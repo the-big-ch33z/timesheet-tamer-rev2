@@ -13,17 +13,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertTriangle,
   Calendar,
-  ChevronDown,
   Clock,
   FileText,
-  LayoutDashboard,
   LogOut,
   Settings,
   ShieldAlert,
   UserRound,
   Users,
+  Import,
+  Export,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,14 +36,15 @@ type NavItem = {
   title: string;
   href: string;
   icon: React.ReactNode;
-  role: "all" | UserRole;  // Update to reuse UserRole type
+  role: "all" | UserRole;
+  variant?: "default" | "accent";
 };
 
 const navItems: NavItem[] = [
   {
     title: "Timesheet",
     href: "/timesheet",
-    icon: <Clock className="h-5 w-5" />,
+    icon: <Calendar className="h-5 w-5" />,
     role: "all",
   },
   {
@@ -54,13 +54,13 @@ const navItems: NavItem[] = [
     role: "all",
   },
   {
-    title: "Team Calendar",
+    title: "Schedule",
     href: "/team-calendar",
     icon: <Calendar className="h-5 w-5" />,
     role: "all",
   },
   {
-    title: "Team Management",
+    title: "Manager",
     href: "/manager",
     icon: <Users className="h-5 w-5" />,
     role: "manager",
@@ -70,12 +70,27 @@ const navItems: NavItem[] = [
     href: "/settings",
     icon: <Settings className="h-5 w-5" />,
     role: "all",
+    variant: "accent",
   },
   {
     title: "Admin",
     href: "/admin",
     icon: <ShieldAlert className="h-5 w-5" />,
     role: "admin",
+    variant: "accent",
+  },
+];
+
+const actionItems = [
+  {
+    title: "Export",
+    icon: <Export className="h-5 w-5" />,
+    action: () => console.log("Export clicked"),
+  },
+  {
+    title: "Import",
+    icon: <Import className="h-5 w-5" />,
+    action: () => console.log("Import clicked"),
   },
 ];
 
@@ -96,40 +111,54 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <header className="border-b border-border bg-background sticky top-0 z-30">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-6">
-            <Link to="/timesheet" className="flex items-center gap-2">
-              <Clock className="h-6 w-6 text-brand-600" />
-              <span className="font-bold text-xl text-brand-800">TimeFlow</span>
+            <Link to="/timesheet" className="flex items-center gap-2 text-brand-600">
+              <Clock className="h-6 w-6" />
+              <span className="font-bold text-xl">Timesheet Tamer</span>
             </Link>
             
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-2">
               {navItems
                 .filter(item => 
                   item.role === "all" || 
-                  item.role === userRole  // Compare directly with userRole
+                  item.role === userRole
                 )
                 .map((item) => (
                   <Link
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted",
+                      "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md",
                       location.pathname === item.href
-                        ? "text-brand-700 bg-brand-50"
-                        : "text-muted-foreground"
+                        ? "text-brand-600 font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                      item.variant === "accent" && 
+                        (location.pathname === item.href 
+                          ? "bg-gray-900 text-white" 
+                          : "bg-gray-100 hover:bg-gray-200")
                     )}
                   >
                     {item.icon}
-                    {item.title}
+                    <span>{item.title}</span>
                   </Link>
                 ))}
             </nav>
           </div>
           
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" className="hidden md:flex">
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Pending Timesheets
-            </Button>
+            <div className="hidden md:flex items-center gap-2">
+              {actionItems.map((item, index) => (
+                <Button 
+                  key={index} 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={item.action}
+                  className="flex items-center gap-2"
+                >
+                  {item.icon}
+                  <span>{item.title}</span>
+                </Button>
+              ))}
+            </div>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -139,12 +168,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 >
                   <Avatar className="h-7 w-7">
                     <AvatarImage src="" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarFallback>AH</AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline-block text-sm font-normal">
-                    John Doe
+                    AH
                   </span>
-                  <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
