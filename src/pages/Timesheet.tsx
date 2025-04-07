@@ -18,26 +18,7 @@ const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<string>("timesheet");
-  const [entries, setEntries] = useState<TimeEntry[]>([
-    {
-      id: "1",
-      date: new Date(),
-      project: "Website Redesign",
-      hours: 3.5,
-      description: "Homepage layout updates",
-      startTime: "09:00",
-      endTime: "12:30",
-    },
-    {
-      id: "2",
-      date: new Date(),
-      project: "Client Meeting",
-      hours: 1.0,
-      description: "Weekly progress review",
-      startTime: "14:00",
-      endTime: "15:00",
-    },
-  ]);
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
 
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));

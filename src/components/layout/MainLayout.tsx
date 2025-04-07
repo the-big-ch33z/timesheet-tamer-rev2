@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,7 +36,7 @@ type NavItem = {
   title: string;
   href: string;
   icon: React.ReactNode;
-  role: "all" | UserRole;
+  role: "all" | UserRole[];
   variant?: "default" | "accent";
 };
 
@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     title: "Manager",
     href: "/manager",
     icon: <Users className="h-5 w-5" />,
-    role: "manager",
+    role: ["admin", "manager"],
   },
   {
     title: "Settings",
@@ -76,7 +76,7 @@ const navItems: NavItem[] = [
     title: "Admin",
     href: "/admin",
     icon: <ShieldAlert className="h-5 w-5" />,
-    role: "admin",
+    role: ["admin"],
     variant: "accent",
   },
 ];
@@ -120,7 +120,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {navItems
                 .filter(item => 
                   item.role === "all" || 
-                  item.role === userRole
+                  (Array.isArray(item.role) && item.role.includes(userRole))
                 )
                 .map((item) => (
                   <Link
