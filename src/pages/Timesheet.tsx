@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import TimesheetCalendar from "@/components/timesheet/TimesheetCalendar";
 import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
 import ToilSummary from "@/components/timesheet/ToilSummary";
 import MonthlyHours from "@/components/timesheet/MonthlyHours";
+import { initializeHolidays } from "@/lib/holidays";
 
 const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -20,6 +21,11 @@ const Timesheet = () => {
   const [activeTab, setActiveTab] = useState<string>("timesheet");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
+
+  // Initialize holidays when the component mounts
+  useEffect(() => {
+    initializeHolidays();
+  }, []);
 
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));

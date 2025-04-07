@@ -19,3 +19,9 @@ export interface EntryFieldConfig {
   visible: boolean;
 }
 
+export interface Holiday {
+  id: string;
+  name: string;
+  date: string; // YYYY-MM-DD format
+  region: string;
+}

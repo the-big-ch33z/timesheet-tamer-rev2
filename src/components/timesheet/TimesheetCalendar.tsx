@@ -1,10 +1,11 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { TimeEntry } from "@/types";
+import { Holiday, isHoliday, getHolidayForDate, getHolidays } from "@/lib/holidays";
 
 interface TimesheetCalendarProps {
   currentMonth: Date;
@@ -21,6 +22,13 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   onNextMonth,
   onDayClick,
 }) => {
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  
+  useEffect(() => {
+    // Load holidays
+    setHolidays(getHolidays());
+  }, []);
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -35,15 +43,13 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
     return getDayEntries(day).reduce((total, entry) => total + entry.hours, 0);
   };
 
-  // Holiday days (sample data)
-  const holidays = [
-    "2025-04-18",
-    "2025-04-21",
-    "2025-04-25"
-  ];
+  const checkIsHoliday = (day: Date) => {
+    return isHoliday(day, holidays);
+  };
 
-  const isHoliday = (day: Date) => {
-    return holidays.includes(format(day, "yyyy-MM-dd"));
+  const getHolidayName = (day: Date) => {
+    const holiday = getHolidayForDate(day, holidays);
+    return holiday ? holiday.name : null;
   };
 
   return (
@@ -89,7 +95,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
             const totalHours = getTotalHours(day);
             const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
             const hasEntries = dayEntries.length > 0;
-            const dayHoliday = isHoliday(day);
+            const dayHoliday = checkIsHoliday(day);
+            const holidayName = getHolidayName(day);
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
             
             return (
@@ -139,7 +146,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
                 )}
                 {dayHoliday && (
                   <div className="text-xs text-amber-700 mt-1">
-                    Holiday
+                    {holidayName || "Holiday"}
                   </div>
                 )}
               </div>
