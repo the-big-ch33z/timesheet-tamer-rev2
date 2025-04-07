@@ -10,6 +10,7 @@ import { TimeEntry } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserInfo from "@/components/timesheet/UserInfo";
 import TabContent from "@/components/timesheet/TabContent";
+import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
 
 const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -22,6 +23,8 @@ const Timesheet = () => {
       project: "Website Redesign",
       hours: 3.5,
       description: "Homepage layout updates",
+      startTime: "09:00",
+      endTime: "12:30",
     },
     {
       id: "2",
@@ -29,15 +32,19 @@ const Timesheet = () => {
       project: "Client Meeting",
       hours: 1.0,
       description: "Weekly progress review",
+      startTime: "14:00",
+      endTime: "15:00",
     },
   ]);
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
+  const [showDetailView, setShowDetailView] = useState(false);
 
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
   const handleDayClick = (day: Date) => {
     setSelectedDay(day);
+    setShowDetailView(true);
   };
 
   const addEntry = (entry: Omit<TimeEntry, "id">) => {
@@ -70,16 +77,34 @@ const Timesheet = () => {
           <TabsTrigger value="recent">Recent Entries</TabsTrigger>
         </TabsList>
 
-        <TabContent 
-          entries={entries}
-          currentMonth={currentMonth}
-          onPrevMonth={prevMonth}
-          onNextMonth={nextMonth}
-          onDayClick={handleDayClick}
-        />
+        {showDetailView && selectedDay ? (
+          <div className="mt-6">
+            <TimesheetEntryDetail 
+              date={selectedDay}
+              entries={getDayEntries(selectedDay)}
+              onAddEntry={() => setIsEntryDialogOpen(true)}
+            />
+            <div className="mt-4 flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDetailView(false)}
+              >
+                Back to Calendar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <TabContent 
+            entries={entries}
+            currentMonth={currentMonth}
+            onPrevMonth={prevMonth}
+            onNextMonth={nextMonth}
+            onDayClick={handleDayClick}
+          />
+        )}
       </Tabs>
 
-      <Dialog open={Boolean(selectedDay)} onOpenChange={(open) => !open && setSelectedDay(null)}>
+      <Dialog open={Boolean(selectedDay) && !showDetailView} onOpenChange={(open) => !open && setSelectedDay(null)}>
         {selectedDay && (
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>

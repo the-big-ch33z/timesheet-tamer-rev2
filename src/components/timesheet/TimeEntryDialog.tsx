@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import { TimeEntry } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,27 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const [project, setProject] = useState("");
   const [hours, setHours] = useState("");
   const [description, setDescription] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+
+  // Update hours when start/end time changes
+  useEffect(() => {
+    if (startTime && endTime) {
+      const [startHours, startMinutes] = startTime.split(':').map(Number);
+      const [endHours, endMinutes] = endTime.split(':').map(Number);
+      
+      let hoursDiff = endHours - startHours;
+      let minutesDiff = endMinutes - startMinutes;
+      
+      if (minutesDiff < 0) {
+        hoursDiff--;
+        minutesDiff += 60;
+      }
+      
+      const totalHours = hoursDiff + (minutesDiff / 60);
+      setHours(totalHours.toFixed(2));
+    }
+  }, [startTime, endTime]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +59,16 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       project,
       hours: parseFloat(hours),
       description,
+      startTime,
+      endTime,
     });
     
     // Reset form
     setProject("");
     setHours("");
     setDescription("");
+    setStartTime("");
+    setEndTime("");
   };
 
   return (
@@ -78,6 +103,42 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start Time</Label>
+              <div className="relative">
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                  className="pr-10"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End Time</Label>
+              <div className="relative">
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                  className="pr-10"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
