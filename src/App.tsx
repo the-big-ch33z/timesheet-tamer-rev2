@@ -21,7 +21,8 @@ const App = () => (
     <Sonner />
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Auth />} />
+        <Route path="/" element={<Navigate to="/timesheet" replace />} />
+        <Route path="/login" element={<Auth />} />
         
         {/* Protected Routes */}
         <Route path="/timesheet" element={<MainLayout><Timesheet /></MainLayout>} />
