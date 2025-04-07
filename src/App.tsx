@@ -3,6 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/lib/routeProtection";
 import MainLayout from "./components/layout/MainLayout";
 import Auth from "./pages/Auth";
 import Timesheet from "./pages/Timesheet";
@@ -28,24 +30,23 @@ const App = () => (
     <Toaster />
     <Sonner />
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/timesheet" replace />} />
-        <Route path="/login" element={<Auth />} />
-        
-        {/* Protected Routes */}
-        <Route path="/timesheet" element={<MainLayout><Timesheet /></MainLayout>} />
-        <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
-        <Route path="/team-calendar" element={<MainLayout><TeamCalendar /></MainLayout>} />
-        <Route path="/manager" element={<MainLayout><Manager /></MainLayout>} />
-        <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
-        <Route path="/admin" element={<MainLayout><Admin /></MainLayout>} />
-        
-        {/* No longer needed with the root redirect above */}
-        {/* <Route path="/timesheet/" element={<Navigate to="/timesheet" replace />} /> */}
-        
-        {/* Catch-all route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to="/timesheet" replace />} />
+          <Route path="/login" element={<Auth />} />
+          
+          {/* Protected Routes */}
+          <Route path="/timesheet" element={<ProtectedRoute><MainLayout><Timesheet /></MainLayout></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><MainLayout><Reports /></MainLayout></ProtectedRoute>} />
+          <Route path="/team-calendar" element={<ProtectedRoute><MainLayout><TeamCalendar /></MainLayout></ProtectedRoute>} />
+          <Route path="/manager" element={<ProtectedRoute requiredRoles={['admin', 'manager']}><MainLayout><Manager /></MainLayout></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Admin /></MainLayout></ProtectedRoute>} />
+          
+          {/* Catch-all route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>
 );

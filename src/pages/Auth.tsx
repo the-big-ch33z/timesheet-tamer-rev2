@@ -1,11 +1,23 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If already authenticated, redirect to timesheet
+    if (isAuthenticated) {
+      navigate('/timesheet');
+    }
+  }, [isAuthenticated, navigate]);
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-brand-50 to-brand-100">
       <div className="w-full max-w-md p-4">
