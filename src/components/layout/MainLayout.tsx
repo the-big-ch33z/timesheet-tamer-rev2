@@ -37,7 +37,7 @@ type NavItem = {
   title: string;
   href: string;
   icon: React.ReactNode;
-  role: "all" | "manager" | "admin";
+  role: "all" | UserRole;  // Update to reuse UserRole type
 };
 
 const navItems: NavItem[] = [
@@ -105,8 +105,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {navItems
                 .filter(item => 
                   item.role === "all" || 
-                  (item.role === "manager" && (userRole === "manager" || userRole === "admin")) ||
-                  (item.role === "admin" && userRole === "admin")
+                  item.role === userRole  // Compare directly with userRole
                 )
                 .map((item) => (
                   <Link
