@@ -1,344 +1,293 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Clock, AlertCircle, Search, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Calendar,
+  Clock,
+  Edit,
+  FileText,
+  Filter,
+  RefreshCw,
+  Trash,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 type TeamMember = {
   id: string;
   name: string;
   email: string;
   role: string;
-  avatar?: string;
-  division: string;
+  employeeType: string;
   status: "active" | "on-leave" | "inactive";
-  hoursThisWeek: number;
-  timesheetStatus: "approved" | "pending" | "rejected";
+  requiredHours: number;
+  actualHours: number;
+  toilBalance: number;
+  toilRollover: number;
+  paidHours: number;
+  bankedLeave: number;
 };
 
-const DIVISIONS = ["Engineering", "Design", "Marketing", "Operations"];
-
+// Sample data for team members
 const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "Frontend Developer",
-    avatar: "",
-    division: "Engineering",
+    name: "Aidan Hart",
+    email: "aidan.h89@live.com.au",
+    role: "Employee",
+    employeeType: "Full Time",
     status: "active",
-    hoursThisWeek: 38,
-    timesheetStatus: "approved",
+    requiredHours: 0,
+    actualHours: 159.6,
+    toilBalance: 19.0,
+    toilRollover: 0.0,
+    paidHours: 0,
+    bankedLeave: 0,
   },
   {
     id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "UX Designer",
-    avatar: "",
-    division: "Design",
+    name: "Bob",
+    email: "kimack2@yahoo.com.au",
+    role: "Employee",
+    employeeType: "Full Time",
     status: "active",
-    hoursThisWeek: 35,
-    timesheetStatus: "pending",
+    requiredHours: 0,
+    actualHours: 168.0,
+    toilBalance: 0.0,
+    toilRollover: 0.0,
+    paidHours: 0,
+    bankedLeave: 0,
   },
   {
     id: "3",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    role: "Project Manager",
-    avatar: "",
-    division: "Engineering",
-    status: "on-leave",
-    hoursThisWeek: 20,
-    timesheetStatus: "approved",
-  },
-  {
-    id: "4",
-    name: "Sarah Wilson",
-    email: "sarah.wilson@example.com",
-    role: "Backend Developer",
-    avatar: "",
-    division: "Engineering",
+    name: "Bob John",
+    email: "brou_dot_com@hotmail.com",
+    role: "Employee",
+    employeeType: "Full Time",
     status: "active",
-    hoursThisWeek: 42,
-    timesheetStatus: "rejected",
-  },
-  {
-    id: "5",
-    name: "Robert Chen",
-    email: "robert.chen@example.com",
-    role: "Marketing Specialist",
-    avatar: "",
-    division: "Marketing",
-    status: "active",
-    hoursThisWeek: 36,
-    timesheetStatus: "pending",
+    requiredHours: 0,
+    actualHours: 159.6,
+    toilBalance: 0.0,
+    toilRollover: 0.0,
+    paidHours: 0,
+    bankedLeave: 0,
   },
 ];
 
 const Manager = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDivision, setSelectedDivision] = useState<string>("all");
+  const [selectedTab, setSelectedTab] = useState("overview");
   
-  const filteredMembers = TEAM_MEMBERS.filter((member) => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         member.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         member.role.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesDivision = selectedDivision === "all" || member.division === selectedDivision;
-    
-    return matchesSearch && matchesDivision;
-  });
+  // Calculate stats
+  const activeEmployeesCount = TEAM_MEMBERS.filter(m => m.status === "active").length;
+  const totalToilHours = TEAM_MEMBERS.reduce((total, member) => total + member.toilBalance, 0);
+  const pendingApprovalsCount = 0; // Mock data - would come from a real API
+  const totalBankedLeave = TEAM_MEMBERS.reduce((total, member) => total + member.bankedLeave, 0);
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("");
-  };
-
-  const getStatusColor = (status: TeamMember["status"]) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "on-leave":
-        return "bg-amber-100 text-amber-800";
-      case "inactive":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "";
-    }
-  };
-
-  const getTimesheetStatusIcon = (status: TeamMember["timesheetStatus"]) => {
-    switch (status) {
-      case "approved":
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case "pending":
-        return <Clock className="h-5 w-5 text-amber-500" />;
-      case "rejected":
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      default:
-        return null;
-    }
-  };
+  // Filter team members based on search query
+  const filteredMembers = TEAM_MEMBERS.filter((member) =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold text-brand-800 mb-6">Team Management</h1>
+    <div className="container py-8 space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Employee Manager</h1>
+        <p className="text-muted-foreground">Manage your team members and view their statistics.</p>
+      </div>
       
-      <Tabs defaultValue="members" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="members">Team Members</TabsTrigger>
-          <TabsTrigger value="timesheets">Pending Timesheets</TabsTrigger>
-          <TabsTrigger value="divisions">Divisions</TabsTrigger>
-        </TabsList>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-50 p-3 rounded-full">
+                <Users className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active Employees</p>
+                <h2 className="text-3xl font-bold">{activeEmployeesCount}</h2>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
-        <TabsContent value="members" className="space-y-6">
-          <div className="flex flex-col md:flex-row justify-between gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search team members..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-amber-50 p-3 rounded-full">
+                <Clock className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total TOIL Hours</p>
+                <h2 className="text-3xl font-bold">{totalToilHours.toFixed(1)}</h2>
+              </div>
             </div>
-            
-            <div className="flex gap-2">
-              <Select
-                value={selectedDivision}
-                onValueChange={setSelectedDivision}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by division" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Divisions</SelectItem>
-                  {DIVISIONS.map((division) => (
-                    <SelectItem key={division} value={division}>
-                      {division}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-red-50 p-3 rounded-full">
+                <FileText className="h-6 w-6 text-red-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Approvals</p>
+                <h2 className="text-3xl font-bold">{pendingApprovalsCount}</h2>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-50 p-3 rounded-full">
+                <Calendar className="h-6 w-6 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Banked Leave</p>
+                <h2 className="text-3xl font-bold">{totalBankedLeave.toFixed(1)}</h2>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Tabs */}
+      <Tabs defaultValue="overview" className="w-full" onValueChange={setSelectedTab}>
+        <TabsList className="bg-muted/50">
+          <TabsTrigger value="overview">Employee Overview</TabsTrigger>
+          <TabsTrigger value="toil-report">TOIL Approval Report</TabsTrigger>
+          <TabsTrigger value="dta-report">DTA Approval Report</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Active Employees</h2>
               
-              <Button>
-                <Plus className="h-4 w-4 mr-2" /> Add Member
-              </Button>
-            </div>
-          </div>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
-                Manage your team members and their time entries
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <div className="grid grid-cols-[1fr_1fr_150px_150px_100px] bg-muted px-4 py-3 text-sm font-medium">
-                  <div>Name</div>
-                  <div>Role</div>
-                  <div>Division</div>
-                  <div>Hours This Week</div>
-                  <div className="text-right">Status</div>
+              <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>2025-04</span>
+                  </Button>
+                  
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-1" />
+                    Filters
+                  </Button>
                 </div>
                 
-                {filteredMembers.length > 0 ? (
-                  filteredMembers.map((member) => (
-                    <div
-                      key={member.id}
-                      className="grid grid-cols-[1fr_1fr_150px_150px_100px] items-center px-4 py-3 border-t hover:bg-muted/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={member.avatar} />
-                          <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{member.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {member.email}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>{member.role}</div>
-                      
-                      <div>{member.division}</div>
-                      
-                      <div className="flex items-center gap-2">
-                        {member.hoursThisWeek} hrs
-                        {getTimesheetStatusIcon(member.timesheetStatus)}
-                      </div>
-                      
-                      <div className="text-right">
-                        <Badge variant="outline" className={getStatusColor(member.status)}>
-                          {member.status === "active"
-                            ? "Active"
-                            : member.status === "on-leave"
-                            ? "On Leave"
-                            : "Inactive"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="px-4 py-10 text-center text-muted-foreground">
-                    No team members found
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="timesheets" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Timesheets</CardTitle>
-              <CardDescription>
-                Review and approve timesheet submissions from your team
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {TEAM_MEMBERS.filter(m => m.timesheetStatus === "pending").map((member) => (
-                  <div
-                    key={member.id}
-                    className="border rounded-md p-4 hover:bg-muted/50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={member.avatar} />
-                          <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{member.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {member.division} • {member.role}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm">{member.hoursThisWeek} hours this week</div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-2">
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                      <Button variant="destructive" size="sm">
-                        Reject
-                      </Button>
-                      <Button size="sm" className="bg-brand-600 hover:bg-brand-700">
-                        Approve
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <Button size="sm" className="gap-1" onClick={() => console.log("Refresh data")}>
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </Button>
                 
-                {TEAM_MEMBERS.filter(m => m.timesheetStatus === "pending").length === 0 && (
-                  <div className="text-center py-8">
-                    <CheckCircle2 className="h-12 w-12 mx-auto text-brand-500 mb-3" />
-                    <h3 className="text-lg font-medium mb-1">All caught up!</h3>
-                    <p className="text-muted-foreground">
-                      No pending timesheet submissions to review
-                    </p>
-                  </div>
-                )}
+                <Button variant="default" size="sm" className="gap-1">
+                  <UserPlus className="h-4 w-4" />
+                  Add Employee
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Required Hours</TableHead>
+                    <TableHead>Actual Hours</TableHead>
+                    <TableHead>TOIL Balance</TableHead>
+                    <TableHead>TOIL Rollover</TableHead>
+                    <TableHead>Paid Hrs</TableHead>
+                    <TableHead>Banked Leave</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                
+                <TableBody>
+                  {filteredMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{member.name}</div>
+                          <div className="text-xs text-muted-foreground">{member.email}</div>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div>
+                          <div>{member.role}</div>
+                          <div className="text-xs text-muted-foreground">{member.employeeType}</div>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Badge variant="outline" className="bg-green-100 text-green-800">
+                          Active
+                        </Badge>
+                      </TableCell>
+                      
+                      <TableCell>{member.requiredHours} hrs</TableCell>
+                      <TableCell>{member.actualHours.toFixed(1)}</TableCell>
+                      <TableCell>{member.toilBalance.toFixed(1)}</TableCell>
+                      <TableCell>{member.toilRollover.toFixed(1)}</TableCell>
+                      <TableCell>No</TableCell>
+                      <TableCell>{member.bankedLeave}</TableCell>
+                      
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-amber-500">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </TabsContent>
         
-        <TabsContent value="divisions" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Divisions</CardTitle>
-                <CardDescription>
-                  Manage divisions across your organization
-                </CardDescription>
-              </div>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" /> Add Division
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {DIVISIONS.map((division) => {
-                  const memberCount = TEAM_MEMBERS.filter(
-                    (m) => m.division === division
-                  ).length;
-                  
-                  return (
-                    <div
-                      key={division}
-                      className="flex justify-between items-center border rounded-md p-4 hover:bg-muted/50"
-                    >
-                      <div>
-                        <h3 className="font-medium">{division}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {memberCount} members
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Manage
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="toil-report">
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-2xl font-bold mb-6">TOIL Approval Report</h2>
+            <p className="text-muted-foreground">
+              This section would display Time Off In Lieu (TOIL) approvals and reports.
+            </p>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="dta-report">
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-2xl font-bold mb-6">DTA Approval Report</h2>
+            <p className="text-muted-foreground">
+              This section would display DTA approvals and reports.
+            </p>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
