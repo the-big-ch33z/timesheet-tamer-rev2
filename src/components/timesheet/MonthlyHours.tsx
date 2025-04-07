@@ -28,7 +28,11 @@ const MonthlyHours: React.FC = () => {
         
         <div className="text-right mb-2">{percentage}%</div>
         
-        <Progress value={percentage} color={getProgressColor()} className="h-2 mb-4" />
+        <Progress 
+          value={percentage} 
+          className="h-2 mb-4"
+          color={getProgressColor()}
+        />
         
         <div className="text-sm text-gray-500">
           {targetHours - hours} hours remaining to meet target

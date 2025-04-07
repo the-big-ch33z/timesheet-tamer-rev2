@@ -13,7 +13,15 @@ import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create a new QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false, // Don't retry on failure by default
+      refetchOnWindowFocus: false, // Don't refetch queries when window regains focus
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,8 +40,8 @@ const App = () => (
         <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
         <Route path="/admin" element={<MainLayout><Admin /></MainLayout>} />
         
-        {/* Redirect /timesheet path to /timesheet route */}
-        <Route path="/timesheet/" element={<Navigate to="/timesheet" replace />} />
+        {/* No longer needed with the root redirect above */}
+        {/* <Route path="/timesheet/" element={<Navigate to="/timesheet" replace />} /> */}
         
         {/* Catch-all route */}
         <Route path="*" element={<NotFound />} />
