@@ -31,6 +31,8 @@ type MainLayoutProps = {
   children: React.ReactNode;
 };
 
+type UserRole = "admin" | "manager" | "team-member";
+
 type NavItem = {
   title: string;
   href: string;
@@ -82,7 +84,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   
   // Mock user role - in a real app, this would come from auth context
-  const userRole = "admin"; // can be "admin", "manager", or "team-member"
+  const userRole: UserRole = "admin"; // can be "admin", "manager", or "team-member"
   
   const handleSignOut = () => {
     // Handle sign out logic
