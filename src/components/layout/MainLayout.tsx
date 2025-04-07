@@ -21,8 +21,8 @@ import {
   ShieldAlert,
   UserRound,
   Users,
-  Import,
-  Export,
+  Download,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -84,12 +84,12 @@ const navItems: NavItem[] = [
 const actionItems = [
   {
     title: "Export",
-    icon: <Export className="h-5 w-5" />,
+    icon: <Download className="h-5 w-5" />,
     action: () => console.log("Export clicked"),
   },
   {
     title: "Import",
-    icon: <Import className="h-5 w-5" />,
+    icon: <Upload className="h-5 w-5" />,
     action: () => console.log("Import clicked"),
   },
 ];
