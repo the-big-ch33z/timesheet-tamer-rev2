@@ -54,6 +54,8 @@ const UserManagement = () => {
     teamIds?: string[];
     useDefaultSchedule?: boolean;
     scheduleId?: string;
+    fte?: number;
+    fortnightHours?: number;
   }) => {
     if (!selectedUser) return;
     
@@ -70,9 +72,13 @@ const UserManagement = () => {
         assignScheduleToUser(selectedUser.id, data.scheduleId);
       }
       
+      // In a real app, we would update the user's FTE and fortnight hours here
+      // This would be handled by a backend API call
+      console.log("Updating user with FTE:", data.fte, "and fortnight hours:", data.fortnightHours);
+      
       toast({
         title: "User Updated",
-        description: `${selectedUser.name}'s role and schedule have been updated.`,
+        description: `${selectedUser.name}'s settings have been updated.`,
       });
       
       setIsEditUserOpen(false);
@@ -143,3 +149,4 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+
