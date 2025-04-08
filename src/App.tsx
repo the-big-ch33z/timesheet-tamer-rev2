@@ -27,7 +27,7 @@ function App() {
             <Route path="/signup" element={<Auth mode="signup" />} />
             
             {/* Protected routes with layout */}
-            <Route element={<MainLayout>Outlet content</MainLayout>}>
+            <Route element={<MainLayout />}>
               <Route path="/timesheet" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
               <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />

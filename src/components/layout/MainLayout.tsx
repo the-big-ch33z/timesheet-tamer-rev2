@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type MainLayoutProps = {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 type UserRole = "admin" | "manager" | "team-member";
@@ -200,7 +199,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </header>
       
       <main className="flex-1 bg-muted/30">
-        {children || <Outlet />}
+        <Outlet />
       </main>
       
       <footer className="border-t py-4 bg-background">
