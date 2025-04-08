@@ -18,8 +18,8 @@ const userEditSchema = z.object({
   teamIds: z.array(z.string()).optional(),
   useDefaultSchedule: z.boolean().default(true),
   scheduleId: z.string().optional(),
-  fte: z.string().transform(val => Number(val) || 0),
-  fortnightHours: z.string().transform(val => Number(val) || 0),
+  fte: z.coerce.number().min(0).max(1).default(1),
+  fortnightHours: z.coerce.number().min(0).default(76),
 });
 
 type UserEditFormValues = z.infer<typeof userEditSchema>;
@@ -51,8 +51,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       teamIds: selectedUser?.teamIds || [],
       useDefaultSchedule: selectedUser?.workScheduleId ? false : true,
       scheduleId: selectedUser?.workScheduleId || 'default',
-      fte: selectedUser?.fte ? String(selectedUser.fte) : "1.0",
-      fortnightHours: selectedUser?.fortnightHours ? String(selectedUser.fortnightHours) : "76",
+      fte: selectedUser?.fte || 1.0,
+      fortnightHours: selectedUser?.fortnightHours || 76,
     },
   });
 
@@ -67,8 +67,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       form.setValue("scheduleId", selectedUser.workScheduleId || 'default');
       
       // Set FTE and fortnight hours with proper type conversion
-      form.setValue("fte", selectedUser.fte ? String(selectedUser.fte) : "1.0");
-      form.setValue("fortnightHours", selectedUser.fortnightHours ? String(selectedUser.fortnightHours) : "76");
+      form.setValue("fte", selectedUser.fte || 1.0);
+      form.setValue("fortnightHours", selectedUser.fortnightHours || 76);
     }
   }, [selectedUser, form]);
 
@@ -141,6 +141,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
                       max="1"
                       placeholder="1.0" 
                       {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -161,6 +162,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
                       min="0"
                       placeholder="76" 
                       {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
                   </FormControl>
                   <FormMessage />
