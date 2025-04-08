@@ -26,8 +26,11 @@ export interface Holiday {
   region: string;
 }
 
-// New interfaces for role-based access control
+// Role-based access control interfaces
 export type UserRole = 'admin' | 'manager' | 'team-member';
+
+export type ActionType = 'create' | 'read' | 'update' | 'delete';
+export type ResourceType = 'user' | 'team' | 'project' | 'timesheet' | 'report' | 'holiday' | 'setting';
 
 export interface User {
   id: string;
@@ -36,12 +39,25 @@ export interface User {
   role: UserRole;
   organizationId: string;
   teamIds?: string[]; // For team members and managers
+  createdAt?: string;
+  updatedAt?: string;
+  lastLogin?: string;
+  status?: 'active' | 'inactive' | 'pending';
 }
 
 export interface Organization {
   id: string;
   name: string;
   adminId: string; // The user ID of the admin who created this organization
+  createdAt?: string;
+  settings?: OrganizationSettings;
+}
+
+export interface OrganizationSettings {
+  workingDays: string[]; // e.g., ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+  workingHoursPerDay: number;
+  timeFormat: '12h' | '24h';
+  dateFormat: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
 }
 
 export interface Team {
@@ -49,6 +65,8 @@ export interface Team {
   name: string;
   organizationId: string;
   managerId: string; // The user ID of the manager for this team
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TeamMembership {
@@ -56,4 +74,24 @@ export interface TeamMembership {
   teamId: string;
   userId: string; // The team member's user ID
   managerId: string; // The ID of the manager who oversees this team member
+  joinedAt?: string;
+}
+
+// Audit trail for security events
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  action: string; // e.g., 'login', 'logout', 'create_user', 'update_role', etc.
+  targetResource: string; // e.g., 'user/123', 'team/456', etc.
+  details: string;
+  ipAddress?: string;
+}
+
+// Data sync tracking
+export interface SyncStatus {
+  lastSyncedAt: string;
+  entityType: string; // e.g., 'users', 'teams', 'timesheets', etc.
+  status: 'success' | 'failed' | 'in_progress';
+  recordsProcessed?: number;
 }
