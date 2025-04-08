@@ -1,17 +1,15 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { UserRole, User } from "@/types";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
 
 // Form schema for editing a user
@@ -20,6 +18,8 @@ const userEditSchema = z.object({
   teamIds: z.array(z.string()).optional(),
   useDefaultSchedule: z.boolean().default(true),
   scheduleId: z.string().optional(),
+  fte: z.string().transform(val => Number(val) || 0),
+  fortnightHours: z.string().transform(val => Number(val) || 0),
 });
 
 type UserEditFormValues = z.infer<typeof userEditSchema>;
@@ -37,14 +37,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   selectedUser,
   onSubmit
 }) => {
-  const [activeTab, setActiveTab] = useState<string>("role");
-  
   // Access work schedule context
-  const { 
-    getAllSchedules, 
-    getUserSchedule, 
-    assignScheduleToUser 
-  } = useWorkSchedule();
+  const { getAllSchedules } = useWorkSchedule();
   
   // Get all available schedules
   const schedules = getAllSchedules();
@@ -57,11 +51,13 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       teamIds: selectedUser?.teamIds || [],
       useDefaultSchedule: selectedUser?.workScheduleId ? false : true,
       scheduleId: selectedUser?.workScheduleId || 'default',
+      fte: selectedUser?.fte ? String(selectedUser.fte) : "1.0",
+      fortnightHours: selectedUser?.fortnightHours ? String(selectedUser.fortnightHours) : "76",
     },
   });
 
   // Update form when selected user changes
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedUser) {
       form.setValue("role", selectedUser.role);
       form.setValue("teamIds", selectedUser.teamIds || []);
@@ -69,23 +65,20 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       const hasCustomSchedule = selectedUser.workScheduleId && selectedUser.workScheduleId !== 'default';
       form.setValue("useDefaultSchedule", !hasCustomSchedule);
       form.setValue("scheduleId", selectedUser.workScheduleId || 'default');
+      
+      // Set FTE and fortnight hours with proper type conversion
+      form.setValue("fte", selectedUser.fte ? String(selectedUser.fte) : "1.0");
+      form.setValue("fortnightHours", selectedUser.fortnightHours ? String(selectedUser.fortnightHours) : "76");
     }
   }, [selectedUser, form]);
 
   const handleSubmit = async (values: UserEditFormValues) => {
     if (!selectedUser) return;
     
-    try {
-      // If not using default schedule, ensure we have a schedule ID
-      if (!values.useDefaultSchedule && values.scheduleId) {
-        assignScheduleToUser(selectedUser.id, values.scheduleId);
-      } else if (values.useDefaultSchedule) {
-        // Reset to default
-        assignScheduleToUser(selectedUser.id, 'default');
-      }
-      
-      // Submit the rest of the form values
+    try {      
+      // Submit all form values
       await onSubmit(values);
+      onOpenChange(false);
     } catch (error) {
       console.error("Error updating user:", error);
     }
@@ -101,113 +94,141 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
           </SheetDescription>
         </SheetHeader>
         
-        <Tabs defaultValue="role" value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="mb-4">
-            <TabsTrigger value="role">Role & Teams</TabsTrigger>
-            <TabsTrigger value="schedule">Work Schedule</TabsTrigger>
-          </TabsList>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
-              <TabsContent value="role" className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="team-member">Team Member</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Teams selection would go here in a more complex implementation */}
-                
-                <div className="flex justify-between">
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="button" 
-                    onClick={() => setActiveTab("schedule")}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pt-6">
+            {/* Role selection */}
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
                   >
-                    Next: Work Schedule
-                  </Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="schedule" className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="useDefaultSchedule"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Use Default Schedule</FormLabel>
-                        <FormDescription>
-                          Use the organization's default work schedule
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {!form.watch("useDefaultSchedule") && (
-                  <div className="space-y-6 pt-2">
-                    <FormField
-                      control={form.control}
-                      name="scheduleId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assigned Schedule</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select schedule" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {schedules.filter(s => !s.isDefault).map((schedule) => (
-                                <SelectItem key={schedule.id} value={schedule.id}>
-                                  {schedule.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="team-member">Team Member</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* FTE Field */}
+            <FormField
+              control={form.control}
+              name="fte"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>FTE (Full-Time Equivalent)</FormLabel>
+                  <FormDescription>
+                    Work fraction (1.0 = full-time, 0.5 = half-time)
+                  </FormDescription>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      step="0.1" 
+                      min="0" 
+                      max="1"
+                      placeholder="1.0" 
+                      {...field}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Fortnight Hours Field */}
+            <FormField
+              control={form.control}
+              name="fortnightHours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Required Fortnight Hours</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      min="0"
+                      placeholder="76" 
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Work Schedule section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Work Schedule</h3>
+              
+              <FormField
+                control={form.control}
+                name="useDefaultSchedule"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Use Default Schedule</FormLabel>
+                      <FormDescription>
+                        Use the organization's default work schedule
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                    <div className="pt-4">
-                      <h3 className="text-sm font-medium mb-2">Schedule Preview</h3>
+              {!form.watch("useDefaultSchedule") && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="scheduleId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assigned Schedule</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select schedule" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {schedules.filter(s => !s.isDefault).map((schedule) => (
+                              <SelectItem key={schedule.id} value={schedule.id}>
+                                {schedule.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("scheduleId") && (
+                    <div className="pt-2">
+                      <h4 className="text-sm font-medium mb-2">Schedule Preview</h4>
                       <div className="bg-gray-50 p-4 rounded border text-sm">
-                        {form.watch("scheduleId") && schedules.find(s => s.id === form.watch("scheduleId")) ? (
+                        {schedules.find(s => s.id === form.watch("scheduleId")) ? (
                           <div>
                             <p className="font-medium">{schedules.find(s => s.id === form.watch("scheduleId"))?.name}</p>
                             <p className="text-muted-foreground mt-1">
@@ -219,31 +240,20 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
                         )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
+            </div>
 
-                <SheetFooter className="pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setActiveTab("role")}
-                  >
-                    Back
-                  </Button>
-                  <Button type="submit">Update User</Button>
-                </SheetFooter>
-              </TabsContent>
-            </form>
-          </Form>
-        </Tabs>
+            <SheetFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Update User</Button>
+            </SheetFooter>
+          </form>
+        </Form>
       </SheetContent>
     </Sheet>
   );
 };
-
-function FormDescription(props: React.HTMLAttributes<HTMLParagraphElement>) {
-  const { className, ...rest } = props;
-  return (
-    <p className={`text-sm text-muted-foreground ${className}`} {...rest} />
-  );
-}

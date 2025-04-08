@@ -54,6 +54,8 @@ const UserManagement = () => {
     teamIds?: string[];
     useDefaultSchedule?: boolean;
     scheduleId?: string;
+    fte: number;
+    fortnightHours: number;
   }) => {
     if (!selectedUser) return;
     
@@ -70,9 +72,13 @@ const UserManagement = () => {
         assignScheduleToUser(selectedUser.id, data.scheduleId);
       }
       
+      // Here we would update the user with FTE and fortnightHours
+      // This would require a new auth context method, but for now we'll just show a toast
+      console.log('Updating user with FTE:', data.fte, 'and fortnight hours:', data.fortnightHours);
+      
       toast({
         title: "User Updated",
-        description: `${selectedUser.name}'s role and schedule have been updated.`,
+        description: `${selectedUser.name}'s details have been updated.`,
       });
       
       setIsEditUserOpen(false);

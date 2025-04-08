@@ -1,4 +1,3 @@
-
 export interface TimeEntry {
   id: string;
   date: Date;
@@ -26,13 +25,11 @@ export interface Holiday {
   region: string;
 }
 
-// Role-based access control interfaces
 export type UserRole = 'admin' | 'manager' | 'team-member';
 
 export type ActionType = 'create' | 'read' | 'update' | 'delete';
 export type ResourceType = 'user' | 'team' | 'project' | 'timesheet' | 'report' | 'holiday' | 'setting';
 
-// New work schedule related types
 export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type WeekNumber = 1 | 2;
 
@@ -41,7 +38,6 @@ export interface WorkHours {
   endTime: string; // Format: "HH:MM" in 24h format
 }
 
-// Updated WorkSchedule with two-week rotation support
 export interface WorkSchedule {
   id: string;
   name: string;
@@ -56,7 +52,6 @@ export interface WorkSchedule {
   isDefault?: boolean;
 }
 
-// Legacy work days structure for compatibility
 export interface LegacyWorkSchedule {
   id: string;
   name: string;
@@ -74,6 +69,8 @@ export interface User {
   teamIds?: string[]; // For team members and managers
   workScheduleId?: string; // Reference to a work schedule
   useDefaultSchedule?: boolean; // If true, use the organization's default schedule
+  fte?: number; // Full-Time Equivalent (1.0 = full-time, 0.5 = half-time)
+  fortnightHours?: number; // Required hours per fortnight
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;
@@ -112,7 +109,6 @@ export interface TeamMembership {
   joinedAt?: string;
 }
 
-// Audit trail for security events
 export interface AuditLog {
   id: string;
   timestamp: string;
@@ -123,7 +119,6 @@ export interface AuditLog {
   ipAddress?: string;
 }
 
-// Data sync tracking
 export interface SyncStatus {
   lastSyncedAt: string;
   entityType: string; // e.g., 'users', 'teams', 'timesheets', etc.
@@ -131,7 +126,6 @@ export interface SyncStatus {
   recordsProcessed?: number;
 }
 
-// Permission matrix for role-based actions
 export interface PermissionMatrix {
   [role: string]: {
     [resource: string]: {
@@ -140,7 +134,6 @@ export interface PermissionMatrix {
   }
 }
 
-// Team hierarchy representation
 export interface TeamHierarchy {
   team: Team;
   manager: User;
