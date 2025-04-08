@@ -5,6 +5,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import ProjectManagement from "@/components/admin/ProjectManagement";
 import HolidayManagement from "@/components/admin/HolidayManagement";
 import SystemSettings from "@/components/admin/SystemSettings";
+import AccountSettings from "@/components/admin/AccountSettings";
 
 const Admin = () => {
   return (
@@ -17,6 +18,7 @@ const Admin = () => {
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="holidays">Public Holidays</TabsTrigger>
           <TabsTrigger value="system">System Settings</TabsTrigger>
+          <TabsTrigger value="account">Account Settings</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users">
@@ -33,6 +35,10 @@ const Admin = () => {
         
         <TabsContent value="system">
           <SystemSettings />
+        </TabsContent>
+
+        <TabsContent value="account">
+          <AccountSettings />
         </TabsContent>
       </Tabs>
     </div>
