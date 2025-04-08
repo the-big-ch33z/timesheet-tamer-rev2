@@ -14,6 +14,7 @@ import Manager from "./pages/Manager";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import { ThemeProvider } from "next-themes";
 
 // Create a new QueryClient instance
 const queryClient = new QueryClient({
@@ -26,29 +27,31 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/timesheet" replace />} />
-          <Route path="/login" element={<Auth />} />
-          
-          {/* Protected Routes */}
-          <Route path="/timesheet" element={<ProtectedRoute><MainLayout><Timesheet /></MainLayout></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><MainLayout><Reports /></MainLayout></ProtectedRoute>} />
-          <Route path="/team-calendar" element={<ProtectedRoute><MainLayout><TeamCalendar /></MainLayout></ProtectedRoute>} />
-          <Route path="/manager" element={<ProtectedRoute requiredRoles={['admin', 'manager']}><MainLayout><Manager /></MainLayout></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Admin /></MainLayout></ProtectedRoute>} />
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+  <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/timesheet" replace />} />
+            <Route path="/login" element={<Auth />} />
+            
+            {/* Protected Routes */}
+            <Route path="/timesheet" element={<ProtectedRoute><MainLayout><Timesheet /></MainLayout></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><MainLayout><Reports /></MainLayout></ProtectedRoute>} />
+            <Route path="/team-calendar" element={<ProtectedRoute><MainLayout><TeamCalendar /></MainLayout></ProtectedRoute>} />
+            <Route path="/manager" element={<ProtectedRoute requiredRoles={['admin', 'manager']}><MainLayout><Manager /></MainLayout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRoles={['admin']}><MainLayout><Admin /></MainLayout></ProtectedRoute>} />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
