@@ -8,12 +8,14 @@ import { useAuth } from "@/contexts/auth";
 import { UserSearch } from "./UserSearch";
 import { UserTable } from "./UserTable";
 import { EditUserForm } from "./EditUserForm";
+import { AddUserDialog } from "./AddUserDialog";
 import OrganizationTree from "../OrganizationTree";
 
 const UserManagement = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showOrgTree, setShowOrgTree] = useState(false);
 
@@ -27,10 +29,7 @@ const UserManagement = () => {
 
   // Handle add user button click
   const handleAddUser = () => {
-    toast({
-      title: "Add User",
-      description: "User creation functionality will be implemented soon."
-    });
+    setIsAddUserOpen(true);
   };
   
   // Handle edit user button click
@@ -118,6 +117,12 @@ const UserManagement = () => {
         onOpenChange={setIsEditUserOpen}
         selectedUser={selectedUser}
         onSubmit={onSubmitEditUser}
+      />
+
+      {/* Add User Dialog */}
+      <AddUserDialog 
+        isOpen={isAddUserOpen}
+        onOpenChange={setIsAddUserOpen}
       />
     </>
   );

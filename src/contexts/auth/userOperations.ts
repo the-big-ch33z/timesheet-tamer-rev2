@@ -1,4 +1,3 @@
-
 import { User, UserRole } from '@/types';
 import { auditService } from '@/services/auditService';
 import { syncService } from '@/services/syncService';
@@ -70,8 +69,63 @@ export const createUserOperations = (state: AuthStateType, toast: ReturnType<typ
     }
   };
 
+  const addUser = async (email: string, name: string, role: UserRole = 'team-member') => {
+    try {
+      if (!state.currentUser) {
+        throw new Error("You must be logged in to add a user");
+      }
+
+      if (state.currentUser.role !== 'admin') {
+        throw new Error("Only admins can add users");
+      }
+
+      if (state.users.some(u => u.email === email)) {
+        throw new Error("A user with this email already exists");
+      }
+
+      const newUser: User = {
+        id: `user-${Date.now()}`,
+        email,
+        name,
+        role,
+        organizationId: state.currentUser.organizationId,
+        createdAt: new Date().toISOString(),
+        status: 'active'
+      };
+
+      state.setUsers(prevUsers => [...prevUsers, newUser]);
+
+      await auditService.logEvent(
+        state.currentUser.id,
+        'create_user',
+        `user/${newUser.id}`,
+        `Created new user ${name} with role ${role}`
+      );
+
+      await syncService.recordSync('users', 'success', 1);
+
+      toast.toast({
+        title: "User created",
+        description: `${name} has been added as a ${role}`,
+      });
+
+      return newUser;
+    } catch (error) {
+      toast.toast({
+        title: "Failed to add user",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const addTeamMember = async (email: string, name: string, teamId: string) => {
     try {
+      if (!teamId) {
+        return await addUser(email, name, 'team-member');
+      }
+
       const team = state.teams.find(t => t.id === teamId);
       if (!team) {
         throw new Error("Team not found");
@@ -223,6 +277,7 @@ export const createUserOperations = (state: AuthStateType, toast: ReturnType<typ
     getUserById,
     getUsersByTeam,
     updateUserRole,
+    addUser,
     addTeamMember,
     removeUserFromTeam
   };

@@ -12,6 +12,7 @@ export interface AuthContextType {
   logout: () => void;
   register: (email: string, name: string, password: string, organizationName: string) => Promise<void>;
   createTeam: (name: string, managerId: string) => Promise<Team>;
+  addUser: (email: string, name: string, role?: UserRole) => Promise<User>;
   addTeamMember: (email: string, name: string, teamId: string) => Promise<User>;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
   assignManagerToTeam: (managerId: string, teamId: string) => Promise<void>;
