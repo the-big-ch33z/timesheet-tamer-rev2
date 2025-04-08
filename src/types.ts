@@ -1,3 +1,4 @@
+
 export interface TimeEntry {
   id: string;
   date: Date;
@@ -73,8 +74,6 @@ export interface User {
   teamIds?: string[]; // For team members and managers
   workScheduleId?: string; // Reference to a work schedule
   useDefaultSchedule?: boolean; // If true, use the organization's default schedule
-  fte?: number; // Full-Time Equivalent (1.0 = full-time, 0.5 = half-time)
-  fortnightHours?: number; // Required hours per fortnight
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;
