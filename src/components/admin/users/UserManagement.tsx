@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User } from "@/types";
+import { User, WorkSchedule } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { UserSearch } from "./UserSearch";
@@ -47,18 +47,27 @@ const UserManagement = () => {
   };
 
   // Handle edit user submission
-  const onSubmitEditUser = async (data: { role: typeof selectedUser.role, teamIds?: string[] }) => {
+  const onSubmitEditUser = async (data: { 
+    role: typeof selectedUser.role, 
+    teamIds?: string[],
+    useDefaultSchedule?: boolean,
+    workSchedule?: WorkSchedule 
+  }) => {
     if (!selectedUser) return;
     
     try {
       // Update user's role
       await updateUserRole(selectedUser.id, data.role);
       
-      // In a real app, we would also update the user's team assignments here
-      // For this demo, we'll just show a toast
+      // In a real app, we would also update the user's work schedule and team assignments here
+      // For this demo, we'll just show a toast with the information
+      const scheduleInfo = data.useDefaultSchedule 
+        ? "Default work schedule will be used." 
+        : `Custom schedule "${data.workSchedule?.name}" will be used.`;
+      
       toast({
         title: "User Updated",
-        description: `${selectedUser.name}'s role has been updated to ${data.role}.`,
+        description: `${selectedUser.name}'s role has been updated to ${data.role}. ${scheduleInfo}`,
       });
       
       setIsEditUserOpen(false);

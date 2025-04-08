@@ -32,6 +32,22 @@ export type UserRole = 'admin' | 'manager' | 'team-member';
 export type ActionType = 'create' | 'read' | 'update' | 'delete';
 export type ResourceType = 'user' | 'team' | 'project' | 'timesheet' | 'report' | 'holiday' | 'setting';
 
+// New work schedule related types
+export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface WorkHours {
+  startTime: string; // Format: "HH:MM" in 24h format
+  endTime: string; // Format: "HH:MM" in 24h format
+}
+
+export interface WorkSchedule {
+  id: string;
+  name: string;
+  workDays: Record<WeekDay, WorkHours | null>; // null means day off
+  rdoDays: WeekDay[]; // Rostered Day Off
+  isDefault?: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -39,6 +55,8 @@ export interface User {
   role: UserRole;
   organizationId: string;
   teamIds?: string[]; // For team members and managers
+  workScheduleId?: string; // Reference to a work schedule
+  useDefaultSchedule?: boolean; // If true, use the organization's default schedule
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;
