@@ -1,8 +1,9 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, Organization, Team, TeamMembership, UserRole } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { auditService } from '@/services/auditService';
+import { syncService } from '@/services/syncService';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -24,9 +25,12 @@ interface AuthContextType {
   getOrganizationById: (orgId: string) => Organization | undefined;
   getTeamById: (teamId: string) => Team | undefined;
   getUserById: (userId: string) => User | undefined;
+  removeUserFromTeam: (userId: string, teamId: string) => Promise<void>;
+  deleteTeam: (teamId: string) => Promise<void>;
+  syncData: () => Promise<void>;
+  getAuditLogs: () => Promise<any[]>;
 }
 
-// Initial empty state
 const defaultAuthContext: AuthContextType = {
   currentUser: null,
   users: [],
@@ -47,6 +51,10 @@ const defaultAuthContext: AuthContextType = {
   getOrganizationById: () => undefined,
   getTeamById: () => undefined,
   getUserById: () => undefined,
+  removeUserFromTeam: async () => {},
+  deleteTeam: async () => {},
+  syncData: async () => {},
+  getAuditLogs: async () => [],
 };
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContext);
@@ -64,10 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Initialize data from localStorage
   useEffect(() => {
     try {
-      // Try to load existing data from localStorage
       const storedUser = localStorage.getItem('currentUser');
       const storedUsers = localStorage.getItem('users');
       const storedOrgs = localStorage.getItem('organizations');
@@ -89,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Save data to localStorage whenever it changes
   useEffect(() => {
     if (currentUser) localStorage.setItem('currentUser', JSON.stringify(currentUser));
     if (users.length) localStorage.setItem('users', JSON.stringify(users));
@@ -100,19 +105,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      // In a real app, this would be an API call
       const user = users.find(u => u.email === email);
       
       if (!user) {
         throw new Error("User not found");
       }
       
-      // Simulate password check (in a real app, this would be done securely on the server)
-      // For demo purposes we're not checking passwords
-      
       setCurrentUser(user);
       setIsAuthenticated(true);
       localStorage.setItem('currentUser', JSON.stringify(user));
+      
+      await auditService.logEvent(
+        user.id,
+        'login',
+        `user/${user.id}`,
+        `User ${user.name} logged in`
+      );
       
       toast({
         title: "Logged in successfully",
@@ -131,6 +139,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    if (currentUser) {
+      auditService.logEvent(
+        currentUser.id,
+        'logout',
+        `user/${currentUser.id}`,
+        `User ${currentUser.name} logged out`
+      );
+    }
+    
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('currentUser');
@@ -143,12 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (email: string, name: string, password: string, organizationName: string) => {
     try {
-      // Check if user with this email already exists
       if (users.some(user => user.email === email)) {
         throw new Error("User with this email already exists");
       }
       
-      // Create a new organization
       const newOrgId = `org-${Date.now()}`;
       const newUserId = `user-${Date.now()}`;
       
@@ -156,15 +171,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: newOrgId,
         name: organizationName,
         adminId: newUserId,
+        createdAt: new Date().toISOString()
       };
       
-      // Create a new user with admin role
       const newUser: User = {
         id: newUserId,
         email,
         name,
-        role: 'admin', // First user is always an admin
+        role: 'admin',
         organizationId: newOrgId,
+        createdAt: new Date().toISOString(),
+        status: 'active'
       };
       
       setUsers(prevUsers => [...prevUsers, newUser]);
@@ -173,6 +190,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
       
       localStorage.setItem('currentUser', JSON.stringify(newUser));
+      
+      await auditService.logEvent(
+        newUser.id,
+        'register',
+        `user/${newUser.id}`,
+        `New user registered and organization ${organizationName} created`
+      );
+      
+      await syncService.recordSync('users', 'success', 1);
+      await syncService.recordSync('organizations', 'success', 1);
       
       toast({
         title: "Registration successful",
@@ -192,31 +219,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createTeam = async (name: string, managerId: string) => {
     try {
-      // Verify the current user is an admin
       if (!currentUser || currentUser.role !== 'admin') {
         throw new Error("Only admins can create teams");
       }
       
-      // Get the manager user
       const managerUser = users.find(user => user.id === managerId);
       if (!managerUser) {
         throw new Error("Manager not found");
       }
       
-      // Create a new team
       const newTeam: Team = {
         id: `team-${Date.now()}`,
         name,
         organizationId: currentUser.organizationId,
         managerId,
+        createdAt: new Date().toISOString()
       };
       
-      // Update manager's role if they're not already a manager
       if (managerUser.role !== 'manager') {
         await updateUserRole(managerId, 'manager');
       }
       
       setTeams(prevTeams => [...prevTeams, newTeam]);
+      
+      await auditService.logEvent(
+        currentUser.id,
+        'create_team',
+        `team/${newTeam.id}`,
+        `Team "${name}" created with manager ${managerUser.name}`
+      );
+      
+      await syncService.recordSync('teams', 'success', 1);
       
       toast({
         title: "Team created",
@@ -236,28 +269,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addTeamMember = async (email: string, name: string, teamId: string) => {
     try {
-      // Check if user with this email already exists
-      let teamMember = users.find(user => user.email === email);
       const team = teams.find(t => t.id === teamId);
-      
       if (!team) {
         throw new Error("Team not found");
       }
       
+      if (
+        !currentUser || 
+        (currentUser.role !== 'admin' && currentUser.id !== team.managerId)
+      ) {
+        throw new Error("You don't have permission to add members to this team");
+      }
+      
+      let teamMember = users.find(user => user.email === email);
+      
       if (!teamMember) {
-        // Create a new user with team-member role
         teamMember = {
           id: `user-${Date.now()}`,
           email,
           name,
           role: 'team-member',
           organizationId: team.organizationId,
-          teamIds: [teamId]
+          teamIds: [teamId],
+          createdAt: new Date().toISOString(),
+          status: 'active'
         };
         
         setUsers(prevUsers => [...prevUsers, teamMember!]);
+        
+        await auditService.logEvent(
+          currentUser.id,
+          'create_user',
+          `user/${teamMember.id}`,
+          `New user ${name} created and added to team ${team.name}`
+        );
+        
+        await syncService.recordSync('users', 'success', 1);
       } else {
-        // Update existing user's teams
         teamMember = {
           ...teamMember,
           teamIds: [...(teamMember.teamIds || []), teamId]
@@ -266,17 +314,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsers(prevUsers => 
           prevUsers.map(u => u.id === teamMember!.id ? teamMember! : u)
         );
+        
+        await auditService.logEvent(
+          currentUser.id,
+          'update_user',
+          `user/${teamMember.id}`,
+          `User ${name} added to team ${team.name}`
+        );
+        
+        await syncService.recordSync('users', 'success', 1);
       }
       
-      // Create a team membership
       const newMembership: TeamMembership = {
         id: `membership-${Date.now()}`,
         teamId,
         userId: teamMember.id,
-        managerId: team.managerId
+        managerId: team.managerId,
+        joinedAt: new Date().toISOString()
       };
       
       setTeamMemberships(prevMemberships => [...prevMemberships, newMembership]);
+      
+      await syncService.recordSync('teamMemberships', 'success', 1);
       
       toast({
         title: "Team member added",
@@ -296,7 +355,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUserRole = async (userId: string, newRole: UserRole) => {
     try {
-      // Verify the current user is an admin
       if (!currentUser || currentUser.role !== 'admin') {
         throw new Error("Only admins can update user roles");
       }
@@ -306,17 +364,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("User not found");
       }
       
-      // Update the user's role
-      const updatedUser = { ...targetUser, role: newRole };
+      const updatedUser = { 
+        ...targetUser, 
+        role: newRole,
+        updatedAt: new Date().toISOString()
+      };
       
       setUsers(prevUsers => 
         prevUsers.map(u => u.id === userId ? updatedUser : u)
       );
       
-      // If this is the current user, update currentUser state too
       if (currentUser.id === userId) {
         setCurrentUser(updatedUser);
       }
+      
+      await auditService.logEvent(
+        currentUser.id,
+        'update_role',
+        `user/${targetUser.id}`,
+        `Updated ${targetUser.name}'s role from ${targetUser.role} to ${newRole}`
+      );
+      
+      await syncService.recordSync('users', 'success', 1);
       
       toast({
         title: "Role updated",
@@ -334,7 +403,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const assignManagerToTeam = async (managerId: string, teamId: string) => {
     try {
-      // Verify the current user is an admin
       if (!currentUser || currentUser.role !== 'admin') {
         throw new Error("Only admins can assign managers to teams");
       }
@@ -350,19 +418,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Team not found");
       }
       
-      // Update manager's role if they're not already a manager
       if (managerUser.role !== 'manager') {
         await updateUserRole(managerId, 'manager');
       }
       
-      // Update the team with the new manager
-      const updatedTeam = { ...team, managerId };
+      const updatedTeam = { 
+        ...team, 
+        managerId,
+        updatedAt: new Date().toISOString()
+      };
       
       setTeams(prevTeams => 
         prevTeams.map(t => t.id === teamId ? updatedTeam : t)
       );
       
-      // Update all team memberships for this team
       setTeamMemberships(prevMemberships => 
         prevMemberships.map(membership => 
           membership.teamId === teamId 
@@ -370,6 +439,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : membership
         )
       );
+      
+      await auditService.logEvent(
+        currentUser.id,
+        'assign_manager',
+        `team/${team.id}`,
+        `Assigned ${managerUser.name} as manager to team ${team.name}`
+      );
+      
+      await syncService.recordSync('teams', 'success', 1);
+      await syncService.recordSync('teamMemberships', 'success', teamMemberships.filter(m => m.teamId === teamId).length);
       
       toast({
         title: "Manager assigned",
@@ -385,7 +464,196 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Helper functions for querying the data
+  const removeUserFromTeam = async (userId: string, teamId: string) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      const team = teams.find(t => t.id === teamId);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+      
+      if (!team) {
+        throw new Error("Team not found");
+      }
+      
+      if (
+        !currentUser || 
+        (currentUser.role !== 'admin' && currentUser.id !== team.managerId)
+      ) {
+        throw new Error("You don't have permission to remove members from this team");
+      }
+      
+      setTeamMemberships(prevMemberships => 
+        prevMemberships.filter(
+          membership => !(membership.teamId === teamId && membership.userId === userId)
+        )
+      );
+      
+      if (user.teamIds?.includes(teamId)) {
+        const updatedUser = {
+          ...user,
+          teamIds: user.teamIds.filter(id => id !== teamId),
+          updatedAt: new Date().toISOString()
+        };
+        
+        setUsers(prevUsers => 
+          prevUsers.map(u => u.id === userId ? updatedUser : u)
+        );
+      }
+      
+      await auditService.logEvent(
+        currentUser.id,
+        'remove_team_member',
+        `team/${teamId}/user/${userId}`,
+        `Removed ${user.name} from team ${team.name}`
+      );
+      
+      await syncService.recordSync('teamMemberships', 'success', 1);
+      await syncService.recordSync('users', 'success', 1);
+      
+      toast({
+        title: "Team member removed",
+        description: `${user.name} has been removed from ${team.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to remove team member",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const deleteTeam = async (teamId: string) => {
+    try {
+      if (!currentUser || currentUser.role !== 'admin') {
+        throw new Error("Only admins can delete teams");
+      }
+      
+      const team = teams.find(t => t.id === teamId);
+      
+      if (!team) {
+        throw new Error("Team not found");
+      }
+      
+      setTeamMemberships(prevMemberships => 
+        prevMemberships.filter(membership => membership.teamId !== teamId)
+      );
+      
+      const usersInTeam = users.filter(user => user.teamIds?.includes(teamId));
+      
+      usersInTeam.forEach(user => {
+        const updatedUser = {
+          ...user,
+          teamIds: user.teamIds?.filter(id => id !== teamId),
+          updatedAt: new Date().toISOString()
+        };
+        
+        setUsers(prevUsers => 
+          prevUsers.map(u => u.id === user.id ? updatedUser : u)
+        );
+      });
+      
+      setTeams(prevTeams => prevTeams.filter(t => t.id !== teamId));
+      
+      await auditService.logEvent(
+        currentUser.id,
+        'delete_team',
+        `team/${teamId}`,
+        `Deleted team ${team.name}`
+      );
+      
+      await syncService.recordSync('teams', 'success', 1);
+      await syncService.recordSync('teamMemberships', 'success', 1);
+      await syncService.recordSync('users', 'success', usersInTeam.length);
+      
+      toast({
+        title: "Team deleted",
+        description: `Team "${team.name}" has been deleted successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete team",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const syncData = async () => {
+    try {
+      if (!currentUser) {
+        throw new Error("You must be logged in to sync data");
+      }
+      
+      toast({
+        title: "Syncing data",
+        description: "Starting data synchronization...",
+      });
+      
+      await syncService.recordSync('users', 'in_progress', users.length);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      await syncService.recordSync('users', 'success', users.length);
+      
+      await syncService.recordSync('teams', 'in_progress', teams.length);
+      
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      await syncService.recordSync('teams', 'success', teams.length);
+      
+      await syncService.recordSync('teamMemberships', 'in_progress', teamMemberships.length);
+      
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      await syncService.recordSync('teamMemberships', 'success', teamMemberships.length);
+      
+      await auditService.logEvent(
+        currentUser.id,
+        'data_sync',
+        'system/sync',
+        `Synchronized ${users.length} users, ${teams.length} teams, and ${teamMemberships.length} memberships`
+      );
+      
+      toast({
+        title: "Sync complete",
+        description: `Successfully synchronized all data`,
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const getAuditLogs = async () => {
+    try {
+      if (!currentUser) {
+        throw new Error("You must be logged in to view audit logs");
+      }
+      
+      if (currentUser.role !== 'admin') {
+        throw new Error("Only admins can view audit logs");
+      }
+      
+      return await auditService.getLogs();
+    } catch (error) {
+      toast({
+        title: "Failed to retrieve audit logs",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const getUsersByRole = (role: UserRole) => {
     return users.filter(user => user.role === role);
   };
@@ -434,6 +702,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getOrganizationById,
     getTeamById,
     getUserById,
+    removeUserFromTeam,
+    deleteTeam,
+    syncData,
+    getAuditLogs,
   };
 
   return (

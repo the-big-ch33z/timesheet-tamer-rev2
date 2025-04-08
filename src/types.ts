@@ -95,3 +95,20 @@ export interface SyncStatus {
   status: 'success' | 'failed' | 'in_progress';
   recordsProcessed?: number;
 }
+
+// Permission matrix for role-based actions
+export interface PermissionMatrix {
+  [role: string]: {
+    [resource: string]: {
+      [action: string]: boolean;
+    }
+  }
+}
+
+// Team hierarchy representation
+export interface TeamHierarchy {
+  team: Team;
+  manager: User;
+  members: User[];
+  subteams?: TeamHierarchy[];
+}
