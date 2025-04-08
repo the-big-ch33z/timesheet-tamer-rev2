@@ -63,8 +63,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       teamIds: selectedUser?.teamIds || [],
       useDefaultSchedule: selectedUser?.workScheduleId ? false : true,
       scheduleId: selectedUser?.workScheduleId || 'default',
-      fte: selectedUser?.fte !== undefined ? selectedUser.fte.toString() : "1.0",
-      fortnightHours: selectedUser?.fortnightHours !== undefined ? selectedUser.fortnightHours.toString() : "76",
+      fte: selectedUser?.fte !== undefined ? String(selectedUser.fte) : "1.0",
+      fortnightHours: selectedUser?.fortnightHours !== undefined ? String(selectedUser.fortnightHours) : "76",
     },
   });
 
@@ -77,8 +77,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       const hasCustomSchedule = selectedUser.workScheduleId && selectedUser.workScheduleId !== 'default';
       form.setValue("useDefaultSchedule", !hasCustomSchedule);
       form.setValue("scheduleId", selectedUser.workScheduleId || 'default');
-      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte.toString() : "1.0");
-      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? selectedUser.fortnightHours.toString() : "76");
+      form.setValue("fte", selectedUser.fte !== undefined ? String(selectedUser.fte) : "1.0");
+      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? String(selectedUser.fortnightHours) : "76");
     }
   }, [selectedUser, form]);
 
