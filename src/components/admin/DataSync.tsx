@@ -3,169 +3,138 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { Database, AlertCircle, Check, ArrowDownUp, Clock, Loader2, AlertTriangle } from "lucide-react";
-import { syncService } from "@/services/syncService";
 import { SyncStatus } from "@/types";
-import { formatDistance } from "date-fns";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
+import { RotateCw, Check, AlertTriangle, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress";
+import { syncService } from "@/services/syncService";
 
 const DataSync = () => {
-  const { toast } = useToast();
   const { syncData } = useAuth();
   const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Fetch sync statuses on component mount
   useEffect(() => {
-    fetchSyncStatuses();
+    const fetchSyncStatus = async () => {
+      try {
+        const statuses = await syncService.getSyncStatuses();
+        setSyncStatuses(statuses);
+      } catch (error) {
+        console.error("Error fetching sync status:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSyncStatus();
   }, []);
 
-  const fetchSyncStatuses = async () => {
+  const handleSyncData = async () => {
+    setIsSyncing(true);
     try {
-      setLoading(true);
-      const statuses = await syncService.getSyncStatuses();
-      setSyncStatuses(statuses);
-    } catch (error) {
-      console.error("Failed to load sync statuses:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSync = async () => {
-    try {
-      setSyncing(true);
       await syncData();
-      await fetchSyncStatuses(); // Refresh statuses after sync
+      const updatedStatuses = await syncService.getSyncStatuses();
+      setSyncStatuses(updatedStatuses);
     } catch (error) {
-      console.error("Sync failed:", error);
+      console.error("Error during sync:", error);
     } finally {
-      setSyncing(false);
+      setIsSyncing(false);
     }
   };
 
-  // Get status badge for sync status
-  const getStatusBadge = (status: string) => {
+  const getStatusIcon = (status: 'success' | 'failed' | 'in_progress') => {
     switch (status) {
       case 'success':
-        return <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
-          <Check className="h-3 w-3" /> Success
-        </Badge>;
+        return <Check className="h-4 w-4 text-green-500" />;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" /> Failed
-        </Badge>;
+        return <AlertTriangle className="h-4 w-4 text-red-500" />;
       case 'in_progress':
-        return <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-          <Loader2 className="h-3 w-3 animate-spin" /> In Progress
-        </Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+        return <Clock className="h-4 w-4 text-blue-500" />;
     }
   };
 
-  // Format entity type for display
-  const formatEntityType = (type: string) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
+  const getStatusBadge = (status: 'success' | 'failed' | 'in_progress') => {
+    switch (status) {
+      case 'success':
+        return "bg-green-100 text-green-800 border-green-200";
+      case 'failed':
+        return "bg-red-100 text-red-800 border-red-200";
+      case 'in_progress':
+        return "bg-blue-100 text-blue-800 border-blue-200";
+    }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Data Synchronization</CardTitle>
-        <CardDescription>Manage data synchronization with the database</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-muted-foreground" />
-            <span className="font-medium">Database Sync Status</span>
+        <div className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Data Synchronization</CardTitle>
+            <CardDescription>Sync data with external systems</CardDescription>
           </div>
-          
           <Button 
-            onClick={handleSync} 
-            disabled={syncing}
+            onClick={handleSyncData} 
+            disabled={isSyncing}
             className="flex items-center gap-2"
           >
-            {syncing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> 
-                Syncing...
-              </>
-            ) : (
-              <>
-                <ArrowDownUp className="h-4 w-4" />
-                Synchronize Data
-              </>
-            )}
+            <RotateCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} /> 
+            {isSyncing ? "Syncing..." : "Sync Now"}
           </Button>
         </div>
-        
-        {syncing && (
-          <Alert className="bg-blue-50 border-blue-200">
-            <Clock className="h-4 w-4" />
-            <AlertTitle>Sync in progress</AlertTitle>
-            <AlertDescription>
-              Synchronizing data with the database. This may take a moment...
-            </AlertDescription>
-          </Alert>
-        )}
-        
+      </CardHeader>
+      <CardContent>
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-          </div>
+          <div className="py-8 text-center text-muted-foreground">Loading sync status...</div>
         ) : (
-          <>
-            {syncStatuses.length === 0 ? (
-              <Alert className="bg-amber-50 border-amber-200">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>No sync history</AlertTitle>
-                <AlertDescription>
-                  No synchronization has been performed yet. Click the "Synchronize Data" button to begin.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Table>
-                <TableHeader>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Entity Type</TableHead>
+                  <TableHead>Last Synced</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Records</TableHead>
+                  <TableHead>Progress</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {syncStatuses.length > 0 ? (
+                  syncStatuses.map((status) => (
+                    <TableRow key={status.entityType}>
+                      <TableCell className="font-medium capitalize">
+                        {status.entityType}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {format(new Date(status.lastSyncedAt), "yyyy-MM-dd HH:mm:ss")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`flex items-center gap-1 ${getStatusBadge(status.status)}`}>
+                          {getStatusIcon(status.status)}
+                          {status.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{status.recordsProcessed || 0} records</TableCell>
+                      <TableCell>
+                        <Progress 
+                          value={status.status === 'success' ? 100 : status.status === 'in_progress' ? 50 : 0} 
+                          className="h-2"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
                   <TableRow>
-                    <TableHead>Entity Type</TableHead>
-                    <TableHead>Last Synced</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Records</TableHead>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No sync history available. Click "Sync Now" to start synchronization.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {syncStatuses
-                    .sort((a, b) => new Date(b.lastSyncedAt).getTime() - new Date(a.lastSyncedAt).getTime())
-                    .map((status, index) => (
-                      <TableRow key={`${status.entityType}-${index}`}>
-                        <TableCell className="font-medium">
-                          {formatEntityType(status.entityType)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">
-                              {formatDistance(new Date(status.lastSyncedAt), new Date(), { addSuffix: true })}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(status.status)}</TableCell>
-                        <TableCell>{status.recordsProcessed || "-"}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            )}
-            <div className="text-xs text-muted-foreground mt-2">
-              Next sync should include any changes since the last successful synchronization
-            </div>
-          </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

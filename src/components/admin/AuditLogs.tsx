@@ -1,86 +1,91 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { Search, FileText, RefreshCcw } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { AuditLog } from "@/types";
-import { formatDistance } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { Search, Shield, AlertTriangle, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 const AuditLogs = () => {
-  const { toast } = useToast();
   const { getAuditLogs } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all"); // all, login, resource, system
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterAction, setFilterAction] = useState<string>("");
 
-  // Fetch logs on component mount
   useEffect(() => {
-    fetchLogs();
-  }, []);
+    const fetchLogs = async () => {
+      try {
+        const auditLogs = await getAuditLogs();
+        setLogs(auditLogs);
+      } catch (error) {
+        console.error("Error fetching audit logs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchLogs = async () => {
-    try {
-      setLoading(true);
-      const auditLogs = await getAuditLogs();
-      setLogs(auditLogs);
-    } catch (error) {
-      toast({
-        title: "Failed to load audit logs",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    fetchLogs();
+  }, [getAuditLogs]);
+
+  const getActionIcon = (action: string) => {
+    if (action === "login" || action === "logout" || action === "register") {
+      return <Shield className="h-4 w-4 text-blue-500" />;
+    } else if (action.startsWith("delete") || action.includes("remove")) {
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    } else {
+      return <Info className="h-4 w-4 text-green-500" />;
     }
   };
 
-  // Get unique action types for filtering
-  const actionTypes = Array.from(new Set(logs.map(log => log.action)));
-
-  // Filter logs based on search term and action filter
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.targetResource.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesAction = filterAction ? log.action === filterAction : true;
-    
-    return matchesSearch && matchesAction;
-  });
-
-  // Get badge color for different action types
   const getActionBadgeColor = (action: string) => {
-    if (action.includes('create')) return "bg-green-100 text-green-800";
-    if (action.includes('update') || action.includes('assign')) return "bg-blue-100 text-blue-800";
-    if (action.includes('delete') || action.includes('remove')) return "bg-red-100 text-red-800";
-    if (action.includes('login') || action.includes('logout')) return "bg-purple-100 text-purple-800";
-    return "bg-gray-100 text-gray-800";
+    if (action === "login" || action === "logout" || action === "register") {
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    } else if (action.startsWith("delete") || action.includes("remove")) {
+      return "bg-red-100 text-red-800 border-red-200";
+    } else {
+      return "bg-green-100 text-green-800 border-green-200";
+    }
   };
+
+  const filteredLogs = logs.filter(log => {
+    // Apply category filter
+    if (filter === "login" && !["login", "logout", "register"].includes(log.action)) {
+      return false;
+    }
+    if (filter === "resource" && !["create", "update", "delete"].some(action => log.action.includes(action))) {
+      return false;
+    }
+    if (filter === "system" && !log.action.includes("sync")) {
+      return false;
+    }
+    
+    // Apply search term filter
+    if (searchTerm) {
+      return (
+        log.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.targetResource.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.details.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    return true;
+  });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>Audit Logs</span>
-          <Button size="sm" onClick={fetchLogs} className="flex items-center gap-1">
-            <RefreshCcw className="h-4 w-4" />
-            Refresh
-          </Button>
-        </CardTitle>
+        <CardTitle>Audit Logs</CardTitle>
         <CardDescription>Review system activity and security events</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-grow">
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search logs..."
@@ -90,83 +95,65 @@ const AuditLogs = () => {
             />
           </div>
           
-          <div className="w-full sm:w-64">
-            <Select 
-              value={filterAction}
-              onValueChange={setFilterAction}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by action" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Actions</SelectItem>
-                {actionTypes.map(action => (
-                  <SelectItem key={action} value={action}>
-                    {action.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select 
+            value={filter}
+            onValueChange={setFilter}
+          >
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Events</SelectItem>
+              <SelectItem value="login">Authentication</SelectItem>
+              <SelectItem value="resource">Resource Changes</SelectItem>
+              <SelectItem value="system">System Events</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-          </div>
+          <div className="py-8 text-center text-muted-foreground">Loading audit logs...</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>User ID</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs.length > 0 ? (
-                filteredLogs
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                  .map((log) => (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Resource</TableHead>
+                  <TableHead>Details</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLogs.length > 0 ? (
+                  filteredLogs.map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistance(new Date(log.timestamp), new Date(), { addSuffix: true })}
-                        </span>
+                      <TableCell className="font-mono text-xs">
+                        {format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss")}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{log.userId}</TableCell>
+                      <TableCell>{log.userId}</TableCell>
                       <TableCell>
-                        <Badge className={getActionBadgeColor(log.action)}>
-                          {log.action.replace('_', ' ')}
+                        <Badge className={`flex items-center gap-1 ${getActionBadgeColor(log.action)}`}>
+                          {getActionIcon(log.action)}
+                          {log.action}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{log.targetResource}</TableCell>
-                      <TableCell className="max-w-sm truncate">{log.details}</TableCell>
+                      <TableCell className="max-w-xs truncate">{log.details}</TableCell>
                     </TableRow>
                   ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {logs.length === 0 ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <FileText className="h-8 w-8 text-muted-foreground/50" />
-                        <span>No audit logs found</span>
-                      </div>
-                    ) : (
-                      "No logs match your filters"
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No audit logs found matching your criteria.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
-        
-        <div className="text-xs text-muted-foreground">
-          Showing {filteredLogs.length} of {logs.length} logs
-        </div>
       </CardContent>
     </Card>
   );

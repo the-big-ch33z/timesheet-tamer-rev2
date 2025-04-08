@@ -1,0 +1,105 @@
+
+import React from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, Users } from "lucide-react";
+import { User, UserRole } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface UserTableProps {
+  filteredUsers: User[];
+  onEditUser: (user: User) => void;
+  onDeleteUser: (userId: string) => void;
+}
+
+export const UserTable: React.FC<UserTableProps> = ({ 
+  filteredUsers, 
+  onEditUser, 
+  onDeleteUser 
+}) => {
+  const { getTeamById, teamMemberships } = useAuth();
+
+  const getRoleBadgeColor = (role: UserRole) => {
+    switch (role) {
+      case "admin":
+        return "bg-red-100 text-red-800";
+      case "manager":
+        return "bg-blue-100 text-blue-800";
+      case "team-member":
+        return "bg-green-100 text-green-800";
+    }
+  };
+
+  // Function to get a user's teams
+  const getUserTeams = (userId: string) => {
+    const { teams } = useAuth();
+    const userTeamIds = teamMemberships
+      .filter(membership => membership.userId === userId)
+      .map(membership => membership.teamId);
+      
+    return teams.filter(team => userTeamIds.includes(team.id) || team.managerId === userId);
+  };
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Teams</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredUsers.map(user => {
+          // Get user's teams
+          const userTeams = getUserTeams(user.id);
+          
+          return (
+            <TableRow key={user.id}>
+              <TableCell className="font-medium">{user.name}</TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>
+                <Badge className={getRoleBadgeColor(user.role)}>
+                  {user.role.replace("-", " ")}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {userTeams.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {userTeams.map(team => (
+                      <Badge key={team.id} variant="outline" className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {team.name}
+                        {team.managerId === user.id && " (Manager)"}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-sm italic">No teams</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right space-x-2">
+                <Button variant="ghost" size="icon" onClick={() => onEditUser(user)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onDeleteUser(user.id)} className="text-red-500 hover:text-red-700">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+        {filteredUsers.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+              No users found.
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+};

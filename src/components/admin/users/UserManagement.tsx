@@ -1,0 +1,126 @@
+
+import React, { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { User } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserSearch } from "./UserSearch";
+import { UserTable } from "./UserTable";
+import { EditUserForm } from "./EditUserForm";
+import OrganizationTree from "../OrganizationTree";
+
+const UserManagement = () => {
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showOrgTree, setShowOrgTree] = useState(false);
+
+  // Access authentication context
+  const { users, updateUserRole } = useAuth();
+
+  // Handle search term changes
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  // Handle add user button click
+  const handleAddUser = () => {
+    toast({
+      title: "Add User",
+      description: "User creation functionality will be implemented soon."
+    });
+  };
+  
+  // Handle edit user button click
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsEditUserOpen(true);
+  };
+  
+  // Handle delete user button click
+  const handleDeleteUser = (userId: string) => {
+    toast({
+      title: "Delete User",
+      description: `Deleting user with ID: ${userId}`
+    });
+  };
+
+  // Handle edit user submission
+  const onSubmitEditUser = async (data: { role: typeof selectedUser.role, teamIds?: string[] }) => {
+    if (!selectedUser) return;
+    
+    try {
+      // Update user's role
+      await updateUserRole(selectedUser.id, data.role);
+      
+      // In a real app, we would also update the user's team assignments here
+      // For this demo, we'll just show a toast
+      toast({
+        title: "User Updated",
+        description: `${selectedUser.name}'s role has been updated to ${data.role}.`,
+      });
+      
+      setIsEditUserOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      toast({
+        title: "Error Updating User",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <>
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>Manage user accounts and permissions</CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowOrgTree(!showOrgTree)}
+          >
+            {showOrgTree ? "Hide Organization Tree" : "Show Organization Tree"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <UserSearch 
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            onAddUser={handleAddUser}
+          />
+          
+          <UserTable 
+            filteredUsers={filteredUsers}
+            onEditUser={handleEditUser}
+            onDeleteUser={handleDeleteUser}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Organization Tree Card (conditionally rendered) */}
+      {showOrgTree && <OrganizationTree />}
+
+      {/* Edit User Sheet */}
+      <EditUserForm 
+        isOpen={isEditUserOpen}
+        onOpenChange={setIsEditUserOpen}
+        selectedUser={selectedUser}
+        onSubmit={onSubmitEditUser}
+      />
+    </>
+  );
+};
+
+export default UserManagement;
