@@ -7,7 +7,11 @@ import { SignupForm } from "@/components/auth/SignupForm";
 import { useAuth } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
 
-const Auth = () => {
+interface AuthProps {
+  mode?: "login" | "signup";
+}
+
+const Auth: React.FC<AuthProps> = ({ mode = "login" }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -27,7 +31,7 @@ const Auth = () => {
             <CardDescription className="text-center">Manage your time efficiently across all devices</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" className="w-full">
+            <Tabs defaultValue={mode} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>

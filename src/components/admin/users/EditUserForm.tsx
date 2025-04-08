@@ -134,7 +134,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto" size="lg">
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Edit User</SheetTitle>
           <SheetDescription>
