@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Settings, Users } from "lucide-react";
+import { PlusCircle, Settings, UserPlus, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AddTeamMemberDialog } from "@/components/admin/teams/AddTeamMemberDialog";
+import { Team } from "@/types";
 
 const TeamsList = () => {
   const { teams, getUserById, users, currentUser } = useAuth();
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   // Filter teams by organization or by manager (if current user is a manager)
   const filteredTeams = teams.filter(team => {
@@ -33,6 +37,11 @@ const TeamsList = () => {
 
   const getTeamMemberCount = (teamId: string) => {
     return users.filter(user => user.teamIds?.includes(teamId)).length;
+  };
+
+  const handleAddMember = (team: Team) => {
+    setSelectedTeam(team);
+    setIsAddMemberOpen(true);
   };
 
   return (
@@ -94,6 +103,15 @@ const TeamsList = () => {
                   
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-1"
+                        onClick={() => handleAddMember(team)}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add Member
+                      </Button>
                       <Button variant="outline" size="sm" className="flex items-center gap-1">
                         <Settings className="h-4 w-4" />
                         Manage
@@ -106,6 +124,13 @@ const TeamsList = () => {
           </Table>
         </div>
       )}
+
+      {/* Add Team Member Dialog */}
+      <AddTeamMemberDialog 
+        open={isAddMemberOpen} 
+        onOpenChange={setIsAddMemberOpen} 
+        team={selectedTeam} 
+      />
     </div>
   );
 };
