@@ -25,6 +25,8 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import TeamsList from "@/components/manager/TeamsList";
+import { useAuth } from "@/contexts/auth";
 
 type TeamMember = {
   id: string;
@@ -90,12 +92,14 @@ const TEAM_MEMBERS: TeamMember[] = [
 const Manager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTab, setSelectedTab] = useState("overview");
+  const { teams } = useAuth();
   
   // Calculate stats
   const activeEmployeesCount = TEAM_MEMBERS.filter(m => m.status === "active").length;
   const totalToilHours = TEAM_MEMBERS.reduce((total, member) => total + member.toilBalance, 0);
   const pendingApprovalsCount = 0; // Mock data - would come from a real API
   const totalBankedLeave = TEAM_MEMBERS.reduce((total, member) => total + member.bankedLeave, 0);
+  const teamsCount = teams.length;
 
   // Filter team members based on search query
   const filteredMembers = TEAM_MEMBERS.filter((member) =>
@@ -111,7 +115,7 @@ const Manager = () => {
       </div>
       
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -167,12 +171,27 @@ const Manager = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-green-50 p-3 rounded-full">
+                <Users className="h-6 w-6 text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Teams</p>
+                <h2 className="text-3xl font-bold">{teamsCount}</h2>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full" onValueChange={setSelectedTab}>
         <TabsList className="bg-muted/50">
           <TabsTrigger value="overview">Employee Overview</TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="toil-report">TOIL Approval Report</TabsTrigger>
           <TabsTrigger value="dta-report">DTA Approval Report</TabsTrigger>
         </TabsList>
@@ -270,6 +289,10 @@ const Manager = () => {
               </Table>
             </div>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="teams">
+          <TeamsList />
         </TabsContent>
         
         <TabsContent value="toil-report">
