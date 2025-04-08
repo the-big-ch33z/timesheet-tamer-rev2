@@ -24,82 +24,12 @@ const Settings = () => {
     <div className="container py-8">
       <h1 className="text-3xl font-bold text-brand-800 mb-6">Settings</h1>
       
-      <Tabs defaultValue="account" className="space-y-6">
+      <Tabs defaultValue="notifications" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="timesheets">Timesheets</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="account" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your account details and profile information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" defaultValue="John Doe" />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" defaultValue="john.doe@example.com" />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="title">Job Title</Label>
-                  <Input id="title" defaultValue="Frontend Developer" />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button onClick={saveSettings}>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription>
-                Update your password to keep your account secure
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input id="current-password" type="password" />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input id="new-password" type="password" />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input id="confirm-password" type="password" />
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button onClick={saveSettings}>Update Password</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
         
         <TabsContent value="notifications" className="space-y-6">
           <Card>
