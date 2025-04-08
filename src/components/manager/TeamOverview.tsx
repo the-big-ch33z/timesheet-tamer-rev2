@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
 import { Calendar, Edit, Filter, RefreshCw, Trash, UserPlus, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Team, User } from "@/types";
+import { AddTeamMemberDialog } from "./AddTeamMemberDialog";
 
 interface TeamOverviewProps {
   teams: Team[];
@@ -33,6 +34,8 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
   teamMembers,
   onRefreshData,
 }) => {
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  
   return (
     <div className="bg-white rounded-lg border p-6">
       <div className="flex justify-between items-center mb-6">
@@ -78,7 +81,12 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
           </Button>
           
           {selectedTeam && (
-            <Button variant="default" size="sm" className="gap-1">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="gap-1"
+              onClick={() => setIsAddMemberOpen(true)}
+            >
               <UserPlus className="h-4 w-4" />
               Add Team Member
             </Button>
@@ -168,6 +176,13 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
           </p>
         </div>
       )}
+      
+      {/* Add Team Member Dialog */}
+      <AddTeamMemberDialog 
+        open={isAddMemberOpen} 
+        onOpenChange={setIsAddMemberOpen} 
+        team={selectedTeam} 
+      />
     </div>
   );
 };
