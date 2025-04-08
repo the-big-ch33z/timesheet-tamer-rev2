@@ -21,6 +21,7 @@ const defaultAuthContext: AuthContextType = {
   logout: () => {},
   register: async () => {},
   createTeam: async () => ({ id: '', name: '', organizationId: '', managerId: '' }),
+  addUser: async () => ({ id: '', email: '', name: '', role: 'team-member', organizationId: '' }),
   addTeamMember: async () => ({ id: '', email: '', name: '', role: 'team-member', organizationId: '' }),
   updateUserRole: async () => {},
   assignManagerToTeam: async () => {},
