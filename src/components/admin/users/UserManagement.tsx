@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User } from "@/types";
+import { User, UserRole } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
