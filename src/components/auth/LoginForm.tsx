@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const LoginForm = () => {
   const [email, setEmail] = React.useState("");
@@ -12,17 +13,15 @@ export const LoginForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Here you would integrate with your authentication provider
-      console.log("Login attempt with:", { email, password });
-      
-      // Mock successful login
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Use the login function from AuthContext
+      await login(email, password);
       
       toast({
         title: "Success",
