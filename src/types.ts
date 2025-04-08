@@ -34,13 +34,30 @@ export type ResourceType = 'user' | 'team' | 'project' | 'timesheet' | 'report' 
 
 // New work schedule related types
 export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+export type WeekNumber = 1 | 2;
 
 export interface WorkHours {
   startTime: string; // Format: "HH:MM" in 24h format
   endTime: string; // Format: "HH:MM" in 24h format
 }
 
+// Updated WorkSchedule with two-week rotation support
 export interface WorkSchedule {
+  id: string;
+  name: string;
+  weeks: {
+    1: Record<WeekDay, WorkHours | null>; // Week 1
+    2: Record<WeekDay, WorkHours | null>; // Week 2
+  };
+  rdoDays: {
+    1: WeekDay[]; // Week 1 RDOs
+    2: WeekDay[]; // Week 2 RDOs
+  };
+  isDefault?: boolean;
+}
+
+// Legacy work days structure for compatibility
+export interface LegacyWorkSchedule {
   id: string;
   name: string;
   workDays: Record<WeekDay, WorkHours | null>; // null means day off

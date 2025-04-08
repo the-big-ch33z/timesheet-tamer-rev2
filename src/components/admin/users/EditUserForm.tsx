@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,35 +7,19 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { UserRole, User, WeekDay, WorkSchedule } from "@/types";
+import { UserRole, User } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-
-// Default work schedule
-const defaultWorkSchedule: WorkSchedule = {
-  id: 'default',
-  name: 'Default Schedule',
-  workDays: {
-    monday: { startTime: '09:00', endTime: '17:00' },
-    tuesday: { startTime: '09:00', endTime: '17:00' },
-    wednesday: { startTime: '09:00', endTime: '17:00' },
-    thursday: { startTime: '09:00', endTime: '17:00' },
-    friday: { startTime: '09:00', endTime: '17:00' },
-    saturday: null,
-    sunday: null
-  },
-  rdoDays: [],
-  isDefault: true
-};
+import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
   role: z.enum(["admin", "manager", "team-member"] as const),
   teamIds: z.array(z.string()).optional(),
   useDefaultSchedule: z.boolean().default(true),
+  scheduleId: z.string().optional(),
 });
 
 type UserEditFormValues = z.infer<typeof userEditSchema>;
@@ -44,7 +28,7 @@ interface EditUserFormProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedUser: User | null;
-  onSubmit: (data: UserEditFormValues & { workSchedule?: WorkSchedule }) => Promise<void>;
+  onSubmit: (data: UserEditFormValues) => Promise<void>;
 }
 
 export const EditUserForm: React.FC<EditUserFormProps> = ({
@@ -53,13 +37,17 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   selectedUser,
   onSubmit
 }) => {
-  const weekDays: WeekDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const [activeTab, setActiveTab] = useState<string>("role");
-  const [userWorkSchedule, setUserWorkSchedule] = useState<WorkSchedule>({
-    ...defaultWorkSchedule,
-    id: `schedule-${Date.now()}`,
-    isDefault: false,
-  });
+  
+  // Access work schedule context
+  const { 
+    getAllSchedules, 
+    getUserSchedule, 
+    assignScheduleToUser 
+  } = useWorkSchedule();
+  
+  // Get all available schedules
+  const schedules = getAllSchedules();
   
   // Setup form for editing a user
   const form = useForm<UserEditFormValues>({
@@ -67,69 +55,40 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     defaultValues: {
       role: selectedUser?.role || "team-member",
       teamIds: selectedUser?.teamIds || [],
-      useDefaultSchedule: selectedUser?.useDefaultSchedule !== false,
+      useDefaultSchedule: selectedUser?.workScheduleId ? false : true,
+      scheduleId: selectedUser?.workScheduleId || 'default',
     },
   });
 
   // Update form when selected user changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedUser) {
       form.setValue("role", selectedUser.role);
       form.setValue("teamIds", selectedUser.teamIds || []);
-      form.setValue("useDefaultSchedule", selectedUser.useDefaultSchedule !== false);
       
-      // In a real app, you would fetch the user's work schedule if they have one
-      // For now, we'll just use the default
-      setUserWorkSchedule({
-        ...defaultWorkSchedule,
-        id: selectedUser.workScheduleId || `schedule-${Date.now()}`,
-        isDefault: false,
-      });
+      const hasCustomSchedule = selectedUser.workScheduleId && selectedUser.workScheduleId !== 'default';
+      form.setValue("useDefaultSchedule", !hasCustomSchedule);
+      form.setValue("scheduleId", selectedUser.workScheduleId || 'default');
     }
   }, [selectedUser, form]);
 
   const handleSubmit = async (values: UserEditFormValues) => {
-    // If not using default schedule, include the custom one
-    if (!values.useDefaultSchedule) {
-      await onSubmit({ ...values, workSchedule: userWorkSchedule });
-    } else {
+    if (!selectedUser) return;
+    
+    try {
+      // If not using default schedule, ensure we have a schedule ID
+      if (!values.useDefaultSchedule && values.scheduleId) {
+        assignScheduleToUser(selectedUser.id, values.scheduleId);
+      } else if (values.useDefaultSchedule) {
+        // Reset to default
+        assignScheduleToUser(selectedUser.id, 'default');
+      }
+      
+      // Submit the rest of the form values
       await onSubmit(values);
+    } catch (error) {
+      console.error("Error updating user:", error);
     }
-  };
-
-  const updateWorkDay = (day: WeekDay, isWorkDay: boolean) => {
-    setUserWorkSchedule(prev => ({
-      ...prev,
-      workDays: {
-        ...prev.workDays,
-        [day]: isWorkDay ? { startTime: '09:00', endTime: '17:00' } : null
-      }
-    }));
-  };
-
-  const updateWorkHours = (day: WeekDay, field: 'startTime' | 'endTime', value: string) => {
-    setUserWorkSchedule(prev => ({
-      ...prev,
-      workDays: {
-        ...prev.workDays,
-        [day]: {
-          ...prev.workDays[day]!,
-          [field]: value
-        }
-      }
-    }));
-  };
-
-  const toggleRdoDay = (day: WeekDay) => {
-    setUserWorkSchedule(prev => {
-      const isRdo = prev.rdoDays.includes(day);
-      return {
-        ...prev,
-        rdoDays: isRdo
-          ? prev.rdoDays.filter(d => d !== day)
-          : [...prev.rdoDays, day]
-      };
-    });
   };
 
   return (
@@ -216,71 +175,48 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
 
                 {!form.watch("useDefaultSchedule") && (
                   <div className="space-y-6 pt-2">
-                    <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <Label>Schedule Name</Label>
-                        <Input
-                          value={userWorkSchedule.name}
-                          onChange={(e) => setUserWorkSchedule({...userWorkSchedule, name: e.target.value})}
-                          placeholder="Custom Schedule"
-                        />
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="scheduleId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Assigned Schedule</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select schedule" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {schedules.filter(s => !s.isDefault).map((schedule) => (
+                                <SelectItem key={schedule.id} value={schedule.id}>
+                                  {schedule.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                    <Separator />
-
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Working Days & Hours</h3>
-                      <div className="space-y-4">
-                        {weekDays.map((day) => (
-                          <div key={day} className="flex flex-wrap items-center gap-4">
-                            <div className="w-28 capitalize">{day}</div>
-                            <div className="flex items-center gap-2">
-                              <Switch 
-                                checked={userWorkSchedule.workDays[day] !== null}
-                                onCheckedChange={(checked) => updateWorkDay(day, checked)}
-                              />
-                              <span className="text-sm text-gray-500">
-                                {userWorkSchedule.workDays[day] ? 'Working Day' : 'Day Off'}
-                              </span>
-                            </div>
-
-                            {userWorkSchedule.workDays[day] && (
-                              <>
-                                <div className="flex items-center gap-2 ml-4">
-                                  <Label htmlFor={`start-${day}`} className="w-20 text-sm">Start Time</Label>
-                                  <Input
-                                    id={`start-${day}`}
-                                    type="time"
-                                    value={userWorkSchedule.workDays[day]?.startTime}
-                                    onChange={(e) => updateWorkHours(day, 'startTime', e.target.value)}
-                                    className="w-24"
-                                  />
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <Label htmlFor={`end-${day}`} className="w-20 text-sm">End Time</Label>
-                                  <Input
-                                    id={`end-${day}`}
-                                    type="time"
-                                    value={userWorkSchedule.workDays[day]?.endTime}
-                                    onChange={(e) => updateWorkHours(day, 'endTime', e.target.value)}
-                                    className="w-24"
-                                  />
-                                </div>
-                                
-                                <div className="flex items-center gap-2 ml-4">
-                                  <Label htmlFor={`rdo-${day}`} className="text-sm">RDO</Label>
-                                  <Switch
-                                    id={`rdo-${day}`}
-                                    checked={userWorkSchedule.rdoDays.includes(day)}
-                                    onCheckedChange={() => toggleRdoDay(day)}
-                                  />
-                                </div>
-                              </>
-                            )}
+                    <div className="pt-4">
+                      <h3 className="text-sm font-medium mb-2">Schedule Preview</h3>
+                      <div className="bg-gray-50 p-4 rounded border text-sm">
+                        {form.watch("scheduleId") && schedules.find(s => s.id === form.watch("scheduleId")) ? (
+                          <div>
+                            <p className="font-medium">{schedules.find(s => s.id === form.watch("scheduleId"))?.name}</p>
+                            <p className="text-muted-foreground mt-1">
+                              This schedule has specific hours defined for each day across a two-week rotation.
+                            </p>
                           </div>
-                        ))}
+                        ) : (
+                          <p className="text-muted-foreground">Select a schedule to see details</p>
+                        )}
                       </div>
                     </div>
                   </div>

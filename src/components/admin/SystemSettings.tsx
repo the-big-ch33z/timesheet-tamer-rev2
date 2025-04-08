@@ -6,14 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { EntryFieldConfig, WeekDay, WorkHours, WorkSchedule } from "@/types";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { 
+  EntryFieldConfig, 
+  WeekDay, 
+  WorkSchedule 
+} from "@/types";
+import { GripVertical, Plus, Trash2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const SystemSettings = () => {
   const { toast } = useToast();
+  const { 
+    defaultSchedule, 
+    updateDefaultSchedule, 
+    createSchedule, 
+    updateSchedule,
+    deleteSchedule,
+    getAllSchedules
+  } = useWorkSchedule();
   
   const [entryFields, setEntryFields] = useState<EntryFieldConfig[]>([
     { id: '1', name: 'Project', type: 'select', required: true, options: ['Website Redesign', 'Mobile App', 'Client Meeting'], visible: true },
@@ -23,30 +37,105 @@ const SystemSettings = () => {
     { id: '5', name: 'End Time', type: 'time', required: false, visible: true },
   ]);
 
-  // Work Schedule State
-  const [defaultWorkSchedule, setDefaultWorkSchedule] = useState<WorkSchedule>({
-    id: 'default',
-    name: 'Default Schedule',
-    workDays: {
-      monday: { startTime: '09:00', endTime: '17:00' },
-      tuesday: { startTime: '09:00', endTime: '17:00' },
-      wednesday: { startTime: '09:00', endTime: '17:00' },
-      thursday: { startTime: '09:00', endTime: '17:00' },
-      friday: { startTime: '09:00', endTime: '17:00' },
-      saturday: null,
-      sunday: null
-    },
-    rdoDays: [],
-    isDefault: true
-  });
+  // States for schedule management
+  const [activeWeek, setActiveWeek] = useState<1 | 2>(1);
+  const [showCreateScheduleDialog, setShowCreateScheduleDialog] = useState(false);
+  const [schedules, setSchedules] = useState(() => getAllSchedules());
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string>(defaultSchedule.id);
+  const [editingSchedule, setEditingSchedule] = useState<WorkSchedule>({...defaultSchedule});
+  const [newScheduleName, setNewScheduleName] = useState('');
 
   const weekDays: WeekDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-  const saveSettings = () => {
+  // Function to save work schedule changes
+  const saveSchedule = () => {
+    if (editingSchedule.id === 'default') {
+      updateDefaultSchedule(editingSchedule);
+    } else {
+      updateSchedule(editingSchedule.id, editingSchedule);
+    }
+    
+    // Refresh schedules list
+    setSchedules(getAllSchedules());
+    
     toast({
-      title: "Settings saved",
-      description: "Your system settings have been updated",
+      title: "Schedule saved",
+      description: `"${editingSchedule.name}" schedule has been saved successfully`,
     });
+  };
+
+  // Function to create a new schedule
+  const handleCreateSchedule = () => {
+    if (!newScheduleName.trim()) {
+      toast({
+        title: "Schedule name required",
+        description: "Please enter a name for the new schedule",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newSchedule: WorkSchedule = {
+      id: `schedule-${Date.now()}`,
+      name: newScheduleName,
+      weeks: {
+        1: {
+          monday: { startTime: '09:00', endTime: '17:00' },
+          tuesday: { startTime: '09:00', endTime: '17:00' },
+          wednesday: { startTime: '09:00', endTime: '17:00' },
+          thursday: { startTime: '09:00', endTime: '17:00' },
+          friday: { startTime: '09:00', endTime: '17:00' },
+          saturday: null,
+          sunday: null
+        },
+        2: {
+          monday: { startTime: '09:00', endTime: '17:00' },
+          tuesday: { startTime: '09:00', endTime: '17:00' },
+          wednesday: { startTime: '09:00', endTime: '17:00' },
+          thursday: { startTime: '09:00', endTime: '17:00' },
+          friday: { startTime: '09:00', endTime: '17:00' },
+          saturday: null,
+          sunday: null
+        }
+      },
+      rdoDays: {
+        1: [],
+        2: []
+      }
+    };
+    
+    createSchedule(newSchedule);
+    setSchedules(getAllSchedules());
+    setSelectedScheduleId(newSchedule.id);
+    setEditingSchedule(newSchedule);
+    setNewScheduleName('');
+    setShowCreateScheduleDialog(false);
+  };
+
+  // Function to handle schedule selection change
+  const handleScheduleChange = (scheduleId: string) => {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (schedule) {
+      setSelectedScheduleId(scheduleId);
+      setEditingSchedule({...schedule});
+    }
+  };
+
+  // Function to delete a schedule
+  const handleDeleteSchedule = () => {
+    if (selectedScheduleId === 'default') {
+      toast({
+        title: "Cannot delete default schedule",
+        description: "The default schedule cannot be deleted",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    deleteSchedule(selectedScheduleId);
+    setSchedules(getAllSchedules());
+    setSelectedScheduleId('default');
+    setEditingSchedule({...defaultSchedule});
   };
 
   const addField = () => {
@@ -72,37 +161,39 @@ const SystemSettings = () => {
   };
 
   const updateWorkDay = (day: WeekDay, isWorkDay: boolean) => {
-    setDefaultWorkSchedule(prev => ({
-      ...prev,
-      workDays: {
-        ...prev.workDays,
-        [day]: isWorkDay ? { startTime: '09:00', endTime: '17:00' } : null
-      }
-    }));
+    const updatedSchedule = {...editingSchedule};
+    updatedSchedule.weeks[activeWeek][day] = isWorkDay 
+      ? { startTime: '09:00', endTime: '17:00' } 
+      : null;
+    setEditingSchedule(updatedSchedule);
   };
 
   const updateWorkHours = (day: WeekDay, field: 'startTime' | 'endTime', value: string) => {
-    setDefaultWorkSchedule(prev => ({
-      ...prev,
-      workDays: {
-        ...prev.workDays,
-        [day]: {
-          ...prev.workDays[day]!,
-          [field]: value
-        }
-      }
-    }));
+    const updatedSchedule = {...editingSchedule};
+    if (updatedSchedule.weeks[activeWeek][day]) {
+      updatedSchedule.weeks[activeWeek][day] = {
+        ...updatedSchedule.weeks[activeWeek][day]!,
+        [field]: value
+      };
+      setEditingSchedule(updatedSchedule);
+    }
   };
 
   const toggleRdoDay = (day: WeekDay) => {
-    setDefaultWorkSchedule(prev => {
-      const isRdo = prev.rdoDays.includes(day);
-      return {
-        ...prev,
-        rdoDays: isRdo
-          ? prev.rdoDays.filter(d => d !== day)
-          : [...prev.rdoDays, day]
-      };
+    const updatedSchedule = {...editingSchedule};
+    const isRdo = updatedSchedule.rdoDays[activeWeek].includes(day);
+    
+    updatedSchedule.rdoDays[activeWeek] = isRdo
+      ? updatedSchedule.rdoDays[activeWeek].filter(d => d !== day)
+      : [...updatedSchedule.rdoDays[activeWeek], day];
+    
+    setEditingSchedule(updatedSchedule);
+  };
+
+  const saveSettings = () => {
+    toast({
+      title: "Settings saved",
+      description: "Your system settings have been updated",
     });
   };
 
@@ -110,7 +201,7 @@ const SystemSettings = () => {
     <Tabs defaultValue="fields">
       <TabsList className="mb-4">
         <TabsTrigger value="fields">Entry Fields</TabsTrigger>
-        <TabsTrigger value="schedule">Work Schedule</TabsTrigger>
+        <TabsTrigger value="schedule">Work Schedules</TabsTrigger>
       </TabsList>
 
       <TabsContent value="fields">
@@ -206,21 +297,79 @@ const SystemSettings = () => {
 
       <TabsContent value="schedule">
         <Card>
-          <CardHeader>
-            <CardTitle>Default Work Schedule</CardTitle>
-            <CardDescription>
-              Configure the default work schedule for all users
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Work Schedules</CardTitle>
+              <CardDescription>
+                Configure work schedules for your organization
+              </CardDescription>
+            </div>
+            <Dialog open={showCreateScheduleDialog} onOpenChange={setShowCreateScheduleDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" /> Create Schedule
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Schedule</DialogTitle>
+                  <DialogDescription>
+                    Enter a name for the new work schedule
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Label htmlFor="schedule-name">Schedule Name</Label>
+                  <Input
+                    id="schedule-name"
+                    value={newScheduleName}
+                    onChange={(e) => setNewScheduleName(e.target.value)}
+                    placeholder="e.g., Night Shift, Rotating Shift"
+                    className="mt-2"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCreateScheduleDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateSchedule}>Create</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               <div className="grid gap-4">
                 <div className="space-y-2">
+                  <Label>Select Schedule</Label>
+                  <Select
+                    value={selectedScheduleId}
+                    onValueChange={handleScheduleChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {schedules.map(schedule => (
+                        <SelectItem key={schedule.id} value={schedule.id}>
+                          {schedule.name}{schedule.isDefault ? " (Default)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Schedule Name</Label>
                   <Input
-                    value={defaultWorkSchedule.name}
-                    onChange={(e) => setDefaultWorkSchedule({...defaultWorkSchedule, name: e.target.value})}
+                    value={editingSchedule.name}
+                    onChange={(e) => setEditingSchedule({...editingSchedule, name: e.target.value})}
+                    disabled={editingSchedule.isDefault}
                   />
+                  {editingSchedule.isDefault && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The default schedule name cannot be changed.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -228,49 +377,63 @@ const SystemSettings = () => {
 
               <div>
                 <h3 className="text-lg font-medium mb-4">Working Days & Hours</h3>
+                
+                <div className="flex justify-between items-center mb-4">
+                  <Tabs 
+                    value={String(activeWeek)}
+                    onValueChange={(value) => setActiveWeek(Number(value) as 1 | 2)}
+                    className="w-[200px]"
+                  >
+                    <TabsList>
+                      <TabsTrigger value="1">Week 1</TabsTrigger>
+                      <TabsTrigger value="2">Week 2</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                
                 <div className="space-y-4">
                   {weekDays.map((day) => (
-                    <div key={day} className="flex items-center gap-4">
+                    <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
                       <div className="w-28 capitalize">{day}</div>
                       <div className="flex items-center gap-2">
                         <Switch 
-                          checked={defaultWorkSchedule.workDays[day] !== null}
+                          checked={editingSchedule.weeks[activeWeek][day] !== null}
                           onCheckedChange={(checked) => updateWorkDay(day, checked)}
                         />
                         <span className="text-sm text-gray-500">
-                          {defaultWorkSchedule.workDays[day] ? 'Working Day' : 'Day Off'}
+                          {editingSchedule.weeks[activeWeek][day] ? 'Working Day' : 'Day Off'}
                         </span>
                       </div>
 
-                      {defaultWorkSchedule.workDays[day] && (
+                      {editingSchedule.weeks[activeWeek][day] && (
                         <>
                           <div className="flex items-center gap-2 ml-4">
-                            <Label htmlFor={`start-${day}`} className="w-20 text-sm">Start Time</Label>
+                            <Label htmlFor={`start-${activeWeek}-${day}`} className="w-20 text-sm">Start Time</Label>
                             <Input
-                              id={`start-${day}`}
+                              id={`start-${activeWeek}-${day}`}
                               type="time"
-                              value={defaultWorkSchedule.workDays[day]?.startTime}
+                              value={editingSchedule.weeks[activeWeek][day]?.startTime}
                               onChange={(e) => updateWorkHours(day, 'startTime', e.target.value)}
                               className="w-24"
                             />
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <Label htmlFor={`end-${day}`} className="w-20 text-sm">End Time</Label>
+                            <Label htmlFor={`end-${activeWeek}-${day}`} className="w-20 text-sm">End Time</Label>
                             <Input
-                              id={`end-${day}`}
+                              id={`end-${activeWeek}-${day}`}
                               type="time"
-                              value={defaultWorkSchedule.workDays[day]?.endTime}
+                              value={editingSchedule.weeks[activeWeek][day]?.endTime}
                               onChange={(e) => updateWorkHours(day, 'endTime', e.target.value)}
                               className="w-24"
                             />
                           </div>
                           
                           <div className="flex items-center gap-2 ml-4">
-                            <Label htmlFor={`rdo-${day}`} className="text-sm">RDO</Label>
+                            <Label htmlFor={`rdo-${activeWeek}-${day}`} className="text-sm">RDO</Label>
                             <Switch
-                              id={`rdo-${day}`}
-                              checked={defaultWorkSchedule.rdoDays.includes(day)}
+                              id={`rdo-${activeWeek}-${day}`}
+                              checked={editingSchedule.rdoDays[activeWeek].includes(day)}
                               onCheckedChange={() => toggleRdoDay(day)}
                             />
                           </div>
@@ -281,8 +444,19 @@ const SystemSettings = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button onClick={saveSettings}>Save Schedule</Button>
+              <div className="flex justify-between pt-4">
+                {!editingSchedule.isDefault && (
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteSchedule}
+                    disabled={editingSchedule.isDefault}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete Schedule
+                  </Button>
+                )}
+                <Button onClick={saveSchedule}>
+                  <Save className="h-4 w-4 mr-1" /> Save Schedule
+                </Button>
               </div>
             </div>
           </CardContent>

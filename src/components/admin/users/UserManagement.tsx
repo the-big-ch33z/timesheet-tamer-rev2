@@ -2,9 +2,10 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, WorkSchedule } from "@/types";
+import { User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
+import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
 import { UserSearch } from "./UserSearch";
 import { UserTable } from "./UserTable";
 import { EditUserForm } from "./EditUserForm";
@@ -19,8 +20,9 @@ const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showOrgTree, setShowOrgTree] = useState(false);
 
-  // Access authentication context
+  // Access authentication and work schedule contexts
   const { users, updateUserRole } = useAuth();
+  const { assignScheduleToUser } = useWorkSchedule();
 
   // Handle search term changes
   const handleSearchChange = (term: string) => {
@@ -48,10 +50,10 @@ const UserManagement = () => {
 
   // Handle edit user submission
   const onSubmitEditUser = async (data: { 
-    role: typeof selectedUser.role, 
-    teamIds?: string[],
-    useDefaultSchedule?: boolean,
-    workSchedule?: WorkSchedule 
+    role: UserRole;
+    teamIds?: string[];
+    useDefaultSchedule?: boolean;
+    scheduleId?: string;
   }) => {
     if (!selectedUser) return;
     
@@ -59,15 +61,18 @@ const UserManagement = () => {
       // Update user's role
       await updateUserRole(selectedUser.id, data.role);
       
-      // In a real app, we would also update the user's work schedule and team assignments here
-      // For this demo, we'll just show a toast with the information
-      const scheduleInfo = data.useDefaultSchedule 
-        ? "Default work schedule will be used." 
-        : `Custom schedule "${data.workSchedule?.name}" will be used.`;
+      // Handle work schedule assignment
+      if (data.useDefaultSchedule) {
+        // Reset to default schedule
+        assignScheduleToUser(selectedUser.id, 'default');
+      } else if (data.scheduleId) {
+        // Assign to custom schedule
+        assignScheduleToUser(selectedUser.id, data.scheduleId);
+      }
       
       toast({
         title: "User Updated",
-        description: `${selectedUser.name}'s role has been updated to ${data.role}. ${scheduleInfo}`,
+        description: `${selectedUser.name}'s role and schedule have been updated.`,
       });
       
       setIsEditUserOpen(false);
