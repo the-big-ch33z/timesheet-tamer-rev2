@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { UserSearch } from "./UserSearch";
 import { UserTable } from "./UserTable";
 import { EditUserForm } from "./EditUserForm";

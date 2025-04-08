@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Users } from "lucide-react";
 import { User, UserRole } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface UserTableProps {
   filteredUsers: User[];
@@ -31,7 +30,6 @@ export const UserTable: React.FC<UserTableProps> = ({
     }
   };
 
-  // Function to get a user's teams
   const getUserTeams = (userId: string) => {
     const { teams } = useAuth();
     const userTeamIds = teamMemberships
@@ -54,7 +52,6 @@ export const UserTable: React.FC<UserTableProps> = ({
       </TableHeader>
       <TableBody>
         {filteredUsers.map(user => {
-          // Get user's teams
           const userTeams = getUserTeams(user.id);
           
           return (

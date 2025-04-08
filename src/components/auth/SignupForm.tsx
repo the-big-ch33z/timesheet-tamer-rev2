@@ -1,10 +1,9 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth";
 
 export const SignupForm = () => {
   const [name, setName] = React.useState("");
@@ -20,7 +19,6 @@ export const SignupForm = () => {
     setIsLoading(true);
 
     try {
-      // Use the register function from AuthContext
       await register(email, name, password, organization);
       
       toast({

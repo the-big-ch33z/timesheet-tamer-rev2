@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { UserRole } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Shield, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 

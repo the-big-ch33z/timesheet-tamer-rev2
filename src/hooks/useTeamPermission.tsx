@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useRolePermission } from '@/hooks/useRolePermission';
 import { User, Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';

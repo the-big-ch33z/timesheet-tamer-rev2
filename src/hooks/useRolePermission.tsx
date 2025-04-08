@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { canPerformAction, canAccessRoute } from '@/lib/routeProtection';
 
 export function useRolePermission() {

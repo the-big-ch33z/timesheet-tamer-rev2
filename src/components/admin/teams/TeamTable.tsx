@@ -3,7 +3,7 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Users, UserPlus, User as UserIcon } from "lucide-react";
 import { RoleBadge } from "@/components/common/RoleBasedUI";
 import { Team } from "@/types";
