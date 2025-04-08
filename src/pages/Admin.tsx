@@ -2,6 +2,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserManagement from "@/components/admin/UserManagement";
+import TeamManagement from "@/components/admin/TeamManagement";
 import ProjectManagement from "@/components/admin/ProjectManagement";
 import HolidayManagement from "@/components/admin/HolidayManagement";
 import SystemSettings from "@/components/admin/SystemSettings";
@@ -15,6 +16,7 @@ const Admin = () => {
       <Tabs defaultValue="users">
         <TabsList className="mb-4">
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="holidays">Public Holidays</TabsTrigger>
           <TabsTrigger value="system">System Settings</TabsTrigger>
@@ -23,6 +25,10 @@ const Admin = () => {
         
         <TabsContent value="users">
           <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="teams">
+          <TeamManagement />
         </TabsContent>
         
         <TabsContent value="projects">
