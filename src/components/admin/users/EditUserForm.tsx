@@ -20,14 +20,14 @@ const userEditSchema = z.object({
   teamIds: z.array(z.string()).optional(),
   useDefaultSchedule: z.boolean().default(true),
   scheduleId: z.string().optional(),
-  fte: z.string().transform((val) => parseFloat(val)).refine(
-    (val) => !isNaN(val) && val >= 0 && val <= 1, 
-    { message: "FTE must be between 0 and 1" }
-  ).optional(),
-  fortnightHours: z.string().transform((val) => parseFloat(val)).refine(
-    (val) => !isNaN(val) && val >= 0, 
-    { message: "Required hours must be a positive number" }
-  ).optional(),
+  fte: z.string().transform((val) => {
+    const parsed = parseFloat(val);
+    return !isNaN(parsed) ? parsed : 1.0;
+  }),
+  fortnightHours: z.string().transform((val) => {
+    const parsed = parseFloat(val);
+    return !isNaN(parsed) ? parsed : 76;
+  }),
 });
 
 type UserEditFormValues = z.infer<typeof userEditSchema>;
@@ -63,8 +63,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       teamIds: selectedUser?.teamIds || [],
       useDefaultSchedule: selectedUser?.workScheduleId ? false : true,
       scheduleId: selectedUser?.workScheduleId || 'default',
-      fte: selectedUser?.fte?.toString() || "1.0",
-      fortnightHours: selectedUser?.fortnightHours?.toString() || "76",
+      fte: selectedUser?.fte !== undefined ? selectedUser.fte.toString() : "1.0",
+      fortnightHours: selectedUser?.fortnightHours !== undefined ? selectedUser.fortnightHours.toString() : "76",
     },
   });
 
@@ -77,8 +77,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       const hasCustomSchedule = selectedUser.workScheduleId && selectedUser.workScheduleId !== 'default';
       form.setValue("useDefaultSchedule", !hasCustomSchedule);
       form.setValue("scheduleId", selectedUser.workScheduleId || 'default');
-      form.setValue("fte", selectedUser.fte?.toString() || "1.0");
-      form.setValue("fortnightHours", selectedUser.fortnightHours?.toString() || "76");
+      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte.toString() : "1.0");
+      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? selectedUser.fortnightHours.toString() : "76");
     }
   }, [selectedUser, form]);
 
@@ -94,7 +94,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         assignScheduleToUser(selectedUser.id, 'default');
       }
       
-      // Submit the rest of the form values
+      // Submit the form values - Zod will transform the string values to numbers
       await onSubmit(values);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -284,4 +284,3 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     </Sheet>
   );
 };
-
