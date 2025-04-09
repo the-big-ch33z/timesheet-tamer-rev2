@@ -2,12 +2,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { EntryFieldConfig } from '@/types';
 
-// Default entry fields - only the first row (4 fields)
+// Default empty entry fields - only the first row (4 fields)
 const DEFAULT_ENTRY_FIELDS: EntryFieldConfig[] = [
-  { id: '1', name: 'Job Number', type: 'text', required: false, visible: true, placeholder: 'Job No.' },
-  { id: '2', name: 'Rego', type: 'text', required: false, visible: true, placeholder: 'Rego' },
-  { id: '3', name: 'Notes', type: 'textarea', required: true, visible: true, placeholder: 'Notes' },
-  { id: '4', name: 'Hours', type: 'number', required: true, visible: true, placeholder: 'Hrs', size: 'small' },
+  { id: '1', name: '', type: 'text', required: false, visible: true, placeholder: '' },
+  { id: '2', name: '', type: 'text', required: false, visible: true, placeholder: '' },
+  { id: '3', name: '', type: 'textarea', required: false, visible: true, placeholder: '' },
+  { id: '4', name: '', type: 'number', required: false, visible: true, placeholder: '', size: 'small' },
 ];
 
 interface TimesheetSettingsContextType {

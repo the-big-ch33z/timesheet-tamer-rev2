@@ -76,7 +76,7 @@ const EntryFieldsSettings: React.FC<EntryFieldsSettingsProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Group fields by rows of 4 */}
+          {/* Group fields by rows of 4 - without the labels row */}
           {Array.from({ length: Math.ceil(fields.length / 4) }).map((_, rowIndex) => {
             const rowFields = fields.slice(rowIndex * 4, rowIndex * 4 + 4);
             return (
