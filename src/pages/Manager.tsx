@@ -8,6 +8,8 @@ import { EditUserForm, UserEditFormValues } from "@/components/admin/users/EditU
 import { User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
+import { useTeamPermission } from "@/hooks/useTeamPermission";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 
 type TeamMember = {
   id: string;
@@ -26,13 +28,14 @@ type TeamMember = {
 
 const Manager = () => {
   const [selectedTab, setSelectedTab] = useState("team-overview");
-  const { users, teams, getUserById, getUsersByTeam, currentUser, updateUserRole } = useAuth();
+  const { users, teams, getUserById, getUsersByTeam, currentUser, updateUserRole, archiveUser, restoreUser } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { toast } = useToast();
   const { assignScheduleToUser } = useWorkSchedule();
+  const { canManageUser } = useTeamPermission();
   
   // Filter teams by organization or by manager (if current user is a manager)
   const filteredTeams = teams.filter(team => {
@@ -83,8 +86,63 @@ const Manager = () => {
 
   // Handle editing a user
   const handleEditUser = (user: User) => {
+    if (!canManageUser(user.id)) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to edit this user.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSelectedUser(user);
     setIsEditUserOpen(true);
+  };
+
+  // Handle archiving a user
+  const handleArchiveUser = async (userId: string) => {
+    if (!canManageUser(userId)) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to archive this user.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await archiveUser(userId);
+      // Refresh team members list after archiving
+      if (selectedTeamId) {
+        const members = getUsersByTeam(selectedTeamId);
+        setTeamMembers(members);
+      }
+    } catch (error) {
+      console.error("Error archiving user:", error);
+    }
+  };
+
+  // Handle restoring a user
+  const handleRestoreUser = async (userId: string) => {
+    if (!canManageUser(userId)) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to restore this user.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await restoreUser(userId);
+      // Refresh team members list after restoring
+      if (selectedTeamId) {
+        const members = getUsersByTeam(selectedTeamId);
+        setTeamMembers(members);
+      }
+    } catch (error) {
+      console.error("Error restoring user:", error);
+    }
   };
 
   // Handle form submission for editing a user
@@ -111,6 +169,12 @@ const Manager = () => {
       
       setIsEditUserOpen(false);
       setSelectedUser(null);
+      
+      // Refresh team members list after updating
+      if (selectedTeamId) {
+        const members = getUsersByTeam(selectedTeamId);
+        setTeamMembers(members);
+      }
     } catch (error) {
       toast({
         title: "Error Updating User",
@@ -155,6 +219,8 @@ const Manager = () => {
           teamMembers={teamMembers}
           onRefreshData={handleRefreshData}
           onEditUser={handleEditUser}
+          onArchiveUser={handleArchiveUser}
+          onRestoreUser={handleRestoreUser}
         />
       </Tabs>
       

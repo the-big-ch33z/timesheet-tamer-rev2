@@ -15,6 +15,8 @@ interface TabContentProps {
   teamMembers: User[];
   onRefreshData: () => void;
   onEditUser?: (user: User) => void;
+  onArchiveUser?: (userId: string) => void;
+  onRestoreUser?: (userId: string) => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -27,6 +29,8 @@ const TabContent: React.FC<TabContentProps> = ({
   teamMembers,
   onRefreshData,
   onEditUser,
+  onArchiveUser,
+  onRestoreUser,
 }) => {
   return (
     <>
@@ -40,6 +44,8 @@ const TabContent: React.FC<TabContentProps> = ({
           teamMembers={teamMembers}
           onRefreshData={onRefreshData}
           onEditUser={onEditUser}
+          onArchiveUser={onArchiveUser}
+          onRestoreUser={onRestoreUser}
         />
       </TabsContent>
       
