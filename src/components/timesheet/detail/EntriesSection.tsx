@@ -1,9 +1,9 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import TimeEntryDialog from "../TimeEntryDialog";
 import { TimeEntry } from "@/types";
+import TimeEntryList from "../entry-display/TimeEntryList";
+import AddEntryButton from "../entry-display/AddEntryButton";
+import NewEntryForm from "../entry-display/NewEntryForm";
 
 interface EntriesSectionProps {
   date: Date;
@@ -25,45 +25,26 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     setShowNewEntryForm(false);
   };
 
-  const handleDeleteEntry = (id?: string) => {
-    if (id) {
-      onDeleteEntry(id);
-    }
-    setShowNewEntryForm(false);
-  };
-
   return (
     <>
-      <div className="space-y-2 mb-4">
-        {entries.map((entry) => (
-          <TimeEntryDialog
-            key={entry.id}
-            onSave={handleSaveEntry}
-            onDelete={handleDeleteEntry}
-            selectedDate={date}
-            entryId={entry.id}
-            initialData={entry}
-          />
-        ))}
-        
-        {/* New entry form */}
-        {showNewEntryForm && (
-          <TimeEntryDialog
-            onSave={handleSaveEntry}
-            onDelete={() => setShowNewEntryForm(false)}
-            selectedDate={date}
-          />
-        )}
-      </div>
+      <TimeEntryList 
+        entries={entries}
+        date={date}
+        onSaveEntry={onSaveEntry}
+        onDeleteEntry={onDeleteEntry}
+      />
+      
+      {/* New entry form */}
+      {showNewEntryForm && (
+        <NewEntryForm
+          date={date}
+          onSaveEntry={handleSaveEntry}
+          onCancel={() => setShowNewEntryForm(false)}
+        />
+      )}
 
       {/* Add Entry Button */}
-      <Button 
-        onClick={() => setShowNewEntryForm(true)}
-        className="w-full bg-green-600 hover:bg-green-700 text-white my-2"
-        size="sm"
-      >
-        <Plus className="h-4 w-4 mr-1" /> Add Entry
-      </Button>
+      <AddEntryButton onClick={() => setShowNewEntryForm(true)} />
     </>
   );
 };
