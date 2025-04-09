@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { format, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import TimeEntryDialog from "@/components/timesheet/TimeEntryDialog";
 import TimeEntryList from "@/components/timesheet/TimeEntryList";
-import { TimeEntry, EntryFieldConfig } from "@/types";
+import { TimeEntry } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetCalendar from "@/components/timesheet/TimesheetCalendar";
@@ -13,6 +13,7 @@ import ToilSummary from "@/components/timesheet/ToilSummary";
 import MonthlyHours from "@/components/timesheet/MonthlyHours";
 import { initializeHolidays } from "@/lib/holidays";
 import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -21,8 +22,7 @@ const Timesheet = () => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
   const { currentUser } = useAuth();
-  
-  // Remove the entryFields state since we're now using TimesheetSettingsContext
+  const { toast } = useToast();
   
   useEffect(() => {
     initializeHolidays();
@@ -41,6 +41,22 @@ const Timesheet = () => {
     } catch (error) {
       console.error("Error loading entries:", error);
     }
+  }, []);
+
+  // Listen for custom events from child components
+  useEffect(() => {
+    const handleEntryAdded = (event: any) => {
+      const newEntry = event.detail;
+      if (newEntry) {
+        setEntries(prev => [...prev, newEntry]);
+      }
+    };
+    
+    document.addEventListener('entry-added', handleEntryAdded);
+    
+    return () => {
+      document.removeEventListener('entry-added', handleEntryAdded);
+    };
   }, []);
 
   useEffect(() => {
@@ -64,6 +80,20 @@ const Timesheet = () => {
     
     setEntries([...entries, newEntry]);
     setIsEntryDialogOpen(false);
+    
+    toast({
+      title: "Entry added",
+      description: `Added ${newEntry.hours} hours for ${format(newEntry.date, "MMM dd, yyyy")}`,
+    });
+  };
+
+  const deleteEntry = (id: string) => {
+    setEntries(entries.filter(entry => entry.id !== id));
+    
+    toast({
+      title: "Entry deleted",
+      description: "Time entry has been removed",
+    });
   };
 
   const getUserEntries = () => {
@@ -119,6 +149,7 @@ const Timesheet = () => {
                 date={selectedDay}
                 entries={getDayEntries(selectedDay)}
                 onAddEntry={() => setIsEntryDialogOpen(true)}
+                onDeleteEntry={deleteEntry}
               />
             </div>
           )}
@@ -191,13 +222,6 @@ const Timesheet = () => {
           )}
         </div>
       </div>
-
-      <TimeEntryDialog
-        open={isEntryDialogOpen}
-        onOpenChange={setIsEntryDialogOpen}
-        onSave={addEntry}
-        selectedDate={selectedDay || new Date()}
-      />
 
       <Button 
         className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-indigo-600 hover:bg-indigo-700"

@@ -11,14 +11,17 @@ import {
   Utensils,
   Coffee,
   Plane,
-  Thermometer
+  Thermometer,
+  Trash2
 } from "lucide-react";
 import { TimeEntry } from "@/types";
+import TimeEntryDialog from "./TimeEntryDialog";
 
 interface TimesheetEntryDetailProps {
   date: Date;
   entries: TimeEntry[];
   onAddEntry: () => void;
+  onDeleteEntry?: (id: string) => void;
 }
 
 // Helper function to get icon component from name
@@ -35,11 +38,13 @@ const getIconComponent = (iconName?: string) => {
 const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   date,
   entries,
-  onAddEntry
+  onAddEntry,
+  onDeleteEntry
 }) => {
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [totalHours, setTotalHours] = useState<string>("0.0");
+  const [showInlineForm, setShowInlineForm] = useState(false);
 
   // Calculate total hours when start or end time changes
   useEffect(() => {
@@ -61,6 +66,25 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
       setTotalHours("0.0");
     }
   }, [startTime, endTime]);
+
+  // Handler for saving a new entry
+  const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
+    // Create a new entry with ID
+    const newEntry = {
+      ...entry,
+      id: Date.now().toString()
+    };
+    
+    // Add the entry (we're mimicking what the parent component would do)
+    if (onAddEntry) {
+      // We need to pass the entry back to the parent Timesheet component
+      const mockEvent = new CustomEvent("entry-added", { detail: newEntry });
+      document.dispatchEvent(mockEvent);
+    }
+    
+    // Hide the form
+    setShowInlineForm(false);
+  };
 
   return (
     <Card className="border-0 shadow-sm">
@@ -155,33 +179,60 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           </div>
         </div>
         
+        {/* Add Entry Button */}
+        <div className="mb-4">
+          {!showInlineForm && (
+            <Button 
+              onClick={() => setShowInlineForm(true)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Entry
+            </Button>
+          )}
+          
+          {showInlineForm && (
+            <TimeEntryDialog 
+              onSave={handleSaveEntry}
+              selectedDate={date}
+              onCancel={() => setShowInlineForm(false)}
+            />
+          )}
+        </div>
+        
         {/* Entries Section */}
         {entries.length > 0 ? (
           <div className="space-y-4">
             {entries.map((entry) => (
-              <div key={entry.id} className="border p-4 rounded-lg">
-                <div className="flex justify-between">
-                  <h4 className="font-medium">{entry.project}</h4>
-                  <span>{entry.hours} hours</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">{entry.description}</p>
-                {entry.startTime && entry.endTime && (
-                  <div className="text-xs text-gray-500 mt-2">
-                    {entry.startTime} - {entry.endTime}
+              <div key={entry.id} className="border p-4 rounded-lg flex justify-between items-center">
+                <div className="flex-grow">
+                  <div className="flex justify-between mb-1">
+                    <h4 className="font-medium">{entry.project}</h4>
+                    <span>{entry.hours} hours</span>
                   </div>
-                )}
+                  <p className="text-sm text-gray-600">{entry.description}</p>
+                  {(entry.jobNumber || entry.rego) && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {entry.jobNumber && `Job: ${entry.jobNumber}`} 
+                      {entry.jobNumber && entry.rego && ' • '} 
+                      {entry.rego && `Rego: ${entry.rego}`}
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => onDeleteEntry && onDeleteEntry(entry.id)}
+                >
+                  <Trash2 className="h-5 w-5" />
+                </Button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-6">No entries for this date.</p>
-            <Button 
-              onClick={onAddEntry} 
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Plus className="h-5 w-5 mr-1" /> Add Entry
-            </Button>
+          <div className="text-center py-6">
+            <p className="text-gray-500 mb-2">No entries for this date.</p>
           </div>
         )}
       </CardContent>

@@ -15,6 +15,7 @@ interface CustomFieldsProps {
   setDescription: (value: string) => void;
   hours: string;
   setHours: (value: string) => void;
+  inline?: boolean;
 }
 
 const CustomFields: React.FC<CustomFieldsProps> = ({
@@ -27,78 +28,120 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   setDescription,
   hours,
   setHours,
+  inline = false,
 }) => {
   // Render specific field based on field type and name
-  const renderField = (field: EntryFieldConfig) => {
+  const renderField = (field: EntryFieldConfig, showLabel = true) => {
+    const fieldId = `field-${field.id}`;
+    
     switch (field.name.toLowerCase()) {
       case 'job number':
         return (
-          <Input
-            id="jobNumber"
-            type="text"
-            value={jobNumber}
-            onChange={(e) => setJobNumber(e.target.value)}
-            placeholder={field.placeholder || "Job No."}
-            required={field.required}
-          />
+          <div className={inline ? "flex-1 min-w-20" : "space-y-2"}>
+            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
+            <Input
+              id={fieldId}
+              type="text"
+              value={jobNumber}
+              onChange={(e) => setJobNumber(e.target.value)}
+              placeholder={field.placeholder || "Job No."}
+              required={field.required}
+              className={inline ? "h-9" : ""}
+            />
+          </div>
         );
       case 'rego':
         return (
-          <Input
-            id="rego"
-            type="text"
-            value={rego}
-            onChange={(e) => setRego(e.target.value)}
-            placeholder={field.placeholder || "Rego"}
-            required={field.required}
-          />
+          <div className={inline ? "flex-1 min-w-20" : "space-y-2"}>
+            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
+            <Input
+              id={fieldId}
+              type="text"
+              value={rego}
+              onChange={(e) => setRego(e.target.value)}
+              placeholder={field.placeholder || "Rego"}
+              required={field.required}
+              className={inline ? "h-9" : ""}
+            />
+          </div>
         );
       case 'notes':
         return (
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            placeholder={field.placeholder || "Notes"}
-            required={field.required}
-          />
+          <div className={inline ? "flex-1 min-w-40" : "space-y-2"}>
+            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
+            {inline ? (
+              <Input
+                id={fieldId}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={field.placeholder || "Notes"}
+                required={field.required}
+                className="h-9"
+              />
+            ) : (
+              <Textarea
+                id={fieldId}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder={field.placeholder || "Notes"}
+                required={field.required}
+              />
+            )}
+          </div>
         );
       case 'hours':
         return (
-          <Input
-            id="hours"
-            type="number"
-            step="0.25"
-            min="0.25"
-            max="24"
-            value={hours}
-            onChange={(e) => setHours(e.target.value)}
-            placeholder={field.placeholder || "Hrs"}
-            required={field.required}
-            className={field.size === 'small' ? "w-24" : ""}
-          />
+          <div className={inline ? "w-24" : "space-y-2"}>
+            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
+            <Input
+              id={fieldId}
+              type="number"
+              step="0.25"
+              min="0.25"
+              max="24"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              placeholder={field.placeholder || "Hrs"}
+              required={field.required}
+              className={inline ? "h-9" : ""}
+            />
+          </div>
         );
       default:
         if (!field.name) return null;
         
-        return field.type === 'textarea' ? (
-          <Textarea
-            id={`custom-${field.id}`}
-            placeholder={field.placeholder}
-            required={field.required}
-            rows={3}
-          />
-        ) : (
-          <Input
-            id={`custom-${field.id}`}
-            type={field.type}
-            placeholder={field.placeholder}
-            required={field.required}
-          />
+        return (
+          <div className={inline ? "flex-1" : "space-y-2"}>
+            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
+            {field.type === 'textarea' && !inline ? (
+              <Textarea
+                id={fieldId}
+                placeholder={field.placeholder}
+                required={field.required}
+                rows={3}
+              />
+            ) : (
+              <Input
+                id={fieldId}
+                type={field.type}
+                placeholder={field.placeholder}
+                required={field.required}
+                className={inline ? "h-9" : ""}
+              />
+            )}
+          </div>
         );
     }
   };
+
+  if (inline) {
+    return (
+      <div className="flex gap-2 flex-grow">
+        {visibleFields.map(field => renderField(field, false))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

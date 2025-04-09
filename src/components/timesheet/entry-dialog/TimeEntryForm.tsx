@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -9,6 +10,7 @@ type TimeEntryFormProps = {
   onCancel: () => void;
   selectedDate: Date;
   visibleFields: EntryFieldConfig[];
+  inline?: boolean;
 };
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
@@ -16,6 +18,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   onCancel,
   selectedDate,
   visibleFields,
+  inline = false,
 }) => {
   const [hours, setHours] = useState("");
   const [description, setDescription] = useState("");
@@ -32,7 +35,44 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       jobNumber,
       rego,
     });
+    
+    // Reset fields after save
+    setHours("");
+    setDescription("");
+    setJobNumber("");
+    setRego("");
   };
+
+  if (inline) {
+    return (
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <CustomFields
+          visibleFields={visibleFields}
+          jobNumber={jobNumber}
+          setJobNumber={setJobNumber}
+          rego={rego}
+          setRego={setRego}
+          description={description}
+          setDescription={setDescription}
+          hours={hours}
+          setHours={setHours}
+          inline={true}
+        />
+
+        <div className="flex gap-2 ml-auto">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            size="sm"
+          >
+            Cancel
+          </Button>
+          <Button type="submit" className="bg-brand-600 hover:bg-brand-700" size="sm">Save</Button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
