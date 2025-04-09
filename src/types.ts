@@ -74,7 +74,7 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;
-  status?: 'active' | 'inactive' | 'pending';
+  status?: 'active' | 'inactive' | 'pending' | 'archived';
 }
 
 export interface Organization {

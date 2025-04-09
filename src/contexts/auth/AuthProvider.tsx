@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +32,9 @@ const defaultAuthContext: AuthContextType = {
   getUserById: () => undefined,
   removeUserFromTeam: async () => {},
   deleteTeam: async () => {},
+  archiveUser: async () => {},
+  restoreUser: async () => {},
+  permanentDeleteUser: async () => {},
   syncData: async () => {},
   getAuditLogs: async () => [],
 };
