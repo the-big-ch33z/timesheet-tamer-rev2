@@ -86,7 +86,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
         </div>
 
         {/* Weekday Headers */}
-        <div className="grid grid-cols-7 gap-1 mb-1">
+        <div className="grid grid-cols-7 gap-2 mb-2">
           {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, i) => (
             <div
               key={day}
@@ -100,7 +100,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {/* Empty cells for days before the start of the month */}
           {Array.from({ length: monthStart.getDay() }).map((_, i) => (
             <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-50 rounded" />
@@ -121,8 +121,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
               <div
                 key={day.toString()}
                 className={`p-3 min-h-[80px] rounded cursor-pointer transition-all duration-200 ease-in-out
-                  ${isWeekend ? "bg-gray-50" : "bg-white"}
-                  ${dayHoliday ? "bg-amber-50" : ""}
+                  ${isWeekend ? "bg-[#F1F0FB]" : "bg-white"}
+                  ${dayHoliday ? "bg-[#FEF7CD]" : ""}
                   ${isToday ? "ring-2 ring-indigo-500" : ""}
                   ${isSelected ? "transform scale-[1.02] shadow-md z-10 ring-2 ring-indigo-400" : ""}
                   hover:bg-gray-100
