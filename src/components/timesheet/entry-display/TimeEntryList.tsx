@@ -2,7 +2,6 @@
 import React from "react";
 import { TimeEntry } from "@/types";
 import TimeEntryItem from "./TimeEntryItem";
-import NewEntryForm from "./NewEntryForm";
 
 interface TimeEntryListProps {
   entries: TimeEntry[];
@@ -21,12 +20,9 @@ const TimeEntryList: React.FC<TimeEntryListProps> = ({
         <div className="text-center py-12 border rounded-md">
           <p className="text-muted-foreground">No time entries for this day</p>
           {!readOnly && (
-            <>
-              <p className="text-sm text-muted-foreground mt-2">
-                Click the "Add Entry" button to create a new entry
-              </p>
-              <NewEntryForm />
-            </>
+            <p className="text-sm text-muted-foreground mt-2">
+              Click the "Add Entry" button to create a new entry
+            </p>
           )}
         </div>
       ) : (

@@ -5,9 +5,10 @@ import { Plus } from "lucide-react";
 
 interface AddEntryButtonProps {
   onClick: () => void;
+  date?: Date; // Making date optional to avoid breaking changes
 }
 
-const AddEntryButton: React.FC<AddEntryButtonProps> = ({ onClick }) => {
+const AddEntryButton: React.FC<AddEntryButtonProps> = ({ onClick, date }) => {
   return (
     <Button 
       onClick={onClick}

@@ -14,9 +14,12 @@ import {
 
 interface DetailHeaderProps {
   date: Date;
+  formattedDate?: string;
 }
 
-const DetailHeader: React.FC<DetailHeaderProps> = ({ date }) => {
+const DetailHeader: React.FC<DetailHeaderProps> = ({ date, formattedDate }) => {
+  const displayDate = formattedDate || format(date, "MMM dd, yyyy");
+  
   return (
     <div className="flex flex-row items-center justify-between pb-2 pt-4 px-6">
       <div className="flex items-center gap-2">
@@ -24,7 +27,7 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({ date }) => {
           <CalendarIcon className="h-5 w-5 text-gray-700" />
         </div>
         <CardTitle className="text-xl font-semibold">
-          Entries for {format(date, "MMM dd, yyyy")}
+          Entries for {displayDate}
         </CardTitle>
       </div>
       <div className="flex items-center gap-2">

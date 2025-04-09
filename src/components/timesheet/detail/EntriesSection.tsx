@@ -23,7 +23,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     <div className="md:col-span-8 space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Time Entries</h3>
-        {!readOnly && <AddEntryButton date={date} />}
+        {!readOnly && <AddEntryButton onClick={onAddEntry} date={date} />}
       </div>
       
       <TimeEntryList 

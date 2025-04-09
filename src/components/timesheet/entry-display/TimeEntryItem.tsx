@@ -42,11 +42,6 @@ const TimeEntryItem: React.FC<TimeEntryItemProps> = ({
               {entry.project}
             </Badge>
           )}
-          {entry.category && (
-            <Badge variant="outline" className="bg-purple-50">
-              {entry.category}
-            </Badge>
-          )}
           {!readOnly && (
             <Button
               variant="ghost"

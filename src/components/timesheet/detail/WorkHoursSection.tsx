@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Clock } from "lucide-react";
+import { TimeEntry } from "@/types";
 
 interface WorkHoursSectionProps {
+  entries?: TimeEntry[];
   onHoursCalculated?: (hours: string) => void;
 }
 
-const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ onHoursCalculated }) => {
+const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries = [], onHoursCalculated }) => {
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [totalHours, setTotalHours] = useState<string>("0.0");
