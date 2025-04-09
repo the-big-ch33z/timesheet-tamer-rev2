@@ -63,30 +63,34 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   };
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="p-4 flex items-center justify-between bg-white">
-          <Button variant="outline" size="icon" onClick={onPrevMonth}>
+    <Card className="shadow-sm">
+      <CardContent className="p-4">
+        {/* Calendar Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="outline" size="icon" onClick={onPrevMonth} className="rounded-full w-10 h-10">
             <ChevronLeft className="h-4 w-4" />
           </Button>
+
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-medium">
               {format(currentMonth, "MMMM yyyy")}
             </h2>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
               <CalendarIcon className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="outline" size="icon" onClick={onNextMonth}>
+
+          <Button variant="outline" size="icon" onClick={onNextMonth} className="rounded-full w-10 h-10">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="grid grid-cols-7 border-b gap-0.5 bg-gray-100 p-0.5">
+        {/* Weekday Headers */}
+        <div className="grid grid-cols-7 gap-1 mb-1">
           {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, i) => (
             <div
               key={day}
-              className={`p-2 text-center text-sm font-medium bg-white ${
+              className={`py-2 text-center text-sm font-medium ${
                 i === 0 || i === 6 ? "text-red-500" : "text-gray-700"
               }`}
             >
@@ -95,11 +99,14 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-0.5 bg-gray-100 p-0.5">
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {/* Empty cells for days before the start of the month */}
           {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-            <div key={`empty-${i}`} className="bg-white p-4 min-h-[80px]" />
+            <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-50 rounded" />
           ))}
 
+          {/* Days of the month */}
           {daysInMonth.map((day) => {
             const dayEntries = getDayEntries(day);
             const totalHours = getTotalHours(day);
@@ -113,35 +120,34 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
             return (
               <div
                 key={day.toString()}
-                className={`p-2 min-h-[80px] bg-white cursor-pointer hover:bg-gray-50 transition-all duration-200 ease-in-out ${
-                  isToday ? "border-indigo-500 border-2" : ""
-                } ${
-                  dayHoliday ? "bg-amber-50" : ""
-                } ${
-                  day.getDay() === 0 ? "border-l-2 border-l-red-100" : ""
-                } ${
-                  day.getDay() === 6 ? "border-r-2 border-r-red-100" : ""
-                } ${
-                  isSelected ? "transform scale-[1.02] shadow-md z-10 bg-indigo-50 ring-2 ring-indigo-300" : ""
-                }`}
+                className={`p-3 min-h-[80px] rounded cursor-pointer transition-all duration-200 ease-in-out
+                  ${isWeekend ? "bg-gray-50" : "bg-white"}
+                  ${dayHoliday ? "bg-amber-50" : ""}
+                  ${isToday ? "ring-2 ring-indigo-500" : ""}
+                  ${isSelected ? "transform scale-[1.02] shadow-md z-10 ring-2 ring-indigo-400" : ""}
+                  hover:bg-gray-100
+                `}
                 onClick={() => handleDayClick(day)}
               >
                 <div className="flex justify-between items-start">
                   <span
-                    className={`inline-block w-6 h-6 text-center ${
-                      isToday
-                        ? "bg-indigo-500 text-white rounded-full"
-                        : isWeekend ? "text-red-500" : ""
-                    }`}
+                    className={`text-lg font-medium
+                      ${isWeekend ? "text-red-500" : ""}
+                      ${isToday ? "bg-indigo-500 text-white w-7 h-7 flex items-center justify-center rounded-full" : ""}
+                    `}
                   >
                     {format(day, "d")}
                   </span>
                   {hasEntries && (
-                    <span className="text-xs font-medium text-indigo-700">{totalHours}h</span>
+                    <span className="text-xs font-medium text-indigo-700 px-1 bg-indigo-50 rounded">
+                      {totalHours}h
+                    </span>
                   )}
                 </div>
+
+                {/* Entry indicators */}
                 {hasEntries && (
-                  <div className="mt-1">
+                  <div className="mt-2">
                     {dayEntries.slice(0, 1).map((entry) => (
                       <div
                         key={entry.id}
@@ -157,8 +163,10 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
                     )}
                   </div>
                 )}
+
+                {/* Holiday indicator */}
                 {dayHoliday && (
-                  <div className="text-xs text-amber-700 mt-1">
+                  <div className="text-xs text-amber-700 mt-1 font-medium">
                     {holidayName || "Holiday"}
                   </div>
                 )}
