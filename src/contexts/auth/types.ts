@@ -24,6 +24,9 @@ export interface AuthContextType {
   getUserById: (userId: string) => User | undefined;
   removeUserFromTeam: (userId: string, teamId: string) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
+  archiveUser: (userId: string) => Promise<void>;
+  restoreUser: (userId: string) => Promise<void>;
+  permanentDeleteUser: (userId: string) => Promise<void>;
   syncData: () => Promise<void>;
   getAuditLogs: () => Promise<any[]>;
 }

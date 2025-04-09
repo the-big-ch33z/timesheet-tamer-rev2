@@ -1,20 +1,27 @@
+
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Users } from "lucide-react";
+import { Edit, Trash2, Users, Archive, ArchiveRestore } from "lucide-react";
 import { User, UserRole } from "@/types";
 import { useAuth } from "@/contexts/auth";
 
 interface UserTableProps {
   filteredUsers: User[];
+  showArchived: boolean;
   onEditUser: (user: User) => void;
+  onArchiveUser: (userId: string) => void;
+  onRestoreUser: (userId: string) => void;
   onDeleteUser: (userId: string) => void;
 }
 
 export const UserTable: React.FC<UserTableProps> = ({ 
   filteredUsers, 
+  showArchived,
   onEditUser, 
+  onArchiveUser,
+  onRestoreUser,
   onDeleteUser 
 }) => {
   const { getTeamById, teamMemberships } = useAuth();
@@ -28,6 +35,13 @@ export const UserTable: React.FC<UserTableProps> = ({
       case "team-member":
         return "bg-green-100 text-green-800";
     }
+  };
+
+  const getStatusBadge = (status: string) => {
+    if (status === 'archived') {
+      return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Archived</Badge>;
+    }
+    return null;
   };
 
   const getUserTeams = (userId: string) => {
@@ -55,8 +69,13 @@ export const UserTable: React.FC<UserTableProps> = ({
           const userTeams = getUserTeams(user.id);
           
           return (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
+            <TableRow key={user.id} className={user.status === 'archived' ? 'bg-muted/30' : ''}>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  {user.name}
+                  {getStatusBadge(user.status || 'active')}
+                </div>
+              </TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
                 <Badge className={getRoleBadgeColor(user.role)}>
@@ -79,12 +98,25 @@ export const UserTable: React.FC<UserTableProps> = ({
                 )}
               </TableCell>
               <TableCell className="text-right space-x-2">
-                <Button variant="ghost" size="icon" onClick={() => onEditUser(user)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => onDeleteUser(user.id)} className="text-red-500 hover:text-red-700">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!showArchived ? (
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => onEditUser(user)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onArchiveUser(user.id)} className="text-amber-500 hover:text-amber-700">
+                      <Archive className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => onRestoreUser(user.id)} className="text-green-500 hover:text-green-700">
+                      <ArchiveRestore className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onDeleteUser(user.id)} className="text-red-500 hover:text-red-700">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </TableCell>
             </TableRow>
           );
@@ -92,7 +124,7 @@ export const UserTable: React.FC<UserTableProps> = ({
         {filteredUsers.length === 0 && (
           <TableRow>
             <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-              No users found.
+              {showArchived ? "No archived users found." : "No users found."}
             </TableCell>
           </TableRow>
         )}
