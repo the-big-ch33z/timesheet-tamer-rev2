@@ -91,36 +91,46 @@ const EntryFieldsSettings: React.FC<EntryFieldsSettingsProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Single row with 4 fields */}
-          <div className="grid grid-cols-12 gap-2 items-center border p-2 rounded-md">
+          {/* One row with 4 fields */}
+          <div className="grid grid-cols-12 gap-4 items-center border p-4 rounded-md">
             {fields.map((field, colIndex) => (
               <div 
                 key={field.id} 
                 className={colIndex === 3 ? "col-span-2" : "col-span-3"} // Make Hours field smaller
               >
-                <div className="space-y-1">
-                  <Input
-                    value={field.name}
-                    onChange={(e) => handleNameChange(field.id, e.target.value)}
-                    placeholder={`Field ${colIndex + 1} Name`}
-                    className="text-sm"
-                  />
-                  <Input
-                    value={field.placeholder || ''}
-                    onChange={(e) => handlePlaceholderChange(field.id, e.target.value)}
-                    placeholder="Watermark"
-                    className="text-sm"
-                  />
-                </div>
+                <Input
+                  value={field.name}
+                  onChange={(e) => handleNameChange(field.id, e.target.value)}
+                  placeholder={`Field ${colIndex + 1} Name`}
+                  className="mb-2"
+                />
+                <Input
+                  value={field.placeholder || ''}
+                  onChange={(e) => handlePlaceholderChange(field.id, e.target.value)}
+                  placeholder="Placeholder"
+                  className="text-sm"
+                />
               </div>
             ))}
-            <div className="flex items-center space-x-2 col-span-3">
+            <div className="col-span-2 flex items-center space-x-2">
               <Switch 
-                checked={fields[0]?.visible || false}
-                onCheckedChange={() => fields[0] && handleVisibilityToggle(fields[0].id)}
+                checked={fields.every(field => field.visible)}
+                onCheckedChange={() => {
+                  const allVisible = fields.every(field => field.visible);
+                  setFields(fields.map(field => ({ ...field, visible: !allVisible })));
+                }}
                 id="visible-row"
               />
               <Label htmlFor="visible-row">Visible</Label>
+            </div>
+            <div className="col-span-1 flex justify-center">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash className="h-5 w-5" />
+              </Button>
             </div>
           </div>
           
