@@ -43,6 +43,7 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [totalHours, setTotalHours] = useState<string>("0.0");
+  const [showNewEntryForm, setShowNewEntryForm] = useState(false);
 
   // Calculate total hours when start or end time changes
   useEffect(() => {
@@ -78,13 +79,20 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
       // We need to pass the entry back to the parent Timesheet component
       const mockEvent = new CustomEvent("entry-added", { detail: newEntry });
       document.dispatchEvent(mockEvent);
+      // Hide the new entry form after saving
+      setShowNewEntryForm(false);
     }
   };
 
   const handleDeleteEntry = (id?: string) => {
     if (id && onDeleteEntry) {
       onDeleteEntry(id);
+      setShowNewEntryForm(false);
     }
+  };
+
+  const handleAddEntryClick = () => {
+    setShowNewEntryForm(true);
   };
 
   return (
@@ -192,11 +200,20 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
               initialData={entry}
             />
           ))}
+          
+          {/* New entry form */}
+          {showNewEntryForm && (
+            <TimeEntryDialog
+              onSave={handleSaveEntry}
+              onDelete={() => setShowNewEntryForm(false)}
+              selectedDate={date}
+            />
+          )}
         </div>
 
         {/* Add Entry Button */}
         <Button 
-          onClick={onAddEntry}
+          onClick={handleAddEntryClick}
           className="w-full bg-green-600 hover:bg-green-700 text-white my-2"
           size="sm"
         >

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ const Timesheet = () => {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<string>("timesheet");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
@@ -79,7 +77,6 @@ const Timesheet = () => {
     };
     
     setEntries([...entries, newEntry]);
-    setIsEntryDialogOpen(false);
     
     toast({
       title: "Entry added",
