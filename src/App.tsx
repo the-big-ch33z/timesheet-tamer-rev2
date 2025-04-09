@@ -3,6 +3,7 @@ import React from 'react';
 import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
 import { WorkScheduleProvider } from './contexts/WorkScheduleContext';
+import { TimesheetSettingsProvider } from './contexts/TimesheetSettingsContext';
 import { ProtectedRoute } from './lib/routeProtection';
 import MainLayout from './components/layout/MainLayout';
 import Admin from './pages/Admin';
@@ -20,25 +21,27 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <WorkScheduleProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Auth mode="login" />} />
-            <Route path="/signup" element={<Auth mode="signup" />} />
-            
-            {/* Protected routes with layout */}
-            <Route element={<MainLayout />}>
-              <Route path="/timesheet" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
-              <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-              <Route path="/team-calendar" element={<ProtectedRoute><TeamCalendar /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-            </Route>
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <TimesheetSettingsProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Auth mode="login" />} />
+              <Route path="/signup" element={<Auth mode="signup" />} />
+              
+              {/* Protected routes with layout */}
+              <Route element={<MainLayout />}>
+                <Route path="/timesheet" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
+                <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                <Route path="/team-calendar" element={<ProtectedRoute><TeamCalendar /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              </Route>
+              
+              {/* 404 route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TimesheetSettingsProvider>
         </WorkScheduleProvider>
       </AuthProvider>
     </BrowserRouter>

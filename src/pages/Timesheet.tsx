@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import TimeEntryDialog from "@/components/timesheet/TimeEntryDialog";
 import TimeEntryList from "@/components/timesheet/TimeEntryList";
-import { TimeEntry } from "@/types";
+import { TimeEntry, EntryFieldConfig } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetCalendar from "@/components/timesheet/TimesheetCalendar";
@@ -14,6 +12,7 @@ import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
 import ToilSummary from "@/components/timesheet/ToilSummary";
 import MonthlyHours from "@/components/timesheet/MonthlyHours";
 import { initializeHolidays } from "@/lib/holidays";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 
 const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -21,11 +20,68 @@ const Timesheet = () => {
   const [activeTab, setActiveTab] = useState<string>("timesheet");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
+  const { currentUser } = useAuth();
+  
+  const [entryFields, setEntryFields] = useState<EntryFieldConfig[]>([
+    { 
+      id: '1', 
+      name: 'Job Number', 
+      type: 'text', 
+      required: false, 
+      visible: true, 
+      placeholder: 'Job No.',
+    },
+    { 
+      id: '2', 
+      name: 'Rego', 
+      type: 'text', 
+      required: false, 
+      visible: true,
+      placeholder: 'Rego', 
+    },
+    { 
+      id: '3', 
+      name: 'Notes', 
+      type: 'textarea', 
+      required: true, 
+      visible: true,
+      placeholder: 'Notes', 
+    },
+    { 
+      id: '4', 
+      name: 'Hours', 
+      type: 'number', 
+      required: true, 
+      visible: true,
+      placeholder: 'Hrs',
+      size: 'small', 
+    },
+  ]);
 
-  // Initialize holidays when the component mounts
   useEffect(() => {
     initializeHolidays();
   }, []);
+
+  useEffect(() => {
+    try {
+      const savedEntries = localStorage.getItem('timeEntries');
+      if (savedEntries) {
+        const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
+          ...entry,
+          date: new Date(entry.date)
+        }));
+        setEntries(parsedEntries);
+      }
+    } catch (error) {
+      console.error("Error loading entries:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (entries.length > 0) {
+      localStorage.setItem('timeEntries', JSON.stringify(entries));
+    }
+  }, [entries]);
 
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -44,22 +100,27 @@ const Timesheet = () => {
     setIsEntryDialogOpen(false);
   };
 
+  const getUserEntries = () => {
+    if (!currentUser) return entries;
+    return entries.filter(entry => entry.userId === currentUser.id);
+  };
+
   const getDayEntries = (day: Date) => {
-    return entries.filter(
+    const userEntries = getUserEntries();
+    return userEntries.filter(
       (entry) =>
         format(entry.date, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
     );
   };
 
-  const recentEntries = [...entries].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  ).slice(0, 5);
+  const recentEntries = getUserEntries()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   return (
     <div className="container py-6 max-w-7xl">
       <UserInfo />
 
-      {/* Tabs */}
       <Tabs defaultValue="timesheet" className="mb-6" onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-4 w-full max-w-md">
           <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
@@ -73,7 +134,7 @@ const Timesheet = () => {
             <div className="lg:col-span-2">
               <TimesheetCalendar 
                 currentMonth={currentMonth}
-                entries={entries}
+                entries={getUserEntries()}
                 onPrevMonth={prevMonth}
                 onNextMonth={nextMonth}
                 onDayClick={handleDayClick}
@@ -86,7 +147,6 @@ const Timesheet = () => {
             </div>
           </div>
 
-          {/* Selected day entry detail - always visible when a day is selected */}
           {selectedDay && (
             <div className="mb-8">
               <TimesheetEntryDetail 
@@ -134,7 +194,6 @@ const Timesheet = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Recent Entries Section - Always visible at bottom regardless of tab */}
       <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
         <h3 className="text-lg font-medium mb-4">Recent Time Entries</h3>
         <div className="space-y-3">
@@ -142,7 +201,16 @@ const Timesheet = () => {
             <div key={entry.id} className="p-3 bg-white rounded-lg border border-gray-100 flex justify-between items-center">
               <div>
                 <div className="font-medium">{entry.project}</div>
-                <div className="text-sm text-gray-600 mt-1">{format(entry.date, "MMM dd, yyyy")} · {entry.description}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {format(entry.date, "MMM dd, yyyy")} · {entry.description}
+                </div>
+                {(entry.jobNumber || entry.rego) && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {entry.jobNumber && `Job: ${entry.jobNumber}`} 
+                    {entry.jobNumber && entry.rego && ' • '} 
+                    {entry.rego && `Rego: ${entry.rego}`}
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <div className="font-medium">{entry.hours} hours</div>
@@ -152,7 +220,7 @@ const Timesheet = () => {
               </div>
             </div>
           ))}
-          {entries.length === 0 && (
+          {recentEntries.length === 0 && (
             <p className="text-gray-500 text-center py-4">No recent entries</p>
           )}
         </div>
@@ -163,9 +231,9 @@ const Timesheet = () => {
         onOpenChange={setIsEntryDialogOpen}
         onSave={addEntry}
         selectedDate={selectedDay || new Date()}
+        entryFields={entryFields}
       />
 
-      {/* Floating action button */}
       <Button 
         className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-indigo-600 hover:bg-indigo-700"
         onClick={() => {

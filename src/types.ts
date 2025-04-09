@@ -6,16 +6,21 @@ export interface TimeEntry {
   description: string;
   startTime?: string;
   endTime?: string;
+  userId?: string;  // Add userId to track which user the entry belongs to
+  jobNumber?: string;
+  rego?: string;
 }
 
 export interface EntryFieldConfig {
   id: string;
   name: string;
-  type: 'text' | 'select' | 'time' | 'number';
+  type: 'text' | 'select' | 'time' | 'number' | 'textarea';
   required: boolean;
   options?: string[];
   icon?: string;
   visible: boolean;
+  placeholder?: string;
+  size?: 'small' | 'medium' | 'large';
 }
 
 export interface Holiday {

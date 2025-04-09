@@ -10,14 +10,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, Clock } from "lucide-react";
-import { TimeEntry } from "@/types";
+import { TimeEntry, EntryFieldConfig } from "@/types";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 
 type TimeEntryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (entry: Omit<TimeEntry, "id">) => void;
   selectedDate: Date;
+  entryFields?: EntryFieldConfig[]; // Add support for custom entry fields
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
@@ -25,6 +27,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   onOpenChange,
   onSave,
   selectedDate,
+  entryFields = [],
 }) => {
   const [date, setDate] = useState<Date>(selectedDate);
   const [project, setProject] = useState("");
@@ -32,6 +35,9 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [jobNumber, setJobNumber] = useState("");
+  const [rego, setRego] = useState("");
+  const { currentUser } = useAuth();
 
   // Update hours when start/end time changes
   useEffect(() => {
@@ -61,6 +67,9 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       description,
       startTime,
       endTime,
+      userId: currentUser?.id, // Associate entry with current user
+      jobNumber,
+      rego,
     });
     
     // Reset form
@@ -69,6 +78,8 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     setDescription("");
     setStartTime("");
     setEndTime("");
+    setJobNumber("");
+    setRego("");
   };
 
   return (
@@ -140,6 +151,31 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
               </div>
             </div>
           </div>
+          
+          {/* Job number and rego fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="jobNumber">Job Number</Label>
+              <Input
+                id="jobNumber"
+                type="text"
+                value={jobNumber}
+                onChange={(e) => setJobNumber(e.target.value)}
+                placeholder="Job No."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rego">Rego</Label>
+              <Input
+                id="rego"
+                type="text"
+                value={rego}
+                onChange={(e) => setRego(e.target.value)}
+                placeholder="Rego"
+              />
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="project">Project</Label>
@@ -172,6 +208,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               required
+              placeholder="Hrs"
             />
           </div>
 
@@ -182,7 +219,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="What did you work on?"
+              placeholder="Notes"
               required
             />
           </div>
