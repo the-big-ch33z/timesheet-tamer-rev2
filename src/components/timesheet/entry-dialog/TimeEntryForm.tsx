@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { EntryFieldConfig, TimeEntry } from "@/types";
@@ -49,6 +50,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       description,
       jobNumber,
       rego,
+      project: initialData.project || "General", // Adding a default project value
     });
   };
 
