@@ -23,6 +23,7 @@ interface TeamOverviewProps {
   manager: User | null;
   teamMembers: User[];
   onRefreshData: () => void;
+  onEditUser?: (user: User) => void;
 }
 
 const TeamOverview: React.FC<TeamOverviewProps> = ({
@@ -33,6 +34,7 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
   manager,
   teamMembers,
   onRefreshData,
+  onEditUser,
 }) => {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   
@@ -146,7 +148,12 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
                       
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => onEditUser && onEditUser(member)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-amber-500">

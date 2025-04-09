@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
-import TeamsList from "@/components/manager/TeamsList";
-import TeamOverview from "@/components/manager/TeamOverview";
 import { Team, User } from "@/types";
+import TeamOverview from "./TeamOverview";
+import TeamsList from "./TeamsList";
 
 interface TabContentProps {
   activeTab: string;
@@ -14,6 +14,7 @@ interface TabContentProps {
   manager: User | null;
   teamMembers: User[];
   onRefreshData: () => void;
+  onEditUser?: (user: User) => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -24,12 +25,13 @@ const TabContent: React.FC<TabContentProps> = ({
   selectedTeam,
   manager,
   teamMembers,
-  onRefreshData
+  onRefreshData,
+  onEditUser,
 }) => {
   return (
     <>
-      <TabsContent value="team-overview">
-        <TeamOverview
+      <TabsContent value="team-overview" className="mt-6">
+        <TeamOverview 
           teams={filteredTeams}
           selectedTeamId={selectedTeamId}
           setSelectedTeamId={setSelectedTeamId}
@@ -37,28 +39,29 @@ const TabContent: React.FC<TabContentProps> = ({
           manager={manager}
           teamMembers={teamMembers}
           onRefreshData={onRefreshData}
+          onEditUser={onEditUser}
         />
       </TabsContent>
       
-      <TabsContent value="teams">
-        <TeamsList />
+      <TabsContent value="teams" className="mt-6">
+        <TeamsList 
+          teams={filteredTeams}
+          selectedTeamId={selectedTeamId}
+          setSelectedTeamId={setSelectedTeamId}
+        />
       </TabsContent>
       
-      <TabsContent value="toil-report">
+      <TabsContent value="toil-report" className="mt-6">
         <div className="bg-white rounded-lg border p-6">
-          <h2 className="text-2xl font-bold mb-6">TOIL Approval Report</h2>
-          <p className="text-muted-foreground">
-            This section would display Time Off In Lieu (TOIL) approvals and reports.
-          </p>
+          <h2 className="text-2xl font-bold mb-4">TOIL Approval Report</h2>
+          <p className="text-muted-foreground">No pending TOIL approvals.</p>
         </div>
       </TabsContent>
       
-      <TabsContent value="dta-report">
+      <TabsContent value="dta-report" className="mt-6">
         <div className="bg-white rounded-lg border p-6">
-          <h2 className="text-2xl font-bold mb-6">DTA Approval Report</h2>
-          <p className="text-muted-foreground">
-            This section would display DTA approvals and reports.
-          </p>
+          <h2 className="text-2xl font-bold mb-4">DTA Approval Report</h2>
+          <p className="text-muted-foreground">No pending DTA approvals.</p>
         </div>
       </TabsContent>
     </>

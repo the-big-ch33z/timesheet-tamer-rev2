@@ -4,6 +4,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
 import StatisticsCards from "@/components/manager/StatisticsCards";
 import TabContent from "@/components/manager/TabContent";
+import { EditUserForm, UserEditFormValues } from "@/components/admin/users/EditUserForm";
+import { User } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
 
 type TeamMember = {
   id: string;
@@ -22,9 +26,13 @@ type TeamMember = {
 
 const Manager = () => {
   const [selectedTab, setSelectedTab] = useState("team-overview");
-  const { users, teams, getUserById, getUsersByTeam, currentUser } = useAuth();
+  const { users, teams, getUserById, getUsersByTeam, currentUser, updateUserRole } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { toast } = useToast();
+  const { assignScheduleToUser } = useWorkSchedule();
   
   // Filter teams by organization or by manager (if current user is a manager)
   const filteredTeams = teams.filter(team => {
@@ -73,6 +81,45 @@ const Manager = () => {
     // Implement actual refresh logic here
   };
 
+  // Handle editing a user
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsEditUserOpen(true);
+  };
+
+  // Handle form submission for editing a user
+  const handleSubmitEditUser = async (data: UserEditFormValues) => {
+    if (!selectedUser) return;
+    
+    try {
+      // Update user's role
+      await updateUserRole(selectedUser.id, data.role);
+      
+      // Handle work schedule assignment
+      if (data.useDefaultSchedule) {
+        // Reset to default schedule
+        assignScheduleToUser(selectedUser.id, 'default');
+      } else if (data.scheduleId) {
+        // Assign to custom schedule
+        assignScheduleToUser(selectedUser.id, data.scheduleId);
+      }
+      
+      toast({
+        title: "User Updated",
+        description: `${selectedUser.name}'s details have been updated.`,
+      });
+      
+      setIsEditUserOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      toast({
+        title: "Error Updating User",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container py-8 space-y-8">
       <div>
@@ -107,8 +154,17 @@ const Manager = () => {
           manager={manager}
           teamMembers={teamMembers}
           onRefreshData={handleRefreshData}
+          onEditUser={handleEditUser}
         />
       </Tabs>
+      
+      {/* Edit User Sheet */}
+      <EditUserForm 
+        isOpen={isEditUserOpen}
+        onOpenChange={setIsEditUserOpen}
+        selectedUser={selectedUser}
+        onSubmit={handleSubmitEditUser}
+      />
     </div>
   );
 };
