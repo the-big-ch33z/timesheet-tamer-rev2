@@ -8,7 +8,6 @@ import { initializeHolidays } from "@/lib/holidays";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
-import RecentEntries from "@/components/timesheet/RecentEntries";
 import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
 
 const Timesheet = () => {
@@ -116,8 +115,6 @@ const Timesheet = () => {
           />
         </div>
       )}
-
-      <RecentEntries entries={recentEntries} />
 
       <FloatingActionButton onClick={() => setSelectedDay(new Date())} />
     </div>

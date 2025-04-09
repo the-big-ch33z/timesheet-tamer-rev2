@@ -6,6 +6,7 @@ import { TimeEntry } from "@/types";
 import TimesheetCalendar from "./TimesheetCalendar";
 import ToilSummary from "./ToilSummary";
 import MonthlyHours from "./MonthlyHours";
+import RecentEntries from "./RecentEntries";
 
 interface TabContentProps {
   entries: TimeEntry[];
@@ -22,6 +23,11 @@ const TabContent: React.FC<TabContentProps> = ({
   onNextMonth,
   onDayClick,
 }) => {
+  // Sort entries by date (newest first)
+  const sortedEntries = [...entries].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
   return (
     <>
       <TabsContent value="timesheet" className="mt-4">
@@ -60,21 +66,7 @@ const TabContent: React.FC<TabContentProps> = ({
       <TabsContent value="recent">
         <div className="bg-gray-50 p-8 rounded-lg">
           <h3 className="text-xl font-medium mb-4">Recent Time Entries</h3>
-          <div className="space-y-4">
-            {entries.slice(0, 5).map(entry => (
-              <div key={entry.id} className="p-4 bg-white rounded-lg border">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium">{entry.project}</span>
-                  <span>{format(entry.date, "MMM dd, yyyy")}</span>
-                </div>
-                <p className="text-sm text-gray-600">{entry.description}</p>
-                <div className="text-right text-sm font-medium mt-2">{entry.hours} hours</div>
-              </div>
-            ))}
-            {entries.length === 0 && (
-              <p className="text-gray-500">No recent entries</p>
-            )}
-          </div>
+          <RecentEntries entries={sortedEntries} />
         </div>
       </TabsContent>
     </>
