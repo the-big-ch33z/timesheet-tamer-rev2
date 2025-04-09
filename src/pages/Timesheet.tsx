@@ -41,7 +41,6 @@ const Timesheet = () => {
     }
   }, []);
 
-  // Listen for custom events from child components
   useEffect(() => {
     const handleEntryAdded = (event: any) => {
       const newEntry = event.detail;
@@ -145,7 +144,7 @@ const Timesheet = () => {
               <TimesheetEntryDetail 
                 date={selectedDay}
                 entries={getDayEntries(selectedDay)}
-                onAddEntry={() => setIsEntryDialogOpen(true)}
+                onAddEntry={() => {}}
                 onDeleteEntry={deleteEntry}
               />
             </div>
@@ -224,7 +223,6 @@ const Timesheet = () => {
         className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-indigo-600 hover:bg-indigo-700"
         onClick={() => {
           setSelectedDay(new Date());
-          setIsEntryDialogOpen(true);
         }}
       >
         <Plus className="h-6 w-6" />
