@@ -12,7 +12,6 @@ import {
   Coffee,
   Plane,
   Thermometer,
-  Trash2
 } from "lucide-react";
 import { TimeEntry } from "@/types";
 import TimeEntryDialog from "./TimeEntryDialog";
@@ -44,7 +43,6 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [totalHours, setTotalHours] = useState<string>("0.0");
-  const [showInlineForm, setShowInlineForm] = useState(false);
 
   // Calculate total hours when start or end time changes
   useEffect(() => {
@@ -81,9 +79,12 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
       const mockEvent = new CustomEvent("entry-added", { detail: newEntry });
       document.dispatchEvent(mockEvent);
     }
-    
-    // Hide the form
-    setShowInlineForm(false);
+  };
+
+  const handleDeleteEntry = (id?: string) => {
+    if (id && onDeleteEntry) {
+      onDeleteEntry(id);
+    }
   };
 
   return (
@@ -179,62 +180,28 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           </div>
         </div>
         
-        {/* Add Entry Button */}
-        <div className="mb-4">
-          {!showInlineForm && (
-            <Button 
-              onClick={() => setShowInlineForm(true)}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Add Entry
-            </Button>
-          )}
-          
-          {showInlineForm && (
-            <TimeEntryDialog 
-              onSave={handleSaveEntry}
-              selectedDate={date}
-              onCancel={() => setShowInlineForm(false)}
-            />
-          )}
-        </div>
-        
         {/* Entries Section */}
-        {entries.length > 0 ? (
-          <div className="space-y-4">
-            {entries.map((entry) => (
-              <div key={entry.id} className="border p-4 rounded-lg flex justify-between items-center">
-                <div className="flex-grow">
-                  <div className="flex justify-between mb-1">
-                    <h4 className="font-medium">{entry.project}</h4>
-                    <span>{entry.hours} hours</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{entry.description}</p>
-                  {(entry.jobNumber || entry.rego) && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {entry.jobNumber && `Job: ${entry.jobNumber}`} 
-                      {entry.jobNumber && entry.rego && ' • '} 
-                      {entry.rego && `Rego: ${entry.rego}`}
-                    </div>
-                  )}
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  onClick={() => onDeleteEntry && onDeleteEntry(entry.id)}
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-6">
-            <p className="text-gray-500 mb-2">No entries for this date.</p>
-          </div>
-        )}
+        <div className="space-y-2 mb-4">
+          {entries.map((entry) => (
+            <TimeEntryDialog
+              key={entry.id}
+              onSave={handleSaveEntry}
+              onDelete={handleDeleteEntry}
+              selectedDate={date}
+              entryId={entry.id}
+              initialData={entry}
+            />
+          ))}
+        </div>
+
+        {/* Add Entry Button */}
+        <Button 
+          onClick={onAddEntry}
+          className="w-full bg-green-600 hover:bg-green-700 text-white my-2"
+          size="sm"
+        >
+          <Plus className="h-4 w-4 mr-1" /> Add Entry
+        </Button>
       </CardContent>
     </Card>
   );

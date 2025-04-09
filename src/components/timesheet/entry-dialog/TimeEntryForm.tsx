@@ -1,51 +1,60 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
 import { EntryFieldConfig, TimeEntry } from "@/types";
 import CustomFields from "./fields/CustomFields";
+import { Trash2 } from "lucide-react";
 
 type TimeEntryFormProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
+  onDelete?: (id?: string) => void;
   selectedDate: Date;
   visibleFields: EntryFieldConfig[];
   inline?: boolean;
+  entryId?: string;
+  initialData?: Partial<TimeEntry>;
 };
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   onSave,
   onCancel,
+  onDelete,
   selectedDate,
   visibleFields,
   inline = false,
+  entryId,
+  initialData = {},
 }) => {
-  const [hours, setHours] = useState("");
-  const [description, setDescription] = useState("");
-  const [jobNumber, setJobNumber] = useState("");
-  const [rego, setRego] = useState("");
+  const [hours, setHours] = useState(initialData.hours?.toString() || "");
+  const [description, setDescription] = useState(initialData.description || "");
+  const [jobNumber, setJobNumber] = useState(initialData.jobNumber || "");
+  const [rego, setRego] = useState(initialData.rego || "");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (inline && (hours || description || jobNumber || rego)) {
+      const timeoutId = setTimeout(() => {
+        handleSave();
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [hours, description, jobNumber, rego]);
+
+  const handleSave = () => {
+    if (!hours) return;
+
     onSave({
       date: selectedDate,
-      project: "No Project",
       hours: parseFloat(hours) || 0,
       description,
       jobNumber,
       rego,
     });
-    
-    // Reset fields after save
-    setHours("");
-    setDescription("");
-    setJobNumber("");
-    setRego("");
   };
 
   if (inline) {
     return (
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <div className="flex items-center gap-2 bg-white border rounded-md p-2">
         <CustomFields
           visibleFields={visibleFields}
           jobNumber={jobNumber}
@@ -59,23 +68,23 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
           inline={true}
         />
 
-        <div className="flex gap-2 ml-auto">
+        {onDelete && (
           <Button 
             type="button" 
-            variant="outline" 
-            onClick={onCancel}
-            size="sm"
+            variant="ghost" 
+            size="icon"
+            onClick={() => onDelete(entryId)}
+            className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
           >
-            Cancel
+            <Trash2 className="h-4 w-4" />
           </Button>
-          <Button type="submit" className="bg-brand-600 hover:bg-brand-700" size="sm">Save</Button>
-        </div>
-      </form>
+        )}
+      </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
       <CustomFields
         visibleFields={visibleFields}
         jobNumber={jobNumber}
@@ -88,16 +97,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         setHours={setHours}
       />
 
-      <DialogFooter>
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={onCancel}
-        >
-          Cancel
-        </Button>
+      <div className="flex justify-end gap-2">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
         <Button type="submit" className="bg-brand-600 hover:bg-brand-700">Save Entry</Button>
-      </DialogFooter>
+      </div>
     </form>
   );
 };

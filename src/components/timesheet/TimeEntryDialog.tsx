@@ -4,17 +4,24 @@ import { TimeEntry } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
+import { format } from "date-fns";
 
 type TimeEntryDialogProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
+  onDelete?: (id?: string) => void;
   selectedDate: Date;
   onCancel?: () => void;
+  entryId?: string;
+  initialData?: Partial<TimeEntry>;
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   onSave,
+  onDelete,
   selectedDate,
   onCancel,
+  entryId,
+  initialData,
 }) => {
   const { getVisibleFields } = useTimesheetSettings();
   const visibleFields = getVisibleFields();
@@ -29,13 +36,16 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   };
 
   return (
-    <div className="border p-4 rounded-lg bg-yellow-50 mb-4">
+    <div className="mb-2">
       <TimeEntryForm
         onSave={handleSave}
         onCancel={onCancel}
+        onDelete={onDelete}
         selectedDate={selectedDate}
         visibleFields={visibleFields}
         inline={true}
+        entryId={entryId}
+        initialData={initialData}
       />
     </div>
   );
