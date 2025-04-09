@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TimeEntry } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
@@ -29,8 +29,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       ...entry,
       userId: currentUser?.id, // Associate entry with current user
     });
-    
-    // Dialog will be closed by the parent component
   };
 
   return (
@@ -38,6 +36,9 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add Time Entry</DialogTitle>
+          <DialogDescription>
+            Enter your time entry details for {selectedDate.toLocaleDateString()}.
+          </DialogDescription>
         </DialogHeader>
         
         <TimeEntryForm
