@@ -44,11 +44,7 @@ const TabContent: React.FC<TabContentProps> = ({
       </TabsContent>
       
       <TabsContent value="teams" className="mt-6">
-        <TeamsList 
-          teams={filteredTeams}
-          selectedTeamId={selectedTeamId}
-          setSelectedTeamId={setSelectedTeamId}
-        />
+        <TeamsList />
       </TabsContent>
       
       <TabsContent value="toil-report" className="mt-6">
