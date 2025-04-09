@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Trash, Plus, Move } from "lucide-react";
+import { Trash, Plus } from "lucide-react";
 import { EntryFieldConfig } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 

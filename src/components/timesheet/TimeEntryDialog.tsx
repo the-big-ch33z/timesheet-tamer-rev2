@@ -13,13 +13,13 @@ import { CalendarIcon, Clock } from "lucide-react";
 import { TimeEntry, EntryFieldConfig } from "@/types";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 
 type TimeEntryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (entry: Omit<TimeEntry, "id">) => void;
   selectedDate: Date;
-  entryFields?: EntryFieldConfig[]; // Add support for custom entry fields
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
@@ -27,8 +27,9 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   onOpenChange,
   onSave,
   selectedDate,
-  entryFields = [],
 }) => {
+  const { getVisibleFields } = useTimesheetSettings();
+  const visibleFields = getVisibleFields();
   const [date, setDate] = useState<Date>(selectedDate);
   const [project, setProject] = useState("");
   const [hours, setHours] = useState("");
@@ -80,6 +81,78 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     setEndTime("");
     setJobNumber("");
     setRego("");
+  };
+
+  // Helper function to render input based on field type
+  const renderField = (field: EntryFieldConfig) => {
+    switch (field.name.toLowerCase()) {
+      case 'job number':
+        return (
+          <Input
+            id="jobNumber"
+            type="text"
+            value={jobNumber}
+            onChange={(e) => setJobNumber(e.target.value)}
+            placeholder={field.placeholder || "Job No."}
+            required={field.required}
+          />
+        );
+      case 'rego':
+        return (
+          <Input
+            id="rego"
+            type="text"
+            value={rego}
+            onChange={(e) => setRego(e.target.value)}
+            placeholder={field.placeholder || "Rego"}
+            required={field.required}
+          />
+        );
+      case 'notes':
+        return (
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            placeholder={field.placeholder || "Notes"}
+            required={field.required}
+          />
+        );
+      case 'hours':
+        return (
+          <Input
+            id="hours"
+            type="number"
+            step="0.25"
+            min="0.25"
+            max="24"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            placeholder={field.placeholder || "Hrs"}
+            required={field.required}
+            className={field.size === 'small' ? "w-24" : ""}
+          />
+        );
+      default:
+        if (!field.name) return null;
+        
+        return field.type === 'textarea' ? (
+          <Textarea
+            id={`custom-${field.id}`}
+            placeholder={field.placeholder}
+            required={field.required}
+            rows={3}
+          />
+        ) : (
+          <Input
+            id={`custom-${field.id}`}
+            type={field.type}
+            placeholder={field.placeholder}
+            required={field.required}
+          />
+        );
+    }
   };
 
   return (
@@ -152,76 +225,74 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
             </div>
           </div>
           
-          {/* Job number and rego fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="jobNumber">Job Number</Label>
-              <Input
-                id="jobNumber"
-                type="text"
-                value={jobNumber}
-                onChange={(e) => setJobNumber(e.target.value)}
-                placeholder="Job No."
-              />
-            </div>
+          {/* Custom entry fields from settings */}
+          <div className="space-y-4">
+            {/* Render Job Number and Rego fields in a grid if they exist */}
+            {visibleFields.some(f => 
+              f.name.toLowerCase() === 'job number' || f.name.toLowerCase() === 'rego'
+            ) && (
+              <div className="grid grid-cols-2 gap-4">
+                {visibleFields.filter(f => f.name.toLowerCase() === 'job number').map(field => (
+                  <div key={field.id} className="space-y-2">
+                    <Label htmlFor="jobNumber">{field.name}</Label>
+                    {renderField(field)}
+                  </div>
+                ))}
+
+                {visibleFields.filter(f => f.name.toLowerCase() === 'rego').map(field => (
+                  <div key={field.id} className="space-y-2">
+                    <Label htmlFor="rego">{field.name}</Label>
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="rego">Rego</Label>
-              <Input
-                id="rego"
-                type="text"
-                value={rego}
-                onChange={(e) => setRego(e.target.value)}
-                placeholder="Rego"
-              />
+              <Label htmlFor="project">Project</Label>
+              <Select
+                value={project}
+                onValueChange={setProject}
+                required
+              >
+                <SelectTrigger id="project">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Website Redesign">Website Redesign</SelectItem>
+                  <SelectItem value="Mobile App Development">Mobile App Development</SelectItem>
+                  <SelectItem value="Client Meeting">Client Meeting</SelectItem>
+                  <SelectItem value="Documentation">Documentation</SelectItem>
+                  <SelectItem value="Research">Research</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="project">Project</Label>
-            <Select
-              value={project}
-              onValueChange={setProject}
-              required
-            >
-              <SelectTrigger id="project">
-                <SelectValue placeholder="Select a project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Website Redesign">Website Redesign</SelectItem>
-                <SelectItem value="Mobile App Development">Mobile App Development</SelectItem>
-                <SelectItem value="Client Meeting">Client Meeting</SelectItem>
-                <SelectItem value="Documentation">Documentation</SelectItem>
-                <SelectItem value="Research">Research</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Render Notes field if it exists */}
+            {visibleFields.filter(f => f.name.toLowerCase() === 'notes').map(field => (
+              <div key={field.id} className="space-y-2">
+                <Label htmlFor="description">{field.name}</Label>
+                {renderField(field)}
+              </div>
+            ))}
 
-          <div className="space-y-2">
-            <Label htmlFor="hours">Hours</Label>
-            <Input
-              id="hours"
-              type="number"
-              step="0.25"
-              min="0.25"
-              max="24"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              required
-              placeholder="Hrs"
-            />
-          </div>
+            {/* Render Hours field if it exists */}
+            {visibleFields.filter(f => f.name.toLowerCase() === 'hours').map(field => (
+              <div key={field.id} className="space-y-2">
+                <Label htmlFor="hours">{field.name}</Label>
+                {renderField(field)}
+              </div>
+            ))}
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Notes"
-              required
-            />
+            {/* Render other custom fields if they exist */}
+            {visibleFields.filter(f => 
+              !['job number', 'rego', 'notes', 'hours', ''].includes(f.name.toLowerCase())
+            ).map(field => (
+              <div key={field.id} className="space-y-2">
+                <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
+                {renderField(field)}
+              </div>
+            ))}
           </div>
 
           <DialogFooter>
