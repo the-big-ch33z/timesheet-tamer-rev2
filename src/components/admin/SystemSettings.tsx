@@ -5,13 +5,12 @@ import EntryFieldsSettings from "@/components/settings/EntryFieldsSettings";
 import WorkScheduleSettings from "@/components/settings/WorkScheduleSettings";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import { useToast } from "@/hooks/use-toast";
-import { EntryFieldConfig } from "@/types";
 
 const SystemSettings = () => {
   const { toast } = useToast();
-  const { entryFields, updateEntryFields } = useTimesheetSettings();
+  const { updateEntryFields } = useTimesheetSettings();
 
-  const handleSaveEntryFields = (fields: EntryFieldConfig[]) => {
+  const handleSaveEntryFields = (fields: any[]) => {
     updateEntryFields(fields);
     toast({
       title: "Entry fields saved",
@@ -28,7 +27,6 @@ const SystemSettings = () => {
 
       <TabsContent value="fields">
         <EntryFieldsSettings 
-          initialFields={entryFields}
           onSave={handleSaveEntryFields}
         />
       </TabsContent>
