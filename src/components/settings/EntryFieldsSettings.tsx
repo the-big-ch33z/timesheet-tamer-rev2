@@ -17,21 +17,19 @@ const EntryFieldsSettings: React.FC<EntryFieldsSettingsProps> = ({
   initialFields = [],
   onSave 
 }) => {
-  // Set default fields if none provided
+  // Set default fields if none provided - only include first row (4 fields)
   const defaultFields: EntryFieldConfig[] = [
     { id: '1', name: 'Job Number', type: 'text', required: false, visible: true, placeholder: 'Job No.' },
     { id: '2', name: 'Rego', type: 'text', required: false, visible: true, placeholder: 'Rego' },
     { id: '3', name: 'Notes', type: 'textarea', required: true, visible: true, placeholder: 'Notes' },
     { id: '4', name: 'Hours', type: 'number', required: true, visible: true, placeholder: 'Hrs', size: 'small' },
-    // Empty row
-    { id: '5', name: '', type: 'text', required: false, visible: true, placeholder: '' },
-    { id: '6', name: '', type: 'text', required: false, visible: true, placeholder: '' },
-    { id: '7', name: '', type: 'text', required: false, visible: true, placeholder: '' },
-    { id: '8', name: '', type: 'number', required: false, visible: true, placeholder: '' },
   ];
 
   const [fields, setFields] = useState<EntryFieldConfig[]>(
-    initialFields.length > 0 ? initialFields : defaultFields
+    initialFields.length > 0 ? 
+      // If initialFields is provided but has more than 4 items, only take the first 4
+      initialFields.length > 4 ? initialFields.slice(0, 4) : initialFields
+      : defaultFields
   );
 
   const handleVisibilityToggle = (id: string) => {
