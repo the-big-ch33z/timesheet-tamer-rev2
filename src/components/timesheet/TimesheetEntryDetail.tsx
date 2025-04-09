@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import DetailHeader from "./detail/DetailHeader";
 import WorkHoursSection from "./detail/WorkHoursSection";
@@ -10,51 +10,33 @@ interface TimesheetEntryDetailProps {
   date: Date;
   entries: TimeEntry[];
   onAddEntry: () => void;
-  onDeleteEntry?: (id: string) => void;
+  onDeleteEntry: (id: string) => void;
+  readOnly?: boolean;
 }
 
 const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   date,
   entries,
-  onDeleteEntry
+  onAddEntry,
+  onDeleteEntry,
+  readOnly = false
 }) => {
-
-  // Handler for saving a new entry
-  const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
-    // Create a new entry with ID
-    const newEntry = {
-      ...entry,
-      id: Date.now().toString()
-    };
-    
-    // Dispatch event to add the entry
-    const mockEvent = new CustomEvent("entry-added", { detail: newEntry });
-    document.dispatchEvent(mockEvent);
-  };
-
-  const handleDeleteEntry = (id: string) => {
-    if (onDeleteEntry) {
-      onDeleteEntry(id);
-    }
-  };
-
+  const formattedDate = format(date, "EEEE, d MMMM yyyy");
+  
   return (
-    <Card className="border-0 shadow-sm">
-      <CardHeader className="p-0">
-        <DetailHeader date={date} />
-      </CardHeader>
-
-      <CardContent className="px-6">
-        <WorkHoursSection />
-        
+    <div className="bg-white rounded-lg border shadow-sm">
+      <DetailHeader date={date} formattedDate={formattedDate} />
+      <div className="p-6 grid md:grid-cols-12 gap-6">
+        <WorkHoursSection entries={entries} />
         <EntriesSection 
           date={date} 
           entries={entries} 
-          onSaveEntry={handleSaveEntry} 
-          onDeleteEntry={handleDeleteEntry}
+          onAddEntry={onAddEntry} 
+          onDeleteEntry={onDeleteEntry} 
+          readOnly={readOnly}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

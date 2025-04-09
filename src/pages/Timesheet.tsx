@@ -9,14 +9,27 @@ import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
+import { useParams, Navigate } from "react-router-dom";
+import { useRolePermission } from "@/hooks/useRolePermission";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<string>("timesheet");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const { currentUser } = useAuth();
+  const { userId } = useParams<{ userId: string }>();
+  const { currentUser, getUserById, users } = useAuth();
   const { toast } = useToast();
+  const { isAdmin, isManager } = useRolePermission();
+  const isViewingOtherUser = userId && userId !== currentUser?.id;
+  const viewedUser = userId ? getUserById(userId) : currentUser;
+  
+  // Check permission to view this timesheet
+  const canViewTimesheet = !isViewingOtherUser || isAdmin() || isManager();
   
   useEffect(() => {
     initializeHolidays();
@@ -75,8 +88,9 @@ const Timesheet = () => {
   };
 
   const getUserEntries = () => {
-    if (!currentUser) return entries;
-    return entries.filter(entry => entry.userId === currentUser.id);
+    // If viewing another user's timesheet, filter by that userId
+    if (!viewedUser) return entries;
+    return entries.filter(entry => entry.userId === viewedUser.id);
   };
 
   const getDayEntries = (day: Date) => {
@@ -87,13 +101,58 @@ const Timesheet = () => {
     );
   };
 
-  const recentEntries = getUserEntries()
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  // If user doesn't have permission, redirect to their own timesheet
+  if (isViewingOtherUser && !canViewTimesheet) {
+    toast({
+      title: "Access Denied",
+      description: "You don't have permission to view this timesheet",
+      variant: "destructive",
+    });
+    return <Navigate to="/timesheet" replace />;
+  }
+
+  // User not found
+  if (userId && !viewedUser) {
+    return (
+      <div className="container py-6">
+        <Alert variant="destructive" className="mb-4">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            User not found. The requested timesheet doesn't exist.
+          </AlertDescription>
+        </Alert>
+        <Button asChild>
+          <Link to="/timesheet" className="mt-4 flex items-center gap-2">
+            <ArrowLeft size={16} />
+            Back to your timesheet
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-6 max-w-7xl">
-      <UserInfo />
+      {/* Back button when viewing other user's timesheet */}
+      {isViewingOtherUser && (
+        <div className="flex items-center justify-between mb-4">
+          <Button 
+            asChild 
+            variant="outline"
+            className="mb-4"
+          >
+            <Link to={isAdmin() ? "/admin" : "/manager"} className="flex items-center gap-2">
+              <ArrowLeft size={16} />
+              Back to {isAdmin() ? "Admin" : "Manager"} Dashboard
+            </Link>
+          </Button>
+          <h2 className="text-lg font-medium">
+            Viewing {viewedUser?.name}'s Timesheet
+          </h2>
+        </div>
+      )}
+
+      <UserInfo user={viewedUser} />
 
       <TimesheetTabs 
         activeTab={activeTab}
@@ -112,11 +171,15 @@ const Timesheet = () => {
             entries={getDayEntries(selectedDay)}
             onAddEntry={() => {}}
             onDeleteEntry={deleteEntry}
+            readOnly={isViewingOtherUser}  // Make read-only when viewing another user's timesheet
           />
         </div>
       )}
 
-      <FloatingActionButton onClick={() => setSelectedDay(new Date())} />
+      {/* Only show FloatingActionButton if not in read-only mode */}
+      {!isViewingOtherUser && (
+        <FloatingActionButton onClick={() => setSelectedDay(new Date())} />
+      )}
     </div>
   );
 };

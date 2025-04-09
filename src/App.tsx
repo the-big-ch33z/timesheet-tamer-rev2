@@ -31,6 +31,7 @@ function App() {
               {/* Protected routes with layout */}
               <Route element={<MainLayout />}>
                 <Route path="/timesheet" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
+                <Route path="/timesheet/:userId" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
                 <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                 <Route path="/team-calendar" element={<ProtectedRoute><TeamCalendar /></ProtectedRoute>} />

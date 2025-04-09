@@ -1,51 +1,37 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { TimeEntry } from "@/types";
 import TimeEntryList from "../entry-display/TimeEntryList";
 import AddEntryButton from "../entry-display/AddEntryButton";
-import NewEntryForm from "../entry-display/NewEntryForm";
 
 interface EntriesSectionProps {
   date: Date;
   entries: TimeEntry[];
-  onSaveEntry: (entry: Omit<TimeEntry, "id">) => void;
+  onAddEntry: () => void;
   onDeleteEntry: (id: string) => void;
+  readOnly?: boolean;
 }
 
 const EntriesSection: React.FC<EntriesSectionProps> = ({
   date,
   entries,
-  onSaveEntry,
+  onAddEntry,
   onDeleteEntry,
+  readOnly = false
 }) => {
-  const [showNewEntryForm, setShowNewEntryForm] = useState(false);
-
-  const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
-    onSaveEntry(entry);
-    setShowNewEntryForm(false);
-  };
-
   return (
-    <>
-      <TimeEntryList 
-        entries={entries}
-        date={date}
-        onSaveEntry={onSaveEntry}
-        onDeleteEntry={onDeleteEntry}
-      />
+    <div className="md:col-span-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Time Entries</h3>
+        {!readOnly && <AddEntryButton date={date} />}
+      </div>
       
-      {/* New entry form */}
-      {showNewEntryForm && (
-        <NewEntryForm
-          date={date}
-          onSaveEntry={handleSaveEntry}
-          onCancel={() => setShowNewEntryForm(false)}
-        />
-      )}
-
-      {/* Add Entry Button */}
-      <AddEntryButton onClick={() => setShowNewEntryForm(true)} />
-    </>
+      <TimeEntryList 
+        entries={entries} 
+        onDeleteEntry={onDeleteEntry} 
+        readOnly={readOnly}
+      />
+    </div>
   );
 };
 

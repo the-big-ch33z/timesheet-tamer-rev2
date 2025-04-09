@@ -3,9 +3,10 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Users, Archive, ArchiveRestore } from "lucide-react";
+import { Edit, Trash2, Users, Archive, ArchiveRestore, Calendar } from "lucide-react";
 import { User, UserRole } from "@/types";
 import { useAuth } from "@/contexts/auth";
+import { Link } from "react-router-dom";
 
 interface UserTableProps {
   filteredUsers: User[];
@@ -97,26 +98,40 @@ export const UserTable: React.FC<UserTableProps> = ({
                   <span className="text-muted-foreground text-sm italic">No teams</span>
                 )}
               </TableCell>
-              <TableCell className="text-right space-x-2">
-                {!showArchived ? (
-                  <>
-                    <Button variant="ghost" size="icon" onClick={() => onEditUser(user)}>
-                      <Edit className="h-4 w-4" />
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  {/* View Timesheet Button */}
+                  <Link to={`/timesheet/${user.id}`}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-blue-500 hover:text-blue-700"
+                      title="View Timesheet"
+                    >
+                      <Calendar className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onArchiveUser(user.id)} className="text-amber-500 hover:text-amber-700">
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="ghost" size="icon" onClick={() => onRestoreUser(user.id)} className="text-green-500 hover:text-green-700">
-                      <ArchiveRestore className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDeleteUser(user.id)} className="text-red-500 hover:text-red-700">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
+                  </Link>
+                  
+                  {!showArchived ? (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => onEditUser(user)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onArchiveUser(user.id)} className="text-amber-500 hover:text-amber-700">
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => onRestoreUser(user.id)} className="text-green-500 hover:text-green-700">
+                        <ArchiveRestore className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onDeleteUser(user.id)} className="text-red-500 hover:text-red-700">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           );

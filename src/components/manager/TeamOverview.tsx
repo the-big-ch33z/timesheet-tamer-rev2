@@ -16,6 +16,7 @@ import { Team, User } from "@/types";
 import { AddTeamMemberDialog } from "./AddTeamMemberDialog";
 import { useTeamPermission } from "@/hooks/useTeamPermission";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Link } from "react-router-dom";
 
 interface TeamOverviewProps {
   teams: Team[];
@@ -173,6 +174,18 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
                       
                       <TableCell>
                         <div className="flex gap-2">
+                          {/* View Timesheet Button */}
+                          <Link to={`/timesheet/${member.id}`}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700"
+                              title="View Timesheet"
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        
                           {member.status !== 'archived' ? (
                             <>
                               <Button 
