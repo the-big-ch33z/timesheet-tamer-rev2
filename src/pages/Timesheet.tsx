@@ -22,42 +22,8 @@ const Timesheet = () => {
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false);
   const { currentUser } = useAuth();
   
-  const [entryFields, setEntryFields] = useState<EntryFieldConfig[]>([
-    { 
-      id: '1', 
-      name: 'Job Number', 
-      type: 'text', 
-      required: false, 
-      visible: true, 
-      placeholder: 'Job No.',
-    },
-    { 
-      id: '2', 
-      name: 'Rego', 
-      type: 'text', 
-      required: false, 
-      visible: true,
-      placeholder: 'Rego', 
-    },
-    { 
-      id: '3', 
-      name: 'Notes', 
-      type: 'textarea', 
-      required: true, 
-      visible: true,
-      placeholder: 'Notes', 
-    },
-    { 
-      id: '4', 
-      name: 'Hours', 
-      type: 'number', 
-      required: true, 
-      visible: true,
-      placeholder: 'Hrs',
-      size: 'small', 
-    },
-  ]);
-
+  // Remove the entryFields state since we're now using TimesheetSettingsContext
+  
   useEffect(() => {
     initializeHolidays();
   }, []);
@@ -231,7 +197,6 @@ const Timesheet = () => {
         onOpenChange={setIsEntryDialogOpen}
         onSave={addEntry}
         selectedDate={selectedDay || new Date()}
-        entryFields={entryFields}
       />
 
       <Button 
