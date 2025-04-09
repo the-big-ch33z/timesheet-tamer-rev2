@@ -56,12 +56,19 @@ const Manager = () => {
   // Update team members when selected team changes
   useEffect(() => {
     if (selectedTeamId) {
-      const members = getUsersByTeam(selectedTeamId);
-      setTeamMembers(members);
+      refreshTeamMembers();
     } else {
       setTeamMembers([]);
     }
   }, [selectedTeamId, getUsersByTeam]);
+
+  // Function to refresh team members
+  const refreshTeamMembers = () => {
+    if (selectedTeamId) {
+      const members = getUsersByTeam(selectedTeamId);
+      setTeamMembers(members);
+    }
+  };
   
   const selectedTeam = selectedTeamId 
     ? filteredTeams.find(team => team.id === selectedTeamId) 
@@ -81,7 +88,7 @@ const Manager = () => {
   // Handle refresh data
   const handleRefreshData = () => {
     console.log("Refreshing data");
-    // Implement actual refresh logic here
+    refreshTeamMembers();
   };
 
   // Handle editing a user
@@ -112,11 +119,8 @@ const Manager = () => {
     
     try {
       await archiveUser(userId);
-      // Refresh team members list after archiving
-      if (selectedTeamId) {
-        const members = getUsersByTeam(selectedTeamId);
-        setTeamMembers(members);
-      }
+      // Immediately refresh team members list after archiving
+      refreshTeamMembers();
     } catch (error) {
       console.error("Error archiving user:", error);
     }
@@ -135,11 +139,8 @@ const Manager = () => {
     
     try {
       await restoreUser(userId);
-      // Refresh team members list after restoring
-      if (selectedTeamId) {
-        const members = getUsersByTeam(selectedTeamId);
-        setTeamMembers(members);
-      }
+      // Immediately refresh team members list after restoring
+      refreshTeamMembers();
     } catch (error) {
       console.error("Error restoring user:", error);
     }

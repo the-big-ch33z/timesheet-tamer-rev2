@@ -51,6 +51,13 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
   const getUserById = (userId: string) => {
     return teamMembers.find(member => member.id === userId);
   };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    if (onRefreshData) {
+      onRefreshData();
+    }
+  };
   
   return (
     <div className="bg-white rounded-lg border p-6">
@@ -91,7 +98,7 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
             </Button>
           </div>
           
-          <Button size="sm" className="gap-1" onClick={onRefreshData}>
+          <Button size="sm" className="gap-1" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
