@@ -103,7 +103,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
         <div className="grid grid-cols-7 gap-2">
           {/* Empty cells for days before the start of the month */}
           {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-            <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-50 rounded" />
+            <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-100 border border-gray-200 rounded" />
           ))}
 
           {/* Days of the month */}
@@ -120,9 +120,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
             return (
               <div
                 key={day.toString()}
-                className={`p-3 min-h-[80px] rounded cursor-pointer transition-all duration-200 ease-in-out
-                  ${isWeekend ? "bg-[#F1F0FB]" : "bg-white"}
-                  ${dayHoliday ? "bg-[#FEF7CD]" : ""}
+                className={`p-3 min-h-[80px] border rounded cursor-pointer transition-all duration-200 ease-in-out
+                  ${isWeekend ? "bg-gray-200 border-gray-300" : "bg-white border-gray-200"}
+                  ${dayHoliday ? "bg-[#FEF7CD] border-amber-200" : ""}
                   ${isToday ? "ring-2 ring-indigo-500" : ""}
                   ${isSelected ? "transform scale-[1.02] shadow-md z-10 ring-2 ring-indigo-400" : ""}
                   hover:bg-gray-100
@@ -132,7 +132,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
                 <div className="flex justify-between items-start">
                   <span
                     className={`text-lg font-medium
-                      ${isWeekend ? "text-red-500" : ""}
+                      ${isWeekend ? "text-gray-900" : ""}
                       ${isToday ? "bg-indigo-500 text-white w-7 h-7 flex items-center justify-center rounded-full" : ""}
                     `}
                   >
