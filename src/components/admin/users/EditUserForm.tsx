@@ -4,13 +4,13 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { UserRole, User } from "@/types";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
+import { RoleSelection } from "./form-sections/RoleSelection";
+import { UserMetricsFields } from "./form-sections/UserMetricsFields";
+import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
@@ -22,7 +22,7 @@ const userEditSchema = z.object({
   fortnightHours: z.coerce.number().min(0).default(76),
 });
 
-type UserEditFormValues = z.infer<typeof userEditSchema>;
+export type UserEditFormValues = z.infer<typeof userEditSchema>;
 
 interface EditUserFormProps {
   isOpen: boolean;
@@ -97,155 +97,17 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pt-6">
             {/* Role selection */}
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="team-member">Team Member</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <RoleSelection control={form.control} />
             
-            {/* FTE Field */}
-            <FormField
-              control={form.control}
-              name="fte"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>FTE (Full-Time Equivalent)</FormLabel>
-                  <FormDescription>
-                    Work fraction (1.0 = full-time, 0.5 = half-time)
-                  </FormDescription>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.1" 
-                      min="0" 
-                      max="1"
-                      placeholder="1.0" 
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Fortnight Hours Field */}
-            <FormField
-              control={form.control}
-              name="fortnightHours"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Required Fortnight Hours</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      min="0"
-                      placeholder="76" 
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* User Metrics Fields */}
+            <UserMetricsFields control={form.control} />
             
             {/* Work Schedule section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Work Schedule</h3>
-              
-              <FormField
-                control={form.control}
-                name="useDefaultSchedule"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Use Default Schedule</FormLabel>
-                      <FormDescription>
-                        Use the organization's default work schedule
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {!form.watch("useDefaultSchedule") && (
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="scheduleId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assigned Schedule</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select schedule" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {schedules.filter(s => !s.isDefault).map((schedule) => (
-                              <SelectItem key={schedule.id} value={schedule.id}>
-                                {schedule.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch("scheduleId") && (
-                    <div className="pt-2">
-                      <h4 className="text-sm font-medium mb-2">Schedule Preview</h4>
-                      <div className="bg-gray-50 p-4 rounded border text-sm">
-                        {schedules.find(s => s.id === form.watch("scheduleId")) ? (
-                          <div>
-                            <p className="font-medium">{schedules.find(s => s.id === form.watch("scheduleId"))?.name}</p>
-                            <p className="text-muted-foreground mt-1">
-                              This schedule has specific hours defined for each day across a two-week rotation.
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-muted-foreground">Select a schedule to see details</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <WorkScheduleSection 
+              control={form.control} 
+              watch={form.watch} 
+              schedules={schedules} 
+            />
 
             <SheetFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
