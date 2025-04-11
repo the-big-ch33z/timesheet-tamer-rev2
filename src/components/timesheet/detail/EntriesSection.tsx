@@ -41,6 +41,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     const newEntry: TimeEntry = {
       ...entry,
       id: uuidv4(),
+      userId: userId // Ensure userId is set in the new entry
     };
     
     // Call the parent handler with the new entry

@@ -19,7 +19,10 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   userId
 }) => {
   const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
-    onSaveEntry(entry);
+    onSaveEntry({
+      ...entry,
+      userId: userId // Ensure userId gets added to the entry
+    });
   };
 
   return (

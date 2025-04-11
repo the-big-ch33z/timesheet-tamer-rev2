@@ -53,12 +53,18 @@ export const useEntryManagement = (userId?: string) => {
   }, [entries, logger]);
 
   const addEntry = (entry: TimeEntry) => {
-    setEntries(prev => [...prev, entry]);
-    logger.info("Entry added explicitly", { entry });
+    // Ensure the entry has the correct userId
+    const completeEntry = {
+      ...entry,
+      userId: entry.userId || userId // Use the entry's userId if provided, otherwise use the hook's userId
+    };
+    
+    setEntries(prev => [...prev, completeEntry]);
+    logger.info("Entry added explicitly", { entry: completeEntry });
     
     // Create a custom event to notify about the new entry
     const event = new CustomEvent('entry-added', {
-      detail: entry
+      detail: completeEntry
     });
     document.dispatchEvent(event);
   };

@@ -36,11 +36,13 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
 
   const handleSave = (entry: Omit<TimeEntry, "id">) => {
     try {
-      // Add user ID to the entry - use provided userId or fall back to current user
-      onSave({
+      // Use the provided userId or fall back to current user's id
+      const entryWithUserId = {
         ...entry,
         userId: userId || currentUser?.id,
-      });
+      };
+      
+      onSave(entryWithUserId);
       
       // Show success notification
       toast({
@@ -90,7 +92,10 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         visibleFields={visibleFields}
         inline={true}
         entryId={entryId}
-        initialData={initialData}
+        initialData={{
+          ...initialData,
+          userId: userId || currentUser?.id
+        }}
         workSchedule={workSchedule}
       />
     </div>
