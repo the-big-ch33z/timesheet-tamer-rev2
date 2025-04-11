@@ -10,6 +10,7 @@ import {
   Plane,
   Thermometer,
   Clock,
+  CreditCard
 } from "lucide-react";
 
 interface DetailHeaderProps {
@@ -23,17 +24,17 @@ const DetailHeader: React.FC<DetailHeaderProps> = ({ date, formattedDate }) => {
   return (
     <div className="flex flex-row items-center justify-between pb-2 pt-4 px-6">
       <div className="flex items-center gap-2">
-        <div className="p-2 rounded-md bg-gray-100">
-          <CalendarIcon className="h-5 w-5 text-gray-700" />
+        <div className="p-2 rounded-md bg-blue-50">
+          <CalendarIcon className="h-5 w-5 text-blue-600" />
         </div>
         <CardTitle className="text-xl font-semibold">
-          Entries for {displayDate}
+          Entries for {format(date, "MMM d, yyyy")}
         </CardTitle>
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" className="gap-1 text-sm">
           <CalendarIcon className="h-4 w-4" />
-          {format(date, "dd MMM yyyy")}
+          {format(date, "d MMM yyyy")}
         </Button>
         
         {/* Action buttons */}

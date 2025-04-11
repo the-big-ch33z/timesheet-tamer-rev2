@@ -21,12 +21,12 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   onDeleteEntry,
   readOnly = false
 }) => {
-  const formattedDate = format(date, "EEEE, d MMMM yyyy");
+  const formattedDate = format(date, "MMM d, yyyy");
   
   return (
     <div className="bg-white rounded-lg border shadow-sm">
       <DetailHeader date={date} formattedDate={formattedDate} />
-      <div className="p-6 grid md:grid-cols-12 gap-6">
+      <div className="p-6 space-y-6">
         <WorkHoursSection entries={entries} />
         <EntriesSection 
           date={date} 
