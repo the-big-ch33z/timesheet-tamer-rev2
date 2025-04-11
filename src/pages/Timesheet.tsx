@@ -8,6 +8,7 @@ import TimesheetBackNavigation from "@/components/timesheet/navigation/Timesheet
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import { useTimesheet } from "@/hooks/useTimesheet";
 import { useToast } from "@/hooks/use-toast";
+import { TimeEntry } from "@/types";
 
 const Timesheet = () => {
   const { toast } = useToast();
@@ -19,6 +20,7 @@ const Timesheet = () => {
     viewedUser,
     canViewTimesheet,
     userWorkSchedule,
+    targetUserId,
     setActiveTab,
     prevMonth,
     nextMonth,
@@ -26,7 +28,8 @@ const Timesheet = () => {
     deleteEntry,
     getUserEntries,
     getDayEntries,
-    setSelectedDay
+    setSelectedDay,
+    addEntry
   } = useTimesheet();
 
   // Check for permission or if user exists
@@ -44,6 +47,14 @@ const Timesheet = () => {
     toast({
       title: "Entry deleted",
       description: "Time entry has been removed successfully",
+    });
+  };
+
+  const handleAddEntry = (entry: TimeEntry) => {
+    addEntry(entry);
+    toast({
+      title: "Entry added",
+      description: "Time entry has been added successfully",
     });
   };
 
@@ -74,10 +85,11 @@ const Timesheet = () => {
           <TimesheetEntryDetail 
             date={selectedDay}
             entries={getDayEntries(selectedDay)}
-            onAddEntry={() => {}}
+            onAddEntry={handleAddEntry}
             onDeleteEntry={handleDeleteEntry}
             readOnly={isViewingOtherUser}
             workSchedule={userWorkSchedule}
+            userId={targetUserId}
           />
         </div>
       )}

@@ -52,6 +52,17 @@ export const useEntryManagement = (userId?: string) => {
     }
   }, [entries, logger]);
 
+  const addEntry = (entry: TimeEntry) => {
+    setEntries(prev => [...prev, entry]);
+    logger.info("Entry added explicitly", { entry });
+    
+    // Create a custom event to notify about the new entry
+    const event = new CustomEvent('entry-added', {
+      detail: entry
+    });
+    document.dispatchEvent(event);
+  };
+
   const deleteEntry = (id: string) => {
     setEntries(entries.filter(entry => entry.id !== id));
     logger.info("Entry deleted", { id });
@@ -92,6 +103,7 @@ export const useEntryManagement = (userId?: string) => {
     entries,
     deleteEntry,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    addEntry
   };
 };

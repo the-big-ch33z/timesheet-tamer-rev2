@@ -12,10 +12,11 @@ import { useEntryActions } from "./hooks/useEntryActions";
 interface TimesheetEntryDetailProps {
   date: Date;
   entries: TimeEntry[];
-  onAddEntry: () => void;
+  onAddEntry: (entry: TimeEntry) => void;
   onDeleteEntry: (id: string) => void;
   readOnly?: boolean;
   workSchedule?: WorkSchedule;
+  userId?: string;
 }
 
 const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
@@ -24,7 +25,8 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   onAddEntry,
   onDeleteEntry,
   readOnly = false,
-  workSchedule
+  workSchedule,
+  userId
 }) => {
   const formattedDate = format(date, "MMM d, yyyy");
   const { handleDeleteEntry } = useEntryActions({ 
@@ -48,6 +50,7 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           onDeleteEntry={handleDeleteEntry} 
           readOnly={readOnly}
           workSchedule={workSchedule}
+          userId={userId}
         />
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useCalendarState } from "./timesheet/useCalendarState";
 import { useEntryManagement } from "./timesheet/useEntryManagement";
 import { useTimesheetContext } from "./timesheet/useTimesheetContext";
 import { useLogger } from "./useLogger";
+import { TimeEntry } from "@/types";
 
 export const useTimesheet = () => {
   const logger = useLogger("Timesheet");
@@ -30,7 +31,8 @@ export const useTimesheet = () => {
   const {
     deleteEntry,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    addEntry
   } = useEntryManagement(targetUserId);
   
   logger.debug("Timesheet hook initialized", { 
@@ -61,6 +63,7 @@ export const useTimesheet = () => {
     // Entry management
     deleteEntry,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    addEntry
   };
 };

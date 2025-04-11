@@ -11,10 +11,11 @@ import TimeEntryList from "../entry-display/TimeEntryList";
 interface EntriesSectionProps {
   date: Date;
   entries: TimeEntry[];
-  onAddEntry: () => void;
+  onAddEntry: (entry: TimeEntry) => void;
   onDeleteEntry: (id: string) => void;
   readOnly?: boolean;
   workSchedule?: WorkSchedule;
+  userId?: string;
 }
 
 const EntriesSection: React.FC<EntriesSectionProps> = ({
@@ -23,7 +24,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   onAddEntry,
   onDeleteEntry,
   readOnly = false,
-  workSchedule
+  workSchedule,
+  userId
 }) => {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
 
@@ -41,14 +43,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
       id: uuidv4(),
     };
     
-    // Create a custom event to notify about the new entry
-    const event = new CustomEvent('entry-added', {
-      detail: newEntry
-    });
-    document.dispatchEvent(event);
-    
-    // Call the parent handler
-    onAddEntry();
+    // Call the parent handler with the new entry
+    onAddEntry(newEntry);
     
     // Close the form
     setIsAddingEntry(false);
@@ -77,6 +73,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
           onSaveEntry={handleSaveEntry} 
           onCancel={handleCancelAddEntry}
           workSchedule={workSchedule}
+          userId={userId}
         />
       )}
 

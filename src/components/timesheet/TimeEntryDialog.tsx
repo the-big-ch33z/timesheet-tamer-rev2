@@ -16,6 +16,7 @@ type TimeEntryDialogProps = {
   entryId?: string;
   initialData?: Partial<TimeEntry>;
   workSchedule?: WorkSchedule;
+  userId?: string;
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
@@ -26,6 +27,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   entryId,
   initialData,
   workSchedule,
+  userId,
 }) => {
   const { getVisibleFields } = useTimesheetSettings();
   const visibleFields = getVisibleFields();
@@ -34,10 +36,10 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
 
   const handleSave = (entry: Omit<TimeEntry, "id">) => {
     try {
-      // Add user ID to the entry
+      // Add user ID to the entry - use provided userId or fall back to current user
       onSave({
         ...entry,
-        userId: currentUser?.id,
+        userId: userId || currentUser?.id,
       });
       
       // Show success notification

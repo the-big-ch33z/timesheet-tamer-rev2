@@ -8,6 +8,7 @@ interface NewEntryFormProps {
   onSaveEntry: (entry: Omit<TimeEntry, "id">) => void;
   onCancel: () => void;
   workSchedule?: WorkSchedule;
+  userId?: string;
 }
 
 const NewEntryForm: React.FC<NewEntryFormProps> = ({
@@ -15,6 +16,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   onSaveEntry,
   onCancel,
   workSchedule,
+  userId
 }) => {
   const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
     onSaveEntry(entry);
@@ -26,6 +28,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       onDelete={onCancel}
       selectedDate={date}
       workSchedule={workSchedule}
+      userId={userId}
     />
   );
 };
