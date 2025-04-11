@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserRole } from '@/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -9,12 +9,12 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRoles?: UserRole[];
+  allowedRoles?: UserRole[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requiredRoles = [] 
+  allowedRoles = [] 
 }) => {
   const { isAuthenticated, currentUser } = useAuth();
   const navigate = useNavigate();

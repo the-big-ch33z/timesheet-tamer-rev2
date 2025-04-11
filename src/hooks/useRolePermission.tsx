@@ -23,6 +23,11 @@ export function useRolePermission() {
     return currentUser?.role === 'manager' || currentUser?.role === 'admin';
   };
   
+  // Add this isAdminOrManager helper method that's missing
+  const isAdminOrManager = (): boolean => {
+    return isAdmin() || isManager();
+  };
+  
   const isTeamMember = (): boolean => {
     return !!currentUser; // Any authenticated user is at least a team member
   };
@@ -42,6 +47,7 @@ export function useRolePermission() {
     isAdmin,
     isManager,
     isTeamMember,
+    isAdminOrManager, // Add this to the return object
     checkAndLogPermission
   };
 }
