@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
@@ -66,10 +67,10 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     }
   };
 
-  const handleDelete = (id?: string) => {
+  const handleDelete = () => {
     try {
-      if (onDelete && id) {
-        onDelete(id);
+      if (onDelete && entryId) {
+        onDelete(entryId);
         toast({
           title: "Entry deleted",
           description: "Time entry has been removed",
@@ -90,7 +91,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       <TimeEntryForm
         onSave={handleSave}
         onCancel={onCancel}
-        onDelete={handleDelete}
+        onDelete={entryId ? handleDelete : undefined}
         selectedDate={selectedDate}
         visibleFields={visibleFields}
         inline={true}

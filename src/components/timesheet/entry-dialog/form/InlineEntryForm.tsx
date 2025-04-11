@@ -14,7 +14,7 @@ interface InlineEntryFormProps {
     rego: string;
   };
   onFieldChange: (field: string, value: string) => void;
-  onDelete?: (id?: string) => void;
+  onDelete?: () => void;
   entryId?: string;
   disabled?: boolean;
 }
@@ -48,7 +48,7 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
           type="button" 
           variant="ghost" 
           size="icon"
-          onClick={() => onDelete(entryId)}
+          onClick={() => onDelete()}
           className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
           disabled={disabled}
         >
