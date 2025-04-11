@@ -2,7 +2,7 @@
 import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule } from "@/types";
 import TimesheetCalendar from "./TimesheetCalendar";
 import ToilSummary from "./ToilSummary";
 import MonthlyHours from "./MonthlyHours";
@@ -14,6 +14,7 @@ interface TabContentProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
+  workSchedule?: WorkSchedule;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -22,6 +23,7 @@ const TabContent: React.FC<TabContentProps> = ({
   onPrevMonth,
   onNextMonth,
   onDayClick,
+  workSchedule,
 }) => {
   // Sort entries by date (newest first)
   const sortedEntries = [...entries].sort((a, b) => 
@@ -39,6 +41,7 @@ const TabContent: React.FC<TabContentProps> = ({
               onPrevMonth={onPrevMonth}
               onNextMonth={onNextMonth}
               onDayClick={onDayClick}
+              workSchedule={workSchedule}
             />
           </div>
 
