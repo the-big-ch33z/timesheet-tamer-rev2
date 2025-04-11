@@ -12,7 +12,7 @@ interface InlineEntryFormProps {
     description: string;
     jobNumber: string;
     rego: string;
-    taskNumber: string; // Added task number
+    taskNumber: string;
   };
   onFieldChange: (field: string, value: string) => void;
   onDelete?: () => void;
@@ -51,7 +51,7 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
           type="button" 
           variant="ghost" 
           size="icon"
-          onClick={() => onDelete()}
+          onClick={onDelete}
           className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
           disabled={disabled}
         >

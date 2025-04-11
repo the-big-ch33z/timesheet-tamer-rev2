@@ -1,9 +1,6 @@
-
 import React from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { EntryFieldConfig } from "@/types";
+import EntryField from "./EntryField";
 
 interface CustomFieldsProps {
   visibleFields: EntryFieldConfig[];
@@ -11,8 +8,8 @@ interface CustomFieldsProps {
   setJobNumber: (value: string) => void;
   rego: string;
   setRego: (value: string) => void;
-  taskNumber: string; // Added taskNumber
-  setTaskNumber: (value: string) => void; // Added setTaskNumber
+  taskNumber: string;
+  setTaskNumber: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
   hours: string;
@@ -27,8 +24,8 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   setJobNumber,
   rego,
   setRego,
-  taskNumber, // Added taskNumber
-  setTaskNumber, // Added setTaskNumber
+  taskNumber,
+  setTaskNumber,
   description,
   setDescription,
   hours,
@@ -37,129 +34,103 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   disabled = false,
 }) => {
   // Render specific field based on field type and name
-  const renderField = (field: EntryFieldConfig, showLabel = true) => {
-    const fieldId = `field-${field.id}`;
+  const renderField = (field: EntryFieldConfig) => {
+    const fieldId = field.id;
     
     switch (field.name.toLowerCase()) {
       case 'job number':
         return (
-          <div className={inline ? "flex-1 min-w-20" : "space-y-2"}>
-            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
-            <Input
-              id={fieldId}
-              type="text"
-              value={jobNumber}
-              onChange={(e) => setJobNumber(e.target.value)}
-              placeholder={field.placeholder || "Job No."}
-              required={field.required}
-              className={inline ? "h-9" : ""}
-              disabled={disabled}
-            />
-          </div>
+          <EntryField
+            id={fieldId}
+            name={field.name}
+            value={jobNumber}
+            onChange={setJobNumber}
+            placeholder={field.placeholder || "Job No."}
+            required={field.required}
+            inline={inline}
+            disabled={disabled}
+            showLabel={!inline}
+          />
         );
       case 'rego':
         return (
-          <div className={inline ? "flex-1 min-w-20" : "space-y-2"}>
-            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
-            <Input
-              id={fieldId}
-              type="text"
-              value={rego}
-              onChange={(e) => setRego(e.target.value)}
-              placeholder={field.placeholder || "Rego"}
-              required={field.required}
-              className={inline ? "h-9" : ""}
-              disabled={disabled}
-            />
-          </div>
+          <EntryField
+            id={fieldId}
+            name={field.name}
+            value={rego}
+            onChange={setRego}
+            placeholder={field.placeholder || "Rego"}
+            required={field.required}
+            inline={inline}
+            disabled={disabled}
+            showLabel={!inline}
+          />
         );
-      case 'task number': // Added case for task number
+      case 'task number':
         return (
-          <div className={inline ? "flex-1 min-w-20" : "space-y-2"}>
-            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
-            <Input
-              id={fieldId}
-              type="text"
-              value={taskNumber}
-              onChange={(e) => setTaskNumber(e.target.value)}
-              placeholder={field.placeholder || "Task No."}
-              required={field.required}
-              className={inline ? "h-9" : ""}
-              disabled={disabled}
-            />
-          </div>
+          <EntryField
+            id={fieldId}
+            name={field.name}
+            value={taskNumber}
+            onChange={setTaskNumber}
+            placeholder={field.placeholder || "Task No."}
+            required={field.required}
+            inline={inline}
+            disabled={disabled}
+            showLabel={!inline}
+          />
         );
       case 'notes':
         return (
-          <div className={inline ? "flex-1 min-w-40" : "space-y-2"}>
-            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
-            {inline ? (
-              <Input
-                id={fieldId}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={field.placeholder || "Notes"}
-                required={field.required}
-                className="h-9"
-                disabled={disabled}
-              />
-            ) : (
-              <Textarea
-                id={fieldId}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                placeholder={field.placeholder || "Notes"}
-                required={field.required}
-                disabled={disabled}
-              />
-            )}
-          </div>
+          <EntryField
+            id={fieldId}
+            name={field.name}
+            value={description}
+            onChange={setDescription}
+            placeholder={field.placeholder || "Notes"}
+            required={field.required}
+            inline={inline}
+            type={inline ? "text" : "textarea"}
+            disabled={disabled}
+            showLabel={!inline}
+            className={inline ? "flex-1 min-w-40" : ""}
+          />
         );
       case 'hours':
         return (
-          <div className={inline ? "w-24" : "space-y-2"}>
-            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
-            <Input
-              id={fieldId}
-              type="number"
-              step="0.25"
-              min="0.25"
-              max="24"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              placeholder={field.placeholder || "Hrs"}
-              required={field.required}
-              className={inline ? "h-9" : ""}
-              disabled={disabled}
-            />
-          </div>
+          <EntryField
+            id={fieldId}
+            name={field.name}
+            value={hours}
+            onChange={setHours}
+            placeholder={field.placeholder || "Hrs"}
+            required={field.required}
+            inline={inline}
+            type="number"
+            disabled={disabled}
+            min="0.25"
+            max="24"
+            step="0.25"
+            showLabel={!inline}
+            className={inline ? "w-24" : ""}
+          />
         );
       default:
         if (!field.name) return null;
         
         return (
-          <div className={inline ? "flex-1" : "space-y-2"}>
-            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
-            {field.type === 'textarea' && !inline ? (
-              <Textarea
-                id={fieldId}
-                placeholder={field.placeholder}
-                required={field.required}
-                rows={3}
-                disabled={disabled}
-              />
-            ) : (
-              <Input
-                id={fieldId}
-                type={field.type}
-                placeholder={field.placeholder}
-                required={field.required}
-                className={inline ? "h-9" : ""}
-                disabled={disabled}
-              />
-            )}
-          </div>
+          <EntryField
+            id={fieldId}
+            name={field.name}
+            value=""
+            onChange={() => {}}
+            placeholder={field.placeholder || ""}
+            required={field.required}
+            inline={inline}
+            type={field.type === 'textarea' ? "textarea" : "text"}
+            disabled={disabled}
+            showLabel={!inline}
+          />
         );
     }
   };
@@ -167,60 +138,47 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   if (inline) {
     return (
       <div className="flex gap-2 flex-grow">
-        {visibleFields.map(field => field.visible && renderField(field, false))}
+        {visibleFields.map(field => field.visible && (
+          <React.Fragment key={field.id}>
+            {renderField(field)}
+          </React.Fragment>
+        ))}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Only render visible fields */}
+      {/* Job Number, Rego, and Task Number fields in a grid */}
       <div className="grid grid-cols-2 gap-4">
-        {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'job number').map(field => (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
-            {renderField(field)}
-          </div>
-        ))}
-
-        {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'rego').map(field => (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
-            {renderField(field)}
-          </div>
-        ))}
-        
-        {/* Render Task Number field if it exists and is visible */}
-        {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'task number').map(field => (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+        {visibleFields.filter(f => 
+          f.visible && ['job number', 'rego', 'task number'].includes(f.name.toLowerCase())
+        ).map(field => (
+          <div key={field.id}>
             {renderField(field)}
           </div>
         ))}
       </div>
 
-      {/* Render Notes field if it exists and is visible */}
+      {/* Notes field */}
       {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'notes').map(field => (
-        <div key={field.id} className="space-y-2">
-          <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+        <div key={field.id}>
           {renderField(field)}
         </div>
       ))}
 
-      {/* Render Hours field if it exists and is visible */}
+      {/* Hours field */}
       {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'hours').map(field => (
-        <div key={field.id} className="space-y-2">
-          <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+        <div key={field.id}>
           {renderField(field)}
         </div>
       ))}
 
-      {/* Render other custom fields if they exist and are visible */}
+      {/* Other custom fields */}
       {visibleFields.filter(f => 
         f.visible && !['job number', 'rego', 'task number', 'notes', 'hours', ''].includes(f.name.toLowerCase())
       ).map(field => (
-        <div key={field.id} className="space-y-2">
-          <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+        <div key={field.id}>
           {renderField(field)}
         </div>
       ))}

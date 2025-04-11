@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import TimeEntryDialog from "../TimeEntryDialog";
 import { TimeEntry, WorkSchedule } from "@/types";
 
@@ -39,11 +39,6 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       ...entry,
       userId: entry.userId || userId // Ensure userId gets added to the entry
     });
-    
-    // Allow the form to be submitted again after a short delay
-    setTimeout(() => {
-      setIsSubmitting(false);
-    }, 300);
   };
 
   return (

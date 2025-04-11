@@ -1,8 +1,7 @@
 
 import React from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Clock } from "lucide-react";
+import EntryField from "../EntryField";
 
 interface TimeInputProps {
   id: string;
@@ -21,16 +20,15 @@ const TimeInput: React.FC<TimeInputProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
       <div className="relative">
-        <Input
+        <EntryField
           id={id}
-          type="time"
+          name={label}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           required
-          className="pr-10"
           disabled={disabled}
+          className="pr-10"
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <Clock className="h-4 w-4 text-gray-500" />
