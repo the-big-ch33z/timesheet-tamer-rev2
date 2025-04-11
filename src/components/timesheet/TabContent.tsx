@@ -1,29 +1,30 @@
 
 import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
-import { TimeEntry, WorkSchedule, User } from "@/types";
 import TimesheetCalendar from "./TimesheetCalendar";
 import ToilSummary from "./ToilSummary";
 import MonthlyHours from "./MonthlyHours";
 import RecentEntries from "./RecentEntries";
-import { useTabContent, TabContentProps } from "./hooks/useTabContent";
+import { useTabContent } from "./hooks/useTabContent";
+import { useTimesheetContext } from "@/contexts/timesheet";
 
-interface TabContentComponentProps extends TabContentProps {
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
-  onDayClick: (day: Date) => void;
-}
+const TabContent = () => {
+  const { 
+    currentMonth, 
+    entries, 
+    workSchedule, 
+    viewedUser,
+    onPrevMonth,
+    onNextMonth,
+    handleDayClick
+  } = useTimesheetContext();
 
-const TabContent: React.FC<TabContentComponentProps> = ({
-  entries,
-  currentMonth,
-  onPrevMonth,
-  onNextMonth,
-  onDayClick,
-  workSchedule,
-  user,
-}) => {
-  const { sortedEntries } = useTabContent({ entries, currentMonth, workSchedule, user });
+  const { sortedEntries } = useTabContent({ 
+    entries, 
+    currentMonth, 
+    workSchedule, 
+    user: viewedUser
+  });
 
   return (
     <>
@@ -35,7 +36,7 @@ const TabContent: React.FC<TabContentComponentProps> = ({
               entries={entries}
               onPrevMonth={onPrevMonth}
               onNextMonth={onNextMonth}
-              onDayClick={onDayClick}
+              onDayClick={handleDayClick}
               workSchedule={workSchedule}
             />
           </div>
@@ -43,7 +44,7 @@ const TabContent: React.FC<TabContentComponentProps> = ({
           <div className="space-y-6">
             <MonthlyHours 
               entries={entries} 
-              user={user} 
+              user={viewedUser} 
               currentMonth={currentMonth} 
               workSchedule={workSchedule}
             />

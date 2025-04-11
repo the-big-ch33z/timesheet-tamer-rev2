@@ -1,31 +1,28 @@
 
 import React from "react";
 import { format } from "date-fns";
-import { TimeEntry, WorkSchedule } from "@/types";
+import { TimeEntry } from "@/types";
 import DetailHeader from "./detail/DetailHeader";
 import WorkHoursSection from "./detail/WorkHoursSection";
 import EntriesSection from "./detail/EntriesSection";
 import ScheduleInfoCard from "./detail/ScheduleInfoCard";
+import { useTimesheetContext } from "@/contexts/timesheet";
 
 interface TimesheetEntryDetailProps {
   date: Date;
   entries: TimeEntry[];
-  onAddEntry: (entry: Omit<TimeEntry, "id">) => void;
-  onDeleteEntry: (id: string) => void;
-  readOnly?: boolean;
-  workSchedule?: WorkSchedule;
-  userId?: string;
 }
 
 const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   date,
-  entries,
-  onAddEntry,
-  onDeleteEntry,
-  readOnly = false,
-  workSchedule,
-  userId
+  entries
 }) => {
+  const { 
+    workSchedule,
+    canEditTimesheet,
+    targetUserId
+  } = useTimesheetContext();
+  
   const formattedDate = format(date, "MMM d, yyyy");
   
   return (
@@ -46,11 +43,8 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
         <EntriesSection 
           date={date} 
           entries={entries} 
-          onAddEntry={onAddEntry} 
-          onDeleteEntry={onDeleteEntry} 
-          readOnly={readOnly}
-          workSchedule={workSchedule}
-          userId={userId}
+          readOnly={!canEditTimesheet}
+          userId={targetUserId}
         />
       </div>
     </div>

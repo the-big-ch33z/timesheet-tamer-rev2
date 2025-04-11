@@ -6,36 +6,20 @@ import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
-import { useTimesheet } from "@/hooks/useTimesheet";
-import { useTimesheetEntries } from "@/hooks/timesheet/useTimesheetEntries";
-import { useRolePermission } from "@/hooks/useRolePermission";
+import { TimesheetProvider, useTimesheetContext } from "@/contexts/timesheet";
 
-const Timesheet = () => {
+// Create a wrapper component that uses the context
+const TimesheetContent = () => {
   const {
-    currentMonth,
     selectedDay,
     activeTab,
     isViewingOtherUser,
     viewedUser,
     canViewTimesheet,
-    userWorkSchedule,
-    targetUserId,
-    setActiveTab,
-    prevMonth,
-    nextMonth,
-    handleDayClick,
+    canEditTimesheet,
+    getDayEntries,
     setSelectedDay
-  } = useTimesheet();
-
-  // Use our new unified hook for entry management
-  const {
-    addEntry,
-    deleteEntry,
-    getUserEntries,
-    getDayEntries
-  } = useTimesheetEntries(targetUserId);
-
-  const { isAdmin, isManager } = useRolePermission();
+  } = useTimesheetContext();
 
   // Check for permission or if user exists
   if (!viewedUser || !canViewTimesheet) {
@@ -47,9 +31,6 @@ const Timesheet = () => {
     );
   }
 
-  // Check if current user can edit this timesheet
-  const canEditTimesheet = !isViewingOtherUser || isAdmin() || isManager();
-
   return (
     <div className="container py-6 max-w-7xl">
       {/* Back button when viewing other user's timesheet */}
@@ -60,28 +41,13 @@ const Timesheet = () => {
 
       <UserInfo user={viewedUser} />
 
-      <TimesheetTabs 
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        entries={getUserEntries()}
-        currentMonth={currentMonth}
-        onPrevMonth={prevMonth}
-        onNextMonth={nextMonth}
-        onDayClick={handleDayClick}
-        workSchedule={userWorkSchedule}
-        user={viewedUser}
-      />
+      <TimesheetTabs />
 
       {selectedDay && activeTab === "timesheet" && (
         <div className="mb-8">
           <TimesheetEntryDetail 
             date={selectedDay}
             entries={getDayEntries(selectedDay)}
-            onAddEntry={addEntry}
-            onDeleteEntry={deleteEntry}
-            readOnly={!canEditTimesheet}
-            workSchedule={userWorkSchedule}
-            userId={targetUserId}
           />
         </div>
       )}
@@ -91,6 +57,15 @@ const Timesheet = () => {
         <FloatingActionButton onClick={() => setSelectedDay(new Date())} />
       )}
     </div>
+  );
+};
+
+// Main component that provides the context
+const Timesheet = () => {
+  return (
+    <TimesheetProvider>
+      <TimesheetContent />
+    </TimesheetProvider>
   );
 };
 

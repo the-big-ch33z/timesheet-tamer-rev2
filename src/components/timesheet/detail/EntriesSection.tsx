@@ -5,28 +5,25 @@ import { Plus } from "lucide-react";
 import NewEntryForm from "../entry-display/NewEntryForm";
 import TimeEntryList from "../entry-display/TimeEntryList";
 import AddEntryButton from "../entry-display/AddEntryButton";
+import { useTimesheetContext } from "@/contexts/timesheet";
 
 interface EntriesSectionProps {
   date: Date;
   entries: TimeEntry[];
-  onAddEntry: (entry: Omit<TimeEntry, "id">) => void;
-  onDeleteEntry: (id: string) => void;
   readOnly?: boolean;
-  workSchedule?: WorkSchedule;
   userId?: string;
 }
 
 const EntriesSection: React.FC<EntriesSectionProps> = ({
   date,
   entries,
-  onAddEntry,
-  onDeleteEntry,
   readOnly = false,
-  workSchedule,
   userId
 }) => {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
+  
+  const { addEntry, deleteEntry, workSchedule } = useTimesheetContext();
 
   const handleAddEntry = useCallback(() => {
     setIsAddingEntry(true);
@@ -39,9 +36,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   }, []);
 
   const handleSaveEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
-    // Just pass the entry data to the parent handler
-    // userId is now managed at a higher level
-    onAddEntry({
+    // Just pass the entry data to the context handler
+    addEntry({
       ...entry,
       userId: entry.userId || userId
     });
@@ -51,7 +47,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     setTimeout(() => {
       setFormKey(Date.now());
     }, 300);
-  }, [onAddEntry, userId]);
+  }, [addEntry, userId]);
 
   return (
     <div className="space-y-4">
@@ -85,8 +81,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         <div>
           <NewEntryForm 
             date={date} 
-            onSaveEntry={handleSaveEntry} 
             onCancel={handleCancelAddEntry}
+            onSaveEntry={handleSaveEntry}
             workSchedule={workSchedule}
             userId={userId}
             formKey={`entry-form-${formKey}`}
@@ -96,7 +92,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
 
       <TimeEntryList 
         entries={entries}
-        onDeleteEntry={onDeleteEntry}
+        onDeleteEntry={deleteEntry}
         readOnly={readOnly}
       />
       
