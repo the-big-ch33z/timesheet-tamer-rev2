@@ -65,18 +65,20 @@ export function useAuthState() {
           createdAt: new Date().toISOString()
         };
         
-        // Create default team memberships
+        // Create default team memberships - Fixed by adding managerId
         const defaultMemberships = [
           {
             id: 'membership-1',
             userId: 'user-manager',
             teamId: 'team-default',
+            managerId: 'user-manager', // Added the required managerId
             addedAt: new Date().toISOString()
           },
           {
             id: 'membership-2',
             userId: 'user-member',
             teamId: 'team-default',
+            managerId: 'user-manager', // Added the required managerId
             addedAt: new Date().toISOString()
           }
         ];
