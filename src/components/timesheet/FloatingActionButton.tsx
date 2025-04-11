@@ -12,6 +12,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ onClick }) 
     <Button 
       className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-indigo-600 hover:bg-indigo-700"
       onClick={onClick}
+      aria-label="Add new time entry"
     >
       <Plus className="h-6 w-6" />
     </Button>

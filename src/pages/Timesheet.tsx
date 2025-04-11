@@ -9,9 +9,11 @@ import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFou
 import { useTimesheet } from "@/hooks/useTimesheet";
 import { useToast } from "@/hooks/use-toast";
 import { TimeEntry } from "@/types";
+import { useRolePermission } from "@/hooks/useRolePermission";
 
 const Timesheet = () => {
   const { toast } = useToast();
+  const { isAdmin, isManager } = useRolePermission();
   const {
     currentMonth,
     selectedDay,
@@ -41,6 +43,9 @@ const Timesheet = () => {
       />
     );
   }
+
+  // Check if current user can edit this timesheet
+  const canEditTimesheet = !isViewingOtherUser || isAdmin() || isManager();
 
   const handleDeleteEntry = (id: string) => {
     deleteEntry(id);
@@ -87,15 +92,15 @@ const Timesheet = () => {
             entries={getDayEntries(selectedDay)}
             onAddEntry={handleAddEntry}
             onDeleteEntry={handleDeleteEntry}
-            readOnly={isViewingOtherUser}
+            readOnly={!canEditTimesheet}
             workSchedule={userWorkSchedule}
             userId={targetUserId}
           />
         </div>
       )}
 
-      {/* Only show FloatingActionButton if not in read-only mode */}
-      {!isViewingOtherUser && (
+      {/* Only show FloatingActionButton if user can edit this timesheet */}
+      {canEditTimesheet && (
         <FloatingActionButton onClick={() => setSelectedDay(new Date())} />
       )}
     </div>
