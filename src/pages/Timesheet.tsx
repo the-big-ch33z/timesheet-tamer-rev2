@@ -30,8 +30,8 @@ const Timesheet = () => {
     deleteEntry,
     getUserEntries,
     getDayEntries,
-    setSelectedDay,
-    addEntry
+    addEntry,
+    setSelectedDay
   } = useTimesheet();
 
   // Check for permission or if user exists

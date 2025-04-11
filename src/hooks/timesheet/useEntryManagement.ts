@@ -27,23 +27,6 @@ export const useEntryManagement = (userId?: string) => {
     }
   }, [logger]);
 
-  // Listen for new entries added
-  useEffect(() => {
-    const handleEntryAdded = (event: any) => {
-      const newEntry = event.detail;
-      if (newEntry) {
-        setEntries(prev => [...prev, newEntry]);
-        logger.info("New entry added", { entry: newEntry });
-      }
-    };
-    
-    document.addEventListener('entry-added', handleEntryAdded);
-    
-    return () => {
-      document.removeEventListener('entry-added', handleEntryAdded);
-    };
-  }, [logger]);
-
   // Save entries to localStorage when they change
   useEffect(() => {
     if (entries.length > 0) {
@@ -61,12 +44,6 @@ export const useEntryManagement = (userId?: string) => {
     
     setEntries(prev => [...prev, completeEntry]);
     logger.info("Entry added explicitly", { entry: completeEntry });
-    
-    // Create a custom event to notify about the new entry
-    const event = new CustomEvent('entry-added', {
-      detail: completeEntry
-    });
-    document.dispatchEvent(event);
   };
 
   const deleteEntry = (id: string) => {

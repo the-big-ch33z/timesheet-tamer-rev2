@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -47,8 +46,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     // Call the parent handler with the new entry
     onAddEntry(newEntry);
     
-    // Close the form
-    setIsAddingEntry(false);
+    // Keep the form open to allow adding multiple entries
+    // setIsAddingEntry(false);
   };
 
   return (
