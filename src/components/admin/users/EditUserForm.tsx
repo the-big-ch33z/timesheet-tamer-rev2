@@ -11,6 +11,8 @@ import { useWorkSchedule } from "@/contexts/work-schedule"; // Updated import pa
 import { RoleSelection } from "./form-sections/RoleSelection";
 import { UserMetricsFields } from "./form-sections/UserMetricsFields";
 import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";
+import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
@@ -37,6 +39,9 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   selectedUser,
   onSubmit
 }) => {
+  // Toast for notifications
+  const { toast } = useToast();
+  
   // Access work schedule context
   const { getAllSchedules } = useWorkSchedule();
   
@@ -78,8 +83,25 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     try {      
       // Submit all form values
       await onSubmit(values);
+      
+      // Show success toast notification
+      toast({
+        title: "User updated successfully",
+        description: `${selectedUser.name}'s information has been updated.`,
+        variant: "default",
+        className: "bg-green-50 border-green-200",
+        icon: <CheckCircle className="h-4 w-4 text-green-500" />
+      });
+      
       onOpenChange(false);
     } catch (error) {
+      // Show error toast notification
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+        icon: <AlertCircle className="h-4 w-4" />
+      });
       console.error("Error updating user:", error);
     }
   };
