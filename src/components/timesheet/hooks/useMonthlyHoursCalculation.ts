@@ -20,8 +20,14 @@ export const useMonthlyHoursCalculation = (
   // Get user metrics with defaults if user is provided
   const userMetrics = user ? getUserMetrics(user.id) : null;
   
+  logger.debug("User metrics retrieved:", { 
+    userId: user?.id, 
+    metrics: userMetrics 
+  });
+  
   // If we have a work schedule, calculate fortnight hours from it
   let fortnightHours = userMetrics?.fortnightHours || 0;
+  let userFte = userMetrics?.fte || 1.0;
   
   if (workSchedule) {
     // Calculate fortnight hours based on the schedule
@@ -29,16 +35,24 @@ export const useMonthlyHoursCalculation = (
     
     // Use calculated hours from schedule if available
     if (scheduleHours > 0) {
-      fortnightHours = scheduleHours;
-      logger.debug(`Using calculated fortnight hours from schedule: ${fortnightHours}`, { 
-        scheduleId: workSchedule.id,
-        scheduleName: workSchedule.name
-      });
+      // Apply FTE to the schedule hours if user has an FTE set
+      if (userFte !== 1.0 && userFte > 0) {
+        fortnightHours = scheduleHours * userFte;
+        logger.debug(`Adjusted fortnight hours by FTE: ${scheduleHours} * ${userFte} = ${fortnightHours}`);
+      } else {
+        fortnightHours = scheduleHours;
+        logger.debug(`Using calculated fortnight hours from schedule: ${fortnightHours}`);
+      }
     }
+  } else if (userMetrics) {
+    // If no schedule but we have user metrics with fortnightHours
+    fortnightHours = userMetrics.fortnightHours;
+    logger.debug(`Using fortnight hours from user metrics: ${fortnightHours}`);
   }
   
-  logger.debug(`Using fortnight hours value: ${fortnightHours}`, { 
+  logger.debug(`Final fortnight hours value: ${fortnightHours}`, { 
     userId: user?.id,
+    fte: userFte,
     fromSchedule: !!workSchedule
   });
   

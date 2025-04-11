@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User, WorkSchedule } from "@/types";
 import { getWorkdaysInMonth } from "@/lib/date-utils";
 import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
+import { useUserMetrics } from "@/contexts/user-metrics";
 
 interface MonthlyHoursProps {
   entries: TimeEntry[];
@@ -14,6 +15,7 @@ interface MonthlyHoursProps {
 }
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth, workSchedule }) => {
+  const { getUserMetrics } = useUserMetrics();
   const {
     hours,
     targetHours,
@@ -21,6 +23,9 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
     hoursRemaining,
     progressColor
   } = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);
+
+  // Get user metrics to display FTE information
+  const userMetrics = user ? getUserMetrics(user.id) : null;
 
   return (
     <Card>
@@ -45,6 +50,12 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
         <div className="text-sm text-gray-500">
           Based on {getWorkdaysInMonth(currentMonth)} work days this month
         </div>
+        
+        {userMetrics && (
+          <div className="mt-2 text-xs text-gray-400 border-t pt-2">
+            FTE: {userMetrics.fte} · Required hours/fortnight: {userMetrics.fortnightHours}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
