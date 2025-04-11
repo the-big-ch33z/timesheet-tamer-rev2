@@ -5,17 +5,17 @@ import { Plus } from "lucide-react";
 
 interface AddEntryButtonProps {
   onClick: () => void;
-  date?: Date; // Making date optional to avoid breaking changes
+  date?: Date;
 }
 
 const AddEntryButton: React.FC<AddEntryButtonProps> = ({ onClick, date }) => {
   return (
     <Button 
       onClick={onClick}
-      className="w-full bg-green-600 hover:bg-green-700 text-white my-2"
-      size="sm"
+      className="bg-blue-800 hover:bg-blue-900 text-white"
+      size="default"
     >
-      <Plus className="h-4 w-4 mr-1" /> Add Entry
+      <Plus className="h-5 w-5 mr-1" /> Add Entry
     </Button>
   );
 };

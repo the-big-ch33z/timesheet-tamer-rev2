@@ -15,9 +15,9 @@ const TimeEntryList: React.FC<TimeEntryListProps> = ({
   readOnly = false
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {entries.length === 0 ? (
-        <div className="text-center py-12 border rounded-md">
+        <div className="text-center py-8 border rounded-md bg-gray-50">
           <p className="text-muted-foreground">No time entries for this day</p>
           {!readOnly && (
             <p className="text-sm text-muted-foreground mt-2">
@@ -30,7 +30,7 @@ const TimeEntryList: React.FC<TimeEntryListProps> = ({
           <TimeEntryItem 
             key={entry.id} 
             entry={entry} 
-            onDelete={onDeleteEntry} 
+            onDelete={() => onDeleteEntry(entry.id)} 
             readOnly={readOnly}
           />
         ))

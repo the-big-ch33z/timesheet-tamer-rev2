@@ -12,6 +12,7 @@ interface InlineEntryFormProps {
     description: string;
     jobNumber: string;
     rego: string;
+    taskNumber: string; // Added task number
   };
   onFieldChange: (field: string, value: string) => void;
   onDelete?: () => void;
@@ -35,6 +36,8 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
         setJobNumber={(val) => onFieldChange('jobNumber', val)}
         rego={formValues.rego}
         setRego={(val) => onFieldChange('rego', val)}
+        taskNumber={formValues.taskNumber}
+        setTaskNumber={(val) => onFieldChange('taskNumber', val)}
         description={formValues.description}
         setDescription={(val) => onFieldChange('description', val)}
         hours={formValues.hours}

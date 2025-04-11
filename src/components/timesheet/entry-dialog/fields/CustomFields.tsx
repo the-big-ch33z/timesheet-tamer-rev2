@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,8 @@ interface CustomFieldsProps {
   setJobNumber: (value: string) => void;
   rego: string;
   setRego: (value: string) => void;
+  taskNumber: string; // Added taskNumber
+  setTaskNumber: (value: string) => void; // Added setTaskNumber
   description: string;
   setDescription: (value: string) => void;
   hours: string;
@@ -24,6 +27,8 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   setJobNumber,
   rego,
   setRego,
+  taskNumber, // Added taskNumber
+  setTaskNumber, // Added setTaskNumber
   description,
   setDescription,
   hours,
@@ -62,6 +67,22 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
               value={rego}
               onChange={(e) => setRego(e.target.value)}
               placeholder={field.placeholder || "Rego"}
+              required={field.required}
+              className={inline ? "h-9" : ""}
+              disabled={disabled}
+            />
+          </div>
+        );
+      case 'task number': // Added case for task number
+        return (
+          <div className={inline ? "flex-1 min-w-20" : "space-y-2"}>
+            {showLabel && !inline && <Label htmlFor={fieldId}>{field.name}</Label>}
+            <Input
+              id={fieldId}
+              type="text"
+              value={taskNumber}
+              onChange={(e) => setTaskNumber(e.target.value)}
+              placeholder={field.placeholder || "Task No."}
               required={field.required}
               className={inline ? "h-9" : ""}
               disabled={disabled}
@@ -168,6 +189,14 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
             {renderField(field)}
           </div>
         ))}
+        
+        {/* Render Task Number field if it exists and is visible */}
+        {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'task number').map(field => (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+            {renderField(field)}
+          </div>
+        ))}
       </div>
 
       {/* Render Notes field if it exists and is visible */}
@@ -188,7 +217,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
 
       {/* Render other custom fields if they exist and are visible */}
       {visibleFields.filter(f => 
-        f.visible && !['job number', 'rego', 'notes', 'hours', ''].includes(f.name.toLowerCase())
+        f.visible && !['job number', 'rego', 'task number', 'notes', 'hours', ''].includes(f.name.toLowerCase())
       ).map(field => (
         <div key={field.id} className="space-y-2">
           <Label htmlFor={`field-${field.id}`}>{field.name}</Label>

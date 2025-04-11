@@ -10,7 +10,7 @@ import { useEntryFormState } from "./form/useEntryFormState";
 type TimeEntryFormProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
   onCancel?: () => void;
-  onDelete?: (id?: string) => void;
+  onDelete?: () => void;
   selectedDate: Date;
   visibleFields: EntryFieldConfig[];
   inline?: boolean;
@@ -43,14 +43,24 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
 
   // Auto-save for inline forms with debouncing only if edited
   useEffect(() => {
-    if (inline && formState.formEdited && (formState.hours || formState.description || formState.jobNumber || formState.rego) && !disabled) {
+    if (inline && formState.formEdited && 
+       (formState.hours || formState.description || formState.jobNumber || 
+        formState.rego || formState.taskNumber) && !disabled) {
       const timeoutId = setTimeout(() => {
         handleSave();
       }, 800); // Increased debounce time to prevent multiple submissions
       
       return () => clearTimeout(timeoutId);
     }
-  }, [formState.hours, formState.description, formState.jobNumber, formState.rego, formState.formEdited, disabled]);
+  }, [
+    formState.hours, 
+    formState.description, 
+    formState.jobNumber, 
+    formState.rego, 
+    formState.taskNumber, // Added task number to dependency array
+    formState.formEdited, 
+    disabled
+  ]);
 
   const handleSave = () => {
     if (!formState.hours && inline) return; // Only validate hours for inline form
@@ -109,6 +119,8 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         setJobNumber={(val) => handleFieldChange('jobNumber', val)}
         rego={formState.rego}
         setRego={(val) => handleFieldChange('rego', val)}
+        taskNumber={formState.taskNumber} // Added task number
+        setTaskNumber={(val) => handleFieldChange('taskNumber', val)} // Added task number setter
         description={formState.description}
         setDescription={(val) => handleFieldChange('description', val)}
         hours={formState.hours}

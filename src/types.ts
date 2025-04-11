@@ -1,14 +1,15 @@
 export interface TimeEntry {
   id: string;
   date: Date;
-  project: string;
   hours: number;
-  description: string;
-  startTime?: string;
-  endTime?: string;
-  userId?: string;  // Add userId to track which user the entry belongs to
+  description?: string;
   jobNumber?: string;
   rego?: string;
+  taskNumber?: string; // Added task number field
+  startTime?: string;
+  endTime?: string;
+  project?: string;
+  userId: string;
 }
 
 export interface EntryFieldConfig {
