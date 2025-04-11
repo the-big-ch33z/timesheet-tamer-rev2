@@ -19,7 +19,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
     percentage,
     hoursRemaining,
     progressColor
-  } = useMonthlyHoursCalculation(entries, user, currentMonth);
+  } = useMonthlyHoursCalculation(entries, currentMonth, user);
 
   return (
     <Card>

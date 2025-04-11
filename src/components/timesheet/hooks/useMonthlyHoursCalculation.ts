@@ -6,8 +6,8 @@ import { useLogger } from "@/hooks/useLogger";
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],
-  user?: User,
-  currentMonth: Date
+  currentMonth: Date,
+  user?: User
 ) => {
   const { getUserMetrics } = useUserMetrics();
   const logger = useLogger("MonthlyHoursCalculation");
