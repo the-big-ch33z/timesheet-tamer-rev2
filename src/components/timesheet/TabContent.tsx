@@ -43,8 +43,8 @@ const TabContent: React.FC<TabContentProps> = ({
           </div>
 
           <div className="space-y-6">
-            <ToilSummary />
-            <MonthlyHours />
+            <ToilSummary entries={entries} />
+            <MonthlyHours entries={entries} />
           </div>
         </div>
       </TabsContent>
