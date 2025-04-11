@@ -50,6 +50,7 @@ export const UserMetricsFields: React.FC<UserMetricsFieldsProps> = ({ control })
             <FormControl>
               <Input 
                 type="number"
+                step="0.5"
                 min="0"
                 placeholder={FORM_PLACEHOLDERS.FORTNIGHT_HOURS}
                 {...field}

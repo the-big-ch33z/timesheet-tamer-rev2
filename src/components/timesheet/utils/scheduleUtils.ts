@@ -73,6 +73,6 @@ export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule):
     });
   });
   
-  // Round to one decimal place
-  return Math.round(totalHours * 10) / 10;
+  // Round to nearest 0.5 (instead of nearest whole number)
+  return Math.round(totalHours * 2) / 2;
 };
