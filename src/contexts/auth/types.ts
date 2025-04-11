@@ -1,6 +1,26 @@
 
 import { User, Organization, Team, TeamMembership, UserRole } from '@/types';
 
+// Define the login credentials type
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+// Define the signup credentials type
+export interface SignupCredentials {
+  email: string;
+  name: string;
+  password: string;
+  organizationName: string;
+}
+
+// Define the user metrics type
+export interface UserMetrics {
+  fte?: number;
+  fortnightHours?: number;
+}
+
 export interface AuthContextType {
   currentUser: User | null;
   users: User[];
@@ -15,6 +35,7 @@ export interface AuthContextType {
   addUser: (email: string, name: string, role?: UserRole) => Promise<User>;
   addTeamMember: (email: string, name: string, teamId: string) => Promise<User>;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
+  updateUserMetrics: (userId: string, metrics: UserMetrics) => Promise<void>;
   assignManagerToTeam: (managerId: string, teamId: string) => Promise<void>;
   getUsersByRole: (role: UserRole) => User[];
   getUsersByTeam: (teamId: string) => User[];

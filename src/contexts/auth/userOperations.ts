@@ -419,13 +419,52 @@ export const createUserOperations = (state: AuthStateType, toast: ReturnType<typ
     }
   };
 
+  const updateUserMetrics = async (userId: string, metrics: { fte?: number; fortnightHours?: number }) => {
+    try {
+      const userIndex = state.users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        throw new Error("User not found");
+      }
+      
+      const updatedUser = {
+        ...state.users[userIndex],
+        fte: metrics.fte ?? state.users[userIndex].fte,
+        fortnightHours: metrics.fortnightHours ?? state.users[userIndex].fortnightHours,
+        updatedAt: new Date().toISOString()
+      };
+      
+      const newUsers = [...state.users];
+      newUsers[userIndex] = updatedUser;
+      state.setUsers(newUsers);
+      
+      await auditService.logEvent(
+        state.currentUser?.id || 'system',
+        'update_user_metrics',
+        `user/${userId}`,
+        `User metrics updated: FTE=${metrics.fte}, Fortnight Hours=${metrics.fortnightHours}`
+      );
+      
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating user metrics:", error);
+      toast.toast({
+        title: "Failed to update user metrics",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return {
-    getUsersByRole,
-    getUserById,
-    getUsersByTeam,
-    updateUserRole,
     addUser,
     addTeamMember,
+    updateUserRole,
+    updateUserMetrics,
+    getUsersByRole,
+    getUsersByTeam,
+    getUserById,
     removeUserFromTeam,
     archiveUser,
     restoreUser,

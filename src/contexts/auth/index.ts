@@ -1,6 +1,11 @@
 
 // Re-export types from the types file
-export type { AuthContextType, LoginCredentials, SignupCredentials } from './types';
+export type { 
+  AuthContextType, 
+  LoginCredentials, 
+  SignupCredentials,
+  UserMetrics 
+} from './types';
 
 // Export the context provider
 export { AuthProvider } from './AuthProvider';
