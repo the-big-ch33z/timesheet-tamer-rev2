@@ -48,20 +48,19 @@ export const UserTable: React.FC<UserTableProps> = ({
   };
 
   const getUserTeams = (userId: string) => {
-    const { teams } = useAuth();
     const userTeamIds = teamMemberships
       .filter(membership => membership.userId === userId)
       .map(membership => membership.teamId);
       
-    return teams.filter(team => userTeamIds.includes(team.id) || team.managerId === userId);
+    return useAuth().teams.filter(team => userTeamIds.includes(team.id) || team.managerId === userId);
   };
 
-  const getScheduleName = (workScheduleId?: string) => {
-    if (!workScheduleId || workScheduleId === 'default') {
+  const getScheduleName = (user: User) => {
+    if (!user.workScheduleId || user.workScheduleId === 'default') {
       return defaultSchedule.name + " (Default)";
     }
     
-    const schedule = getScheduleById(workScheduleId);
+    const schedule = getScheduleById(user.workScheduleId);
     return schedule ? schedule.name : "Unknown Schedule";
   };
 
@@ -98,7 +97,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <TableCell>
                 <Badge variant="outline" className="flex items-center gap-1 bg-slate-50">
                   <Clock className="h-3 w-3" />
-                  {getScheduleName(user.workScheduleId)}
+                  {getScheduleName(user)}
                 </Badge>
               </TableCell>
               <TableCell>

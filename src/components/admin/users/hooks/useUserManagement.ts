@@ -18,7 +18,7 @@ export const useUserManagement = () => {
 
   // Access authentication and work schedule contexts
   const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser, updateUserMetrics } = useAuth();
-  const { assignScheduleToUser } = useWorkSchedule();
+  const { assignScheduleToUser, resetUserSchedule } = useWorkSchedule();
 
   // Handle search term changes
   const handleSearchChange = (term: string) => {
@@ -76,14 +76,21 @@ export const useUserManagement = () => {
     if (!selectedUser) return;
     
     try {
+      console.log("Updating user with data:", data);
+      
       // Update user's role
       await updateUserRole(selectedUser.id, data.role);
       
       // Handle work schedule assignment
-      const scheduleId = data.useDefaultSchedule ? 'default' : data.scheduleId || 'default';
-      
-      // Assign schedule to user (this updates the workScheduleId in the user object)
-      await assignScheduleToUser(selectedUser.id, scheduleId);
+      if (data.useDefaultSchedule) {
+        console.log("Resetting user schedule to default");
+        // Reset to default schedule
+        await resetUserSchedule(selectedUser.id);
+      } else if (data.scheduleId) {
+        console.log(`Assigning schedule ${data.scheduleId} to user ${selectedUser.id}`);
+        // Assign specific schedule
+        await assignScheduleToUser(selectedUser.id, data.scheduleId);
+      }
       
       // Update user metrics (FTE and fortnight hours)
       await updateUserMetrics(selectedUser.id, {
@@ -99,6 +106,7 @@ export const useUserManagement = () => {
       setIsEditUserOpen(false);
       setSelectedUser(null);
     } catch (error) {
+      console.error("Error updating user:", error);
       toast({
         title: "Error Updating User",
         description: (error as Error).message,

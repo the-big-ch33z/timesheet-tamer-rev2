@@ -70,8 +70,10 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
     }
   };
 
-  const updateUserMetrics = async (userId: string, metrics: { fte?: number; fortnightHours?: number }): Promise<void> => {
+  const updateUserMetrics = async (userId: string, metrics: { fte?: number; fortnightHours?: number; workScheduleId?: string }): Promise<void> => {
     try {
+      console.log(`Updating user ${userId} metrics:`, metrics);
+      
       const userIndex = state.users.findIndex(u => u.id === userId);
       
       if (userIndex === -1) {
@@ -82,18 +84,26 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
         ...state.users[userIndex],
         fte: metrics.fte ?? state.users[userIndex].fte,
         fortnightHours: metrics.fortnightHours ?? state.users[userIndex].fortnightHours,
+        workScheduleId: metrics.workScheduleId !== undefined ? metrics.workScheduleId : state.users[userIndex].workScheduleId,
         updatedAt: new Date().toISOString()
       };
+      
+      console.log("Updated user object:", updatedUser);
       
       const newUsers = [...state.users];
       newUsers[userIndex] = updatedUser;
       state.setUsers(newUsers);
       
+      // If updating the current user, update currentUser state as well
+      if (state.currentUser && state.currentUser.id === userId) {
+        state.setCurrentUser(updatedUser);
+      }
+      
       await auditService.logEvent(
         state.currentUser?.id || 'system',
         'update_user_metrics',
         `user/${userId}`,
-        `User metrics updated: FTE=${metrics.fte}, Fortnight Hours=${metrics.fortnightHours}`
+        `User metrics updated: FTE=${metrics.fte}, Fortnight Hours=${metrics.fortnightHours}, Work Schedule=${metrics.workScheduleId}`
       );
       
     } catch (error) {

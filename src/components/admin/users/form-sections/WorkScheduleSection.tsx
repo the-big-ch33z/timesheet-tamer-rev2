@@ -36,7 +36,11 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
             <FormControl>
               <Switch
                 checked={field.value}
-                onCheckedChange={field.onChange}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked);
+                  // Add console log for debugging
+                  console.log(`Switch toggled to ${checked ? 'default' : 'custom'} schedule`);
+                }}
               />
             </FormControl>
           </FormItem>
@@ -52,7 +56,10 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
               <FormItem>
                 <FormLabel>Assigned Schedule</FormLabel>
                 <Select
-                  onValueChange={field.onChange}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    console.log(`Selected schedule: ${value}`);
+                  }}
                   defaultValue={field.value}
                   value={field.value}
                 >

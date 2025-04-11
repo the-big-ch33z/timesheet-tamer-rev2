@@ -53,8 +53,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     defaultValues: {
       role: selectedUser?.role || "team-member",
       teamIds: selectedUser?.teamIds || [],
-      useDefaultSchedule: selectedUser?.workScheduleId ? false : true,
-      scheduleId: selectedUser?.workScheduleId || 'default',
+      useDefaultSchedule: !selectedUser?.workScheduleId || selectedUser?.workScheduleId === 'default',
+      scheduleId: selectedUser?.workScheduleId !== 'default' ? selectedUser?.workScheduleId : undefined,
       fte: selectedUser?.fte || 1.0,
       fortnightHours: selectedUser?.fortnightHours || 76,
     },
@@ -67,8 +67,15 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       form.setValue("teamIds", selectedUser.teamIds || []);
       
       const hasCustomSchedule = selectedUser.workScheduleId && selectedUser.workScheduleId !== 'default';
+      console.log(`User ${selectedUser.name} has custom schedule: ${hasCustomSchedule}, ID: ${selectedUser.workScheduleId}`);
+      
       form.setValue("useDefaultSchedule", !hasCustomSchedule);
-      form.setValue("scheduleId", selectedUser.workScheduleId || 'default');
+      
+      if (hasCustomSchedule) {
+        form.setValue("scheduleId", selectedUser.workScheduleId);
+      } else {
+        form.setValue("scheduleId", undefined);
+      }
       
       // Set FTE and fortnight hours with proper type conversion
       form.setValue("fte", selectedUser.fte || 1.0);
@@ -79,7 +86,9 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   const handleSubmit = async (values: UserEditFormValues) => {
     if (!selectedUser) return;
     
-    try {      
+    try {
+      console.log("Submitting form with values:", values);
+      
       // Submit all form values
       await onSubmit(values);
       

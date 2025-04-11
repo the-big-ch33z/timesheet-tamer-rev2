@@ -35,15 +35,19 @@ export function useWorkScheduleContext() {
   // Helper function to update user's workScheduleId property
   const updateUserWorkScheduleId = async (userId: string, scheduleId: string) => {
     try {
+      console.log(`Updating user ${userId} workScheduleId to ${scheduleId}`);
+      
       // Use the existing auth context to update user data
-      // We're using updateUserMetrics as a way to update the user object
-      // The key/value will be merged with the existing user
       await updateUserMetrics(userId, {
         // This will update the workScheduleId field in the user object
-        workScheduleId: scheduleId === 'default' ? undefined : scheduleId
+        // Use undefined for default schedule, actual ID for custom schedule
+        workScheduleId: scheduleId === 'default' ? 'default' : scheduleId
       });
+      
+      console.log(`Successfully updated user ${userId} workScheduleId to ${scheduleId}`);
     } catch (error) {
       console.error("Error updating user workScheduleId:", error);
+      throw error;
     }
   };
 
