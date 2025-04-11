@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useNavigate } from "react-router-dom";
 import { useRolePermission } from "@/hooks/useRolePermission";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Shield } from "lucide-react";
@@ -21,15 +21,30 @@ const Timesheet = () => {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<string>("timesheet");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const { userId } = useParams<{ userId: string }>();
-  const { currentUser, getUserById, users } = useAuth();
+  const { userId } = useParams<{ userId?: string }>();
+  const { currentUser, getUserById } = useAuth();
   const { toast } = useToast();
   const { isAdmin, isManager } = useRolePermission();
-  const isViewingOtherUser = userId && userId !== currentUser?.id;
-  const viewedUser = userId ? getUserById(userId) : currentUser;
+  const navigate = useNavigate();
+  
+  // If no userId is provided or it's 'me', use the current user's ID
+  const targetUserId = (!userId || userId === 'me') ? currentUser?.id : userId;
+  
+  // Check if we're viewing another user's timesheet
+  const isViewingOtherUser = targetUserId && targetUserId !== currentUser?.id;
+  
+  // Get the user we're viewing (could be current user or another user)
+  const viewedUser = targetUserId ? getUserById(targetUserId) : currentUser;
   
   // Check permission to view this timesheet
   const canViewTimesheet = !isViewingOtherUser || isAdmin() || isManager();
+  
+  // Redirect to personal timesheet if trying to access a non-existent 'me' route
+  useEffect(() => {
+    if (userId === 'me' && currentUser) {
+      navigate('/timesheet', { replace: true });
+    }
+  }, [userId, currentUser, navigate]);
   
   useEffect(() => {
     initializeHolidays();
@@ -88,8 +103,10 @@ const Timesheet = () => {
   };
 
   const getUserEntries = () => {
-    // If viewing another user's timesheet, filter by that userId
-    if (!viewedUser) return entries;
+    // If no viewed user is found, return empty array
+    if (!viewedUser) return [];
+    
+    // Return entries for the viewed user
     return entries.filter(entry => entry.userId === viewedUser.id);
   };
 
@@ -112,7 +129,7 @@ const Timesheet = () => {
   }
 
   // User not found
-  if (userId && !viewedUser) {
+  if (targetUserId && !viewedUser) {
     return (
       <div className="container py-6">
         <Alert variant="destructive" className="mb-4">

@@ -26,6 +26,16 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   const { toast } = useToast();
   
   const handleDeleteEntry = (id: string) => {
+    // If in read-only mode, prevent deletion and show toast
+    if (readOnly) {
+      toast({
+        title: "Permission denied",
+        description: "You don't have permission to delete entries from this timesheet",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       onDeleteEntry(id);
     } catch (error) {
