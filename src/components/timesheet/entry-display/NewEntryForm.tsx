@@ -9,6 +9,7 @@ interface NewEntryFormProps {
   onCancel: () => void;
   workSchedule?: WorkSchedule;
   userId?: string;
+  formKey?: string | number;
 }
 
 const NewEntryForm: React.FC<NewEntryFormProps> = ({
@@ -16,7 +17,8 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   onSaveEntry,
   onCancel,
   workSchedule,
-  userId
+  userId,
+  formKey
 }) => {
   const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
     // Forward the entry to the parent component
@@ -33,7 +35,8 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       selectedDate={date}
       workSchedule={workSchedule}
       userId={userId}
-      key={`entry-form-${Date.now()}`} // Add a unique key to force proper re-render
+      key={formKey || `entry-form-${Date.now()}`} // Use passed key or generate a new one
+      initialData={{}} // Always start with empty data for new entries
     />
   );
 };

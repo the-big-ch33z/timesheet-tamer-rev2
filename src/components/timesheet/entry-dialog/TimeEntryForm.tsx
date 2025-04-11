@@ -29,6 +29,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   initialData = {},
   workSchedule,
 }) => {
+  // Initialize state with initialData or defaults
   const [hours, setHours] = useState(initialData.hours?.toString() || "");
   const [description, setDescription] = useState(initialData.description || "");
   const [jobNumber, setJobNumber] = useState(initialData.jobNumber || "");
@@ -36,6 +37,17 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   const [startTime, setStartTime] = useState(initialData.startTime || "09:00");
   const [endTime, setEndTime] = useState(initialData.endTime || "17:00");
 
+  // Reset form values when initialData changes (for new forms)
+  useEffect(() => {
+    setHours(initialData.hours?.toString() || "");
+    setDescription(initialData.description || "");
+    setJobNumber(initialData.jobNumber || "");
+    setRego(initialData.rego || "");
+    setStartTime(initialData.startTime || "09:00");
+    setEndTime(initialData.endTime || "17:00");
+  }, [initialData]);
+
+  // Auto-save for inline forms with debouncing
   useEffect(() => {
     if (inline && (hours || description || jobNumber || rego)) {
       const timeoutId = setTimeout(() => {

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";

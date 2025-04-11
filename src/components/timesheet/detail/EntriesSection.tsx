@@ -28,10 +28,12 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   userId
 }) => {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
-  const [entryKey, setEntryKey] = useState(0); // Add a key to force re-render of the form
+  const [formKey, setFormKey] = useState(Date.now()); // Use timestamp for unique form key
 
   const handleAddEntry = () => {
     setIsAddingEntry(true);
+    // Generate new key to ensure clean form reset
+    setFormKey(Date.now());
   };
 
   const handleCancelAddEntry = () => {
@@ -48,8 +50,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     // Call the parent handler with the new entry
     onAddEntry(newEntry);
     
-    // Reset the form by updating the key to force a clean re-render
-    setEntryKey(prev => prev + 1);
+    // Reset the form with a new key for a clean slate
+    setFormKey(Date.now());
   };
 
   return (
@@ -70,13 +72,14 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
       </div>
 
       {isAddingEntry && (
-        <div key={entryKey}> {/* Use key to force re-render */}
+        <div>
           <NewEntryForm 
             date={date} 
             onSaveEntry={handleSaveEntry} 
             onCancel={handleCancelAddEntry}
             workSchedule={workSchedule}
             userId={userId}
+            formKey={`entry-form-${formKey}`}
           />
         </div>
       )}
