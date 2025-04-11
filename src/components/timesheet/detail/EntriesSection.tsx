@@ -23,7 +23,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
   
-  const { addEntry, deleteEntry, workSchedule } = useTimesheetContext();
+  const { addEntry, deleteEntry } = useTimesheetContext();
 
   const handleAddEntry = useCallback(() => {
     setIsAddingEntry(true);
@@ -83,7 +83,6 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
             date={date} 
             onCancel={handleCancelAddEntry}
             onSaveEntry={handleSaveEntry}
-            workSchedule={workSchedule}
             userId={userId}
             formKey={`entry-form-${formKey}`}
           />

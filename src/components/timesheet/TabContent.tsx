@@ -14,8 +14,8 @@ const TabContent = () => {
     entries, 
     workSchedule, 
     viewedUser,
-    onPrevMonth,
-    onNextMonth,
+    prevMonth,
+    nextMonth,
     handleDayClick
   } = useTimesheetContext();
 
@@ -34,8 +34,8 @@ const TabContent = () => {
             <TimesheetCalendar 
               currentMonth={currentMonth}
               entries={entries}
-              onPrevMonth={onPrevMonth}
-              onNextMonth={onNextMonth}
+              onPrevMonth={prevMonth}
+              onNextMonth={nextMonth}
               onDayClick={handleDayClick}
               workSchedule={workSchedule}
             />
