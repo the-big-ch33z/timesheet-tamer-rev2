@@ -2,7 +2,7 @@
 import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Team, User } from "@/types";
-import TeamOverview from "./TeamOverview";
+import TeamOverview from "./team-overview";
 import TeamsList from "./TeamsList";
 
 interface TabContentProps {
