@@ -58,7 +58,7 @@ export const createAuthenticationOperations = (
     state.setCurrentUser(null);
     state.setIsAuthenticated(false);
     localStorage.removeItem('currentUser');
-    navigate('/login');
+    navigate('/auth');  // Updated to redirect to /auth instead of /login
     
     toast.toast({
       title: "Logged out",

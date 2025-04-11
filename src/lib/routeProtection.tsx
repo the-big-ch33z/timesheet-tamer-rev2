@@ -24,10 +24,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Log access attempts for audit purposes
-    console.log(`Access attempt to ${location.pathname} by user:`, currentUser?.id);
+    // Log access attempts for audit purposes - with proper null checking
+    console.log(`Access attempt to ${location.pathname} by user:`, currentUser?.id || 'unauthenticated');
     
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !currentUser) {
       // Not authenticated, redirect to auth page instead of login
       toast({
         title: "Authentication Required",

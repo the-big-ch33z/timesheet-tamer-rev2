@@ -23,7 +23,7 @@ export function useRolePermission() {
     return currentUser?.role === 'manager' || currentUser?.role === 'admin';
   };
   
-  // Add this isAdminOrManager helper method that's missing
+  // Add this isAdminOrManager helper method that was missing
   const isAdminOrManager = (): boolean => {
     return isAdmin() || isManager();
   };
@@ -36,7 +36,7 @@ export function useRolePermission() {
   const checkAndLogPermission = (action: string): boolean => {
     const hasAccess = hasPermission(action);
     console.log(
-      `Permission check: ${action} for user ${currentUser?.id} (${currentUser?.role}): ${hasAccess ? 'Granted' : 'Denied'}`
+      `Permission check: ${action} for user ${currentUser?.id || 'unauthenticated'} (${currentUser?.role || 'no role'}): ${hasAccess ? 'Granted' : 'Denied'}`
     );
     return hasAccess;
   };
@@ -47,7 +47,7 @@ export function useRolePermission() {
     isAdmin,
     isManager,
     isTeamMember,
-    isAdminOrManager, // Add this to the return object
+    isAdminOrManager,
     checkAndLogPermission
   };
 }

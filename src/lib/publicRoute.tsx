@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 
 interface PublicRouteProps {
@@ -9,10 +9,11 @@ interface PublicRouteProps {
 
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
   
   // If user is logged in, redirect to timesheet
   if (isAuthenticated) {
-    return <Navigate to="/timesheet" replace />;
+    return <Navigate to="/timesheet" replace state={{ from: location.pathname }} />;
   }
   
   return <>{children}</>;
