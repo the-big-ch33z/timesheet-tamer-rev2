@@ -20,4 +20,5 @@ export const createUserOperations = (state: AuthStateType, toast: ReturnType<typ
 export type UserOperationsType = ReturnType<typeof createUserOperations>;
 
 // Re-export types
-export { UserMetrics } from './types';
+export type { UserMetrics } from './types';
+
