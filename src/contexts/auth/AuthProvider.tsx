@@ -6,7 +6,7 @@ import { useAuthState } from './useAuthState';
 import { createUserOperations } from './operations';
 import { createTeamOperations } from './teamOperations';
 import { createOrganizationOperations } from './organizationOperations';
-import { createAuthOperations } from './authOperations';
+import { createAuthOperations } from './operations/authOperations';
 import { AuthContextType } from './types';
 
 // Create a default context
