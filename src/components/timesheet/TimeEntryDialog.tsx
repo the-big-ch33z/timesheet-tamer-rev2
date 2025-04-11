@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
@@ -15,7 +15,7 @@ type TimeEntryDialogProps = {
   initialData?: Partial<TimeEntry>;
   workSchedule?: WorkSchedule;
   userId?: string;
-  formKey?: string | number; // Add formKey prop to force re-renders
+  formKey?: string | number;
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
@@ -34,10 +34,19 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
+  // Track if the form was submitted to prevent duplicate submissions
   const [formSubmitted, setFormSubmitted] = useState(false);
+
+  // Reset form submission state when formKey changes
+  useEffect(() => {
+    setFormSubmitted(false);
+  }, [formKey]);
 
   const handleSave = (entry: Omit<TimeEntry, "id">) => {
     try {
+      // Prevent duplicate submissions
+      if (formSubmitted) return;
+      
       // Use the provided userId or fall back to current user's id
       const entryWithUserId = {
         ...entry,
@@ -97,7 +106,8 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         entryId={entryId}
         initialData={initialData}
         workSchedule={workSchedule}
-        formKey={formKey || `form-${Date.now()}`} // Ensure form key is passed to force re-renders
+        formKey={formKey || `form-${Date.now()}`}
+        disabled={formSubmitted}
       />
     </div>
   );

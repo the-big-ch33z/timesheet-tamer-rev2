@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +15,7 @@ interface CustomFieldsProps {
   hours: string;
   setHours: (value: string) => void;
   inline?: boolean;
+  disabled?: boolean;
 }
 
 const CustomFields: React.FC<CustomFieldsProps> = ({
@@ -29,6 +29,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   hours,
   setHours,
   inline = false,
+  disabled = false,
 }) => {
   // Render specific field based on field type and name
   const renderField = (field: EntryFieldConfig, showLabel = true) => {
@@ -47,6 +48,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
               placeholder={field.placeholder || "Job No."}
               required={field.required}
               className={inline ? "h-9" : ""}
+              disabled={disabled}
             />
           </div>
         );
@@ -62,6 +64,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
               placeholder={field.placeholder || "Rego"}
               required={field.required}
               className={inline ? "h-9" : ""}
+              disabled={disabled}
             />
           </div>
         );
@@ -77,6 +80,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
                 placeholder={field.placeholder || "Notes"}
                 required={field.required}
                 className="h-9"
+                disabled={disabled}
               />
             ) : (
               <Textarea
@@ -86,6 +90,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
                 rows={3}
                 placeholder={field.placeholder || "Notes"}
                 required={field.required}
+                disabled={disabled}
               />
             )}
           </div>
@@ -105,6 +110,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
               placeholder={field.placeholder || "Hrs"}
               required={field.required}
               className={inline ? "h-9" : ""}
+              disabled={disabled}
             />
           </div>
         );
@@ -120,6 +126,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
                 placeholder={field.placeholder}
                 required={field.required}
                 rows={3}
+                disabled={disabled}
               />
             ) : (
               <Input
@@ -128,6 +135,7 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
                 placeholder={field.placeholder}
                 required={field.required}
                 className={inline ? "h-9" : ""}
+                disabled={disabled}
               />
             )}
           </div>

@@ -13,6 +13,7 @@ interface TimeFieldsProps {
   setEndTime: (time: string) => void;
   selectedDate: Date;
   workSchedule?: WorkSchedule;
+  disabled?: boolean;
 }
 
 const TimeFields: React.FC<TimeFieldsProps> = ({ 
@@ -21,7 +22,8 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
   setStartTime, 
   setEndTime,
   selectedDate,
-  workSchedule
+  workSchedule,
+  disabled = false
 }) => {
   const [warning, setWarning] = useState<string | null>(null);
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
@@ -29,6 +31,8 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
 
   // Handle time changes with validation
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
+    if (disabled) return;
+    
     const timeToValidate = type === 'start' ? value : startTime;
     const otherTime = type === 'start' ? endTime : value;
     
@@ -75,6 +79,7 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
           label="Start Time"
           value={startTime}
           onChange={(value) => handleTimeChange('start', value)}
+          disabled={disabled}
         />
         
         <TimeInput 
@@ -82,6 +87,7 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
           label="End Time"
           value={endTime}
           onChange={(value) => handleTimeChange('end', value)}
+          disabled={disabled}
         />
       </div>
 

@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -30,17 +29,17 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [formKey, setFormKey] = useState(Date.now()); // Use timestamp for unique form key
 
-  const handleAddEntry = () => {
+  const handleAddEntry = useCallback(() => {
     setIsAddingEntry(true);
     // Generate new key to ensure clean form reset
     setFormKey(Date.now());
-  };
+  }, []);
 
-  const handleCancelAddEntry = () => {
+  const handleCancelAddEntry = useCallback(() => {
     setIsAddingEntry(false);
-  };
+  }, []);
 
-  const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
+  const handleSaveEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
     const newEntry: TimeEntry = {
       ...entry,
       id: uuidv4(),
@@ -50,9 +49,12 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     // Call the parent handler with the new entry
     onAddEntry(newEntry);
     
-    // Generate a new form key to reset the form state
-    setFormKey(Date.now());
-  };
+    // Keep the form open for adding multiple entries
+    // But generate a new form key to reset the form state
+    setTimeout(() => {
+      setFormKey(Date.now());
+    }, 300);
+  }, [onAddEntry, userId]);
 
   return (
     <div className="space-y-4">
@@ -102,7 +104,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         readOnly={readOnly}
       />
       
-      {/* Always show an add entry button at the bottom if not read-only */}
+      {/* Only show an add entry button at the bottom if not read-only and not already adding an entry */}
       {!readOnly && entries.length > 0 && !isAddingEntry && (
         <AddEntryButton onClick={handleAddEntry} date={date} />
       )}
