@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import NewEntryForm from "../entry-display/NewEntryForm";
 import { v4 as uuidv4 } from "uuid";
 import TimeEntryList from "../entry-display/TimeEntryList";
+import AddEntryButton from "../entry-display/AddEntryButton";
 
 interface EntriesSectionProps {
   date: Date;
@@ -49,8 +50,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     // Call the parent handler with the new entry
     onAddEntry(newEntry);
     
-    // Don't hide the form after adding an entry - this allows adding multiple entries
-    // But do reset the form with a new key
+    // Generate a new form key to reset the form state
     setFormKey(Date.now());
   };
 
@@ -101,6 +101,11 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         onDeleteEntry={onDeleteEntry}
         readOnly={readOnly}
       />
+      
+      {/* Always show an add entry button at the bottom if not read-only */}
+      {!readOnly && entries.length > 0 && !isAddingEntry && (
+        <AddEntryButton onClick={handleAddEntry} date={date} />
+      )}
     </div>
   );
 };

@@ -138,56 +138,52 @@ const CustomFields: React.FC<CustomFieldsProps> = ({
   if (inline) {
     return (
       <div className="flex gap-2 flex-grow">
-        {visibleFields.map(field => renderField(field, false))}
+        {visibleFields.map(field => field.visible && renderField(field, false))}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Render Job Number and Rego fields in a grid if they exist */}
-      {visibleFields.some(f => 
-        f.name.toLowerCase() === 'job number' || f.name.toLowerCase() === 'rego'
-      ) && (
-        <div className="grid grid-cols-2 gap-4">
-          {visibleFields.filter(f => f.name.toLowerCase() === 'job number').map(field => (
-            <div key={field.id} className="space-y-2">
-              <Label htmlFor="jobNumber">{field.name}</Label>
-              {renderField(field)}
-            </div>
-          ))}
+      {/* Only render visible fields */}
+      <div className="grid grid-cols-2 gap-4">
+        {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'job number').map(field => (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+            {renderField(field)}
+          </div>
+        ))}
 
-          {visibleFields.filter(f => f.name.toLowerCase() === 'rego').map(field => (
-            <div key={field.id} className="space-y-2">
-              <Label htmlFor="rego">{field.name}</Label>
-              {renderField(field)}
-            </div>
-          ))}
-        </div>
-      )}
+        {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'rego').map(field => (
+          <div key={field.id} className="space-y-2">
+            <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
+            {renderField(field)}
+          </div>
+        ))}
+      </div>
 
-      {/* Render Notes field if it exists */}
-      {visibleFields.filter(f => f.name.toLowerCase() === 'notes').map(field => (
+      {/* Render Notes field if it exists and is visible */}
+      {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'notes').map(field => (
         <div key={field.id} className="space-y-2">
-          <Label htmlFor="description">{field.name}</Label>
+          <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
           {renderField(field)}
         </div>
       ))}
 
-      {/* Render Hours field if it exists */}
-      {visibleFields.filter(f => f.name.toLowerCase() === 'hours').map(field => (
+      {/* Render Hours field if it exists and is visible */}
+      {visibleFields.filter(f => f.visible && f.name.toLowerCase() === 'hours').map(field => (
         <div key={field.id} className="space-y-2">
-          <Label htmlFor="hours">{field.name}</Label>
+          <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
           {renderField(field)}
         </div>
       ))}
 
-      {/* Render other custom fields if they exist */}
+      {/* Render other custom fields if they exist and are visible */}
       {visibleFields.filter(f => 
-        !['job number', 'rego', 'notes', 'hours', ''].includes(f.name.toLowerCase())
+        f.visible && !['job number', 'rego', 'notes', 'hours', ''].includes(f.name.toLowerCase())
       ).map(field => (
         <div key={field.id} className="space-y-2">
-          <Label htmlFor={`custom-${field.id}`}>{field.name}</Label>
+          <Label htmlFor={`field-${field.id}`}>{field.name}</Label>
           {renderField(field)}
         </div>
       ))}

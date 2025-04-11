@@ -16,6 +16,7 @@ type TimeEntryFormProps = {
   entryId?: string;
   initialData?: Partial<TimeEntry>;
   workSchedule?: WorkSchedule;
+  formKey?: string | number; // Add formKey to force re-renders
 };
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
@@ -28,6 +29,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   entryId,
   initialData = {},
   workSchedule,
+  formKey,
 }) => {
   // Initialize state with initialData or defaults
   const [hours, setHours] = useState(initialData.hours?.toString() || "");
@@ -36,8 +38,9 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   const [rego, setRego] = useState(initialData.rego || "");
   const [startTime, setStartTime] = useState(initialData.startTime || "09:00");
   const [endTime, setEndTime] = useState(initialData.endTime || "17:00");
+  const [formEdited, setFormEdited] = useState(false);
 
-  // Reset form values when initialData or key changes
+  // Reset form values when initialData or formKey changes
   useEffect(() => {
     setHours(initialData.hours?.toString() || "");
     setDescription(initialData.description || "");
@@ -45,18 +48,26 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     setRego(initialData.rego || "");
     setStartTime(initialData.startTime || "09:00");
     setEndTime(initialData.endTime || "17:00");
-  }, [initialData]);
+    setFormEdited(false); // Reset the form edited state
+  }, [initialData, formKey]); // Added formKey as a dependency
 
-  // Auto-save for inline forms with debouncing
+  // Track form changes
+  const handleFormChange = () => {
+    if (!formEdited) {
+      setFormEdited(true);
+    }
+  };
+
+  // Auto-save for inline forms with debouncing only if edited
   useEffect(() => {
-    if (inline && (hours || description || jobNumber || rego)) {
+    if (inline && formEdited && (hours || description || jobNumber || rego)) {
       const timeoutId = setTimeout(() => {
         handleSave();
       }, 500);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [hours, description, jobNumber, rego]);
+  }, [hours, description, jobNumber, rego, formEdited]);
 
   const handleSave = () => {
     if (!hours && inline) return; // Only validate hours for inline form
@@ -71,6 +82,9 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       endTime,
       project: initialData.project || "General",
     });
+    
+    // Reset form edited state after save
+    setFormEdited(false);
   };
 
   // Check if time fields should be shown
@@ -84,13 +98,25 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         <CustomFields
           visibleFields={visibleFields}
           jobNumber={jobNumber}
-          setJobNumber={setJobNumber}
+          setJobNumber={(val) => {
+            setJobNumber(val);
+            handleFormChange();
+          }}
           rego={rego}
-          setRego={setRego}
+          setRego={(val) => {
+            setRego(val);
+            handleFormChange();
+          }}
           description={description}
-          setDescription={setDescription}
+          setDescription={(val) => {
+            setDescription(val);
+            handleFormChange();
+          }}
           hours={hours}
-          setHours={setHours}
+          setHours={(val) => {
+            setHours(val);
+            handleFormChange();
+          }}
           inline={true}
         />
 
@@ -110,13 +136,26 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+    <form 
+      onSubmit={(e) => { 
+        e.preventDefault(); 
+        handleSave(); 
+      }} 
+      className="space-y-4"
+      key={`form-${formKey || 'default'}`} // Add key to force re-renders
+    >
       {showTimeFields && (
         <TimeFields 
           startTime={startTime}
           endTime={endTime}
-          setStartTime={setStartTime}
-          setEndTime={setEndTime}
+          setStartTime={(val) => {
+            setStartTime(val);
+            handleFormChange();
+          }}
+          setEndTime={(val) => {
+            setEndTime(val);
+            handleFormChange();
+          }}
           selectedDate={selectedDate}
           workSchedule={workSchedule}
         />
@@ -125,13 +164,25 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       <CustomFields
         visibleFields={visibleFields}
         jobNumber={jobNumber}
-        setJobNumber={setJobNumber}
+        setJobNumber={(val) => {
+          setJobNumber(val);
+          handleFormChange();
+        }}
         rego={rego}
-        setRego={setRego}
+        setRego={(val) => {
+          setRego(val);
+          handleFormChange();
+        }}
         description={description}
-        setDescription={setDescription}
+        setDescription={(val) => {
+          setDescription(val);
+          handleFormChange();
+        }}
         hours={hours}
-        setHours={setHours}
+        setHours={(val) => {
+          setHours(val);
+          handleFormChange();
+        }}
       />
 
       <div className="flex justify-end gap-2">

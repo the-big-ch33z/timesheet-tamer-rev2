@@ -6,7 +6,6 @@ import DetailHeader from "./detail/DetailHeader";
 import WorkHoursSection from "./detail/WorkHoursSection";
 import EntriesSection from "./detail/EntriesSection";
 import ScheduleInfoCard from "./detail/ScheduleInfoCard";
-import { Card } from "@/components/ui/card";
 import { useEntryActions } from "./hooks/useEntryActions";
 
 interface TimesheetEntryDetailProps {
@@ -42,7 +41,11 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           <ScheduleInfoCard date={date} workSchedule={workSchedule} />
         )}
         
-        <WorkHoursSection entries={entries} />
+        {/* Only show WorkHoursSection when there are entries */}
+        {entries.length > 0 && (
+          <WorkHoursSection entries={entries} />
+        )}
+        
         <EntriesSection 
           date={date} 
           entries={entries} 

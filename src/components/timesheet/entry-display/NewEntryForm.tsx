@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import TimeEntryDialog from "../TimeEntryDialog";
 import { TimeEntry, WorkSchedule } from "@/types";
 
@@ -20,12 +20,19 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   userId,
   formKey
 }) => {
+  // Local state to track form submissions and generate new keys
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const uniqueFormKey = `entry-form-${formKey || Date.now()}-${submissionCount}`;
+
   const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
     // Forward the entry to the parent component
     onSaveEntry({
       ...entry,
       userId: userId // Ensure userId gets added to the entry
     });
+    
+    // Increment the submission count to generate a new form key
+    setSubmissionCount(prev => prev + 1);
   };
 
   return (
@@ -35,7 +42,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       selectedDate={date}
       workSchedule={workSchedule}
       userId={userId}
-      key={formKey || `entry-form-${Date.now()}`} // Use passed key or generate a new one
+      formKey={uniqueFormKey} // Use our locally managed unique key
       initialData={{}} // Always start with empty data for new entries
     />
   );

@@ -1,10 +1,9 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
-import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 type TimeEntryDialogProps = {
@@ -16,6 +15,7 @@ type TimeEntryDialogProps = {
   initialData?: Partial<TimeEntry>;
   workSchedule?: WorkSchedule;
   userId?: string;
+  formKey?: string | number; // Add formKey prop to force re-renders
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
@@ -27,17 +27,14 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   initialData = {},
   workSchedule,
   userId,
+  formKey,
 }) => {
   const { getVisibleFields } = useTimesheetSettings();
   const visibleFields = getVisibleFields();
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
-  // Create local state for form data to ensure it's always fresh
-  const [formData] = useState({
-    ...initialData,
-    userId: userId || currentUser?.id
-  });
+  const [formSubmitted, setFormSubmitted] = useState(false);
 
   const handleSave = (entry: Omit<TimeEntry, "id">) => {
     try {
@@ -48,6 +45,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       };
       
       onSave(entryWithUserId);
+      setFormSubmitted(true);
       
       // Show success notification
       toast({
@@ -97,8 +95,9 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         visibleFields={visibleFields}
         inline={true}
         entryId={entryId}
-        initialData={formData}
+        initialData={initialData}
         workSchedule={workSchedule}
+        formKey={formKey || `form-${Date.now()}`} // Ensure form key is passed to force re-renders
       />
     </div>
   );
