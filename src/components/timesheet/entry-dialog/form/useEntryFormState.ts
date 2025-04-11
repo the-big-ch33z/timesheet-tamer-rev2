@@ -83,6 +83,7 @@ export const useEntryFormState = (
     startTime,
     endTime,
     project: initialData.project || "General",
+    userId: initialData.userId || "", // Add userId from initialData
   });
 
   return {

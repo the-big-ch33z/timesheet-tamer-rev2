@@ -19,6 +19,7 @@ type TimeEntryFormProps = {
   workSchedule?: WorkSchedule;
   formKey?: string | number;
   disabled?: boolean;
+  userId?: string; // Added userId prop
 };
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
@@ -32,14 +33,21 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   initialData = {},
   workSchedule,
   formKey,
-  disabled = false
+  disabled = false,
+  userId // Added userId prop
 }) => {
+  // Ensure initialData includes userId
+  const completeInitialData = {
+    ...initialData,
+    userId: initialData.userId || userId
+  };
+  
   const { 
     formState,
     handleFieldChange,
     getFormData,
     resetFormEdited
-  } = useEntryFormState(initialData, formKey);
+  } = useEntryFormState(completeInitialData, formKey);
 
   // Auto-save for inline forms with debouncing only if edited
   useEffect(() => {
@@ -66,7 +74,13 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     if (!formState.hours && inline) return; // Only validate hours for inline form
     if (disabled) return; // Don't save if disabled
 
-    onSave(getFormData(selectedDate));
+    const entryData = getFormData(selectedDate);
+    
+    // Ensure userId is included
+    onSave({
+      ...entryData,
+      userId: userId || initialData.userId || ""
+    });
     
     // Reset form edited state after save
     resetFormEdited();

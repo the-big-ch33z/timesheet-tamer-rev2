@@ -35,6 +35,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const { toast } = useToast();
   
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const effectiveUserId = userId || currentUser?.id;
 
   useEffect(() => {
     setFormSubmitted(false);
@@ -44,9 +45,10 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     try {
       if (formSubmitted) return;
       
+      // Make sure userId is always included
       const entryWithUserId = {
         ...entry,
-        userId: userId || currentUser?.id,
+        userId: entry.userId || effectiveUserId,
       };
       
       onSave(entryWithUserId);
@@ -100,6 +102,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         workSchedule={workSchedule}
         formKey={formKey || `form-${Date.now()}`}
         disabled={formSubmitted}
+        userId={effectiveUserId}
       />
     </div>
   );
