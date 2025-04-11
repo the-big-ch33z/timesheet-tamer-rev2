@@ -27,7 +27,7 @@ const TimeEntryFormButtons: React.FC<TimeEntryFormButtonsProps> = ({
         type="button" 
         variant="ghost" 
         size="icon"
-        onClick={() => onDelete(entryId)}
+        onClick={() => onDelete()} // Fixed: Remove passing entryId as it's not expected in the type definition
         className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
         disabled={disabled}
       >
