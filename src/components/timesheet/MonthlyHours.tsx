@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User } from "@/types";
-import { getDaysInMonth, getWorkdaysInMonth } from "@/lib/date-utils";
+import { getWorkdaysInMonth, calculateMonthlyTargetHours } from "@/lib/date-utils";
 
 interface MonthlyHoursProps {
   entries: TimeEntry[];
@@ -16,24 +16,10 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
   const hours = entries.reduce((total, entry) => total + entry.hours, 0);
   
   // Calculate target hours based on user's fortnightHours setting
-  const calculateTargetHours = () => {
-    // Default to 76 hours per fortnight if not set
-    const fortnightHours = user?.fortnightHours || 76;
-    
-    // Get number of workdays in the month
-    const workDaysInMonth = getWorkdaysInMonth(currentMonth);
-    
-    // Standard workdays in a fortnight (10 days in 2 weeks)
-    const fortnightWorkDays = 10;
-    
-    // Calculate the target hours proportionally
-    const targetHours = (workDaysInMonth / fortnightWorkDays) * fortnightHours;
-    
-    // Round to 1 decimal place
-    return Math.round(targetHours * 10) / 10;
-  };
+  const targetHours = user?.fortnightHours 
+    ? calculateMonthlyTargetHours(user.fortnightHours, currentMonth)
+    : calculateMonthlyTargetHours(76, currentMonth); // Default to 76 hours per fortnight if not set
   
-  const targetHours = calculateTargetHours();
   const percentage = Math.min(Math.round((hours / targetHours) * 100), 100);
   
   // Determine color based on percentage
