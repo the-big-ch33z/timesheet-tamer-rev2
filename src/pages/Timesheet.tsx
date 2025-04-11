@@ -7,8 +7,10 @@ import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import { useTimesheet } from "@/hooks/useTimesheet";
+import { useToast } from "@/hooks/use-toast";
 
 const Timesheet = () => {
+  const { toast } = useToast();
   const {
     currentMonth,
     selectedDay,
@@ -36,6 +38,14 @@ const Timesheet = () => {
       />
     );
   }
+
+  const handleDeleteEntry = (id: string) => {
+    deleteEntry(id);
+    toast({
+      title: "Entry deleted",
+      description: "Time entry has been removed successfully",
+    });
+  };
 
   return (
     <div className="container py-6 max-w-7xl">
@@ -65,7 +75,7 @@ const Timesheet = () => {
             date={selectedDay}
             entries={getDayEntries(selectedDay)}
             onAddEntry={() => {}}
-            onDeleteEntry={deleteEntry}
+            onDeleteEntry={handleDeleteEntry}
             readOnly={isViewingOtherUser}
             workSchedule={userWorkSchedule}
           />

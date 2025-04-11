@@ -27,7 +27,10 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   workSchedule
 }) => {
   const formattedDate = format(date, "MMM d, yyyy");
-  const { handleDeleteEntry } = useEntryActions({ readOnly, onDeleteEntry });
+  const { handleDeleteEntry } = useEntryActions({ 
+    readOnly, 
+    onDeleteEntry 
+  });
   
   return (
     <div className="bg-white rounded-lg border shadow-sm">

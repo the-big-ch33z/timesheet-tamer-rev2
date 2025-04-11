@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import TimeEntryItem from "../entry-display/TimeEntryItem";
 import NewEntryForm from "../entry-display/NewEntryForm";
 import { v4 as uuidv4 } from "uuid";
+import TimeEntryList from "../entry-display/TimeEntryList";
 
 interface EntriesSectionProps {
   date: Date;
@@ -79,22 +80,11 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         />
       )}
 
-      {entries.length > 0 ? (
-        <div className="space-y-2">
-          {entries.map((entry) => (
-            <TimeEntryItem
-              key={entry.id}
-              entry={entry}
-              onDelete={() => onDeleteEntry(entry.id)}
-              readOnly={readOnly}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-md">
-          No time entries for this day
-        </div>
-      )}
+      <TimeEntryList 
+        entries={entries}
+        onDeleteEntry={onDeleteEntry}
+        readOnly={readOnly}
+      />
     </div>
   );
 };
