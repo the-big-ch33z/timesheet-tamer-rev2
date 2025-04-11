@@ -7,7 +7,7 @@ import TabContent from "@/components/manager/TabContent";
 import { EditUserForm, UserEditFormValues } from "@/components/admin/users/EditUserForm";
 import { User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
+import { useWorkSchedule } from "@/contexts/work-schedule";
 import { useTeamPermission } from "@/hooks/useTeamPermission";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 

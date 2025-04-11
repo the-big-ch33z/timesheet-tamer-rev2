@@ -2,7 +2,7 @@
 import React from 'react';
 import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
-import { WorkScheduleProvider } from './contexts/WorkScheduleContext';
+import { WorkScheduleProvider } from './contexts/work-schedule';
 import { TimesheetSettingsProvider } from './contexts/TimesheetSettingsContext';
 import { ProtectedRoute } from './lib/routeProtection';
 import MainLayout from './components/layout/MainLayout';

@@ -1,69 +1,11 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { WorkSchedule, WeekDay } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { WorkSchedule } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { defaultWorkSchedule } from './defaultSchedule';
+import { SCHEDULES_STORAGE_KEY, USER_SCHEDULES_STORAGE_KEY } from './types';
 
-// Default work schedule with two-week rotation
-const defaultWorkSchedule: WorkSchedule = {
-  id: 'default',
-  name: 'Default Schedule',
-  weeks: {
-    1: {
-      monday: { startTime: '09:00', endTime: '17:00' },
-      tuesday: { startTime: '09:00', endTime: '17:00' },
-      wednesday: { startTime: '09:00', endTime: '17:00' },
-      thursday: { startTime: '09:00', endTime: '17:00' },
-      friday: { startTime: '09:00', endTime: '17:00' },
-      saturday: null,
-      sunday: null
-    },
-    2: {
-      monday: { startTime: '09:00', endTime: '17:00' },
-      tuesday: { startTime: '09:00', endTime: '17:00' },
-      wednesday: { startTime: '09:00', endTime: '17:00' },
-      thursday: { startTime: '09:00', endTime: '17:00' },
-      friday: { startTime: '09:00', endTime: '17:00' },
-      saturday: null,
-      sunday: null
-    }
-  },
-  rdoDays: {
-    1: [],
-    2: []
-  },
-  isDefault: true
-};
-
-interface WorkScheduleContextType {
-  defaultSchedule: WorkSchedule;
-  schedules: WorkSchedule[];
-  userSchedules: Record<string, string>; // userId -> scheduleId
-  updateDefaultSchedule: (schedule: WorkSchedule) => void;
-  createSchedule: (schedule: WorkSchedule) => void;
-  updateSchedule: (scheduleId: string, updates: Partial<WorkSchedule>) => void;
-  deleteSchedule: (scheduleId: string) => void;
-  getScheduleById: (scheduleId: string) => WorkSchedule | undefined;
-  assignScheduleToUser: (userId: string, scheduleId: string) => void;
-  getUserSchedule: (userId: string) => WorkSchedule;
-  resetUserSchedule: (userId: string) => void;
-  getAllSchedules: () => WorkSchedule[];
-}
-
-const WorkScheduleContext = createContext<WorkScheduleContextType | undefined>(undefined);
-
-// Local storage keys
-const SCHEDULES_STORAGE_KEY = 'timesheet-app-schedules';
-const USER_SCHEDULES_STORAGE_KEY = 'timesheet-app-user-schedules';
-
-export const useWorkSchedule = (): WorkScheduleContextType => {
-  const context = useContext(WorkScheduleContext);
-  if (!context) {
-    throw new Error('useWorkSchedule must be used within a WorkScheduleProvider');
-  }
-  return context;
-};
-
-export const WorkScheduleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export function useWorkScheduleContext() {
   const { toast } = useToast();
   
   // Initialize state from localStorage if available
@@ -283,22 +225,18 @@ export const WorkScheduleProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Get all available schedules
   const getAllSchedules = () => schedules;
 
-  return (
-    <WorkScheduleContext.Provider value={{
-      defaultSchedule,
-      schedules,
-      userSchedules,
-      updateDefaultSchedule,
-      createSchedule,
-      updateSchedule,
-      deleteSchedule,
-      getScheduleById,
-      assignScheduleToUser,
-      getUserSchedule,
-      resetUserSchedule,
-      getAllSchedules
-    }}>
-      {children}
-    </WorkScheduleContext.Provider>
-  );
-};
+  return {
+    defaultSchedule,
+    schedules,
+    userSchedules,
+    updateDefaultSchedule,
+    createSchedule,
+    updateSchedule,
+    deleteSchedule,
+    getScheduleById,
+    assignScheduleToUser,
+    getUserSchedule,
+    resetUserSchedule,
+    getAllSchedules
+  };
+}
