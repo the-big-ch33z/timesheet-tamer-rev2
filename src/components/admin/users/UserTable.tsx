@@ -3,10 +3,11 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Users, Archive, ArchiveRestore, Calendar } from "lucide-react";
+import { Edit, Trash2, Users, Archive, ArchiveRestore, Calendar, Clock } from "lucide-react";
 import { User, UserRole } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { Link } from "react-router-dom";
+import { useWorkSchedule } from "@/contexts/work-schedule";
 
 interface UserTableProps {
   filteredUsers: User[];
@@ -26,6 +27,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   onDeleteUser 
 }) => {
   const { getTeamById, teamMemberships } = useAuth();
+  const { getScheduleById, defaultSchedule } = useWorkSchedule();
 
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
@@ -54,6 +56,15 @@ export const UserTable: React.FC<UserTableProps> = ({
     return teams.filter(team => userTeamIds.includes(team.id) || team.managerId === userId);
   };
 
+  const getScheduleName = (workScheduleId?: string) => {
+    if (!workScheduleId || workScheduleId === 'default') {
+      return defaultSchedule.name + " (Default)";
+    }
+    
+    const schedule = getScheduleById(workScheduleId);
+    return schedule ? schedule.name : "Unknown Schedule";
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -61,6 +72,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
+          <TableHead>Schedule</TableHead>
           <TableHead>Teams</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -81,6 +93,12 @@ export const UserTable: React.FC<UserTableProps> = ({
               <TableCell>
                 <Badge className={getRoleBadgeColor(user.role)}>
                   {user.role.replace("-", " ")}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className="flex items-center gap-1 bg-slate-50">
+                  <Clock className="h-3 w-3" />
+                  {getScheduleName(user.workScheduleId)}
                 </Badge>
               </TableCell>
               <TableCell>
@@ -138,7 +156,7 @@ export const UserTable: React.FC<UserTableProps> = ({
         })}
         {filteredUsers.length === 0 && (
           <TableRow>
-            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
               {showArchived ? "No archived users found." : "No users found."}
             </TableCell>
           </TableRow>

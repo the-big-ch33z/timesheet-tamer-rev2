@@ -4,9 +4,11 @@ import { WorkSchedule } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { defaultWorkSchedule } from './defaultSchedule';
 import { SCHEDULES_STORAGE_KEY, USER_SCHEDULES_STORAGE_KEY } from './types';
+import { useAuth } from '@/contexts/auth';
 
 export function useWorkScheduleContext() {
   const { toast } = useToast();
+  const { users, updateUserMetrics } = useAuth();
   
   // Initialize state from localStorage if available
   const [defaultSchedule, setDefaultSchedule] = useState<WorkSchedule>(() => {
@@ -142,6 +144,9 @@ export function useWorkScheduleContext() {
       const newUserSchedules = { ...userSchedules };
       affectedUsers.forEach(userId => {
         delete newUserSchedules[userId];
+        
+        // Update user objects to reflect this change
+        updateUserWorkScheduleId(userId, 'default');
       });
       setUserSchedules(newUserSchedules);
       
@@ -157,13 +162,28 @@ export function useWorkScheduleContext() {
     }
   };
 
+  // Helper function to update user's workScheduleId property
+  const updateUserWorkScheduleId = async (userId: string, scheduleId: string) => {
+    try {
+      // Use the existing auth context to update user data
+      // We're using updateUserMetrics as a way to update the user object
+      // The key/value will be merged with the existing user
+      await updateUserMetrics(userId, {
+        // This is a bit of a hack, but it works since updateUserMetrics merges with existing user
+        workScheduleId: scheduleId === 'default' ? undefined : scheduleId
+      });
+    } catch (error) {
+      console.error("Error updating user workScheduleId:", error);
+    }
+  };
+
   // Get a schedule by ID
   const getScheduleById = (scheduleId: string): WorkSchedule | undefined => {
     return schedules.find(s => s.id === scheduleId);
   };
 
   // Assign a schedule to a user
-  const assignScheduleToUser = (userId: string, scheduleId: string) => {
+  const assignScheduleToUser = async (userId: string, scheduleId: string) => {
     console.log(`Assigning schedule ${scheduleId} to user ${userId}`);
     
     if (scheduleId !== 'default' && !schedules.some(s => s.id === scheduleId)) {
@@ -175,25 +195,42 @@ export function useWorkScheduleContext() {
       return;
     }
     
-    if (scheduleId === 'default') {
-      // If assigning default, just remove from userSchedules
-      const newUserSchedules = { ...userSchedules };
-      delete newUserSchedules[userId];
-      setUserSchedules(newUserSchedules);
-      console.log(`User ${userId} reset to default schedule`);
-    } else {
-      // Assign the custom schedule
-      setUserSchedules(prev => ({
-        ...prev,
-        [userId]: scheduleId
-      }));
-      console.log(`Custom schedule ${scheduleId} assigned to user ${userId}`);
+    try {
+      if (scheduleId === 'default') {
+        // If assigning default, just remove from userSchedules
+        const newUserSchedules = { ...userSchedules };
+        delete newUserSchedules[userId];
+        setUserSchedules(newUserSchedules);
+        
+        // Update the user object to clear the custom schedule ID
+        await updateUserWorkScheduleId(userId, 'default');
+        
+        console.log(`User ${userId} reset to default schedule`);
+      } else {
+        // Assign the custom schedule
+        setUserSchedules(prev => ({
+          ...prev,
+          [userId]: scheduleId
+        }));
+        
+        // Update the user object to store the schedule ID
+        await updateUserWorkScheduleId(userId, scheduleId);
+        
+        console.log(`Custom schedule ${scheduleId} assigned to user ${userId}`);
+      }
+      
+      toast({
+        title: 'Schedule assigned',
+        description: 'Work schedule has been assigned to the user',
+      });
+    } catch (error) {
+      console.error("Error assigning schedule to user:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to assign schedule to user',
+        variant: 'destructive',
+      });
     }
-    
-    toast({
-      title: 'Schedule assigned',
-      description: 'Work schedule has been assigned to the user',
-    });
   };
 
   // Get the schedule for a user
@@ -211,10 +248,13 @@ export function useWorkScheduleContext() {
   };
 
   // Reset a user to the default schedule
-  const resetUserSchedule = (userId: string) => {
+  const resetUserSchedule = async (userId: string) => {
     const newUserSchedules = { ...userSchedules };
     delete newUserSchedules[userId];
     setUserSchedules(newUserSchedules);
+    
+    // Update the user object to remove the custom schedule ID
+    await updateUserWorkScheduleId(userId, 'default');
     
     toast({
       title: 'Schedule reset',

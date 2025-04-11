@@ -5,8 +5,9 @@ import { User } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Archive, ArchiveRestore, Calendar, Edit } from "lucide-react";
+import { Archive, ArchiveRestore, Calendar, Edit, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useWorkSchedule } from "@/contexts/work-schedule";
 
 interface TeamMembersTableProps {
   teamMembers: User[];
@@ -22,6 +23,16 @@ export const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   setUserToRestore
 }) => {
   const { canManageUser } = useTeamPermission();
+  const { getScheduleById, defaultSchedule } = useWorkSchedule();
+
+  const getScheduleName = (workScheduleId?: string) => {
+    if (!workScheduleId || workScheduleId === 'default') {
+      return defaultSchedule.name + " (Default)";
+    }
+    
+    const schedule = getScheduleById(workScheduleId);
+    return schedule ? schedule.name : "Unknown Schedule";
+  };
 
   return (
     <div className="rounded-md border">
@@ -30,6 +41,7 @@ export const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead>Schedule</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -51,6 +63,13 @@ export const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     <div>{member.role}</div>
                     <div className="text-xs text-muted-foreground">Team Member</div>
                   </div>
+                </TableCell>
+                
+                <TableCell>
+                  <Badge variant="outline" className="flex items-center gap-1 bg-slate-50">
+                    <Clock className="h-3 w-3" />
+                    {getScheduleName(member.workScheduleId)}
+                  </Badge>
                 </TableCell>
                 
                 <TableCell>
@@ -116,7 +135,7 @@ export const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                 No team members found in this team.
               </TableCell>
             </TableRow>

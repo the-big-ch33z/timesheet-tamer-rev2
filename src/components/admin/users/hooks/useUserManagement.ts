@@ -80,13 +80,10 @@ export const useUserManagement = () => {
       await updateUserRole(selectedUser.id, data.role);
       
       // Handle work schedule assignment
-      if (data.useDefaultSchedule) {
-        // Reset to default schedule
-        assignScheduleToUser(selectedUser.id, 'default');
-      } else if (data.scheduleId) {
-        // Assign to custom schedule
-        assignScheduleToUser(selectedUser.id, data.scheduleId);
-      }
+      const scheduleId = data.useDefaultSchedule ? 'default' : data.scheduleId || 'default';
+      
+      // Assign schedule to user (this updates the workScheduleId in the user object)
+      await assignScheduleToUser(selectedUser.id, scheduleId);
       
       // Update user metrics (FTE and fortnight hours)
       await updateUserMetrics(selectedUser.id, {
