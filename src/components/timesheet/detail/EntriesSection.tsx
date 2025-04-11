@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import TimeEntryItem from "../entry-display/TimeEntryItem";
 import NewEntryForm from "../entry-display/NewEntryForm";
 import { v4 as uuidv4 } from "uuid";
 import TimeEntryList from "../entry-display/TimeEntryList";
@@ -50,7 +49,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     // Call the parent handler with the new entry
     onAddEntry(newEntry);
     
-    // Reset the form with a new key for a clean slate
+    // Don't hide the form after adding an entry - this allows adding multiple entries
+    // But do reset the form with a new key
     setFormKey(Date.now());
   };
 
@@ -81,6 +81,18 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
             userId={userId}
             formKey={`entry-form-${formKey}`}
           />
+          
+          {/* Add a button to close the form if needed */}
+          <div className="flex justify-end mt-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsAddingEntry(false)}
+              className="text-gray-500"
+            >
+              Close Form
+            </Button>
+          </div>
         </div>
       )}
 

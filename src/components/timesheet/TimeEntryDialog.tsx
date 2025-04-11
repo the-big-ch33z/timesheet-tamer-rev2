@@ -1,12 +1,11 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { useWorkSchedule } from "@/contexts/work-schedule";
 
 type TimeEntryDialogProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
@@ -25,7 +24,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   selectedDate,
   onCancel,
   entryId,
-  initialData,
+  initialData = {},
   workSchedule,
   userId,
 }) => {
@@ -33,6 +32,12 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const visibleFields = getVisibleFields();
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  
+  // Create local state for form data to ensure it's always fresh
+  const [formData] = useState({
+    ...initialData,
+    userId: userId || currentUser?.id
+  });
 
   const handleSave = (entry: Omit<TimeEntry, "id">) => {
     try {
@@ -92,10 +97,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         visibleFields={visibleFields}
         inline={true}
         entryId={entryId}
-        initialData={{
-          ...initialData,
-          userId: userId || currentUser?.id
-        }}
+        initialData={formData}
         workSchedule={workSchedule}
       />
     </div>

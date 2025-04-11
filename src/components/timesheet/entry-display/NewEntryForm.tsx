@@ -31,7 +31,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   return (
     <TimeEntryDialog
       onSave={handleSaveEntry}
-      onDelete={onCancel}
+      onCancel={onCancel}
       selectedDate={date}
       workSchedule={workSchedule}
       userId={userId}

@@ -37,7 +37,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   const [startTime, setStartTime] = useState(initialData.startTime || "09:00");
   const [endTime, setEndTime] = useState(initialData.endTime || "17:00");
 
-  // Reset form values when initialData changes (for new forms)
+  // Reset form values when initialData or key changes
   useEffect(() => {
     setHours(initialData.hours?.toString() || "");
     setDescription(initialData.description || "");
@@ -59,7 +59,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   }, [hours, description, jobNumber, rego]);
 
   const handleSave = () => {
-    if (!hours) return;
+    if (!hours && inline) return; // Only validate hours for inline form
 
     onSave({
       date: selectedDate,
