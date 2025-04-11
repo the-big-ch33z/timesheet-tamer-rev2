@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 
@@ -8,11 +8,20 @@ interface PublicRouteProps {
 }
 
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   const location = useLocation();
   
+  // Debug authentication state
+  useEffect(() => {
+    console.log("PublicRoute auth state:", { 
+      isAuthenticated, 
+      currentUser: currentUser ? currentUser.id : 'none' 
+    });
+  }, [isAuthenticated, currentUser]);
+  
   // If user is logged in, redirect to timesheet
-  if (isAuthenticated) {
+  if (isAuthenticated && currentUser) {
+    console.log("User is authenticated, redirecting to timesheet");
     return <Navigate to="/timesheet" replace state={{ from: location.pathname }} />;
   }
   

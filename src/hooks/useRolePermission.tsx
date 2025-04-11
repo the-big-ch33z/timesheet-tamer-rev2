@@ -23,7 +23,6 @@ export function useRolePermission() {
     return currentUser?.role === 'manager' || currentUser?.role === 'admin';
   };
   
-  // Add this isAdminOrManager helper method that was missing
   const isAdminOrManager = (): boolean => {
     return isAdmin() || isManager();
   };

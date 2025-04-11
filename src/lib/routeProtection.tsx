@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,11 +23,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Log access attempts for audit purposes - with proper null checking
+    // Log access attempts for audit purposes
     console.log(`Access attempt to ${location.pathname} by user:`, currentUser?.id || 'unauthenticated');
     
+    // Check if authenticated
     if (!isAuthenticated || !currentUser) {
-      // Not authenticated, redirect to auth page instead of login
+      console.log("Not authenticated, redirecting to auth page");
       toast({
         title: "Authentication Required",
         description: "Please log in to access this resource",
@@ -38,12 +38,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return;
     }
 
-    if (allowedRoles.length > 0 && currentUser) {
+    // Check for role-based access
+    if (allowedRoles.length > 0) {
       // Check if user has required role
       const hasRequiredRole = allowedRoles.includes(currentUser.role);
       
       if (!hasRequiredRole) {
-        // User doesn't have required role, redirect to timesheet and show notification
+        console.log(`User ${currentUser.id} with role ${currentUser.role} doesn't have the required role (${allowedRoles.join(', ')})`);
         toast({
           title: "Access Denied",
           description: `You need ${allowedRoles.join(' or ')} permissions to access this page`,
@@ -56,6 +57,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
     }
     
+    // User is authenticated and authorized
+    console.log(`User ${currentUser.id} authorized to access ${location.pathname}`);
     setIsAuthorized(true);
     setLoading(false);
   }, [isAuthenticated, currentUser, allowedRoles, navigate, location, toast]);
