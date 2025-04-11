@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useEffect } from "react";
 import { EntryFieldConfig, TimeEntry, WorkSchedule } from "@/types";
-import CustomFields from "./fields/CustomFields";
-import { Trash2 } from "lucide-react";
 import TimeFields from "./fields/TimeFields";
+import CustomFields from "./fields/CustomFields";
+import InlineEntryForm from "./form/InlineEntryForm";
+import TimeEntryFormButtons from "./form/TimeEntryFormButtons";
+import { useEntryFormState } from "./form/useEntryFormState";
 
 type TimeEntryFormProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
@@ -33,61 +34,32 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   formKey,
   disabled = false
 }) => {
-  // Initialize state with initialData or defaults
-  const [hours, setHours] = useState("");
-  const [description, setDescription] = useState("");
-  const [jobNumber, setJobNumber] = useState("");
-  const [rego, setRego] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("17:00");
-  const [formEdited, setFormEdited] = useState(false);
-
-  // Reset form values when initialData or formKey changes
-  useEffect(() => {
-    setHours(initialData.hours?.toString() || "");
-    setDescription(initialData.description || "");
-    setJobNumber(initialData.jobNumber || "");
-    setRego(initialData.rego || "");
-    setStartTime(initialData.startTime || "09:00");
-    setEndTime(initialData.endTime || "17:00");
-    setFormEdited(false);
-  }, [initialData, formKey]);
-
-  // Track form changes
-  const handleFormChange = () => {
-    if (!formEdited) {
-      setFormEdited(true);
-    }
-  };
+  const { 
+    formState,
+    handleFieldChange,
+    getFormData,
+    resetFormEdited
+  } = useEntryFormState(initialData, formKey);
 
   // Auto-save for inline forms with debouncing only if edited
   useEffect(() => {
-    if (inline && formEdited && (hours || description || jobNumber || rego) && !disabled) {
+    if (inline && formState.formEdited && (formState.hours || formState.description || formState.jobNumber || formState.rego) && !disabled) {
       const timeoutId = setTimeout(() => {
         handleSave();
       }, 800); // Increased debounce time to prevent multiple submissions
       
       return () => clearTimeout(timeoutId);
     }
-  }, [hours, description, jobNumber, rego, formEdited, disabled]);
+  }, [formState.hours, formState.description, formState.jobNumber, formState.rego, formState.formEdited, disabled]);
 
   const handleSave = () => {
-    if (!hours && inline) return; // Only validate hours for inline form
+    if (!formState.hours && inline) return; // Only validate hours for inline form
     if (disabled) return; // Don't save if disabled
 
-    onSave({
-      date: selectedDate,
-      hours: parseFloat(hours) || 0,
-      description,
-      jobNumber,
-      rego,
-      startTime,
-      endTime,
-      project: initialData.project || "General",
-    });
+    onSave(getFormData(selectedDate));
     
     // Reset form edited state after save
-    setFormEdited(false);
+    resetFormEdited();
   };
 
   // Check if time fields should be shown
@@ -95,51 +67,21 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     (field.id === 'startTime' || field.id === 'endTime') && field.visible
   );
 
+  // Render inline form
   if (inline) {
     return (
-      <div className={`flex items-center gap-2 bg-white border rounded-md p-2 ${disabled ? 'opacity-75' : ''}`}>
-        <CustomFields
-          visibleFields={visibleFields}
-          jobNumber={jobNumber}
-          setJobNumber={(val) => {
-            setJobNumber(val);
-            handleFormChange();
-          }}
-          rego={rego}
-          setRego={(val) => {
-            setRego(val);
-            handleFormChange();
-          }}
-          description={description}
-          setDescription={(val) => {
-            setDescription(val);
-            handleFormChange();
-          }}
-          hours={hours}
-          setHours={(val) => {
-            setHours(val);
-            handleFormChange();
-          }}
-          inline={true}
-          disabled={disabled}
-        />
-
-        {onDelete && entryId && (
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="icon"
-            onClick={() => onDelete(entryId)}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
-            disabled={disabled}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+      <InlineEntryForm 
+        visibleFields={visibleFields}
+        formValues={formState}
+        onFieldChange={handleFieldChange}
+        onDelete={onDelete}
+        entryId={entryId}
+        disabled={disabled}
+      />
     );
   }
 
+  // Render full form
   return (
     <form 
       onSubmit={(e) => { 
@@ -151,16 +93,10 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     >
       {showTimeFields && (
         <TimeFields 
-          startTime={startTime}
-          endTime={endTime}
-          setStartTime={(val) => {
-            setStartTime(val);
-            handleFormChange();
-          }}
-          setEndTime={(val) => {
-            setEndTime(val);
-            handleFormChange();
-          }}
+          startTime={formState.startTime}
+          endTime={formState.endTime}
+          setStartTime={(val) => handleFieldChange('startTime', val)}
+          setEndTime={(val) => handleFieldChange('endTime', val)}
           selectedDate={selectedDate}
           workSchedule={workSchedule}
           disabled={disabled}
@@ -169,37 +105,25 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
 
       <CustomFields
         visibleFields={visibleFields}
-        jobNumber={jobNumber}
-        setJobNumber={(val) => {
-          setJobNumber(val);
-          handleFormChange();
-        }}
-        rego={rego}
-        setRego={(val) => {
-          setRego(val);
-          handleFormChange();
-        }}
-        description={description}
-        setDescription={(val) => {
-          setDescription(val);
-          handleFormChange();
-        }}
-        hours={hours}
-        setHours={(val) => {
-          setHours(val);
-          handleFormChange();
-        }}
+        jobNumber={formState.jobNumber}
+        setJobNumber={(val) => handleFieldChange('jobNumber', val)}
+        rego={formState.rego}
+        setRego={(val) => handleFieldChange('rego', val)}
+        description={formState.description}
+        setDescription={(val) => handleFieldChange('description', val)}
+        hours={formState.hours}
+        setHours={(val) => handleFieldChange('hours', val)}
         disabled={disabled}
       />
 
-      <div className="flex justify-end gap-2">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} disabled={disabled}>
-            Cancel
-          </Button>
-        )}
-        <Button type="submit" className="bg-brand-600 hover:bg-brand-700" disabled={disabled}>Save Entry</Button>
-      </div>
+      <TimeEntryFormButtons
+        onSave={handleSave}
+        onCancel={onCancel}
+        onDelete={onDelete}
+        entryId={entryId}
+        inline={inline}
+        disabled={disabled}
+      />
     </form>
   );
 };

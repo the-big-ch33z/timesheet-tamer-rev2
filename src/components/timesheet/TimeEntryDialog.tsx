@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
@@ -34,20 +33,16 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
-  // Track if the form was submitted to prevent duplicate submissions
   const [formSubmitted, setFormSubmitted] = useState(false);
 
-  // Reset form submission state when formKey changes
   useEffect(() => {
     setFormSubmitted(false);
   }, [formKey]);
 
   const handleSave = (entry: Omit<TimeEntry, "id">) => {
     try {
-      // Prevent duplicate submissions
       if (formSubmitted) return;
       
-      // Use the provided userId or fall back to current user's id
       const entryWithUserId = {
         ...entry,
         userId: userId || currentUser?.id,
@@ -56,7 +51,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       onSave(entryWithUserId);
       setFormSubmitted(true);
       
-      // Show success notification
       toast({
         title: "Entry saved",
         description: "Time entry has been saved successfully",
@@ -64,7 +58,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         className: "bg-green-50 border-green-200"
       });
     } catch (error) {
-      // Show error notification
       toast({
         title: "Save failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -77,7 +70,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     try {
       if (onDelete && id) {
         onDelete(id);
-        // Show success notification
         toast({
           title: "Entry deleted",
           description: "Time entry has been removed",
@@ -85,7 +77,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         });
       }
     } catch (error) {
-      // Show error notification
       toast({
         title: "Delete failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
