@@ -38,15 +38,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return;
     }
 
-    if (requiredRoles.length > 0 && currentUser) {
+    if (allowedRoles.length > 0 && currentUser) {
       // Check if user has required role
-      const hasRequiredRole = requiredRoles.includes(currentUser.role);
+      const hasRequiredRole = allowedRoles.includes(currentUser.role);
       
       if (!hasRequiredRole) {
         // User doesn't have required role, redirect to timesheet and show notification
         toast({
           title: "Access Denied",
-          description: `You need ${requiredRoles.join(' or ')} permissions to access this page`,
+          description: `You need ${allowedRoles.join(' or ')} permissions to access this page`,
           variant: "destructive",
         });
         // Log unauthorized access attempt
@@ -58,7 +58,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     
     setIsAuthorized(true);
     setLoading(false);
-  }, [isAuthenticated, currentUser, requiredRoles, navigate, location, toast]);
+  }, [isAuthenticated, currentUser, allowedRoles, navigate, location, toast]);
 
   // If authorized and finished loading, render children
   if (isAuthenticated && isAuthorized && !loading) {
