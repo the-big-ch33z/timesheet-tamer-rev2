@@ -1,11 +1,12 @@
 
 import React from "react";
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkSchedule } from "@/contexts/work-schedule";
 
 type TimeEntryDialogProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
@@ -14,6 +15,7 @@ type TimeEntryDialogProps = {
   onCancel?: () => void;
   entryId?: string;
   initialData?: Partial<TimeEntry>;
+  workSchedule?: WorkSchedule;
 };
 
 const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
@@ -23,6 +25,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   onCancel,
   entryId,
   initialData,
+  workSchedule,
 }) => {
   const { getVisibleFields } = useTimesheetSettings();
   const visibleFields = getVisibleFields();
@@ -34,7 +37,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       // Add user ID to the entry
       onSave({
         ...entry,
-        userId: currentUser?.id, // Associate entry with current user
+        userId: currentUser?.id,
       });
       
       // Show success notification
@@ -86,6 +89,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         inline={true}
         entryId={entryId}
         initialData={initialData}
+        workSchedule={workSchedule}
       />
     </div>
   );

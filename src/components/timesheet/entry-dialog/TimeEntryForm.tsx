@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { EntryFieldConfig, TimeEntry } from "@/types";
+import { EntryFieldConfig, TimeEntry, WorkSchedule } from "@/types";
 import CustomFields from "./fields/CustomFields";
 import { Trash2 } from "lucide-react";
+import TimeFields from "./fields/TimeFields";
 
 type TimeEntryFormProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
@@ -14,6 +15,7 @@ type TimeEntryFormProps = {
   inline?: boolean;
   entryId?: string;
   initialData?: Partial<TimeEntry>;
+  workSchedule?: WorkSchedule;
 };
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
@@ -25,11 +27,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   inline = false,
   entryId,
   initialData = {},
+  workSchedule,
 }) => {
   const [hours, setHours] = useState(initialData.hours?.toString() || "");
   const [description, setDescription] = useState(initialData.description || "");
   const [jobNumber, setJobNumber] = useState(initialData.jobNumber || "");
   const [rego, setRego] = useState(initialData.rego || "");
+  const [startTime, setStartTime] = useState(initialData.startTime || "09:00");
+  const [endTime, setEndTime] = useState(initialData.endTime || "17:00");
 
   useEffect(() => {
     if (inline && (hours || description || jobNumber || rego)) {
@@ -50,9 +55,16 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       description,
       jobNumber,
       rego,
-      project: initialData.project || "General", // Adding a default project value
+      startTime,
+      endTime,
+      project: initialData.project || "General",
     });
   };
+
+  // Check if time fields should be shown
+  const showTimeFields = visibleFields.some(field => 
+    (field.id === 'startTime' || field.id === 'endTime') && field.visible
+  );
 
   if (inline) {
     return (
@@ -87,6 +99,17 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+      {showTimeFields && (
+        <TimeFields 
+          startTime={startTime}
+          endTime={endTime}
+          setStartTime={setStartTime}
+          setEndTime={setEndTime}
+          selectedDate={selectedDate}
+          workSchedule={workSchedule}
+        />
+      )}
+
       <CustomFields
         visibleFields={visibleFields}
         jobNumber={jobNumber}

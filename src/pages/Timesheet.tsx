@@ -184,7 +184,7 @@ const Timesheet = () => {
         onPrevMonth={prevMonth}
         onNextMonth={nextMonth}
         onDayClick={handleDayClick}
-        workSchedule={userWorkSchedule} // Pass the work schedule to TimesheetTabs
+        workSchedule={userWorkSchedule}
       />
 
       {selectedDay && activeTab === "timesheet" && (
@@ -194,7 +194,8 @@ const Timesheet = () => {
             entries={getDayEntries(selectedDay)}
             onAddEntry={() => {}}
             onDeleteEntry={deleteEntry}
-            readOnly={isViewingOtherUser}  // Make read-only when viewing another user's timesheet
+            readOnly={isViewingOtherUser}
+            workSchedule={userWorkSchedule}
           />
         </div>
       )}
