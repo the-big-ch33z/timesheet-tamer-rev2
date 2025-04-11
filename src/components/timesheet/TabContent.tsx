@@ -6,18 +6,15 @@ import TimesheetCalendar from "./TimesheetCalendar";
 import ToilSummary from "./ToilSummary";
 import MonthlyHours from "./MonthlyHours";
 import RecentEntries from "./RecentEntries";
+import { useTabContent, TabContentProps } from "./hooks/useTabContent";
 
-interface TabContentProps {
-  entries: TimeEntry[];
-  currentMonth: Date;
+interface TabContentComponentProps extends TabContentProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
-  workSchedule?: WorkSchedule;
-  user?: User;
 }
 
-const TabContent: React.FC<TabContentProps> = ({
+const TabContent: React.FC<TabContentComponentProps> = ({
   entries,
   currentMonth,
   onPrevMonth,
@@ -26,10 +23,7 @@ const TabContent: React.FC<TabContentProps> = ({
   workSchedule,
   user,
 }) => {
-  // Sort entries by date (newest first)
-  const sortedEntries = [...entries].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  const { sortedEntries } = useTabContent({ entries, currentMonth, workSchedule, user });
 
   return (
     <>

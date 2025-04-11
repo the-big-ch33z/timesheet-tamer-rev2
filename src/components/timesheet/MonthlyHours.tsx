@@ -3,8 +3,8 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User } from "@/types";
-import { getWorkdaysInMonth, calculateMonthlyTargetHours } from "@/lib/date-utils";
-import { useUserMetrics } from "@/contexts/user-metrics";
+import { getWorkdaysInMonth } from "@/lib/date-utils";
+import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
 
 interface MonthlyHoursProps {
   entries: TimeEntry[];
@@ -13,29 +13,13 @@ interface MonthlyHoursProps {
 }
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth }) => {
-  const { getUserMetrics } = useUserMetrics();
-  
-  // Calculate total hours logged for the month
-  const hours = entries.reduce((total, entry) => total + entry.hours, 0);
-  
-  // Get user metrics with defaults if user is provided
-  const userMetrics = user ? getUserMetrics(user.id) : null;
-  const fortnightHours = userMetrics?.fortnightHours || 0;
-  
-  console.log(`Using fortnight hours value: ${fortnightHours}`);
-  
-  const targetHours = calculateMonthlyTargetHours(fortnightHours, currentMonth);
-  console.log(`Calculated monthly target hours: ${targetHours} based on fortnight hours: ${fortnightHours}`);
-  
-  const percentage = Math.min(Math.round((hours / targetHours) * 100), 100);
-  
-  // Determine color based on percentage
-  const getProgressColor = () => {
-    if (percentage >= 100) return "success";
-    if (percentage >= 70) return "info";
-    if (percentage >= 30) return "warning";
-    return "danger";
-  };
+  const {
+    hours,
+    targetHours,
+    percentage,
+    hoursRemaining,
+    progressColor
+  } = useMonthlyHoursCalculation(entries, user, currentMonth);
 
   return (
     <Card>
@@ -51,11 +35,11 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
         <Progress 
           value={percentage} 
           className="h-2 mb-4"
-          color={getProgressColor()}
+          color={progressColor}
         />
         
         <div className="text-sm text-gray-500">
-          {targetHours - hours > 0 ? (targetHours - hours).toFixed(1) : 0} hours remaining to meet target
+          {hoursRemaining} hours remaining to meet target
         </div>
         <div className="text-sm text-gray-500">
           Based on {getWorkdaysInMonth(currentMonth)} work days this month
