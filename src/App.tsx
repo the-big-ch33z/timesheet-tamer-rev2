@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
@@ -14,8 +15,6 @@ import TeamCalendar from './pages/TeamCalendar';
 import Auth from './pages/Auth';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
-import ScheduleSettings from './pages/ScheduleSettings';
-import PublicRoute from './lib/publicRoute';
 
 function App() {
   return (
@@ -24,85 +23,23 @@ function App() {
         <WorkScheduleProvider>
           <TimesheetSettingsProvider>
             <Routes>
+              {/* Public routes */}
               <Route path="/" element={<Index />} />
-              <Route 
-                path="/auth" 
-                element={
-                  <PublicRoute>
-                    <Auth />
-                  </PublicRoute>
-                } 
-              />
-              <Route 
-                path="/timesheet/:userId?" 
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <Timesheet />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/team-calendar" 
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <TeamCalendar />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/manager" 
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <MainLayout>
-                      <Manager />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin" 
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <MainLayout>
-                      <Admin />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/reports" 
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <Reports />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/settings" 
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <Settings />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/schedule-settings" 
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <MainLayout>
-                      <ScheduleSettings />
-                    </MainLayout>
-                  </ProtectedRoute>
-                } 
-              />
+              <Route path="/login" element={<Auth mode="login" />} />
+              <Route path="/signup" element={<Auth mode="signup" />} />
+              
+              {/* Protected routes with layout */}
+              <Route element={<MainLayout />}>
+                {/* Unified timesheet route with optional userId parameter */}
+                <Route path="/timesheet/:userId?" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
+                <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                <Route path="/team-calendar" element={<ProtectedRoute><TeamCalendar /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              </Route>
+              
+              {/* 404 route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TimesheetSettingsProvider>

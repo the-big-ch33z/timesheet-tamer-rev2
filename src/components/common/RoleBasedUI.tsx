@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/auth';
@@ -36,26 +37,12 @@ export const RoleBasedButton: React.FC<RoleBasedButtonProps> = ({
   
   if (!hasAccess) return null;
   
+  // If action logging is needed
   if (action) {
     console.log(`User ${currentUser.id} (${currentUser.role}) accessing action: ${action}`);
   }
   
   return <>{children}</>;
-};
-
-export const RoleBasedUI: React.FC<{
-  allowedRoles: UserRole[];
-  children: React.ReactNode;
-}> = ({ allowedRoles, children }) => {
-  const { currentUser } = useAuth();
-  
-  if (!currentUser) return null;
-  
-  if (allowedRoles.includes(currentUser.role)) {
-    return <>{children}</>;
-  }
-  
-  return null;
 };
 
 interface RoleBasedSectionProps {

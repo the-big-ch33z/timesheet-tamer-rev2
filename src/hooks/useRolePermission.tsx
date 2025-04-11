@@ -23,10 +23,6 @@ export function useRolePermission() {
     return currentUser?.role === 'manager' || currentUser?.role === 'admin';
   };
   
-  const isAdminOrManager = (): boolean => {
-    return isAdmin() || isManager();
-  };
-  
   const isTeamMember = (): boolean => {
     return !!currentUser; // Any authenticated user is at least a team member
   };
@@ -35,7 +31,7 @@ export function useRolePermission() {
   const checkAndLogPermission = (action: string): boolean => {
     const hasAccess = hasPermission(action);
     console.log(
-      `Permission check: ${action} for user ${currentUser?.id || 'unauthenticated'} (${currentUser?.role || 'no role'}): ${hasAccess ? 'Granted' : 'Denied'}`
+      `Permission check: ${action} for user ${currentUser?.id} (${currentUser?.role}): ${hasAccess ? 'Granted' : 'Denied'}`
     );
     return hasAccess;
   };
@@ -46,7 +42,6 @@ export function useRolePermission() {
     isAdmin,
     isManager,
     isTeamMember,
-    isAdminOrManager,
     checkAndLogPermission
   };
 }

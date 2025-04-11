@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserRole } from '@/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -8,12 +9,12 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: UserRole[];
+  requiredRoles?: UserRole[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  allowedRoles = [] 
+  requiredRoles = [] 
 }) => {
   const { isAuthenticated, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -24,30 +25,28 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   useEffect(() => {
     // Log access attempts for audit purposes
-    console.log(`Access attempt to ${location.pathname} by user:`, currentUser?.id || 'unauthenticated');
+    console.log(`Access attempt to ${location.pathname} by user:`, currentUser?.id);
     
-    // Check if authenticated
-    if (!isAuthenticated || !currentUser) {
-      console.log("Not authenticated, redirecting to auth page");
+    if (!isAuthenticated) {
+      // Not authenticated, redirect to login
       toast({
         title: "Authentication Required",
         description: "Please log in to access this resource",
         variant: "destructive",
       });
-      navigate('/auth', { replace: true, state: { from: location.pathname } });
+      navigate('/login', { replace: true, state: { from: location.pathname } });
       return;
     }
 
-    // Check for role-based access
-    if (allowedRoles.length > 0) {
+    if (requiredRoles.length > 0 && currentUser) {
       // Check if user has required role
-      const hasRequiredRole = allowedRoles.includes(currentUser.role);
+      const hasRequiredRole = requiredRoles.includes(currentUser.role);
       
       if (!hasRequiredRole) {
-        console.log(`User ${currentUser.id} with role ${currentUser.role} doesn't have the required role (${allowedRoles.join(', ')})`);
+        // User doesn't have required role, redirect to timesheet and show notification
         toast({
           title: "Access Denied",
-          description: `You need ${allowedRoles.join(' or ')} permissions to access this page`,
+          description: `You need ${requiredRoles.join(' or ')} permissions to access this page`,
           variant: "destructive",
         });
         // Log unauthorized access attempt
@@ -57,11 +56,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
     }
     
-    // User is authenticated and authorized
-    console.log(`User ${currentUser.id} authorized to access ${location.pathname}`);
     setIsAuthorized(true);
     setLoading(false);
-  }, [isAuthenticated, currentUser, allowedRoles, navigate, location, toast]);
+  }, [isAuthenticated, currentUser, requiredRoles, navigate, location, toast]);
 
   // If authorized and finished loading, render children
   if (isAuthenticated && isAuthorized && !loading) {

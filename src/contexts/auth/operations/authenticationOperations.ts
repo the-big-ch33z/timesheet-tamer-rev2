@@ -12,43 +12,12 @@ export const createAuthenticationOperations = (
 ) => {
   const login = async (email: string, password: string) => {
     try {
-      // For demo/testing purposes, allow any email to work if no users exist yet
-      let user;
+      const user = state.users.find(u => u.email === email);
       
-      if (state.users.length === 0) {
-        console.log("No users found, creating a default admin user");
-        // Create a default user and organization
-        const newOrgId = `org-${Date.now()}`;
-        const newUserId = `user-${Date.now()}`;
-        
-        const newOrg = {
-          id: newOrgId,
-          name: "Demo Organization",
-          adminId: newUserId,
-          createdAt: new Date().toISOString()
-        };
-        
-        user = {
-          id: newUserId,
-          email,
-          name: email.split('@')[0],
-          role: 'admin' as const,
-          organizationId: newOrgId,
-          createdAt: new Date().toISOString(),
-          status: 'active' as const
-        };
-        
-        state.setUsers([user]);
-        state.setOrganizations([newOrg]);
-      } else {
-        user = state.users.find(u => u.email === email);
-        
-        if (!user) {
-          throw new Error("User not found");
-        }
+      if (!user) {
+        throw new Error("User not found");
       }
       
-      // Update authentication state
       state.setCurrentUser(user);
       state.setIsAuthenticated(true);
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -89,7 +58,7 @@ export const createAuthenticationOperations = (
     state.setCurrentUser(null);
     state.setIsAuthenticated(false);
     localStorage.removeItem('currentUser');
-    navigate('/auth');
+    navigate('/login');
     
     toast.toast({
       title: "Logged out",
