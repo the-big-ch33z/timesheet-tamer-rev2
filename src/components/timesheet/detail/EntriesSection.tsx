@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   userId
 }) => {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
+  const [entryKey, setEntryKey] = useState(0); // Add a key to force re-render of the form
 
   const handleAddEntry = () => {
     setIsAddingEntry(true);
@@ -46,8 +48,8 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     // Call the parent handler with the new entry
     onAddEntry(newEntry);
     
-    // Keep the form open to allow adding multiple entries
-    // (Don't close the form after adding an entry)
+    // Reset the form by updating the key to force a clean re-render
+    setEntryKey(prev => prev + 1);
   };
 
   return (
@@ -68,13 +70,15 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
       </div>
 
       {isAddingEntry && (
-        <NewEntryForm 
-          date={date} 
-          onSaveEntry={handleSaveEntry} 
-          onCancel={handleCancelAddEntry}
-          workSchedule={workSchedule}
-          userId={userId}
-        />
+        <div key={entryKey}> {/* Use key to force re-render */}
+          <NewEntryForm 
+            date={date} 
+            onSaveEntry={handleSaveEntry} 
+            onCancel={handleCancelAddEntry}
+            workSchedule={workSchedule}
+            userId={userId}
+          />
+        </div>
       )}
 
       <TimeEntryList 

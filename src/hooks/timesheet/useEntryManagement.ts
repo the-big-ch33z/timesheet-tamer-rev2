@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +35,7 @@ export const useEntryManagement = (userId?: string) => {
     }
   }, [entries, logger]);
 
-  const addEntry = (entry: TimeEntry) => {
+  const addEntry = useCallback((entry: TimeEntry) => {
     // Ensure the entry has the correct userId
     const completeEntry = {
       ...entry,
@@ -43,20 +43,20 @@ export const useEntryManagement = (userId?: string) => {
     };
     
     setEntries(prev => [...prev, completeEntry]);
-    logger.info("Entry added explicitly", { entry: completeEntry });
-  };
+    logger.info("Entry added", { entry: completeEntry });
+  }, [userId, logger]);
 
-  const deleteEntry = (id: string) => {
-    setEntries(entries.filter(entry => entry.id !== id));
+  const deleteEntry = useCallback((id: string) => {
+    setEntries(prev => prev.filter(entry => entry.id !== id));
     logger.info("Entry deleted", { id });
     
     toast({
       title: "Entry deleted",
       description: "Time entry has been removed",
     });
-  };
+  }, [toast, logger]);
 
-  const getUserEntries = (userIdToFilter?: string) => {
+  const getUserEntries = useCallback((userIdToFilter?: string) => {
     const targetUserId = userIdToFilter || userId;
     // If no viewed user is found, return empty array
     if (!targetUserId) {
@@ -68,9 +68,9 @@ export const useEntryManagement = (userId?: string) => {
     const filteredEntries = entries.filter(entry => entry.userId === targetUserId);
     logger.debug("Filtered entries for user", { userId: targetUserId, count: filteredEntries.length });
     return filteredEntries;
-  };
+  }, [entries, userId, logger]);
 
-  const getDayEntries = (day: Date, userIdToFilter?: string) => {
+  const getDayEntries = useCallback((day: Date, userIdToFilter?: string) => {
     const userEntries = getUserEntries(userIdToFilter);
     const dayEntries = userEntries.filter(
       (entry) => format(entry.date, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
@@ -80,7 +80,7 @@ export const useEntryManagement = (userId?: string) => {
       count: dayEntries.length 
     });
     return dayEntries;
-  };
+  }, [getUserEntries, logger]);
 
   return {
     entries,

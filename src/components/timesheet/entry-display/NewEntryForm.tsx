@@ -19,6 +19,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   userId
 }) => {
   const handleSaveEntry = (entry: Omit<TimeEntry, "id">) => {
+    // Forward the entry to the parent component
     onSaveEntry({
       ...entry,
       userId: userId // Ensure userId gets added to the entry
@@ -32,6 +33,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       selectedDate={date}
       workSchedule={workSchedule}
       userId={userId}
+      key={`entry-form-${Date.now()}`} // Add a unique key to force proper re-render
     />
   );
 };
