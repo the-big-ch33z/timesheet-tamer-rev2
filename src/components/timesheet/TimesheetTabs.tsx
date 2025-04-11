@@ -2,10 +2,9 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TimesheetCalendar from "./TimesheetCalendar";
-import MonthlyHours from "./MonthlyHours";
 import RecentEntries from "./RecentEntries";
-import ToilSummary from "./ToilSummary";
 import { TimeEntry, WorkSchedule } from "@/types";
+import TabContent from "./TabContent";
 
 interface TimesheetTabsProps {
   activeTab: string;
@@ -15,7 +14,7 @@ interface TimesheetTabsProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
-  workSchedule?: WorkSchedule; // Added workSchedule prop
+  workSchedule?: WorkSchedule;
 }
 
 const TimesheetTabs = ({
@@ -26,45 +25,23 @@ const TimesheetTabs = ({
   onPrevMonth,
   onNextMonth,
   onDayClick,
-  workSchedule, // Add workSchedule prop
+  workSchedule,
 }: TimesheetTabsProps) => {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
       <TabsList className="mb-4">
         <TabsTrigger value="timesheet">Calendar View</TabsTrigger>
-        <TabsTrigger value="monthly">Monthly Hours</TabsTrigger>
         <TabsTrigger value="recent">Recent Entries</TabsTrigger>
-        <TabsTrigger value="toil">TOIL Summary</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="timesheet">
-        <TimesheetCalendar 
-          currentMonth={currentMonth}
-          entries={entries}
-          onPrevMonth={onPrevMonth}
-          onNextMonth={onNextMonth}
-          onDayClick={onDayClick}
-          workSchedule={workSchedule} // Pass workSchedule to TimesheetCalendar
-        />
-      </TabsContent>
-
-      <TabsContent value="monthly">
-        <MonthlyHours 
-          entries={entries} // This was causing an error
-        />
-      </TabsContent>
-
-      <TabsContent value="recent">
-        <RecentEntries 
-          entries={entries} // This was causing an error - onDayClick was improperly passed
-        />
-      </TabsContent>
-
-      <TabsContent value="toil">
-        <ToilSummary 
-          entries={entries} // This was causing an error
-        />
-      </TabsContent>
+      <TabContent 
+        entries={entries}
+        currentMonth={currentMonth}
+        onPrevMonth={onPrevMonth}
+        onNextMonth={onNextMonth}
+        onDayClick={onDayClick}
+        workSchedule={workSchedule}
+      />
     </Tabs>
   );
 };
