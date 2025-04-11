@@ -1,4 +1,3 @@
-
 import { WeekDay, WorkSchedule } from "@/types";
 
 // Helper function to get weekday from date
@@ -75,4 +74,9 @@ export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule):
   
   // Round to nearest 0.5 (instead of nearest whole number)
   return Math.round(totalHours * 2) / 2;
+};
+
+// Format hours to display with one decimal place
+export const formatHours = (hours: number): string => {
+  return hours.toFixed(1);
 };
