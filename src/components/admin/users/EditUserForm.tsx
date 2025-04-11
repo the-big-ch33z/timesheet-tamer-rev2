@@ -111,20 +111,43 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         console.log(`Setting schedule ID in form to: ${selectedUser.workScheduleId}`);
       } else {
         form.setValue("scheduleId", undefined);
+        // When using default schedule, set fortnight hours from default schedule
+        const defaultHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+        if (defaultHours > 0) {
+          console.log(`Setting initial fortnight hours from default schedule: ${defaultHours}`);
+          // Only update if user doesn't have a specific override
+          if (!selectedUser.fortnightHours) {
+            form.setValue("fortnightHours", defaultHours);
+          }
+        }
       }
       
       // Set FTE and fortnight hours with proper type conversion, fallback to defaults if undefined
       form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : USER_DEFAULTS.FTE);
-      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? selectedUser.fortnightHours : USER_DEFAULTS.FORTNIGHT_HOURS);
-      console.log(`Initializing fortnightHours to: ${selectedUser.fortnightHours ?? USER_DEFAULTS.FORTNIGHT_HOURS}`);
+      
+      // If user has specific fortnight hours set, use those. Otherwise use calculated hours from schedule
+      if (selectedUser.fortnightHours !== undefined) {
+        form.setValue("fortnightHours", selectedUser.fortnightHours);
+        console.log(`Initializing fortnightHours to user-specific value: ${selectedUser.fortnightHours}`);
+      }
     }
-  }, [selectedUser, form]);
+  }, [selectedUser, form, defaultSchedule]);
 
   const handleSubmit = async (values: UserEditFormValues) => {
     if (!selectedUser) return;
     
     try {
       console.log("Submitting form with values:", values);
+      
+      // Ensure hours from default schedule are saved if using default schedule
+      if (values.useDefaultSchedule) {
+        // Make sure the actual calculated hours from the default schedule are used
+        const defaultHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+        if (defaultHours > 0) {
+          values.fortnightHours = defaultHours;
+          console.log(`Setting submission fortnight hours to default schedule value: ${defaultHours}`);
+        }
+      }
       
       // Submit all form values
       await onSubmit(values);

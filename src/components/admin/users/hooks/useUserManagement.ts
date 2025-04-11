@@ -6,6 +6,7 @@ import { useWorkSchedule } from "@/contexts/work-schedule";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useToast } from "@/hooks/use-toast";
 import { UserEditFormValues } from "../EditUserForm";
+import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
 
 export const useUserManagement = () => {
   const { toast } = useToast();
@@ -20,7 +21,7 @@ export const useUserManagement = () => {
 
   // Access authentication, work schedule, and metrics contexts
   const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser } = useAuth();
-  const { assignScheduleToUser, resetUserSchedule } = useWorkSchedule();
+  const { assignScheduleToUser, resetUserSchedule, defaultSchedule } = useWorkSchedule();
   const { updateUserMetrics } = useUserMetrics();
 
   // Handle search term changes
@@ -82,10 +83,22 @@ export const useUserManagement = () => {
     try {
       console.log("Updating user with data:", data);
       
+      // Determine the actual fortnight hours to save
+      let actualFortnightHours = data.fortnightHours;
+      
+      if (data.useDefaultSchedule) {
+        // When using default schedule, ensure we're saving the actual calculated hours from the default
+        const defaultHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+        if (defaultHours > 0) {
+          actualFortnightHours = defaultHours;
+          console.log(`Using default schedule hours: ${defaultHours} for user ${selectedUser.id}`);
+        }
+      }
+      
       // First update user metrics (FTE and fortnight hours)
       await updateUserMetrics(selectedUser.id, {
         fte: data.fte,
-        fortnightHours: data.fortnightHours
+        fortnightHours: actualFortnightHours
       });
       
       // Update user's role
