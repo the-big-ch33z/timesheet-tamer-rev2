@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +24,7 @@ const defaultAuthContext: AuthContextType = {
   addUser: async () => ({ id: '', email: '', name: '', role: 'team-member', organizationId: '' }),
   addTeamMember: async () => ({ id: '', email: '', name: '', role: 'team-member', organizationId: '' }),
   updateUserRole: async () => {},
+  updateUserMetrics: async () => {},
   assignManagerToTeam: async () => {},
   getUsersByRole: () => [],
   getUsersByTeam: () => [],
