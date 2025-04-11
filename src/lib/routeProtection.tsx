@@ -28,13 +28,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     console.log(`Access attempt to ${location.pathname} by user:`, currentUser?.id);
     
     if (!isAuthenticated) {
-      // Not authenticated, redirect to login
+      // Not authenticated, redirect to auth page instead of login
       toast({
         title: "Authentication Required",
         description: "Please log in to access this resource",
         variant: "destructive",
       });
-      navigate('/login', { replace: true, state: { from: location.pathname } });
+      navigate('/auth', { replace: true, state: { from: location.pathname } });
       return;
     }
 
