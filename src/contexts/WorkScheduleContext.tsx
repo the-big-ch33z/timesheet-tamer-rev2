@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { WorkSchedule, WeekDay } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,6 +51,10 @@ interface WorkScheduleContextType {
 
 const WorkScheduleContext = createContext<WorkScheduleContextType | undefined>(undefined);
 
+// Local storage keys
+const SCHEDULES_STORAGE_KEY = 'timesheet-app-schedules';
+const USER_SCHEDULES_STORAGE_KEY = 'timesheet-app-user-schedules';
+
 export const useWorkSchedule = (): WorkScheduleContextType => {
   const context = useContext(WorkScheduleContext);
   if (!context) {
@@ -61,9 +65,66 @@ export const useWorkSchedule = (): WorkScheduleContextType => {
 
 export const WorkScheduleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { toast } = useToast();
-  const [defaultSchedule, setDefaultSchedule] = useState<WorkSchedule>(defaultWorkSchedule);
-  const [schedules, setSchedules] = useState<WorkSchedule[]>([defaultWorkSchedule]);
-  const [userSchedules, setUserSchedules] = useState<Record<string, string>>({});
+  
+  // Initialize state from localStorage if available
+  const [defaultSchedule, setDefaultSchedule] = useState<WorkSchedule>(() => {
+    try {
+      const savedSchedules = localStorage.getItem(SCHEDULES_STORAGE_KEY);
+      if (savedSchedules) {
+        const parsedSchedules = JSON.parse(savedSchedules);
+        const defaultFromStorage = parsedSchedules.find((s: WorkSchedule) => s.isDefault);
+        if (defaultFromStorage) return defaultFromStorage;
+      }
+      return defaultWorkSchedule;
+    } catch (error) {
+      console.error("Error loading default schedule from localStorage:", error);
+      return defaultWorkSchedule;
+    }
+  });
+  
+  const [schedules, setSchedules] = useState<WorkSchedule[]>(() => {
+    try {
+      const savedSchedules = localStorage.getItem(SCHEDULES_STORAGE_KEY);
+      if (savedSchedules) {
+        return JSON.parse(savedSchedules);
+      }
+      return [defaultWorkSchedule];
+    } catch (error) {
+      console.error("Error loading schedules from localStorage:", error);
+      return [defaultWorkSchedule];
+    }
+  });
+  
+  const [userSchedules, setUserSchedules] = useState<Record<string, string>>(() => {
+    try {
+      const savedUserSchedules = localStorage.getItem(USER_SCHEDULES_STORAGE_KEY);
+      if (savedUserSchedules) {
+        return JSON.parse(savedUserSchedules);
+      }
+      return {};
+    } catch (error) {
+      console.error("Error loading user schedules from localStorage:", error);
+      return {};
+    }
+  });
+
+  // Save schedules to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCHEDULES_STORAGE_KEY, JSON.stringify(schedules));
+    } catch (error) {
+      console.error("Error saving schedules to localStorage:", error);
+    }
+  }, [schedules]);
+
+  // Save user schedules to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(USER_SCHEDULES_STORAGE_KEY, JSON.stringify(userSchedules));
+    } catch (error) {
+      console.error("Error saving user schedules to localStorage:", error);
+    }
+  }, [userSchedules]);
 
   // Update the default schedule
   const updateDefaultSchedule = (schedule: WorkSchedule) => {
@@ -161,6 +222,8 @@ export const WorkScheduleProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Assign a schedule to a user
   const assignScheduleToUser = (userId: string, scheduleId: string) => {
+    console.log(`Assigning schedule ${scheduleId} to user ${userId}`);
+    
     if (scheduleId !== 'default' && !schedules.some(s => s.id === scheduleId)) {
       toast({
         title: 'Invalid schedule',
@@ -175,12 +238,14 @@ export const WorkScheduleProvider: React.FC<{ children: ReactNode }> = ({ childr
       const newUserSchedules = { ...userSchedules };
       delete newUserSchedules[userId];
       setUserSchedules(newUserSchedules);
+      console.log(`User ${userId} reset to default schedule`);
     } else {
-      // Assign the schedule
+      // Assign the custom schedule
       setUserSchedules(prev => ({
         ...prev,
         [userId]: scheduleId
       }));
+      console.log(`Custom schedule ${scheduleId} assigned to user ${userId}`);
     }
     
     toast({
@@ -192,9 +257,14 @@ export const WorkScheduleProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Get the schedule for a user
   const getUserSchedule = (userId: string): WorkSchedule => {
     const assignedScheduleId = userSchedules[userId];
+    console.log(`Getting schedule for user ${userId}, assigned ID: ${assignedScheduleId}`);
+    
     if (!assignedScheduleId) return defaultSchedule;
     
     const assignedSchedule = schedules.find(s => s.id === assignedScheduleId);
+    if (!assignedSchedule) {
+      console.warn(`Schedule ${assignedScheduleId} not found for user ${userId}, using default`);
+    }
     return assignedSchedule || defaultSchedule;
   };
 
