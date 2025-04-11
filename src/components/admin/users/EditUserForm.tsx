@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { UserRole, User } from "@/types";
-import { useWorkSchedule } from "@/contexts/work-schedule"; // Updated import path
+import { useWorkSchedule } from "@/contexts/work-schedule";
 import { RoleSelection } from "./form-sections/RoleSelection";
 import { UserMetricsFields } from "./form-sections/UserMetricsFields";
 import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";

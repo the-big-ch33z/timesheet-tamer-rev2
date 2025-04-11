@@ -1,3 +1,9 @@
 
-export * from './AuthProvider';
-export * from './types';
+// Re-export types from the types file
+export type { AuthContextType, LoginCredentials, SignupCredentials } from './types';
+
+// Export the context provider
+export { AuthProvider } from './AuthProvider';
+
+// Export the useAuth hook
+export { useAuth } from './AuthProvider';

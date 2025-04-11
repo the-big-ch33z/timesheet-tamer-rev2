@@ -6,10 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, UserRole } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
-import { useWorkSchedule } from "@/contexts/work-schedule"; // Updated import path
+import { useWorkSchedule } from "@/contexts/work-schedule";
 import { UserSearch } from "./UserSearch";
 import { UserTable } from "./UserTable";
-import { EditUserForm } from "./EditUserForm";
+import { EditUserForm, UserEditFormValues } from "./EditUserForm";
 import { AddUserDialog } from "./AddUserDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import OrganizationTree from "../OrganizationTree";
@@ -26,7 +26,7 @@ const UserManagement = () => {
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null);
 
   // Access authentication and work schedule contexts
-  const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser } = useAuth();
+  const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser, updateUserMetrics } = useAuth();
   const { assignScheduleToUser } = useWorkSchedule();
 
   // Handle search term changes
@@ -81,14 +81,7 @@ const UserManagement = () => {
   };
 
   // Handle edit user submission
-  const onSubmitEditUser = async (data: { 
-    role: UserRole;
-    teamIds?: string[];
-    useDefaultSchedule?: boolean;
-    scheduleId?: string;
-    fte: number;
-    fortnightHours: number;
-  }) => {
+  const onSubmitEditUser = async (data: UserEditFormValues) => {
     if (!selectedUser) return;
     
     try {
@@ -104,9 +97,11 @@ const UserManagement = () => {
         assignScheduleToUser(selectedUser.id, data.scheduleId);
       }
       
-      // Here we would update the user with FTE and fortnightHours
-      // This would require a new auth context method, but for now we'll just show a toast
-      console.log('Updating user with FTE:', data.fte, 'and fortnight hours:', data.fortnightHours);
+      // Update user metrics (FTE and fortnight hours)
+      await updateUserMetrics(selectedUser.id, {
+        fte: data.fte,
+        fortnightHours: data.fortnightHours
+      });
       
       toast({
         title: "User Updated",

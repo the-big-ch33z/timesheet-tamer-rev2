@@ -9,26 +9,10 @@ import { User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkSchedule } from "@/contexts/work-schedule";
 import { useTeamPermission } from "@/hooks/useTeamPermission";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
-
-type TeamMember = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  employeeType: string;
-  status: "active" | "on-leave" | "inactive";
-  requiredHours: number;
-  actualHours: number;
-  toilBalance: number;
-  toilRollover: number;
-  paidHours: number;
-  bankedLeave: number;
-};
 
 const Manager = () => {
   const [selectedTab, setSelectedTab] = useState("team-overview");
-  const { users, teams, getUserById, getUsersByTeam, currentUser, updateUserRole, archiveUser, restoreUser } = useAuth();
+  const { users, teams, getUserById, getUsersByTeam, currentUser, updateUserRole, updateUserMetrics, archiveUser, restoreUser } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
@@ -162,6 +146,12 @@ const Manager = () => {
         // Assign to custom schedule
         assignScheduleToUser(selectedUser.id, data.scheduleId);
       }
+      
+      // Update user metrics (FTE and fortnight hours)
+      await updateUserMetrics(selectedUser.id, {
+        fte: data.fte,
+        fortnightHours: data.fortnightHours
+      });
       
       toast({
         title: "User Updated",
