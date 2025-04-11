@@ -21,7 +21,7 @@ export const useUserManagement = () => {
 
   // Access authentication, work schedule, and metrics contexts
   const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser } = useAuth();
-  const { assignScheduleToUser, resetUserSchedule, defaultSchedule } = useWorkSchedule();
+  const { assignScheduleToUser, resetUserSchedule, defaultSchedule, getScheduleById } = useWorkSchedule();
   const { updateUserMetrics } = useUserMetrics();
 
   // Handle search term changes
@@ -83,16 +83,26 @@ export const useUserManagement = () => {
     try {
       console.log("Updating user with data:", data);
       
-      // Determine the actual fortnight hours to save
-      let actualFortnightHours = data.fortnightHours;
+      // Calculate the actual fortnight hours based on FTE and schedule
+      let baseHours = 0;
       
       if (data.useDefaultSchedule) {
-        // When using default schedule, ensure we're saving the actual calculated hours from the default
-        const defaultHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-        if (defaultHours > 0) {
-          actualFortnightHours = defaultHours;
-          console.log(`Using default schedule hours: ${defaultHours} for user ${selectedUser.id}`);
+        baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+      } else if (data.scheduleId) {
+        const selectedSchedule = getScheduleById(data.scheduleId);
+        if (selectedSchedule) {
+          baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
         }
+      }
+      
+      // Apply FTE to calculate the proportional hours
+      let actualFortnightHours = data.fortnightHours; // Default to the form value
+      
+      if (baseHours > 0) {
+        const adjustedHours = baseHours * data.fte;
+        // Round to nearest 0.5
+        actualFortnightHours = Math.round(adjustedHours * 2) / 2;
+        console.log(`Final fortnight hours calculation: base=${baseHours}, FTE=${data.fte}, adjusted=${actualFortnightHours}`);
       }
       
       // First update user metrics (FTE and fortnight hours)

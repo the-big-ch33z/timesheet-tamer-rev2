@@ -21,9 +21,10 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   watch,
   schedules
 }) => {
-  // Get the current value of useDefaultSchedule
+  // Get the current values from the form
   const useDefaultSchedule = watch("useDefaultSchedule");
   const selectedScheduleId = watch("scheduleId");
+  const fte = watch("fte");
   
   // Get access to the default schedule
   const { defaultSchedule } = useWorkSchedule();
@@ -32,24 +33,36 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   const formState = useFormState({ control });
   
   // Calculate fortnight hours for the selected schedule
-  const [fortnightHours, setFortnightHours] = useState<number | null>(null);
+  const [baseScheduleHours, setBaseScheduleHours] = useState<number | null>(null);
+  const [adjustedHours, setAdjustedHours] = useState<number | null>(null);
   
-  // Update fortnight hours when schedule selection changes
+  // Update hours calculations when schedule selection or FTE changes
   useEffect(() => {
+    let baseHours = 0;
+    
     if (useDefaultSchedule) {
       // Calculate hours from default schedule
-      const hours = calculateFortnightHoursFromSchedule(defaultSchedule);
-      setFortnightHours(hours);
+      baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
     } else if (selectedScheduleId) {
       const selectedSchedule = schedules.find(s => s.id === selectedScheduleId);
       if (selectedSchedule) {
-        const hours = calculateFortnightHoursFromSchedule(selectedSchedule);
-        setFortnightHours(hours);
+        baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
       }
-    } else {
-      setFortnightHours(null);
     }
-  }, [selectedScheduleId, useDefaultSchedule, schedules, defaultSchedule]);
+    
+    if (baseHours > 0) {
+      setBaseScheduleHours(baseHours);
+      
+      // Apply FTE to calculate adjusted hours
+      const calculatedAdjustedHours = baseHours * fte;
+      // Round to nearest 0.5
+      const roundedHours = Math.round(calculatedAdjustedHours * 2) / 2;
+      setAdjustedHours(roundedHours);
+    } else {
+      setBaseScheduleHours(null);
+      setAdjustedHours(null);
+    }
+  }, [selectedScheduleId, useDefaultSchedule, schedules, defaultSchedule, fte]);
   
   // Log state changes in the form
   useEffect(() => {
@@ -57,9 +70,11 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
       useDefault: useDefaultSchedule,
       selectedId: selectedScheduleId,
       formErrors: formState.errors,
-      calculatedHours: fortnightHours
+      fte: fte,
+      baseHours: baseScheduleHours,
+      adjustedHours: adjustedHours
     });
-  }, [useDefaultSchedule, selectedScheduleId, formState, fortnightHours]);
+  }, [useDefaultSchedule, selectedScheduleId, formState, baseScheduleHours, adjustedHours, fte]);
 
   // Filter out default schedule from the dropdown
   const availableSchedules = schedules.filter(s => !s.isDefault);
@@ -133,15 +148,29 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
                 {schedules.find(s => s.id === selectedScheduleId) ? (
                   <div>
                     <p className="font-medium">{schedules.find(s => s.id === selectedScheduleId)?.name}</p>
-                    {fortnightHours !== null && (
-                      <div className="flex items-center mt-2">
-                        <p className="text-muted-foreground">Required Fortnight Hours:</p>
-                        <Badge variant="outline" className="ml-2">
-                          {fortnightHours} hours
-                        </Badge>
+                    {baseScheduleHours !== null && (
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center">
+                          <p className="text-muted-foreground">Base Schedule Hours:</p>
+                          <Badge variant="outline" className="ml-2">
+                            {baseScheduleHours} hours
+                          </Badge>
+                        </div>
+                        <div className="flex items-center">
+                          <p className="text-muted-foreground">Current FTE:</p>
+                          <Badge variant="outline" className="ml-2">
+                            {fte} ({Math.round(fte * 100)}%)
+                          </Badge>
+                        </div>
+                        <div className="flex items-center font-medium">
+                          <p className="text-muted-foreground">Required Fortnight Hours:</p>
+                          <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
+                            {adjustedHours} hours
+                          </Badge>
+                        </div>
                       </div>
                     )}
-                    <p className="text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-3">
                       This schedule has specific hours defined for each day across a two-week rotation.
                     </p>
                   </div>
@@ -154,19 +183,33 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
         </div>
       )}
 
-      {useDefaultSchedule && fortnightHours !== null && (
+      {useDefaultSchedule && baseScheduleHours !== null && (
         <div className="pt-2">
           <h4 className="text-sm font-medium mb-2">Default Schedule</h4>
           <div className="bg-gray-50 p-4 rounded border text-sm">
             <div>
               <p className="font-medium">{defaultSchedule.name}</p>
-              <div className="flex items-center mt-2">
-                <p className="text-muted-foreground">Required Fortnight Hours:</p>
-                <Badge variant="outline" className="ml-2">
-                  {fortnightHours} hours
-                </Badge>
+              <div className="space-y-2 mt-2">
+                <div className="flex items-center">
+                  <p className="text-muted-foreground">Base Schedule Hours:</p>
+                  <Badge variant="outline" className="ml-2">
+                    {baseScheduleHours} hours
+                  </Badge>
+                </div>
+                <div className="flex items-center">
+                  <p className="text-muted-foreground">Current FTE:</p>
+                  <Badge variant="outline" className="ml-2">
+                    {fte} ({Math.round(fte * 100)}%)
+                  </Badge>
+                </div>
+                <div className="flex items-center font-medium">
+                  <p className="text-muted-foreground">Required Fortnight Hours:</p>
+                  <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
+                    {adjustedHours} hours
+                  </Badge>
+                </div>
               </div>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-3">
                 This is the organization's default work schedule.
               </p>
             </div>

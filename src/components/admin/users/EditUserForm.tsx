@@ -62,31 +62,36 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     },
   });
 
-  // Watch for changes to useDefaultSchedule and scheduleId
+  // Watch for changes to useDefaultSchedule, scheduleId, and fte
   const useDefaultSchedule = form.watch("useDefaultSchedule");
   const scheduleId = form.watch("scheduleId");
+  const fte = form.watch("fte");
   
-  // Update fortnight hours based on schedule selection
+  // Update fortnight hours based on schedule selection and FTE
   useEffect(() => {
+    let baseHours = 0;
+    
     if (useDefaultSchedule) {
       // When using default schedule, calculate hours from the default schedule
-      const calculatedHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-      if (calculatedHours > 0) {
-        console.log(`Updating fortnight hours from default schedule: ${calculatedHours}`);
-        form.setValue("fortnightHours", calculatedHours);
-      }
+      baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
     } else if (scheduleId) {
       // When using custom schedule
       const selectedSchedule = getScheduleById(scheduleId);
       if (selectedSchedule) {
-        const calculatedHours = calculateFortnightHoursFromSchedule(selectedSchedule);
-        if (calculatedHours > 0) {
-          console.log(`Updating fortnight hours from custom schedule: ${calculatedHours}`);
-          form.setValue("fortnightHours", calculatedHours);
-        }
+        baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
       }
     }
-  }, [useDefaultSchedule, scheduleId, getScheduleById, form, defaultSchedule]);
+    
+    if (baseHours > 0) {
+      // Apply FTE to calculate the proportional hours
+      const adjustedHours = baseHours * fte;
+      // Round to nearest 0.5
+      const roundedHours = Math.round(adjustedHours * 2) / 2;
+      
+      console.log(`Updating fortnight hours: base=${baseHours}, FTE=${fte}, adjusted=${adjustedHours}, rounded=${roundedHours}`);
+      form.setValue("fortnightHours", roundedHours);
+    }
+  }, [useDefaultSchedule, scheduleId, fte, getScheduleById, form, defaultSchedule]);
 
   // Update form when selected user changes
   useEffect(() => {
@@ -111,21 +116,13 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         console.log(`Setting schedule ID in form to: ${selectedUser.workScheduleId}`);
       } else {
         form.setValue("scheduleId", undefined);
-        // When using default schedule, set fortnight hours from default schedule
-        const defaultHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-        if (defaultHours > 0) {
-          console.log(`Setting initial fortnight hours from default schedule: ${defaultHours}`);
-          // Only update if user doesn't have a specific override
-          if (!selectedUser.fortnightHours) {
-            form.setValue("fortnightHours", defaultHours);
-          }
-        }
       }
       
-      // Set FTE and fortnight hours with proper type conversion, fallback to defaults if undefined
+      // Set FTE with proper type conversion, fallback to defaults if undefined
       form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : USER_DEFAULTS.FTE);
       
-      // If user has specific fortnight hours set, use those. Otherwise use calculated hours from schedule
+      // If user has specific fortnight hours set, use those. Otherwise, they'll be calculated
+      // based on the schedule and FTE in the useEffect
       if (selectedUser.fortnightHours !== undefined) {
         form.setValue("fortnightHours", selectedUser.fortnightHours);
         console.log(`Initializing fortnightHours to user-specific value: ${selectedUser.fortnightHours}`);
@@ -139,14 +136,24 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     try {
       console.log("Submitting form with values:", values);
       
-      // Ensure hours from default schedule are saved if using default schedule
+      // Ensure the correct fortnight hours based on schedule and FTE are submitted
+      let baseHours = 0;
+      
       if (values.useDefaultSchedule) {
-        // Make sure the actual calculated hours from the default schedule are used
-        const defaultHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-        if (defaultHours > 0) {
-          values.fortnightHours = defaultHours;
-          console.log(`Setting submission fortnight hours to default schedule value: ${defaultHours}`);
+        baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+      } else if (values.scheduleId) {
+        const selectedSchedule = getScheduleById(values.scheduleId);
+        if (selectedSchedule) {
+          baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
         }
+      }
+      
+      if (baseHours > 0) {
+        // Apply FTE to calculate the proportional hours
+        const adjustedHours = baseHours * values.fte;
+        // Round to nearest 0.5
+        values.fortnightHours = Math.round(adjustedHours * 2) / 2;
+        console.log(`Setting final submission hours: base=${baseHours}, FTE=${values.fte}, adjusted=${values.fortnightHours}`);
       }
       
       // Submit all form values
