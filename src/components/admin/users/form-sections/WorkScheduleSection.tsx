@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { WorkSchedule } from "@/types";
 import { Control, UseFormWatch, useFormState } from "react-hook-form";
-import { UserEditFormValues } from "../EditUserForm";
+import { UserEditFormValues } from "../hooks/useEditUserForm";
 import { Badge } from "@/components/ui/badge";
 import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
 import { useWorkSchedule } from "@/contexts/work-schedule";

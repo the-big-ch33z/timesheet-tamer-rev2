@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/auth";
 import { useWorkSchedule } from "@/contexts/work-schedule";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useToast } from "@/hooks/use-toast";
-import { UserEditFormValues } from "../EditUserForm";
+import { UserEditFormValues } from "../hooks/useEditUserForm";
 import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
 
 export const useUserManagement = () => {

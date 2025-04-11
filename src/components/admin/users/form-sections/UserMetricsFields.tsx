@@ -3,7 +3,7 @@ import React from "react";
 import { FormField, FormItem, FormLabel, FormDescription, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Control } from "react-hook-form";
-import { UserEditFormValues } from "../EditUserForm";
+import { UserEditFormValues } from "../hooks/useEditUserForm";
 import { FORM_PLACEHOLDERS } from "@/constants/defaults";
 
 interface UserMetricsFieldsProps {

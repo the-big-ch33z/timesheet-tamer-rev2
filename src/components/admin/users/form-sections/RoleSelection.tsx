@@ -3,7 +3,7 @@ import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Control } from "react-hook-form";
-import { UserEditFormValues } from "../EditUserForm";
+import { UserEditFormValues } from "../hooks/useEditUserForm";
 
 interface RoleSelectionProps {
   control: Control<UserEditFormValues>;

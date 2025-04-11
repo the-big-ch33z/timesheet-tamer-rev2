@@ -1,37 +1,17 @@
 
-import React, { useEffect } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { UserRole, User } from "@/types";
-import { useWorkSchedule } from "@/contexts/work-schedule";
-import { RoleSelection } from "./form-sections/RoleSelection";
-import { UserMetricsFields } from "./form-sections/UserMetricsFields";
-import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";
-import { useToast } from "@/hooks/use-toast";
-import { USER_DEFAULTS } from "@/constants/defaults";
-import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
-
-// Form schema for editing a user
-const userEditSchema = z.object({
-  role: z.enum(["admin", "manager", "team-member"] as const),
-  teamIds: z.array(z.string()).optional(),
-  useDefaultSchedule: z.boolean().default(true),
-  scheduleId: z.string().optional(),
-  fte: z.coerce.number().min(0).max(1).default(USER_DEFAULTS.FTE),
-  fortnightHours: z.coerce.number().min(0).default(USER_DEFAULTS.FORTNIGHT_HOURS),
-});
-
-export type UserEditFormValues = z.infer<typeof userEditSchema>;
+import { User } from "@/types";
+import { useEditUserForm } from "./hooks/useEditUserForm";
+import { UserFormContent } from "./form-sections/UserFormContent";
 
 interface EditUserFormProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedUser: User | null;
-  onSubmit: (data: UserEditFormValues) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>;
 }
 
 export const EditUserForm: React.FC<EditUserFormProps> = ({
@@ -40,144 +20,11 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   selectedUser,
   onSubmit
 }) => {
-  // Toast for notifications
-  const { toast } = useToast();
-  
-  // Access work schedule context
-  const { getAllSchedules, getScheduleById, defaultSchedule } = useWorkSchedule();
-  
-  // Get all available schedules
-  const schedules = getAllSchedules();
-  
-  // Setup form for editing a user
-  const form = useForm<UserEditFormValues>({
-    resolver: zodResolver(userEditSchema),
-    defaultValues: {
-      role: "team-member",
-      teamIds: [],
-      useDefaultSchedule: true,
-      scheduleId: undefined,
-      fte: USER_DEFAULTS.FTE,
-      fortnightHours: USER_DEFAULTS.FORTNIGHT_HOURS,
-    },
+  const { form, schedules, handleSubmit } = useEditUserForm({ 
+    selectedUser, 
+    onSubmit, 
+    onOpenChange 
   });
-
-  // Watch for changes to useDefaultSchedule, scheduleId, and fte
-  const useDefaultSchedule = form.watch("useDefaultSchedule");
-  const scheduleId = form.watch("scheduleId");
-  const fte = form.watch("fte");
-  
-  // Update fortnight hours based on schedule selection and FTE
-  useEffect(() => {
-    let baseHours = 0;
-    
-    if (useDefaultSchedule) {
-      // When using default schedule, calculate hours from the default schedule
-      baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-    } else if (scheduleId) {
-      // When using custom schedule
-      const selectedSchedule = getScheduleById(scheduleId);
-      if (selectedSchedule) {
-        baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
-      }
-    }
-    
-    if (baseHours > 0) {
-      // Apply FTE to calculate the proportional hours
-      const adjustedHours = baseHours * fte;
-      // Round to nearest 0.5
-      const roundedHours = Math.round(adjustedHours * 2) / 2;
-      
-      console.log(`Updating fortnight hours: base=${baseHours}, FTE=${fte}, adjusted=${adjustedHours}, rounded=${roundedHours}`);
-      form.setValue("fortnightHours", roundedHours);
-    }
-  }, [useDefaultSchedule, scheduleId, fte, getScheduleById, form, defaultSchedule]);
-
-  // Update form when selected user changes
-  useEffect(() => {
-    if (selectedUser) {
-      console.log("Initializing form with user data:", selectedUser);
-      
-      form.setValue("role", selectedUser.role);
-      form.setValue("teamIds", selectedUser.teamIds || []);
-      
-      // Determine if user has a custom schedule
-      const hasCustomSchedule = selectedUser.workScheduleId && 
-                               selectedUser.workScheduleId !== 'default' && 
-                               selectedUser.workScheduleId !== undefined;
-                               
-      console.log(`User ${selectedUser.name} has custom schedule: ${hasCustomSchedule}, ID: ${selectedUser.workScheduleId}`);
-      
-      // Set the form values
-      form.setValue("useDefaultSchedule", !hasCustomSchedule);
-      
-      if (hasCustomSchedule) {
-        form.setValue("scheduleId", selectedUser.workScheduleId || undefined);
-        console.log(`Setting schedule ID in form to: ${selectedUser.workScheduleId}`);
-      } else {
-        form.setValue("scheduleId", undefined);
-      }
-      
-      // Set FTE with proper type conversion, fallback to defaults if undefined
-      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : USER_DEFAULTS.FTE);
-      
-      // If user has specific fortnight hours set, use those. Otherwise, they'll be calculated
-      // based on the schedule and FTE in the useEffect
-      if (selectedUser.fortnightHours !== undefined) {
-        form.setValue("fortnightHours", selectedUser.fortnightHours);
-        console.log(`Initializing fortnightHours to user-specific value: ${selectedUser.fortnightHours}`);
-      }
-    }
-  }, [selectedUser, form, defaultSchedule]);
-
-  const handleSubmit = async (values: UserEditFormValues) => {
-    if (!selectedUser) return;
-    
-    try {
-      console.log("Submitting form with values:", values);
-      
-      // Ensure the correct fortnight hours based on schedule and FTE are submitted
-      let baseHours = 0;
-      
-      if (values.useDefaultSchedule) {
-        baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-      } else if (values.scheduleId) {
-        const selectedSchedule = getScheduleById(values.scheduleId);
-        if (selectedSchedule) {
-          baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
-        }
-      }
-      
-      if (baseHours > 0) {
-        // Apply FTE to calculate the proportional hours
-        const adjustedHours = baseHours * values.fte;
-        // Round to nearest 0.5
-        values.fortnightHours = Math.round(adjustedHours * 2) / 2;
-        console.log(`Setting final submission hours: base=${baseHours}, FTE=${values.fte}, adjusted=${values.fortnightHours}`);
-      }
-      
-      // Submit all form values
-      await onSubmit(values);
-      
-      // Show success toast notification
-      toast({
-        title: "User updated successfully",
-        description: `${selectedUser.name}'s information has been updated.`,
-        variant: "default",
-        className: "bg-green-50 border-green-200"
-      });
-      
-      onOpenChange(false);
-    } catch (error) {
-      // Show error toast notification
-      toast({
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive"
-      });
-      console.error("Error updating user:", error);
-    }
-  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -191,17 +38,9 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pt-6">
-            {/* Role selection */}
-            <RoleSelection control={form.control} />
-            
-            {/* User Metrics Fields */}
-            <UserMetricsFields control={form.control} />
-            
-            {/* Work Schedule section */}
-            <WorkScheduleSection 
-              control={form.control} 
-              watch={form.watch} 
-              schedules={schedules} 
+            <UserFormContent 
+              form={form}
+              schedules={schedules}
             />
 
             <SheetFooter className="pt-4">
@@ -216,3 +55,5 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     </Sheet>
   );
 };
+
+export { UserEditFormValues } from "./hooks/useEditUserForm";
