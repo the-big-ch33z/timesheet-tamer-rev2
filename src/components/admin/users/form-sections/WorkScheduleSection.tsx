@@ -8,6 +8,7 @@ import { Control, UseFormWatch, useFormState } from "react-hook-form";
 import { UserEditFormValues } from "../EditUserForm";
 import { Badge } from "@/components/ui/badge";
 import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
+import { useWorkSchedule } from "@/contexts/work-schedule";
 
 interface WorkScheduleSectionProps {
   control: Control<UserEditFormValues>;
@@ -24,6 +25,9 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   const useDefaultSchedule = watch("useDefaultSchedule");
   const selectedScheduleId = watch("scheduleId");
   
+  // Get access to the default schedule
+  const { defaultSchedule } = useWorkSchedule();
+  
   // Watch form state for debugging
   const formState = useFormState({ control });
   
@@ -32,7 +36,11 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   
   // Update fortnight hours when schedule selection changes
   useEffect(() => {
-    if (selectedScheduleId && !useDefaultSchedule) {
+    if (useDefaultSchedule) {
+      // Calculate hours from default schedule
+      const hours = calculateFortnightHoursFromSchedule(defaultSchedule);
+      setFortnightHours(hours);
+    } else if (selectedScheduleId) {
       const selectedSchedule = schedules.find(s => s.id === selectedScheduleId);
       if (selectedSchedule) {
         const hours = calculateFortnightHoursFromSchedule(selectedSchedule);
@@ -41,7 +49,7 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
     } else {
       setFortnightHours(null);
     }
-  }, [selectedScheduleId, useDefaultSchedule, schedules]);
+  }, [selectedScheduleId, useDefaultSchedule, schedules, defaultSchedule]);
   
   // Log state changes in the form
   useEffect(() => {
@@ -143,6 +151,26 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {useDefaultSchedule && fortnightHours !== null && (
+        <div className="pt-2">
+          <h4 className="text-sm font-medium mb-2">Default Schedule</h4>
+          <div className="bg-gray-50 p-4 rounded border text-sm">
+            <div>
+              <p className="font-medium">{defaultSchedule.name}</p>
+              <div className="flex items-center mt-2">
+                <p className="text-muted-foreground">Required Fortnight Hours:</p>
+                <Badge variant="outline" className="ml-2">
+                  {fortnightHours} hours
+                </Badge>
+              </div>
+              <p className="text-muted-foreground mt-1">
+                This is the organization's default work schedule.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

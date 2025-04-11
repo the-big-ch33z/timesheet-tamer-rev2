@@ -44,7 +44,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   const { toast } = useToast();
   
   // Access work schedule context
-  const { getAllSchedules, getScheduleById } = useWorkSchedule();
+  const { getAllSchedules, getScheduleById, defaultSchedule } = useWorkSchedule();
   
   // Get all available schedules
   const schedules = getAllSchedules();
@@ -68,17 +68,25 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   
   // Update fortnight hours based on schedule selection
   useEffect(() => {
-    if (!useDefaultSchedule && scheduleId) {
+    if (useDefaultSchedule) {
+      // When using default schedule, calculate hours from the default schedule
+      const calculatedHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+      if (calculatedHours > 0) {
+        console.log(`Updating fortnight hours from default schedule: ${calculatedHours}`);
+        form.setValue("fortnightHours", calculatedHours);
+      }
+    } else if (scheduleId) {
+      // When using custom schedule
       const selectedSchedule = getScheduleById(scheduleId);
       if (selectedSchedule) {
         const calculatedHours = calculateFortnightHoursFromSchedule(selectedSchedule);
         if (calculatedHours > 0) {
-          console.log(`Updating fortnight hours from schedule: ${calculatedHours}`);
+          console.log(`Updating fortnight hours from custom schedule: ${calculatedHours}`);
           form.setValue("fortnightHours", calculatedHours);
         }
       }
     }
-  }, [useDefaultSchedule, scheduleId, getScheduleById, form]);
+  }, [useDefaultSchedule, scheduleId, getScheduleById, form, defaultSchedule]);
 
   // Update form when selected user changes
   useEffect(() => {
