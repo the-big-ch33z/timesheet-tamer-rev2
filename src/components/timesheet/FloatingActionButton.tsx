@@ -10,7 +10,7 @@ interface FloatingActionButtonProps {
 const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ onClick }) => {
   return (
     <Button 
-      className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-indigo-600 hover:bg-indigo-700"
+      className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-green-600 hover:bg-green-700"
       onClick={onClick}
       aria-label="Add new time entry"
     >

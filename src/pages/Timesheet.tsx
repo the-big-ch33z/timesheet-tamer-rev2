@@ -61,6 +61,9 @@ const Timesheet = () => {
       title: "Entry added",
       description: "Time entry has been added successfully",
     });
+    
+    // We're not changing selectedDay after adding an entry
+    // This ensures the form stays open for adding multiple entries
   };
 
   return (
