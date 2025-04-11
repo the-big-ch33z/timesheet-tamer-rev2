@@ -44,7 +44,7 @@ export const useTimesheetEntries = (userId?: string) => {
   const addEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
     const newEntry: TimeEntry = {
       ...entry,
-      id: entry.id || uuidv4(),
+      id: uuidv4(), // Always generate a new ID for the entry
       userId: entry.userId || userId || ""
     };
     
