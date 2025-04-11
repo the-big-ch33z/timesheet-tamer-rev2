@@ -12,6 +12,7 @@ import { RoleSelection } from "./form-sections/RoleSelection";
 import { UserMetricsFields } from "./form-sections/UserMetricsFields";
 import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";
 import { useToast } from "@/hooks/use-toast";
+import { USER_DEFAULTS } from "@/constants/defaults";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
@@ -19,8 +20,8 @@ const userEditSchema = z.object({
   teamIds: z.array(z.string()).optional(),
   useDefaultSchedule: z.boolean().default(true),
   scheduleId: z.string().optional(),
-  fte: z.coerce.number().min(0).max(1).default(1),
-  fortnightHours: z.coerce.number().min(0).default(76),
+  fte: z.coerce.number().min(0).max(1).default(USER_DEFAULTS.FTE),
+  fortnightHours: z.coerce.number().min(0).default(USER_DEFAULTS.FORTNIGHT_HOURS),
 });
 
 export type UserEditFormValues = z.infer<typeof userEditSchema>;
@@ -55,8 +56,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       teamIds: [],
       useDefaultSchedule: true,
       scheduleId: undefined,
-      fte: 1.0,
-      fortnightHours: 76,
+      fte: USER_DEFAULTS.FTE,
+      fortnightHours: USER_DEFAULTS.FORTNIGHT_HOURS,
     },
   });
 
@@ -85,10 +86,10 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         form.setValue("scheduleId", undefined);
       }
       
-      // Set FTE and fortnight hours with proper type conversion
-      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : 1.0);
-      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? selectedUser.fortnightHours : 76);
-      console.log(`Initializing fortnightHours to: ${selectedUser.fortnightHours || 76}`);
+      // Set FTE and fortnight hours with proper type conversion, fallback to defaults if undefined
+      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : USER_DEFAULTS.FTE);
+      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? selectedUser.fortnightHours : USER_DEFAULTS.FORTNIGHT_HOURS);
+      console.log(`Initializing fortnightHours to: ${selectedUser.fortnightHours ?? USER_DEFAULTS.FORTNIGHT_HOURS}`);
     }
   }, [selectedUser, form]);
 

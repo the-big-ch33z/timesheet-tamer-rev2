@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User } from "@/types";
 import { getWorkdaysInMonth, calculateMonthlyTargetHours } from "@/lib/date-utils";
+import { USER_DEFAULTS } from "@/constants/defaults";
 
 interface MonthlyHoursProps {
   entries: TimeEntry[];
@@ -22,7 +23,8 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
   const hours = entries.reduce((total, entry) => total + entry.hours, 0);
   
   // Calculate target hours based on user's fortnightHours setting
-  const fortnightHours = user?.fortnightHours !== undefined ? user.fortnightHours : 76;
+  // Use default if fortnightHours is undefined (not set)
+  const fortnightHours = user?.fortnightHours !== undefined ? user.fortnightHours : USER_DEFAULTS.FORTNIGHT_HOURS;
   console.log(`Using fortnight hours value: ${fortnightHours}`);
   
   const targetHours = calculateMonthlyTargetHours(fortnightHours, currentMonth);

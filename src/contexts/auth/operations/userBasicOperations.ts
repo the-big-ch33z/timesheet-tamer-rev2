@@ -4,6 +4,7 @@ import { auditService } from '@/services/auditService';
 import { syncService } from '@/services/syncService';
 import { AuthStateType } from '../AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { USER_DEFAULTS } from '@/constants/defaults';
 
 export const createUserBasicOperations = (state: AuthStateType, toast: ReturnType<typeof useToast>) => {
   const getUsersByRole = (role: UserRole) => {
@@ -87,14 +88,17 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
         updatedAt: new Date().toISOString()
       };
       
-      // Only update the fields that are provided
+      // Only update the fields that are provided, using explicit checks
       if (metrics.fte !== undefined) {
-        updatedUser.fte = metrics.fte;
+        // Ensure we store a valid number
+        updatedUser.fte = !isNaN(metrics.fte) ? metrics.fte : USER_DEFAULTS.FTE;
+        console.log(`Setting FTE to ${updatedUser.fte} for user ${userId}`);
       }
       
       if (metrics.fortnightHours !== undefined) {
-        updatedUser.fortnightHours = metrics.fortnightHours;
-        console.log(`Setting fortnightHours to ${metrics.fortnightHours} for user ${userId}`);
+        // Ensure we store a valid number
+        updatedUser.fortnightHours = !isNaN(metrics.fortnightHours) ? metrics.fortnightHours : USER_DEFAULTS.FORTNIGHT_HOURS;
+        console.log(`Setting fortnightHours to ${updatedUser.fortnightHours} for user ${userId}`);
       }
       
       if (metrics.workScheduleId !== undefined) {
@@ -115,6 +119,7 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       // If updating the current user, update currentUser state as well
       if (state.currentUser && state.currentUser.id === userId) {
         state.setCurrentUser({...updatedUser});
+        console.log("Updated current user state with new metrics");
       }
       
       await auditService.logEvent(
