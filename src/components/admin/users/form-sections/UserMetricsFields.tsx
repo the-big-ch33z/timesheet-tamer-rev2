@@ -29,7 +29,10 @@ export const UserMetricsFields: React.FC<UserMetricsFieldsProps> = ({ control })
                 max="1"
                 placeholder="1.0" 
                 {...field}
-                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  field.onChange(!isNaN(value) ? value : 0);
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -49,7 +52,11 @@ export const UserMetricsFields: React.FC<UserMetricsFieldsProps> = ({ control })
                 min="0"
                 placeholder="76" 
                 {...field}
-                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  field.onChange(!isNaN(value) ? value : 0);
+                  console.log(`Changed fortnightHours to: ${!isNaN(value) ? value : 0}`);
+                }}
               />
             </FormControl>
             <FormMessage />

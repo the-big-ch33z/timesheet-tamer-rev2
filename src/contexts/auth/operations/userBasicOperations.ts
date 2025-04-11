@@ -94,6 +94,7 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       
       if (metrics.fortnightHours !== undefined) {
         updatedUser.fortnightHours = metrics.fortnightHours;
+        console.log(`Setting fortnightHours to ${metrics.fortnightHours} for user ${userId}`);
       }
       
       if (metrics.workScheduleId !== undefined) {
@@ -113,7 +114,7 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       
       // If updating the current user, update currentUser state as well
       if (state.currentUser && state.currentUser.id === userId) {
-        state.setCurrentUser(updatedUser);
+        state.setCurrentUser({...updatedUser});
       }
       
       await auditService.logEvent(

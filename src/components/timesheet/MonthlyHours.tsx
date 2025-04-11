@@ -22,9 +22,11 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
   const hours = entries.reduce((total, entry) => total + entry.hours, 0);
   
   // Calculate target hours based on user's fortnightHours setting
-  const targetHours = user?.fortnightHours 
-    ? calculateMonthlyTargetHours(user.fortnightHours, currentMonth)
-    : calculateMonthlyTargetHours(76, currentMonth); // Default to 76 hours per fortnight if not set
+  const fortnightHours = user?.fortnightHours !== undefined ? user.fortnightHours : 76;
+  console.log(`Using fortnight hours value: ${fortnightHours}`);
+  
+  const targetHours = calculateMonthlyTargetHours(fortnightHours, currentMonth);
+  console.log(`Calculated monthly target hours: ${targetHours} based on fortnight hours: ${fortnightHours}`);
   
   const percentage = Math.min(Math.round((hours / targetHours) * 100), 100);
   

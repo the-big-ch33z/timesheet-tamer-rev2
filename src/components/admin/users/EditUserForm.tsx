@@ -86,8 +86,9 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       }
       
       // Set FTE and fortnight hours with proper type conversion
-      form.setValue("fte", selectedUser.fte || 1.0);
-      form.setValue("fortnightHours", selectedUser.fortnightHours || 76);
+      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : 1.0);
+      form.setValue("fortnightHours", selectedUser.fortnightHours !== undefined ? selectedUser.fortnightHours : 76);
+      console.log(`Initializing fortnightHours to: ${selectedUser.fortnightHours || 76}`);
     }
   }, [selectedUser, form]);
 
