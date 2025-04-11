@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
 import { WorkScheduleProvider } from './contexts/work-schedule';
 import { TimesheetSettingsProvider } from './contexts/TimesheetSettingsContext';
@@ -13,7 +13,6 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import TeamCalendar from './pages/TeamCalendar';
 import Auth from './pages/Auth';
-import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -23,8 +22,8 @@ function App() {
         <WorkScheduleProvider>
           <TimesheetSettingsProvider>
             <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Index />} />
+              {/* Redirect root to login */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<Auth mode="login" />} />
               <Route path="/signup" element={<Auth mode="signup" />} />
               
