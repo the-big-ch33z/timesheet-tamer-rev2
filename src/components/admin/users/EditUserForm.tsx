@@ -56,4 +56,5 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   );
 };
 
-export { UserEditFormValues } from "./hooks/useEditUserForm";
+// Change the re-export to use the `export type` syntax for TypeScript types
+export type { UserEditFormValues } from "./hooks/useEditUserForm";
