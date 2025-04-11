@@ -64,6 +64,16 @@ export const UserTable: React.FC<UserTableProps> = ({
     return schedule ? schedule.name : "Unknown Schedule";
   };
 
+  // Function to refresh content
+  const forceRerender = () => {
+    console.log("Refreshing user table display");
+  };
+
+  // Use effect to refresh on any user changes
+  React.useEffect(() => {
+    forceRerender();
+  }, [filteredUsers]);
+
   return (
     <Table>
       <TableHeader>

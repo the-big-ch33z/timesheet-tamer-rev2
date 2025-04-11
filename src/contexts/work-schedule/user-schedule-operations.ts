@@ -36,7 +36,11 @@ export const createUserScheduleOperations = ({
     }
     
     try {
-      // Update the state with new schedule assignment
+      // First update the user object to store the schedule ID - this is critical
+      // Let's update this in the database first to ensure persistence
+      await updateUserWorkScheduleId(userId, scheduleId);
+      
+      // Then update the local state
       if (scheduleId === 'default') {
         // If assigning default, just remove from userSchedules
         setState(prev => {
@@ -54,9 +58,6 @@ export const createUserScheduleOperations = ({
           }
         }));
       }
-      
-      // Always update the user object to store the schedule ID - this is critical
-      await updateUserWorkScheduleId(userId, scheduleId);
       
       console.log(`Schedule ${scheduleId} successfully assigned to user ${userId}`);
       
@@ -93,14 +94,15 @@ export const createUserScheduleOperations = ({
   const resetUserSchedule = async (userId: string) => {
     console.log(`Resetting user ${userId} to default schedule`);
     
+    // First update the user object to remove the custom schedule ID
+    await updateUserWorkScheduleId(userId, 'default');
+    
+    // Then update the local state
     setState(prev => {
       const newUserSchedules = { ...prev.userSchedules };
       delete newUserSchedules[userId];
       return { ...prev, userSchedules: newUserSchedules };
     });
-    
-    // Update the user object to remove the custom schedule ID
-    await updateUserWorkScheduleId(userId, 'default');
     
     toast({
       title: 'Schedule reset',

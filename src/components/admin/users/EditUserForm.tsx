@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,18 +51,20 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
     defaultValues: {
-      role: selectedUser?.role || "team-member",
-      teamIds: selectedUser?.teamIds || [],
-      useDefaultSchedule: !selectedUser?.workScheduleId || selectedUser?.workScheduleId === 'default',
-      scheduleId: selectedUser?.workScheduleId !== 'default' ? selectedUser?.workScheduleId : undefined,
-      fte: selectedUser?.fte || 1.0,
-      fortnightHours: selectedUser?.fortnightHours || 76,
+      role: "team-member",
+      teamIds: [],
+      useDefaultSchedule: true,
+      scheduleId: undefined,
+      fte: 1.0,
+      fortnightHours: 76,
     },
   });
 
   // Update form when selected user changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedUser) {
+      console.log("Initializing form with user data:", selectedUser);
+      
       form.setValue("role", selectedUser.role);
       form.setValue("teamIds", selectedUser.teamIds || []);
       
@@ -73,10 +75,12 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
                                
       console.log(`User ${selectedUser.name} has custom schedule: ${hasCustomSchedule}, ID: ${selectedUser.workScheduleId}`);
       
+      // Set the form values
       form.setValue("useDefaultSchedule", !hasCustomSchedule);
       
       if (hasCustomSchedule) {
-        form.setValue("scheduleId", selectedUser.workScheduleId);
+        form.setValue("scheduleId", selectedUser.workScheduleId || undefined);
+        console.log(`Setting schedule ID in form to: ${selectedUser.workScheduleId}`);
       } else {
         form.setValue("scheduleId", undefined);
       }

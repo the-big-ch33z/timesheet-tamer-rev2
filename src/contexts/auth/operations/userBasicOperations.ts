@@ -96,8 +96,9 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       }
       
       if (metrics.workScheduleId !== undefined) {
-        // Ensure workScheduleId is stored as a string
-        updatedUser.workScheduleId = metrics.workScheduleId;
+        // Always store workScheduleId as a string, even if it's 'default'
+        updatedUser.workScheduleId = String(metrics.workScheduleId);
+        console.log(`Updated workScheduleId to ${updatedUser.workScheduleId}`);
       }
       
       console.log("Updated user object:", updatedUser);
@@ -111,6 +112,9 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       if (state.currentUser && state.currentUser.id === userId) {
         state.setCurrentUser(updatedUser);
       }
+      
+      // Force a state change to trigger re-renders
+      state.setUsers([...newUsers]);
       
       await auditService.logEvent(
         state.currentUser?.id || 'system',

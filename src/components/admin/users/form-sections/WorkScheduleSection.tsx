@@ -1,10 +1,10 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { WorkSchedule } from "@/types";
-import { Control, UseFormWatch } from "react-hook-form";
+import { Control, UseFormWatch, useFormState } from "react-hook-form";
 import { UserEditFormValues } from "../EditUserForm";
 
 interface WorkScheduleSectionProps {
@@ -21,6 +21,21 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   // Get the current value of useDefaultSchedule
   const useDefaultSchedule = watch("useDefaultSchedule");
   const selectedScheduleId = watch("scheduleId");
+  
+  // Watch form state for debugging
+  const formState = useFormState({ control });
+  
+  // Log state changes in the form
+  useEffect(() => {
+    console.log("Schedule selection state:", {
+      useDefault: useDefaultSchedule,
+      selectedId: selectedScheduleId,
+      formErrors: formState.errors
+    });
+  }, [useDefaultSchedule, selectedScheduleId, formState]);
+
+  // Filter out default schedule from the dropdown
+  const availableSchedules = schedules.filter(s => !s.isDefault);
 
   return (
     <div className="space-y-4">
@@ -64,7 +79,6 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
                     field.onChange(value);
                     console.log(`Selected schedule: ${value}`);
                   }}
-                  defaultValue={field.value}
                   value={field.value || ''}
                 >
                   <FormControl>
@@ -73,7 +87,7 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {schedules.filter(s => !s.isDefault).map((schedule) => (
+                    {availableSchedules.map((schedule) => (
                       <SelectItem key={schedule.id} value={schedule.id}>
                         {schedule.name}
                       </SelectItem>

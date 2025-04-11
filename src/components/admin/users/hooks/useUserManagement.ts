@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { useWorkSchedule } from "@/contexts/work-schedule";
@@ -15,6 +15,7 @@ export const useUserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showOrgTree, setShowOrgTree] = useState(false);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null);
+  const [forceRefresh, setForceRefresh] = useState(0); // Add a state to force re-renders
 
   // Access authentication and work schedule contexts
   const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser, updateUserMetrics } = useAuth();
@@ -32,6 +33,7 @@ export const useUserManagement = () => {
   
   // Handle edit user button click
   const handleEditUser = (user: User) => {
+    console.log("Editing user with current data:", user);
     setSelectedUser(user);
     setIsEditUserOpen(true);
   };
@@ -78,25 +80,26 @@ export const useUserManagement = () => {
     try {
       console.log("Updating user with data:", data);
       
-      // Update user's role
-      await updateUserRole(selectedUser.id, data.role);
-      
-      // Handle work schedule assignment
-      if (data.useDefaultSchedule) {
-        console.log("Resetting user schedule to default");
-        // Reset to default schedule
-        await resetUserSchedule(selectedUser.id);
-      } else if (data.scheduleId) {
-        console.log(`Assigning schedule ${data.scheduleId} to user ${selectedUser.id}`);
-        // Assign specific schedule
-        await assignScheduleToUser(selectedUser.id, data.scheduleId);
-      }
-      
-      // Update user metrics (FTE and fortnight hours)
+      // First update user metrics (FTE and fortnight hours)
       await updateUserMetrics(selectedUser.id, {
         fte: data.fte,
         fortnightHours: data.fortnightHours
       });
+      
+      // Update user's role
+      await updateUserRole(selectedUser.id, data.role);
+      
+      // Handle work schedule assignment - either reset to default or assign specific
+      if (data.useDefaultSchedule) {
+        console.log("Resetting user schedule to default");
+        await resetUserSchedule(selectedUser.id);
+      } else if (data.scheduleId) {
+        console.log(`Assigning schedule ${data.scheduleId} to user ${selectedUser.id}`);
+        await assignScheduleToUser(selectedUser.id, data.scheduleId);
+      }
+      
+      // Force refresh to update UI
+      setForceRefresh(prev => prev + 1);
       
       toast({
         title: "User Updated",
@@ -127,6 +130,12 @@ export const useUserManagement = () => {
     (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Force re-fetch data when needed
+  useEffect(() => {
+    // This effect will run whenever forceRefresh changes
+    // It's empty because we just need to trigger a re-render
+  }, [forceRefresh]);
 
   return {
     searchTerm,
