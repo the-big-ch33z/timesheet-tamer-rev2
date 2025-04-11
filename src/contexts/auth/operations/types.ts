@@ -5,6 +5,7 @@ import { UserRole } from '@/types';
 export interface UserMetrics {
   fte?: number;
   fortnightHours?: number;
+  workScheduleId?: string;
 }
 
 // Export operation types

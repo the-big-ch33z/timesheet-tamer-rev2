@@ -19,6 +19,7 @@ export interface SignupCredentials {
 export interface UserMetrics {
   fte?: number;
   fortnightHours?: number;
+  workScheduleId?: string;
 }
 
 export interface AuthContextType {
