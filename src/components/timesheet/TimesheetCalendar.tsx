@@ -1,17 +1,13 @@
 
 import React, { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, getDate, isWithinInterval, startOfYear, addWeeks } from "date-fns";
-import { Button } from "@/components/ui/button";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, HelpCircle } from "lucide-react";
-import { TimeEntry, WorkSchedule, WeekDay } from "@/types";
-import { Holiday, isHoliday, getHolidayForDate, getHolidays } from "@/lib/holidays";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TimeEntry, WorkSchedule } from "@/types";
+import { Holiday, getHolidays } from "@/lib/holidays";
+import CalendarHeader from "./calendar/CalendarHeader";
+import CalendarLegend from "./calendar/CalendarLegend";
+import CalendarWeekdayHeader from "./calendar/CalendarWeekdayHeader";
+import CalendarGrid from "./calendar/CalendarGrid";
 
 interface TimesheetCalendarProps {
   currentMonth: Date;
@@ -19,7 +15,7 @@ interface TimesheetCalendarProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
-  workSchedule?: WorkSchedule; // Added work schedule prop
+  workSchedule?: WorkSchedule;
 }
 
 const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
@@ -41,345 +37,39 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  const getDayEntries = (day: Date) => {
-    return entries.filter(
-      (entry) => format(entry.date, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
-    );
-  };
-
-  const getTotalHours = (day: Date) => {
-    return getDayEntries(day).reduce((total, entry) => total + entry.hours, 0);
-  };
-
-  const checkIsHoliday = (day: Date) => {
-    return isHoliday(day, holidays);
-  };
-
-  const getHolidayName = (day: Date) => {
-    const holiday = getHolidayForDate(day, holidays);
-    return holiday ? holiday.name : null;
-  };
-
-  // Helper function to convert JS day number to WeekDay type
-  const getWeekDayFromDate = (date: Date): WeekDay => {
-    const dayMap: Record<number, WeekDay> = {
-      0: 'sunday',
-      1: 'monday',
-      2: 'tuesday',
-      3: 'wednesday',
-      4: 'thursday',
-      5: 'friday',
-      6: 'saturday'
-    };
-    return dayMap[date.getDay()];
-  };
-
-  // Determine which fortnight week (1 or 2) a given date falls into
-  const getFortnightWeek = (date: Date): 1 | 2 => {
-    // Start of the year as a reference point
-    const yearStart = startOfYear(new Date(date.getFullYear(), 0, 1));
-    
-    // Calculate weeks since start of year (0-indexed)
-    const weeksSinceYearStart = Math.floor(
-      (date.getTime() - yearStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
-    );
-    
-    // Convert to 1 or 2 based on odd or even week number
-    return ((weeksSinceYearStart % 2) + 1) as 1 | 2;
-  };
-
-  // Check if a day is a working day according to the schedule
-  const isWorkingDay = (day: Date): boolean => {
-    if (!workSchedule) return true; // Default to working day if no schedule
-
-    const weekDay = getWeekDayFromDate(day);
-    const weekNum = getFortnightWeek(day);
-    
-    // Check if it's an RDO
-    if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
-      return false;
-    }
-    
-    // Check if there are work hours defined for this day
-    const hoursForDay = workSchedule.weeks[weekNum][weekDay];
-    return hoursForDay !== null;
-  };
-
-  // Get work hours for a specific day
-  const getWorkHoursForDay = (day: Date) => {
-    if (!workSchedule) return null;
-    
-    const weekDay = getWeekDayFromDate(day);
-    const weekNum = getFortnightWeek(day);
-    
-    return workSchedule.weeks[weekNum][weekDay];
-  };
+  const monthStartDay = getDay(monthStart);
 
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
     onDayClick(day);
   };
 
-  const isDateSelected = (day: Date) => {
-    return selectedDate && format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-  };
-
-  // Calculate day status for tooltip and styling
-  const getDayStatus = (day: Date) => {
-    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-    const dayHoliday = checkIsHoliday(day);
-    const holidayName = getHolidayName(day);
-    const isRDO = workSchedule ? 
-      workSchedule.rdoDays[getFortnightWeek(day)].includes(getWeekDayFromDate(day)) : 
-      false;
-    const workHours = getWorkHoursForDay(day);
-    const isWorkDay = isWorkingDay(day);
-    
-    return {
-      isWeekend,
-      dayHoliday,
-      holidayName,
-      isRDO,
-      workHours,
-      isWorkDay
-    };
-  };
-
   return (
     <Card className="shadow-sm">
       <CardContent className="p-4">
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="outline" size="icon" onClick={onPrevMonth} className="rounded-full w-10 h-10">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-medium">
-              {format(currentMonth, "MMMM yyyy")}
-            </h2>
-            <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <Button variant="outline" size="icon" onClick={onNextMonth} className="rounded-full w-10 h-10">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <CalendarHeader 
+          currentMonth={currentMonth}
+          onPrevMonth={onPrevMonth}
+          onNextMonth={onNextMonth}
+        />
         
         {/* Calendar Legend */}
-        <div className="flex flex-wrap gap-3 mb-3 text-xs">
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded bg-white border border-gray-200 mr-1"></div>
-            <span>Working Day</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded bg-gray-200 mr-1"></div>
-            <span>Weekend</span>
-          </div>
-          {workSchedule && (
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded bg-blue-50 border border-blue-200 mr-1"></div>
-              <span>RDO</span>
-            </div>
-          )}
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded bg-[#FEF7CD] border border-amber-200 mr-1"></div>
-            <span>Holiday</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded bg-gray-100 border border-gray-300 mr-1"></div>
-            <span>Non-Working Day</span>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full w-5 h-5 p-0">
-                  <HelpCircle className="h-4 w-4 text-gray-400" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs max-w-xs">
-                  Working days are based on your schedule. RDOs are rostered days off.
-                  Hover over days to see more details.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <CalendarLegend hasWorkSchedule={!!workSchedule} />
 
         {/* Weekday Headers */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
-          {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, i) => (
-            <div
-              key={day}
-              className={`py-2 text-center text-sm font-medium ${
-                i === 0 || i === 6 ? "text-red-500" : "text-gray-700"
-              }`}
-            >
-              {day}
-            </div>
-          ))}
-        </div>
+        <CalendarWeekdayHeader />
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-2">
-          {/* Empty cells for days before the start of the month */}
-          {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-            <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-100 border border-gray-200 rounded" />
-          ))}
-
-          {/* Days of the month */}
-          {daysInMonth.map((day) => {
-            const dayEntries = getDayEntries(day);
-            const totalHours = getTotalHours(day);
-            const hasEntries = dayEntries.length > 0;
-            const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
-            const isSelected = isDateSelected(day);
-            
-            // Get all the status info for this day
-            const { 
-              isWeekend, 
-              dayHoliday, 
-              holidayName, 
-              isRDO, 
-              workHours, 
-              isWorkDay 
-            } = getDayStatus(day);
-            
-            return (
-              <TooltipProvider key={day.toString()}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div
-                      className={`p-3 min-h-[80px] border rounded cursor-pointer transition-all duration-200 ease-in-out
-                        ${isWeekend ? "bg-gray-200 border-gray-300" : "bg-white border-gray-200"}
-                        ${dayHoliday ? "bg-[#FEF7CD] border-amber-200" : ""}
-                        ${!isWorkDay && !dayHoliday ? "bg-gray-100 border-gray-300" : ""}
-                        ${isRDO ? "bg-blue-50 border-blue-200" : ""}
-                        ${isToday ? "ring-2 ring-indigo-500" : ""}
-                        ${isSelected ? "transform scale-[1.02] shadow-md z-10 ring-2 ring-indigo-400" : ""}
-                        hover:bg-gray-100
-                      `}
-                      onClick={() => handleDayClick(day)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <span
-                          className={`text-lg font-medium
-                            ${isWeekend ? "text-gray-900" : ""}
-                            ${isToday ? "bg-indigo-500 text-white w-7 h-7 flex items-center justify-center rounded-full" : ""}
-                            ${isRDO ? "text-blue-700" : ""}
-                            ${!isWorkDay && !isRDO && !isWeekend ? "text-gray-500" : ""}
-                          `}
-                        >
-                          {format(day, "d")}
-                        </span>
-                        <div className="flex flex-col items-end">
-                          {hasEntries && (
-                            <span className="text-xs font-medium text-indigo-700 px-1 bg-indigo-50 rounded">
-                              {totalHours}h
-                            </span>
-                          )}
-                          {workHours && (
-                            <span className="text-xs text-gray-500 mt-1">
-                              {workHours.startTime}-{workHours.endTime}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Entry indicators */}
-                      {hasEntries && (
-                        <div className="mt-2">
-                          {dayEntries.slice(0, 1).map((entry) => (
-                            <div
-                              key={entry.id}
-                              className="text-xs p-1 mb-1 bg-indigo-100 rounded truncate"
-                            >
-                              {entry.project} ({entry.hours}h)
-                            </div>
-                          ))}
-                          {dayEntries.length > 1 && (
-                            <div className="text-xs text-indigo-600">
-                              +{dayEntries.length - 1} more
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Holiday indicator */}
-                      {dayHoliday && (
-                        <div className="text-xs text-amber-700 mt-1 font-medium">
-                          {holidayName || "Holiday"}
-                        </div>
-                      )}
-                      
-                      {/* RDO indicator */}
-                      {isRDO && !dayHoliday && (
-                        <div className="text-xs text-blue-700 mt-1 font-medium">
-                          RDO
-                        </div>
-                      )}
-                      
-                      {/* Non-working day indicator (not weekend, not holiday, not RDO) */}
-                      {!isWorkDay && !isWeekend && !dayHoliday && !isRDO && (
-                        <div className="text-xs text-gray-500 mt-1 font-medium">
-                          Non-working
-                        </div>
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  
-                  <TooltipContent side="bottom" className="p-2 max-w-[200px]">
-                    <div>
-                      <p className="font-semibold mb-1">{format(day, "EEEE, MMMM d, yyyy")}</p>
-                      
-                      {dayHoliday && (
-                        <p className="text-amber-700 text-sm">
-                          {holidayName || "Holiday"}
-                        </p>
-                      )}
-                      
-                      {isRDO && !dayHoliday && (
-                        <p className="text-blue-700 text-sm">Rostered Day Off</p>
-                      )}
-                      
-                      {isWorkDay && workHours && !dayHoliday && (
-                        <>
-                          <p className="text-sm">Working Hours:</p>
-                          <p className="text-sm font-medium">{workHours.startTime} - {workHours.endTime}</p>
-                        </>
-                      )}
-                      
-                      {!isWorkDay && !dayHoliday && !isRDO && isWeekend && (
-                        <p className="text-sm text-gray-600">Weekend</p>
-                      )}
-                      
-                      {!isWorkDay && !dayHoliday && !isRDO && !isWeekend && (
-                        <p className="text-sm text-gray-600">Non-working day</p>
-                      )}
-                      
-                      {hasEntries && (
-                        <div className="mt-1 pt-1 border-t border-gray-200">
-                          <p className="text-sm">
-                            Total hours: <span className="font-medium">{totalHours}</span>
-                          </p>
-                          {dayEntries.length > 0 && (
-                            <p className="text-sm text-gray-600">
-                              {dayEntries.length} {dayEntries.length === 1 ? 'entry' : 'entries'}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            );
-          })}
-        </div>
+        <CalendarGrid 
+          daysInMonth={daysInMonth}
+          monthStartDay={monthStartDay}
+          entries={entries}
+          selectedDate={selectedDate}
+          workSchedule={workSchedule}
+          holidays={holidays}
+          onDayClick={handleDayClick}
+        />
       </CardContent>
     </Card>
   );
