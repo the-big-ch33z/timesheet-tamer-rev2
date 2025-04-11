@@ -36,6 +36,7 @@ export const createUserScheduleOperations = ({
     }
     
     try {
+      // Update the state with new schedule assignment
       if (scheduleId === 'default') {
         // If assigning default, just remove from userSchedules
         setState(prev => {
@@ -54,7 +55,7 @@ export const createUserScheduleOperations = ({
         }));
       }
       
-      // Always update the user object to store the schedule ID
+      // Always update the user object to store the schedule ID - this is critical
       await updateUserWorkScheduleId(userId, scheduleId);
       
       console.log(`Schedule ${scheduleId} successfully assigned to user ${userId}`);
@@ -70,6 +71,7 @@ export const createUserScheduleOperations = ({
         description: 'Failed to assign schedule to user',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 

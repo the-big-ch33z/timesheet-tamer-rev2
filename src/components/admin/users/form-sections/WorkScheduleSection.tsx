@@ -18,6 +18,10 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   watch,
   schedules
 }) => {
+  // Get the current value of useDefaultSchedule
+  const useDefaultSchedule = watch("useDefaultSchedule");
+  const selectedScheduleId = watch("scheduleId");
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Work Schedule</h3>
@@ -47,7 +51,7 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
         )}
       />
 
-      {!watch("useDefaultSchedule") && (
+      {!useDefaultSchedule && (
         <div className="space-y-4">
           <FormField
             control={control}
@@ -61,7 +65,7 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
                     console.log(`Selected schedule: ${value}`);
                   }}
                   defaultValue={field.value}
-                  value={field.value}
+                  value={field.value || ''}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -81,13 +85,13 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
             )}
           />
 
-          {watch("scheduleId") && (
+          {selectedScheduleId && (
             <div className="pt-2">
               <h4 className="text-sm font-medium mb-2">Schedule Preview</h4>
               <div className="bg-gray-50 p-4 rounded border text-sm">
-                {schedules.find(s => s.id === watch("scheduleId")) ? (
+                {schedules.find(s => s.id === selectedScheduleId) ? (
                   <div>
-                    <p className="font-medium">{schedules.find(s => s.id === watch("scheduleId"))?.name}</p>
+                    <p className="font-medium">{schedules.find(s => s.id === selectedScheduleId)?.name}</p>
                     <p className="text-muted-foreground mt-1">
                       This schedule has specific hours defined for each day across a two-week rotation.
                     </p>

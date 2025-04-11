@@ -66,7 +66,11 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       form.setValue("role", selectedUser.role);
       form.setValue("teamIds", selectedUser.teamIds || []);
       
-      const hasCustomSchedule = selectedUser.workScheduleId && selectedUser.workScheduleId !== 'default';
+      // Determine if user has a custom schedule
+      const hasCustomSchedule = selectedUser.workScheduleId && 
+                               selectedUser.workScheduleId !== 'default' && 
+                               selectedUser.workScheduleId !== undefined;
+                               
       console.log(`User ${selectedUser.name} has custom schedule: ${hasCustomSchedule}, ID: ${selectedUser.workScheduleId}`);
       
       form.setValue("useDefaultSchedule", !hasCustomSchedule);

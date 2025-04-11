@@ -39,9 +39,8 @@ export function useWorkScheduleContext() {
       
       // Use the existing auth context to update user data
       await updateUserMetrics(userId, {
-        // This will update the workScheduleId field in the user object
-        // Use undefined for default schedule, actual ID for custom schedule
-        workScheduleId: scheduleId === 'default' ? 'default' : scheduleId
+        // Pass the scheduleId directly - fixed to ensure it's a string value
+        workScheduleId: scheduleId
       });
       
       console.log(`Successfully updated user ${userId} workScheduleId to ${scheduleId}`);

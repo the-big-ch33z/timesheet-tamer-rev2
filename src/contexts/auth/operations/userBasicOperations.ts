@@ -80,16 +80,29 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
         throw new Error("User not found");
       }
       
+      // Create a copy of the user object
       const updatedUser = {
         ...state.users[userIndex],
-        fte: metrics.fte ?? state.users[userIndex].fte,
-        fortnightHours: metrics.fortnightHours ?? state.users[userIndex].fortnightHours,
-        workScheduleId: metrics.workScheduleId !== undefined ? metrics.workScheduleId : state.users[userIndex].workScheduleId,
         updatedAt: new Date().toISOString()
       };
       
+      // Only update the fields that are provided
+      if (metrics.fte !== undefined) {
+        updatedUser.fte = metrics.fte;
+      }
+      
+      if (metrics.fortnightHours !== undefined) {
+        updatedUser.fortnightHours = metrics.fortnightHours;
+      }
+      
+      if (metrics.workScheduleId !== undefined) {
+        // Ensure workScheduleId is stored as a string
+        updatedUser.workScheduleId = metrics.workScheduleId;
+      }
+      
       console.log("Updated user object:", updatedUser);
       
+      // Update the users array with the new user object
       const newUsers = [...state.users];
       newUsers[userIndex] = updatedUser;
       state.setUsers(newUsers);
