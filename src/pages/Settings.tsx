@@ -8,10 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { Calendar, Settings as SettingsIcon, Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { useRolePermission } from "@/hooks/useRolePermission";
 
 const Settings = () => {
   const { toast } = useToast();
+  const { isAdminOrManager } = useRolePermission();
   
   const saveSettings = () => {
     toast({
@@ -23,6 +27,27 @@ const Settings = () => {
   return (
     <div className="container py-8">
       <h1 className="text-3xl font-bold text-brand-800 mb-6">Settings</h1>
+      
+      {/* Admin/Manager Quick Links */}
+      {isAdminOrManager && (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 mb-8">
+          <Link to="/schedule-settings">
+            <Card className="hover:bg-slate-50 transition-colors cursor-pointer">
+              <CardContent className="flex items-center p-6">
+                <div className="bg-brand-100 p-3 rounded-full mr-4">
+                  <Clock className="h-6 w-6 text-brand-800" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-lg mb-1">Work Schedule Settings</h3>
+                  <p className="text-muted-foreground">Manage work schedules and user assignments</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          {/* Additional quick links can be added here */}
+        </div>
+      )}
       
       <Tabs defaultValue="notifications" className="space-y-6">
         <TabsList>
