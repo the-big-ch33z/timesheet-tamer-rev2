@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Save } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { DialogTrigger } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { ScheduleSelector } from "./schedule/ScheduleSelector";
 import { WeekConfiguration } from "./schedule/WeekConfiguration";
 import { CreateScheduleDialog } from "./schedule/CreateScheduleDialog";
@@ -39,16 +39,16 @@ const WorkScheduleSettings: React.FC = () => {
             Configure work schedules for your organization
           </CardDescription>
         </div>
-        <CreateScheduleDialog
-          open={showCreateScheduleDialog}
-          onOpenChange={setShowCreateScheduleDialog}
-          onCreateSchedule={handleCreateSchedule}
-        />
-        <DialogTrigger asChild>
+        <Dialog open={showCreateScheduleDialog} onOpenChange={setShowCreateScheduleDialog}>
+          <CreateScheduleDialog
+            open={showCreateScheduleDialog}
+            onOpenChange={setShowCreateScheduleDialog}
+            onCreateSchedule={handleCreateSchedule}
+          />
           <Button onClick={() => setShowCreateScheduleDialog(true)}>
             <Plus className="h-4 w-4 mr-2" /> Create Schedule
           </Button>
-        </DialogTrigger>
+        </Dialog>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
