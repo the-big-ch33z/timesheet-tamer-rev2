@@ -1,8 +1,9 @@
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Clock, AlertTriangle, Calendar } from "lucide-react";
-import { format, getDay } from "date-fns";
+import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -26,13 +27,23 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, work
   } 
   // Otherwise, try to get times from workSchedule if available
   else if (workSchedule) {
-    const dayOfWeek = getDay(date);
-    const scheduleDay = workSchedule.days.find(day => day.dayOfWeek === dayOfWeek);
+    const weekDay = getWeekDay(date);
+    const weekNum = getFortnightWeek(date);
+    
+    const scheduleDay = workSchedule.weeks[weekNum][weekDay];
     
     if (scheduleDay) {
       startTime = scheduleDay.startTime || startTime;
       endTime = scheduleDay.endTime || endTime;
-      expectedHours = scheduleDay.hoursWorked || expectedHours;
+      
+      // Calculate expected hours from start and end time
+      const startHour = parseInt(startTime.split(':')[0]);
+      const startMinute = parseInt(startTime.split(':')[1]);
+      const endHour = parseInt(endTime.split(':')[0]);
+      const endMinute = parseInt(endTime.split(':')[1]);
+      
+      // Calculate total hours including partial hours
+      expectedHours = endHour - startHour + (endMinute - startMinute) / 60;
     }
   }
   
