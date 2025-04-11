@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { User } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { useWorkSchedule } from "@/contexts/work-schedule";
+import { useUserMetrics } from "@/contexts/user-metrics";
 import { useToast } from "@/hooks/use-toast";
 import { UserEditFormValues } from "../EditUserForm";
 
@@ -17,9 +18,10 @@ export const useUserManagement = () => {
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null);
   const [forceRefresh, setForceRefresh] = useState(0); // Add a state to force re-renders
 
-  // Access authentication and work schedule contexts
-  const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser, updateUserMetrics } = useAuth();
+  // Access authentication, work schedule, and metrics contexts
+  const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser } = useAuth();
   const { assignScheduleToUser, resetUserSchedule } = useWorkSchedule();
+  const { updateUserMetrics } = useUserMetrics();
 
   // Handle search term changes
   const handleSearchChange = (term: string) => {

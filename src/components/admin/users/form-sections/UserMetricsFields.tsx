@@ -4,7 +4,7 @@ import { FormField, FormItem, FormLabel, FormDescription, FormControl, FormMessa
 import { Input } from "@/components/ui/input";
 import { Control } from "react-hook-form";
 import { UserEditFormValues } from "../EditUserForm";
-import { USER_DEFAULTS, FORM_PLACEHOLDERS } from "@/constants/defaults";
+import { FORM_PLACEHOLDERS } from "@/constants/defaults";
 
 interface UserMetricsFieldsProps {
   control: Control<UserEditFormValues>;
@@ -31,9 +31,8 @@ export const UserMetricsFields: React.FC<UserMetricsFieldsProps> = ({ control })
                 placeholder={FORM_PLACEHOLDERS.FTE}
                 {...field}
                 onChange={(e) => {
-                  // Ensure we have a valid number or fall back to default
-                  const value = e.target.value === '' ? USER_DEFAULTS.FTE : parseFloat(e.target.value);
-                  field.onChange(!isNaN(value) ? value : USER_DEFAULTS.FTE);
+                  const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                  field.onChange(value);
                 }}
               />
             </FormControl>
@@ -55,10 +54,8 @@ export const UserMetricsFields: React.FC<UserMetricsFieldsProps> = ({ control })
                 placeholder={FORM_PLACEHOLDERS.FORTNIGHT_HOURS}
                 {...field}
                 onChange={(e) => {
-                  // Ensure we have a valid number or fall back to default
-                  const value = e.target.value === '' ? USER_DEFAULTS.FORTNIGHT_HOURS : parseFloat(e.target.value);
-                  field.onChange(!isNaN(value) ? value : USER_DEFAULTS.FORTNIGHT_HOURS);
-                  console.log(`Changed fortnightHours to: ${!isNaN(value) ? value : USER_DEFAULTS.FORTNIGHT_HOURS}`);
+                  const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                  field.onChange(value);
                 }}
               />
             </FormControl>

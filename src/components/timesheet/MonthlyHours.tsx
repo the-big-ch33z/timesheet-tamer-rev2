@@ -1,10 +1,10 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User } from "@/types";
 import { getWorkdaysInMonth, calculateMonthlyTargetHours } from "@/lib/date-utils";
-import { USER_DEFAULTS } from "@/constants/defaults";
+import { useUserMetrics } from "@/contexts/user-metrics";
 
 interface MonthlyHoursProps {
   entries: TimeEntry[];
@@ -13,18 +13,15 @@ interface MonthlyHoursProps {
 }
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth }) => {
-  // Add debugging to see what user data is being received
-  useEffect(() => {
-    console.log("MonthlyHours component received user data:", user);
-    console.log("User fortnightHours value:", user?.fortnightHours);
-  }, [user]);
-
+  const { getUserMetrics } = useUserMetrics();
+  
   // Calculate total hours logged for the month
   const hours = entries.reduce((total, entry) => total + entry.hours, 0);
   
-  // Calculate target hours based on user's fortnightHours setting
-  // Use default if fortnightHours is undefined (not set)
-  const fortnightHours = user?.fortnightHours !== undefined ? user.fortnightHours : USER_DEFAULTS.FORTNIGHT_HOURS;
+  // Get user metrics with defaults if user is provided
+  const userMetrics = user ? getUserMetrics(user.id) : null;
+  const fortnightHours = userMetrics?.fortnightHours || 0;
+  
   console.log(`Using fortnight hours value: ${fortnightHours}`);
   
   const targetHours = calculateMonthlyTargetHours(fortnightHours, currentMonth);

@@ -4,6 +4,7 @@ import { format, addMonths, subMonths } from "date-fns";
 import { TimeEntry, User } from "@/types";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 import { useWorkSchedule } from "@/contexts/work-schedule";
+import { useUserMetrics } from "@/contexts/user-metrics";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRolePermission } from "@/hooks/useRolePermission";
@@ -17,6 +18,7 @@ export const useTimesheet = () => {
   
   const { userId } = useParams<{ userId?: string }>();
   const { currentUser, getUserById, users } = useAuth();
+  const { getUserMetrics } = useUserMetrics();
   const { toast } = useToast();
   const { isAdmin, isManager } = useRolePermission();
   const navigate = useNavigate();
@@ -42,7 +44,13 @@ export const useTimesheet = () => {
   // Log the viewedUser to debug
   useEffect(() => {
     console.log("Current viewed user data:", viewedUser);
-  }, [viewedUser]);
+    
+    // Also log user metrics for debugging
+    if (viewedUser) {
+      const metrics = getUserMetrics(viewedUser.id);
+      console.log("User metrics:", metrics);
+    }
+  }, [viewedUser, getUserMetrics]);
   
   // Get the user's work schedule
   const userWorkSchedule = viewedUser ? getUserSchedule(viewedUser.id) : undefined;

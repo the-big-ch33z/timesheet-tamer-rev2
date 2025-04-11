@@ -4,6 +4,7 @@ import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
 import { WorkScheduleProvider } from './contexts/work-schedule';
 import { TimesheetSettingsProvider } from './contexts/TimesheetSettingsContext';
+import { UserMetricsProvider } from './contexts/user-metrics/UserMetricsContext';
 import { ProtectedRoute } from './lib/routeProtection';
 import MainLayout from './components/layout/MainLayout';
 import Admin from './pages/Admin';
@@ -21,26 +22,28 @@ function App() {
       <AuthProvider>
         <WorkScheduleProvider>
           <TimesheetSettingsProvider>
-            <Routes>
-              {/* Redirect root to login */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/login" element={<Auth mode="login" />} />
-              <Route path="/signup" element={<Auth mode="signup" />} />
-              
-              {/* Protected routes with layout */}
-              <Route element={<MainLayout />}>
-                {/* Unified timesheet route with optional userId parameter */}
-                <Route path="/timesheet/:userId?" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
-                <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                <Route path="/team-calendar" element={<ProtectedRoute><TeamCalendar /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              </Route>
-              
-              {/* 404 route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <UserMetricsProvider>
+              <Routes>
+                {/* Redirect root to login */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/login" element={<Auth mode="login" />} />
+                <Route path="/signup" element={<Auth mode="signup" />} />
+                
+                {/* Protected routes with layout */}
+                <Route element={<MainLayout />}>
+                  {/* Unified timesheet route with optional userId parameter */}
+                  <Route path="/timesheet/:userId?" element={<ProtectedRoute><Timesheet /></ProtectedRoute>} />
+                  <Route path="/manager" element={<ProtectedRoute><Manager /></ProtectedRoute>} />
+                  <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                  <Route path="/team-calendar" element={<ProtectedRoute><TeamCalendar /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                </Route>
+                
+                {/* 404 route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </UserMetricsProvider>
           </TimesheetSettingsProvider>
         </WorkScheduleProvider>
       </AuthProvider>
