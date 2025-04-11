@@ -12,7 +12,6 @@ import { RoleSelection } from "./form-sections/RoleSelection";
 import { UserMetricsFields } from "./form-sections/UserMetricsFields";
 import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, CheckCircle } from "lucide-react";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
@@ -89,8 +88,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         title: "User updated successfully",
         description: `${selectedUser.name}'s information has been updated.`,
         variant: "default",
-        className: "bg-green-50 border-green-200",
-        icon: <CheckCircle className="h-4 w-4 text-green-500" />
+        className: "bg-green-50 border-green-200"
       });
       
       onOpenChange(false);
@@ -99,8 +97,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       toast({
         title: "Update failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-        icon: <AlertCircle className="h-4 w-4" />
+        variant: "destructive"
       });
       console.error("Error updating user:", error);
     }

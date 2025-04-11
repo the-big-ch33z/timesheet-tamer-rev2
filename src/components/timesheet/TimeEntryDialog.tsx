@@ -6,7 +6,6 @@ import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, AlertCircle } from "lucide-react";
 
 type TimeEntryDialogProps = {
   onSave: (entry: Omit<TimeEntry, "id">) => void;
@@ -43,16 +42,14 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         title: "Entry saved",
         description: "Time entry has been saved successfully",
         variant: "default",
-        className: "bg-green-50 border-green-200",
-        icon: <CheckCircle className="h-4 w-4 text-green-500" />
+        className: "bg-green-50 border-green-200"
       });
     } catch (error) {
       // Show error notification
       toast({
         title: "Save failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-        icon: <AlertCircle className="h-4 w-4" />
+        variant: "destructive"
       });
     }
   };
@@ -65,8 +62,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         toast({
           title: "Entry deleted",
           description: "Time entry has been removed",
-          variant: "default",
-          icon: <CheckCircle className="h-4 w-4 text-green-500" />
+          variant: "default"
         });
       }
     } catch (error) {
@@ -74,8 +70,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       toast({
         title: "Delete failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-        icon: <AlertCircle className="h-4 w-4" />
+        variant: "destructive"
       });
     }
   };

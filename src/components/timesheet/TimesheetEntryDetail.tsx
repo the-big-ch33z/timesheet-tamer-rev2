@@ -6,7 +6,6 @@ import DetailHeader from "./detail/DetailHeader";
 import WorkHoursSection from "./detail/WorkHoursSection";
 import EntriesSection from "./detail/EntriesSection";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react";
 
 interface TimesheetEntryDetailProps {
   date: Date;
@@ -33,8 +32,7 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
       toast({
         title: "Error deleting entry",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-        icon: <AlertCircle className="h-4 w-4" />
+        variant: "destructive"
       });
     }
   };

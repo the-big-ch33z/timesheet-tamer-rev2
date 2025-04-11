@@ -5,7 +5,6 @@ import EntryFieldsSettings from "@/components/settings/EntryFieldsSettings";
 import WorkScheduleSettings from "@/components/settings/WorkScheduleSettings";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, AlertCircle } from "lucide-react";
 
 const SystemSettings = () => {
   const { toast } = useToast();
@@ -18,15 +17,13 @@ const SystemSettings = () => {
         title: "Settings saved",
         description: "Entry field settings have been updated successfully",
         variant: "default",
-        className: "bg-green-50 border-green-200",
-        icon: <CheckCircle className="h-4 w-4 text-green-500" />
+        className: "bg-green-50 border-green-200"
       });
     } catch (error) {
       toast({
         title: "Save failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-        icon: <AlertCircle className="h-4 w-4" />
+        variant: "destructive"
       });
     }
   };
