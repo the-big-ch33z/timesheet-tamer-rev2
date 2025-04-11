@@ -13,6 +13,7 @@ import { UserMetricsFields } from "./form-sections/UserMetricsFields";
 import { WorkScheduleSection } from "./form-sections/WorkScheduleSection";
 import { useToast } from "@/hooks/use-toast";
 import { USER_DEFAULTS } from "@/constants/defaults";
+import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
@@ -43,7 +44,7 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
   const { toast } = useToast();
   
   // Access work schedule context
-  const { getAllSchedules } = useWorkSchedule();
+  const { getAllSchedules, getScheduleById } = useWorkSchedule();
   
   // Get all available schedules
   const schedules = getAllSchedules();
@@ -60,6 +61,24 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       fortnightHours: USER_DEFAULTS.FORTNIGHT_HOURS,
     },
   });
+
+  // Watch for changes to useDefaultSchedule and scheduleId
+  const useDefaultSchedule = form.watch("useDefaultSchedule");
+  const scheduleId = form.watch("scheduleId");
+  
+  // Update fortnight hours based on schedule selection
+  useEffect(() => {
+    if (!useDefaultSchedule && scheduleId) {
+      const selectedSchedule = getScheduleById(scheduleId);
+      if (selectedSchedule) {
+        const calculatedHours = calculateFortnightHoursFromSchedule(selectedSchedule);
+        if (calculatedHours > 0) {
+          console.log(`Updating fortnight hours from schedule: ${calculatedHours}`);
+          form.setValue("fortnightHours", calculatedHours);
+        }
+      }
+    }
+  }, [useDefaultSchedule, scheduleId, getScheduleById, form]);
 
   // Update form when selected user changes
   useEffect(() => {

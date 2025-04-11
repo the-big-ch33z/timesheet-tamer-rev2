@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Save } from "lucide-react";
@@ -9,6 +9,8 @@ import { ScheduleSelector } from "./schedule/ScheduleSelector";
 import { WeekConfiguration } from "./schedule/WeekConfiguration";
 import { CreateScheduleDialog } from "./schedule/CreateScheduleDialog";
 import { useScheduleState } from "./schedule/useScheduleState";
+import { Badge } from "@/components/ui/badge";
+import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
 
 const WorkScheduleSettings: React.FC = () => {
   const {
@@ -29,6 +31,17 @@ const WorkScheduleSettings: React.FC = () => {
     updateWorkHours,
     toggleRdoDay
   } = useScheduleState();
+  
+  // Calculate fortnight hours based on the current editing schedule
+  const [fortnightHours, setFortnightHours] = useState(0);
+  
+  // Update fortnight hours whenever the schedule changes
+  useEffect(() => {
+    if (editingSchedule) {
+      const hours = calculateFortnightHoursFromSchedule(editingSchedule);
+      setFortnightHours(hours);
+    }
+  }, [editingSchedule]);
 
   return (
     <Card>
@@ -52,13 +65,23 @@ const WorkScheduleSettings: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <ScheduleSelector
-            schedules={schedules}
-            selectedScheduleId={selectedScheduleId}
-            editingSchedule={editingSchedule}
-            onScheduleChange={handleScheduleChange}
-            onNameChange={handleNameChange}
-          />
+          <div className="flex items-center justify-between">
+            <ScheduleSelector
+              schedules={schedules}
+              selectedScheduleId={selectedScheduleId}
+              editingSchedule={editingSchedule}
+              onScheduleChange={handleScheduleChange}
+              onNameChange={handleNameChange}
+            />
+            
+            {/* Display the calculated fortnight hours */}
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">Fortnight Hours:</span>
+              <Badge variant="outline" className="text-sm font-medium">
+                {fortnightHours} hours
+              </Badge>
+            </div>
+          </div>
 
           <Separator />
 

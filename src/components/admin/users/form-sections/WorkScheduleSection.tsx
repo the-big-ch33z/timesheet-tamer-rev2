@@ -1,11 +1,13 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { WorkSchedule } from "@/types";
 import { Control, UseFormWatch, useFormState } from "react-hook-form";
 import { UserEditFormValues } from "../EditUserForm";
+import { Badge } from "@/components/ui/badge";
+import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
 
 interface WorkScheduleSectionProps {
   control: Control<UserEditFormValues>;
@@ -25,14 +27,31 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
   // Watch form state for debugging
   const formState = useFormState({ control });
   
+  // Calculate fortnight hours for the selected schedule
+  const [fortnightHours, setFortnightHours] = useState<number | null>(null);
+  
+  // Update fortnight hours when schedule selection changes
+  useEffect(() => {
+    if (selectedScheduleId && !useDefaultSchedule) {
+      const selectedSchedule = schedules.find(s => s.id === selectedScheduleId);
+      if (selectedSchedule) {
+        const hours = calculateFortnightHoursFromSchedule(selectedSchedule);
+        setFortnightHours(hours);
+      }
+    } else {
+      setFortnightHours(null);
+    }
+  }, [selectedScheduleId, useDefaultSchedule, schedules]);
+  
   // Log state changes in the form
   useEffect(() => {
     console.log("Schedule selection state:", {
       useDefault: useDefaultSchedule,
       selectedId: selectedScheduleId,
-      formErrors: formState.errors
+      formErrors: formState.errors,
+      calculatedHours: fortnightHours
     });
-  }, [useDefaultSchedule, selectedScheduleId, formState]);
+  }, [useDefaultSchedule, selectedScheduleId, formState, fortnightHours]);
 
   // Filter out default schedule from the dropdown
   const availableSchedules = schedules.filter(s => !s.isDefault);
@@ -106,6 +125,14 @@ export const WorkScheduleSection: React.FC<WorkScheduleSectionProps> = ({
                 {schedules.find(s => s.id === selectedScheduleId) ? (
                   <div>
                     <p className="font-medium">{schedules.find(s => s.id === selectedScheduleId)?.name}</p>
+                    {fortnightHours !== null && (
+                      <div className="flex items-center mt-2">
+                        <p className="text-muted-foreground">Required Fortnight Hours:</p>
+                        <Badge variant="outline" className="ml-2">
+                          {fortnightHours} hours
+                        </Badge>
+                      </div>
+                    )}
                     <p className="text-muted-foreground mt-1">
                       This schedule has specific hours defined for each day across a two-week rotation.
                     </p>
