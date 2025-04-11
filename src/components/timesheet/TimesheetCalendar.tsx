@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, getDate, isWithinInterval, startOfYear, addWeeks } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule, WeekDay } from "@/types";
 import { Holiday, isHoliday, getHolidayForDate, getHolidays } from "@/lib/holidays";
 
 interface TimesheetCalendarProps {
@@ -13,6 +13,7 @@ interface TimesheetCalendarProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
+  workSchedule?: WorkSchedule; // Added work schedule prop
 }
 
 const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
@@ -21,6 +22,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   onPrevMonth,
   onNextMonth,
   onDayClick,
+  workSchedule,
 }) => {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -51,6 +53,61 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   const getHolidayName = (day: Date) => {
     const holiday = getHolidayForDate(day, holidays);
     return holiday ? holiday.name : null;
+  };
+
+  // Helper function to convert JS day number to WeekDay type
+  const getWeekDayFromDate = (date: Date): WeekDay => {
+    const dayMap: Record<number, WeekDay> = {
+      0: 'sunday',
+      1: 'monday',
+      2: 'tuesday',
+      3: 'wednesday',
+      4: 'thursday',
+      5: 'friday',
+      6: 'saturday'
+    };
+    return dayMap[date.getDay()];
+  };
+
+  // Determine which fortnight week (1 or 2) a given date falls into
+  const getFortnightWeek = (date: Date): 1 | 2 => {
+    // Start of the year as a reference point
+    const yearStart = startOfYear(new Date(date.getFullYear(), 0, 1));
+    
+    // Calculate weeks since start of year (0-indexed)
+    const weeksSinceYearStart = Math.floor(
+      (date.getTime() - yearStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+    
+    // Convert to 1 or 2 based on odd or even week number
+    return ((weeksSinceYearStart % 2) + 1) as 1 | 2;
+  };
+
+  // Check if a day is a working day according to the schedule
+  const isWorkingDay = (day: Date): boolean => {
+    if (!workSchedule) return true; // Default to working day if no schedule
+
+    const weekDay = getWeekDayFromDate(day);
+    const weekNum = getFortnightWeek(day);
+    
+    // Check if it's an RDO
+    if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
+      return false;
+    }
+    
+    // Check if there are work hours defined for this day
+    const hoursForDay = workSchedule.weeks[weekNum][weekDay];
+    return hoursForDay !== null;
+  };
+
+  // Get work hours for a specific day
+  const getWorkHoursForDay = (day: Date) => {
+    if (!workSchedule) return null;
+    
+    const weekDay = getWeekDayFromDate(day);
+    const weekNum = getFortnightWeek(day);
+    
+    return workSchedule.weeks[weekNum][weekDay];
   };
 
   const handleDayClick = (day: Date) => {
@@ -116,6 +173,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
             const holidayName = getHolidayName(day);
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
             const isSelected = isDateSelected(day);
+            const isWorkDay = isWorkingDay(day);
+            const workHours = getWorkHoursForDay(day);
+            const isRDO = workSchedule ? workSchedule.rdoDays[getFortnightWeek(day)].includes(getWeekDayFromDate(day)) : false;
             
             return (
               <div
@@ -123,6 +183,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
                 className={`p-3 min-h-[80px] border rounded cursor-pointer transition-all duration-200 ease-in-out
                   ${isWeekend ? "bg-gray-200 border-gray-300" : "bg-white border-gray-200"}
                   ${dayHoliday ? "bg-[#FEF7CD] border-amber-200" : ""}
+                  ${!isWorkDay && !dayHoliday ? "bg-gray-100 border-gray-300" : ""}
+                  ${isRDO ? "bg-blue-50 border-blue-200" : ""}
                   ${isToday ? "ring-2 ring-indigo-500" : ""}
                   ${isSelected ? "transform scale-[1.02] shadow-md z-10 ring-2 ring-indigo-400" : ""}
                   hover:bg-gray-100
@@ -134,15 +196,24 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
                     className={`text-lg font-medium
                       ${isWeekend ? "text-gray-900" : ""}
                       ${isToday ? "bg-indigo-500 text-white w-7 h-7 flex items-center justify-center rounded-full" : ""}
+                      ${isRDO ? "text-blue-700" : ""}
+                      ${!isWorkDay && !isRDO && !isWeekend ? "text-gray-500" : ""}
                     `}
                   >
                     {format(day, "d")}
                   </span>
-                  {hasEntries && (
-                    <span className="text-xs font-medium text-indigo-700 px-1 bg-indigo-50 rounded">
-                      {totalHours}h
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end">
+                    {hasEntries && (
+                      <span className="text-xs font-medium text-indigo-700 px-1 bg-indigo-50 rounded">
+                        {totalHours}h
+                      </span>
+                    )}
+                    {workHours && (
+                      <span className="text-xs text-gray-500 mt-1">
+                        {workHours.startTime}-{workHours.endTime}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Entry indicators */}
@@ -168,6 +239,20 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
                 {dayHoliday && (
                   <div className="text-xs text-amber-700 mt-1 font-medium">
                     {holidayName || "Holiday"}
+                  </div>
+                )}
+                
+                {/* RDO indicator */}
+                {isRDO && !dayHoliday && (
+                  <div className="text-xs text-blue-700 mt-1 font-medium">
+                    RDO
+                  </div>
+                )}
+                
+                {/* Non-working day indicator (not weekend, not holiday, not RDO) */}
+                {!isWorkDay && !isWeekend && !dayHoliday && !isRDO && (
+                  <div className="text-xs text-gray-500 mt-1 font-medium">
+                    Non-working
                   </div>
                 )}
               </div>

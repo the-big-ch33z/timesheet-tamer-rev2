@@ -1,8 +1,11 @@
 
 import React from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import TabContent from "./TabContent";
-import { TimeEntry } from "@/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TimesheetCalendar from "./TimesheetCalendar";
+import MonthlyHours from "./MonthlyHours";
+import RecentEntries from "./RecentEntries";
+import ToilSummary from "./ToilSummary";
+import { TimeEntry, WorkSchedule } from "@/types";
 
 interface TimesheetTabsProps {
   activeTab: string;
@@ -12,9 +15,10 @@ interface TimesheetTabsProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
+  workSchedule?: WorkSchedule; // Added workSchedule prop
 }
 
-const TimesheetTabs: React.FC<TimesheetTabsProps> = ({
+const TimesheetTabs = ({
   activeTab,
   setActiveTab,
   entries,
@@ -22,23 +26,44 @@ const TimesheetTabs: React.FC<TimesheetTabsProps> = ({
   onPrevMonth,
   onNextMonth,
   onDayClick,
-}) => {
+  workSchedule, // Add workSchedule prop
+}: TimesheetTabsProps) => {
   return (
-    <Tabs value={activeTab} className="mb-6" onValueChange={setActiveTab}>
-      <TabsList className="grid grid-cols-4 w-full max-w-md">
-        <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
-        <TabsTrigger value="toil">TOIL</TabsTrigger>
-        <TabsTrigger value="dta">DTA</TabsTrigger>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+      <TabsList className="mb-4">
+        <TabsTrigger value="timesheet">Calendar View</TabsTrigger>
+        <TabsTrigger value="monthly">Monthly Hours</TabsTrigger>
         <TabsTrigger value="recent">Recent Entries</TabsTrigger>
+        <TabsTrigger value="toil">TOIL Summary</TabsTrigger>
       </TabsList>
 
-      <TabContent 
-        entries={entries} 
-        currentMonth={currentMonth} 
-        onPrevMonth={onPrevMonth} 
-        onNextMonth={onNextMonth} 
-        onDayClick={onDayClick} 
-      />
+      <TabsContent value="timesheet">
+        <TimesheetCalendar 
+          currentMonth={currentMonth}
+          entries={entries}
+          onPrevMonth={onPrevMonth}
+          onNextMonth={onNextMonth}
+          onDayClick={onDayClick}
+          workSchedule={workSchedule} // Pass workSchedule to TimesheetCalendar
+        />
+      </TabsContent>
+
+      <TabsContent value="monthly">
+        <MonthlyHours 
+          entries={entries} 
+          currentMonth={currentMonth} 
+          onPrevMonth={onPrevMonth}
+          onNextMonth={onNextMonth}
+        />
+      </TabsContent>
+
+      <TabsContent value="recent">
+        <RecentEntries entries={entries} onDayClick={onDayClick} />
+      </TabsContent>
+
+      <TabsContent value="toil">
+        <ToilSummary entries={entries} />
+      </TabsContent>
     </Tabs>
   );
 };

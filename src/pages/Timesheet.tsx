@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useWorkSchedule } from "@/contexts/work-schedule";
 
 const Timesheet = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -26,6 +27,7 @@ const Timesheet = () => {
   const { toast } = useToast();
   const { isAdmin, isManager } = useRolePermission();
   const navigate = useNavigate();
+  const { getUserSchedule } = useWorkSchedule();
   
   // If no userId is provided or it's 'me', use the current user's ID
   const targetUserId = (!userId || userId === 'me') ? currentUser?.id : userId;
@@ -35,6 +37,9 @@ const Timesheet = () => {
   
   // Get the user we're viewing (could be current user or another user)
   const viewedUser = targetUserId ? getUserById(targetUserId) : currentUser;
+  
+  // Get the user's work schedule
+  const userWorkSchedule = viewedUser ? getUserSchedule(viewedUser.id) : undefined;
   
   // Check permission to view this timesheet
   const canViewTimesheet = !isViewingOtherUser || isAdmin() || isManager();
@@ -179,6 +184,7 @@ const Timesheet = () => {
         onPrevMonth={prevMonth}
         onNextMonth={nextMonth}
         onDayClick={handleDayClick}
+        workSchedule={userWorkSchedule} // Pass the work schedule to TimesheetTabs
       />
 
       {selectedDay && activeTab === "timesheet" && (
