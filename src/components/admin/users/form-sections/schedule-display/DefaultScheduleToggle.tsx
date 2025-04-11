@@ -35,7 +35,7 @@ export const DefaultScheduleToggle: React.FC<DefaultScheduleToggleProps> = ({
                   onChange(checked);
                 }
                 // Add console log for debugging
-                console.log(`Switch toggled to ${checked ? 'default' : 'custom'} schedule`);
+                console.log(`Schedule toggle: ${checked ? 'using default' : 'using custom'} schedule`);
               }}
             />
           </FormControl>

@@ -1,5 +1,4 @@
 
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +6,8 @@ import { User } from "@/types";
 import { useWorkSchedule } from "@/contexts/work-schedule";
 import { USER_DEFAULTS } from "@/constants/defaults";
 import { useToast } from "@/hooks/use-toast";
-import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
+import { useFormInitialization } from "./useFormInitialization";
+import { useScheduleValues } from "./useScheduleValues";
 
 // Form schema for editing a user
 const userEditSchema = z.object({
@@ -31,8 +31,8 @@ export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEdi
   // Access toast for notifications
   const { toast } = useToast();
   
-  // Access work schedule context
-  const { getAllSchedules, getScheduleById, defaultSchedule } = useWorkSchedule();
+  // Access work schedule context to get schedules
+  const { getAllSchedules } = useWorkSchedule();
   
   // Get all available schedules
   const schedules = getAllSchedules();
@@ -50,99 +50,28 @@ export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEdi
     },
   });
 
-  // Watch for changes to useDefaultSchedule, scheduleId, and fte
-  const useDefaultSchedule = form.watch("useDefaultSchedule");
-  const scheduleId = form.watch("scheduleId");
-  const fte = form.watch("fte");
-  
-  // Update fortnight hours based on schedule selection and FTE
-  useEffect(() => {
-    let baseHours = 0;
-    
-    if (useDefaultSchedule) {
-      // When using default schedule, calculate hours from the default schedule
-      baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-    } else if (scheduleId) {
-      // When using custom schedule
-      const selectedSchedule = getScheduleById(scheduleId);
-      if (selectedSchedule) {
-        baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
-      }
-    }
-    
-    if (baseHours > 0) {
-      // Apply FTE to calculate the proportional hours
-      const adjustedHours = baseHours * fte;
-      // Round to nearest 0.5
-      const roundedHours = Math.round(adjustedHours * 2) / 2;
-      
-      console.log(`Updating fortnight hours: base=${baseHours}, FTE=${fte}, adjusted=${adjustedHours}, rounded=${roundedHours}`);
-      form.setValue("fortnightHours", roundedHours);
-    }
-  }, [useDefaultSchedule, scheduleId, fte, getScheduleById, form, defaultSchedule]);
+  // Initialize form values when selected user changes
+  useFormInitialization({ 
+    selectedUser, 
+    setValue: form.setValue 
+  });
 
-  // Update form when selected user changes
-  useEffect(() => {
-    if (selectedUser) {
-      console.log("Initializing form with user data:", selectedUser);
-      
-      form.setValue("role", selectedUser.role);
-      form.setValue("teamIds", selectedUser.teamIds || []);
-      
-      // Determine if user has a custom schedule
-      const hasCustomSchedule = selectedUser.workScheduleId && 
-                               selectedUser.workScheduleId !== 'default' && 
-                               selectedUser.workScheduleId !== undefined;
-                               
-      console.log(`User ${selectedUser.name} has custom schedule: ${hasCustomSchedule}, ID: ${selectedUser.workScheduleId}`);
-      
-      // Set the form values
-      form.setValue("useDefaultSchedule", !hasCustomSchedule);
-      
-      if (hasCustomSchedule) {
-        form.setValue("scheduleId", selectedUser.workScheduleId || undefined);
-        console.log(`Setting schedule ID in form to: ${selectedUser.workScheduleId}`);
-      } else {
-        form.setValue("scheduleId", undefined);
-      }
-      
-      // Set FTE with proper type conversion, fallback to defaults if undefined
-      form.setValue("fte", selectedUser.fte !== undefined ? selectedUser.fte : USER_DEFAULTS.FTE);
-      
-      // If user has specific fortnight hours set, use those. Otherwise, they'll be calculated
-      // based on the schedule and FTE in the useEffect
-      if (selectedUser.fortnightHours !== undefined) {
-        form.setValue("fortnightHours", selectedUser.fortnightHours);
-        console.log(`Initializing fortnightHours to user-specific value: ${selectedUser.fortnightHours}`);
-      }
-    }
-  }, [selectedUser, form, defaultSchedule]);
+  // Handle schedule-related calculations
+  const { calculateFinalHours } = useScheduleValues({ 
+    watch: form.watch,
+    setValue: form.setValue
+  });
 
+  // Handle form submission
   const handleSubmit = async (values: UserEditFormValues) => {
     if (!selectedUser) return;
     
     try {
       console.log("Submitting form with values:", values);
       
-      // Ensure the correct fortnight hours based on schedule and FTE are submitted
-      let baseHours = 0;
-      
-      if (values.useDefaultSchedule) {
-        baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
-      } else if (values.scheduleId) {
-        const selectedSchedule = getScheduleById(values.scheduleId);
-        if (selectedSchedule) {
-          baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
-        }
-      }
-      
-      if (baseHours > 0) {
-        // Apply FTE to calculate the proportional hours
-        const adjustedHours = baseHours * values.fte;
-        // Round to nearest 0.5
-        values.fortnightHours = Math.round(adjustedHours * 2) / 2;
-        console.log(`Setting final submission hours: base=${baseHours}, FTE=${values.fte}, adjusted=${values.fortnightHours}`);
-      }
+      // Update fortnightHours with the calculated value based on schedule and FTE
+      values.fortnightHours = calculateFinalHours();
+      console.log(`Final submission hours: ${values.fortnightHours}`);
       
       // Submit all form values
       await onSubmit(values);
@@ -155,6 +84,7 @@ export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEdi
         className: "bg-green-50 border-green-200"
       });
       
+      // Close the form
       onOpenChange(false);
     } catch (error) {
       // Show error toast notification
