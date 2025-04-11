@@ -41,10 +41,12 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           <ScheduleInfoCard date={date} workSchedule={workSchedule} />
         )}
         
-        {/* Only show WorkHoursSection when there are entries */}
-        {entries.length > 0 && (
-          <WorkHoursSection entries={entries} />
-        )}
+        {/* Always display WorkHoursSection regardless of entries */}
+        <WorkHoursSection 
+          entries={entries} 
+          date={date} 
+          workSchedule={workSchedule} 
+        />
         
         <EntriesSection 
           date={date} 
