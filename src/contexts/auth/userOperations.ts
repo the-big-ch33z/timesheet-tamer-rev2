@@ -445,7 +445,6 @@ export const createUserOperations = (state: AuthStateType, toast: ReturnType<typ
         `User metrics updated: FTE=${metrics.fte}, Fortnight Hours=${metrics.fortnightHours}`
       );
       
-      return updatedUser;
     } catch (error) {
       console.error("Error updating user metrics:", error);
       toast.toast({
