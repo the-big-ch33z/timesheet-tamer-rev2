@@ -45,6 +45,7 @@ const TabContent: React.FC<TabContentComponentProps> = ({
               entries={entries} 
               user={user} 
               currentMonth={currentMonth} 
+              workSchedule={workSchedule}
             />
             <ToilSummary entries={entries} />
           </div>

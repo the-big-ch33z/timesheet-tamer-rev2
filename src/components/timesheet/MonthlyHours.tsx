@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { TimeEntry, User } from "@/types";
+import { TimeEntry, User, WorkSchedule } from "@/types";
 import { getWorkdaysInMonth } from "@/lib/date-utils";
 import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
 
@@ -10,16 +10,17 @@ interface MonthlyHoursProps {
   entries: TimeEntry[];
   user?: User;
   currentMonth: Date;
+  workSchedule?: WorkSchedule;
 }
 
-const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth }) => {
+const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth, workSchedule }) => {
   const {
     hours,
     targetHours,
     percentage,
     hoursRemaining,
     progressColor
-  } = useMonthlyHoursCalculation(entries, currentMonth, user);
+  } = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);
 
   return (
     <Card>

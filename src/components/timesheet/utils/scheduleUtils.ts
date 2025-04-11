@@ -43,3 +43,36 @@ export const getDayScheduleInfo = (date: Date, workSchedule?: WorkSchedule) => {
     hours: scheduledHours
   };
 };
+
+// Calculate total hours for a fortnight based on the work schedule
+export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule): number => {
+  let totalHours = 0;
+  
+  // Process both weeks in the fortnight
+  [1, 2].forEach(weekNum => {
+    const weekNumKey = weekNum as 1 | 2;
+    const weekDays: WeekDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    // Calculate hours for each day of the week
+    weekDays.forEach(day => {
+      const daySchedule = workSchedule.weeks[weekNumKey][day];
+      
+      // Skip if no hours scheduled for this day or if it's an RDO
+      if (!daySchedule || workSchedule.rdoDays[weekNumKey].includes(day)) return;
+      
+      // Calculate hours based on start and end time
+      const startHour = parseInt(daySchedule.startTime.split(':')[0]);
+      const startMinute = parseInt(daySchedule.startTime.split(':')[1]);
+      
+      const endHour = parseInt(daySchedule.endTime.split(':')[0]);
+      const endMinute = parseInt(daySchedule.endTime.split(':')[1]);
+      
+      // Calculate total hours including partial hours
+      const hours = endHour - startHour + (endMinute - startMinute) / 60;
+      totalHours += hours;
+    });
+  });
+  
+  // Round to one decimal place
+  return Math.round(totalHours * 10) / 10;
+};
