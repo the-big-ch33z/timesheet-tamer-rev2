@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, UserRole } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
-import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
+import { useWorkSchedule } from "@/contexts/work-schedule"; // Updated import path
 import { UserSearch } from "./UserSearch";
 import { UserTable } from "./UserTable";
 import { EditUserForm } from "./EditUserForm";

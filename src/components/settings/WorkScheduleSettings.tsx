@@ -11,7 +11,7 @@ import { Plus, Trash2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { useWorkSchedule } from "@/contexts/WorkScheduleContext";
+import { useWorkSchedule } from "@/contexts/work-schedule"; // Updated import path
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const WorkScheduleSettings: React.FC = () => {
