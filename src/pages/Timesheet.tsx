@@ -1,178 +1,49 @@
 
-import React, { useState, useEffect } from "react";
-import { format, addMonths, subMonths } from "date-fns";
-import { TimeEntry } from "@/types";
+import React from "react";
 import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
-import { initializeHolidays } from "@/lib/holidays";
-import { useAuth } from "@/contexts/auth/AuthProvider";
-import { useToast } from "@/hooks/use-toast";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
-import { useParams, Navigate, useNavigate } from "react-router-dom";
-import { useRolePermission } from "@/hooks/useRolePermission";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { useWorkSchedule } from "@/contexts/work-schedule";
+import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
+import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
+import { useTimesheet } from "@/hooks/useTimesheet";
 
 const Timesheet = () => {
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("timesheet");
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const { userId } = useParams<{ userId?: string }>();
-  const { currentUser, getUserById } = useAuth();
-  const { toast } = useToast();
-  const { isAdmin, isManager } = useRolePermission();
-  const navigate = useNavigate();
-  const { getUserSchedule } = useWorkSchedule();
-  
-  // If no userId is provided or it's 'me', use the current user's ID
-  const targetUserId = (!userId || userId === 'me') ? currentUser?.id : userId;
-  
-  // Check if we're viewing another user's timesheet
-  const isViewingOtherUser = targetUserId && targetUserId !== currentUser?.id;
-  
-  // Get the user we're viewing (could be current user or another user)
-  const viewedUser = targetUserId ? getUserById(targetUserId) : currentUser;
-  
-  // Get the user's work schedule
-  const userWorkSchedule = viewedUser ? getUserSchedule(viewedUser.id) : undefined;
-  
-  // Check permission to view this timesheet
-  const canViewTimesheet = !isViewingOtherUser || isAdmin() || isManager();
-  
-  // Redirect to personal timesheet if trying to access a non-existent 'me' route
-  useEffect(() => {
-    if (userId === 'me' && currentUser) {
-      navigate('/timesheet', { replace: true });
-    }
-  }, [userId, currentUser, navigate]);
-  
-  useEffect(() => {
-    initializeHolidays();
-  }, []);
+  const {
+    currentMonth,
+    selectedDay,
+    activeTab,
+    isViewingOtherUser,
+    viewedUser,
+    canViewTimesheet,
+    userWorkSchedule,
+    setActiveTab,
+    prevMonth,
+    nextMonth,
+    handleDayClick,
+    deleteEntry,
+    getUserEntries,
+    getDayEntries,
+    setSelectedDay
+  } = useTimesheet();
 
-  useEffect(() => {
-    try {
-      const savedEntries = localStorage.getItem('timeEntries');
-      if (savedEntries) {
-        const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
-          ...entry,
-          date: new Date(entry.date)
-        }));
-        setEntries(parsedEntries);
-      }
-    } catch (error) {
-      console.error("Error loading entries:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleEntryAdded = (event: any) => {
-      const newEntry = event.detail;
-      if (newEntry) {
-        setEntries(prev => [...prev, newEntry]);
-      }
-    };
-    
-    document.addEventListener('entry-added', handleEntryAdded);
-    
-    return () => {
-      document.removeEventListener('entry-added', handleEntryAdded);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (entries.length > 0) {
-      localStorage.setItem('timeEntries', JSON.stringify(entries));
-    }
-  }, [entries]);
-
-  const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
-  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
-
-  const handleDayClick = (day: Date) => {
-    setSelectedDay(day);
-  };
-
-  const deleteEntry = (id: string) => {
-    setEntries(entries.filter(entry => entry.id !== id));
-    
-    toast({
-      title: "Entry deleted",
-      description: "Time entry has been removed",
-    });
-  };
-
-  const getUserEntries = () => {
-    // If no viewed user is found, return empty array
-    if (!viewedUser) return [];
-    
-    // Return entries for the viewed user
-    return entries.filter(entry => entry.userId === viewedUser.id);
-  };
-
-  const getDayEntries = (day: Date) => {
-    const userEntries = getUserEntries();
-    return userEntries.filter(
-      (entry) =>
-        format(entry.date, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
-    );
-  };
-
-  // If user doesn't have permission, redirect to their own timesheet
-  if (isViewingOtherUser && !canViewTimesheet) {
-    toast({
-      title: "Access Denied",
-      description: "You don't have permission to view this timesheet",
-      variant: "destructive",
-    });
-    return <Navigate to="/timesheet" replace />;
-  }
-
-  // User not found
-  if (targetUserId && !viewedUser) {
+  // Check for permission or if user exists
+  if (!viewedUser || !canViewTimesheet) {
     return (
-      <div className="container py-6">
-        <Alert variant="destructive" className="mb-4">
-          <Shield className="h-4 w-4" />
-          <AlertDescription>
-            User not found. The requested timesheet doesn't exist.
-          </AlertDescription>
-        </Alert>
-        <Button asChild>
-          <Link to="/timesheet" className="mt-4 flex items-center gap-2">
-            <ArrowLeft size={16} />
-            Back to your timesheet
-          </Link>
-        </Button>
-      </div>
+      <TimesheetNotFound 
+        userExists={!!viewedUser} 
+        canViewTimesheet={canViewTimesheet} 
+      />
     );
   }
 
   return (
     <div className="container py-6 max-w-7xl">
       {/* Back button when viewing other user's timesheet */}
-      {isViewingOtherUser && (
-        <div className="flex items-center justify-between mb-4">
-          <Button 
-            asChild 
-            variant="outline"
-            className="mb-4"
-          >
-            <Link to={isAdmin() ? "/admin" : "/manager"} className="flex items-center gap-2">
-              <ArrowLeft size={16} />
-              Back to {isAdmin() ? "Admin" : "Manager"} Dashboard
-            </Link>
-          </Button>
-          <h2 className="text-lg font-medium">
-            Viewing {viewedUser?.name}'s Timesheet
-          </h2>
-        </div>
-      )}
+      <TimesheetBackNavigation 
+        user={viewedUser}
+        isViewingOtherUser={isViewingOtherUser}
+      />
 
       <UserInfo user={viewedUser} />
 
