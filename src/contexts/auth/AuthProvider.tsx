@@ -3,7 +3,7 @@ import React, { createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from './useAuthState';
-import { createUserOperations } from './userOperations';
+import { createUserOperations } from './operations';
 import { createTeamOperations } from './teamOperations';
 import { createOrganizationOperations } from './organizationOperations';
 import { createAuthOperations } from './authOperations';
