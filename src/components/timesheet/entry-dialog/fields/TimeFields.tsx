@@ -29,6 +29,12 @@ interface TimeFieldsProps {
   workSchedule?: WorkSchedule;
 }
 
+// Define a validation result type to avoid TypeScript errors
+interface ValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
 const TimeFields: React.FC<TimeFieldsProps> = ({ 
   startTime, 
   endTime, 
@@ -57,8 +63,8 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
   };
 
   // Check if the selected time is within the working hours
-  const validateTime = (start: string, end: string) => {
-    if (!workSchedule || !selectedDate) return true;
+  const validateTime = (start: string, end: string): ValidationResult => {
+    if (!workSchedule || !selectedDate) return { valid: true };
 
     const weekDay = getWeekDay(selectedDate);
     const weekNum = getFortnightWeek(selectedDate);
@@ -175,7 +181,7 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
       </div>
 
       {warning && (
-        <Alert variant="warning" className="mt-2">
+        <Alert variant="default" className="mt-2 bg-amber-50 border-amber-200 text-amber-800">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{warning}</AlertDescription>
         </Alert>
