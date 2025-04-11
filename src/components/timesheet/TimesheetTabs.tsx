@@ -3,7 +3,7 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TimesheetCalendar from "./TimesheetCalendar";
 import RecentEntries from "./RecentEntries";
-import { TimeEntry, WorkSchedule } from "@/types";
+import { TimeEntry, WorkSchedule, User } from "@/types";
 import TabContent from "./TabContent";
 
 interface TimesheetTabsProps {
@@ -15,6 +15,7 @@ interface TimesheetTabsProps {
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
   workSchedule?: WorkSchedule;
+  user?: User;
 }
 
 const TimesheetTabs = ({
@@ -26,6 +27,7 @@ const TimesheetTabs = ({
   onNextMonth,
   onDayClick,
   workSchedule,
+  user,
 }: TimesheetTabsProps) => {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
@@ -41,6 +43,7 @@ const TimesheetTabs = ({
         onNextMonth={onNextMonth}
         onDayClick={onDayClick}
         workSchedule={workSchedule}
+        user={user}
       />
     </Tabs>
   );

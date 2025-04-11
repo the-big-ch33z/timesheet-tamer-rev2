@@ -56,6 +56,7 @@ const Timesheet = () => {
         onNextMonth={nextMonth}
         onDayClick={handleDayClick}
         workSchedule={userWorkSchedule}
+        user={viewedUser}
       />
 
       {selectedDay && activeTab === "timesheet" && (
