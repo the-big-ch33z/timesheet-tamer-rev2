@@ -74,6 +74,7 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
     try {
       console.log(`Updating user ${userId} metrics:`, metrics);
       
+      // Find the target user
       const userIndex = state.users.findIndex(u => u.id === userId);
       
       if (userIndex === -1) {
@@ -106,15 +107,14 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       // Update the users array with the new user object
       const newUsers = [...state.users];
       newUsers[userIndex] = updatedUser;
-      state.setUsers(newUsers);
+      
+      // Force a state change by creating a new array
+      state.setUsers([...newUsers]);
       
       // If updating the current user, update currentUser state as well
       if (state.currentUser && state.currentUser.id === userId) {
         state.setCurrentUser(updatedUser);
       }
-      
-      // Force a state change to trigger re-renders
-      state.setUsers([...newUsers]);
       
       await auditService.logEvent(
         state.currentUser?.id || 'system',
@@ -122,6 +122,12 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
         `user/${userId}`,
         `User metrics updated: FTE=${metrics.fte}, Fortnight Hours=${metrics.fortnightHours}, Work Schedule=${metrics.workScheduleId}`
       );
+      
+      // Add a notification about the successful update
+      toast.toast({
+        title: "User metrics updated",
+        description: `Updated user settings successfully`,
+      });
       
     } catch (error) {
       console.error("Error updating user metrics:", error);

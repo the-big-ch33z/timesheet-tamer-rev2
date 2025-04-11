@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User } from "@/types";
@@ -12,6 +12,12 @@ interface MonthlyHoursProps {
 }
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth }) => {
+  // Add debugging to see what user data is being received
+  useEffect(() => {
+    console.log("MonthlyHours component received user data:", user);
+    console.log("User fortnightHours value:", user?.fortnightHours);
+  }, [user]);
+
   // Calculate total hours logged for the month
   const hours = entries.reduce((total, entry) => total + entry.hours, 0);
   

@@ -16,7 +16,7 @@ export const useTimesheet = () => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   
   const { userId } = useParams<{ userId?: string }>();
-  const { currentUser, getUserById } = useAuth();
+  const { currentUser, getUserById, users } = useAuth();
   const { toast } = useToast();
   const { isAdmin, isManager } = useRolePermission();
   const navigate = useNavigate();
@@ -29,7 +29,20 @@ export const useTimesheet = () => {
   const isViewingOtherUser = targetUserId && targetUserId !== currentUser?.id;
   
   // Get the user we're viewing (could be current user or another user)
+  // Using users dependency to force re-fetch when users array changes
   const viewedUser = targetUserId ? getUserById(targetUserId) : currentUser;
+  
+  // Add dependency on users array to ensure we get fresh data when it changes
+  useEffect(() => {
+    if (targetUserId) {
+      console.log("Users data changed, refreshing viewed user");
+    }
+  }, [users, targetUserId]);
+  
+  // Log the viewedUser to debug
+  useEffect(() => {
+    console.log("Current viewed user data:", viewedUser);
+  }, [viewedUser]);
   
   // Get the user's work schedule
   const userWorkSchedule = viewedUser ? getUserSchedule(viewedUser.id) : undefined;
