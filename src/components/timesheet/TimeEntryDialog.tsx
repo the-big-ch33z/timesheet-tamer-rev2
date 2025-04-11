@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { useAuth } from "@/contexts/auth/AuthProvider";
+import { useAuth } from "@/contexts/auth";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   const { toast } = useToast();
   
   const [formSubmitted, setFormSubmitted] = useState(false);
+  // Always use provided userId, falling back to currentUser.id
   const effectiveUserId = userId || currentUser?.id;
 
   useEffect(() => {
@@ -45,7 +46,7 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     try {
       if (formSubmitted) return;
       
-      // Make sure userId is always included
+      // Always include userId in the entry
       const entryWithUserId = {
         ...entry,
         userId: entry.userId || effectiveUserId,
@@ -53,13 +54,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
       
       onSave(entryWithUserId);
       setFormSubmitted(true);
-      
-      toast({
-        title: "Entry saved",
-        description: "Time entry has been saved successfully",
-        variant: "default",
-        className: "bg-green-50 border-green-200"
-      });
     } catch (error) {
       toast({
         title: "Save failed",
@@ -73,11 +67,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
     try {
       if (onDelete && entryId) {
         onDelete(entryId);
-        toast({
-          title: "Entry deleted",
-          description: "Time entry has been removed",
-          variant: "default"
-        });
       }
     } catch (error) {
       toast({

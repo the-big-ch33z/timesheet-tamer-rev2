@@ -6,12 +6,11 @@ import DetailHeader from "./detail/DetailHeader";
 import WorkHoursSection from "./detail/WorkHoursSection";
 import EntriesSection from "./detail/EntriesSection";
 import ScheduleInfoCard from "./detail/ScheduleInfoCard";
-import { useEntryActions } from "./hooks/useEntryActions";
 
 interface TimesheetEntryDetailProps {
   date: Date;
   entries: TimeEntry[];
-  onAddEntry: (entry: TimeEntry) => void;
+  onAddEntry: (entry: Omit<TimeEntry, "id">) => void;
   onDeleteEntry: (id: string) => void;
   readOnly?: boolean;
   workSchedule?: WorkSchedule;
@@ -28,10 +27,6 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
   userId
 }) => {
   const formattedDate = format(date, "MMM d, yyyy");
-  const { handleDeleteEntry } = useEntryActions({ 
-    readOnly, 
-    onDeleteEntry 
-  });
   
   return (
     <div className="bg-white rounded-lg border shadow-sm">
@@ -52,7 +47,7 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           date={date} 
           entries={entries} 
           onAddEntry={onAddEntry} 
-          onDeleteEntry={handleDeleteEntry} 
+          onDeleteEntry={onDeleteEntry} 
           readOnly={readOnly}
           workSchedule={workSchedule}
           userId={userId}

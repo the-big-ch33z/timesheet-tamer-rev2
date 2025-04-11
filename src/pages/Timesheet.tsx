@@ -7,13 +7,10 @@ import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import { useTimesheet } from "@/hooks/useTimesheet";
-import { useToast } from "@/hooks/use-toast";
-import { TimeEntry } from "@/types";
+import { useTimesheetEntries } from "@/hooks/timesheet/useTimesheetEntries";
 import { useRolePermission } from "@/hooks/useRolePermission";
 
 const Timesheet = () => {
-  const { toast } = useToast();
-  const { isAdmin, isManager } = useRolePermission();
   const {
     currentMonth,
     selectedDay,
@@ -27,12 +24,18 @@ const Timesheet = () => {
     prevMonth,
     nextMonth,
     handleDayClick,
-    deleteEntry,
-    getUserEntries,
-    getDayEntries,
-    addEntry,
     setSelectedDay
   } = useTimesheet();
+
+  // Use our new unified hook for entry management
+  const {
+    addEntry,
+    deleteEntry,
+    getUserEntries,
+    getDayEntries
+  } = useTimesheetEntries(targetUserId);
+
+  const { isAdmin, isManager } = useRolePermission();
 
   // Check for permission or if user exists
   if (!viewedUser || !canViewTimesheet) {
@@ -46,25 +49,6 @@ const Timesheet = () => {
 
   // Check if current user can edit this timesheet
   const canEditTimesheet = !isViewingOtherUser || isAdmin() || isManager();
-
-  const handleDeleteEntry = (id: string) => {
-    deleteEntry(id);
-    toast({
-      title: "Entry deleted",
-      description: "Time entry has been removed successfully",
-    });
-  };
-
-  const handleAddEntry = (entry: TimeEntry) => {
-    addEntry(entry);
-    toast({
-      title: "Entry added",
-      description: "Time entry has been added successfully",
-    });
-    
-    // We're not changing selectedDay after adding an entry
-    // This ensures the form stays open for adding multiple entries
-  };
 
   return (
     <div className="container py-6 max-w-7xl">
@@ -93,8 +77,8 @@ const Timesheet = () => {
           <TimesheetEntryDetail 
             date={selectedDay}
             entries={getDayEntries(selectedDay)}
-            onAddEntry={handleAddEntry}
-            onDeleteEntry={handleDeleteEntry}
+            onAddEntry={addEntry}
+            onDeleteEntry={deleteEntry}
             readOnly={!canEditTimesheet}
             workSchedule={userWorkSchedule}
             userId={targetUserId}

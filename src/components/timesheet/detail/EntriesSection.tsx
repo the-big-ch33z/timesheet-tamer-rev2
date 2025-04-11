@@ -1,17 +1,15 @@
-
 import React, { useState, useCallback } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import NewEntryForm from "../entry-display/NewEntryForm";
-import { v4 as uuidv4 } from "uuid";
 import TimeEntryList from "../entry-display/TimeEntryList";
 import AddEntryButton from "../entry-display/AddEntryButton";
 
 interface EntriesSectionProps {
   date: Date;
   entries: TimeEntry[];
-  onAddEntry: (entry: TimeEntry) => void;
+  onAddEntry: (entry: Omit<TimeEntry, "id">) => void;
   onDeleteEntry: (id: string) => void;
   readOnly?: boolean;
   workSchedule?: WorkSchedule;
@@ -41,14 +39,12 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   }, []);
 
   const handleSaveEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
-    const newEntry: TimeEntry = {
+    // Just pass the entry data to the parent handler
+    // userId is now managed at a higher level
+    onAddEntry({
       ...entry,
-      id: uuidv4(),
-      userId: userId
-    };
-    
-    // Call the parent handler with the new entry
-    onAddEntry(newEntry);
+      userId: entry.userId || userId
+    });
     
     // Keep the form open for adding multiple entries
     // But generate a new form key to reset the form state

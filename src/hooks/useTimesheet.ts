@@ -1,10 +1,12 @@
 
 import { useCalendarState } from "./timesheet/useCalendarState";
-import { useEntryManagement } from "./timesheet/useEntryManagement";
 import { useTimesheetContext } from "./timesheet/useTimesheetContext";
 import { useLogger } from "./useLogger";
-import { TimeEntry } from "@/types";
 
+/**
+ * Primary hook for timesheet functionality
+ * Combines calendar state and timesheet context
+ */
 export const useTimesheet = () => {
   const logger = useLogger("Timesheet");
   
@@ -27,13 +29,6 @@ export const useTimesheet = () => {
     userWorkSchedule,
     setActiveTab
   } = useTimesheetContext();
-  
-  const {
-    deleteEntry,
-    getUserEntries,
-    getDayEntries,
-    addEntry
-  } = useEntryManagement(targetUserId);
   
   logger.debug("Timesheet hook initialized", { 
     targetUserId, 
@@ -58,12 +53,6 @@ export const useTimesheet = () => {
     viewedUser,
     canViewTimesheet,
     userWorkSchedule,
-    setActiveTab,
-    
-    // Entry management
-    deleteEntry,
-    getUserEntries,
-    getDayEntries,
-    addEntry
+    setActiveTab
   };
 };

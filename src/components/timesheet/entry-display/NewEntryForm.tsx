@@ -20,10 +20,8 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   userId,
   formKey
 }) => {
-  // Local state to track form submissions and generate new keys
-  const [submissionCount, setSubmissionCount] = useState(0);
+  // Local state to track form submissions
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const uniqueFormKey = `entry-form-${formKey || Date.now()}-${submissionCount}`;
 
   // Reset submission state when formKey changes
   useEffect(() => {
@@ -39,13 +37,11 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
     // Forward the entry to the parent component
     onSaveEntry({
       ...entry,
-      userId: userId // Ensure userId gets added to the entry
+      userId: entry.userId || userId // Ensure userId gets added to the entry
     });
     
-    // Increment the submission count to generate a new form key after a short delay
-    // This ensures the form fully resets for any subsequent entries
+    // Allow the form to be submitted again after a short delay
     setTimeout(() => {
-      setSubmissionCount(prev => prev + 1);
       setIsSubmitting(false);
     }, 300);
   };
@@ -57,7 +53,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       selectedDate={date}
       workSchedule={workSchedule}
       userId={userId}
-      formKey={uniqueFormKey} // Use our locally managed unique key
+      formKey={formKey} // Use our locally managed unique key
       initialData={{}} // Always start with empty data for new entries
     />
   );
