@@ -2,12 +2,17 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { TimeEntry } from "@/types";
 
-const MonthlyHours: React.FC = () => {
+interface MonthlyHoursProps {
+  entries: TimeEntry[];
+}
+
+const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries }) => {
   // For demo purposes
-  const hours = 0.0;
+  const hours = entries.reduce((total, entry) => total + entry.hours, 0);
   const targetHours = 159.6;
-  const percentage = Math.round((hours / targetHours) * 100);
+  const percentage = Math.min(Math.round((hours / targetHours) * 100), 100);
   
   // Determine color based on percentage
   const getProgressColor = () => {
@@ -35,7 +40,7 @@ const MonthlyHours: React.FC = () => {
         />
         
         <div className="text-sm text-gray-500">
-          {targetHours - hours} hours remaining to meet target
+          {targetHours - hours > 0 ? (targetHours - hours).toFixed(1) : 0} hours remaining to meet target
         </div>
         <div className="text-sm text-gray-500">
           Based on 19.9 work days this month

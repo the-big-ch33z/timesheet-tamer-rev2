@@ -2,10 +2,15 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { TimeEntry } from "@/types";
 
-const ToilSummary: React.FC = () => {
-  // For demo purposes
-  const earned = 0.0;
+interface ToilSummaryProps {
+  entries: TimeEntry[];
+}
+
+const ToilSummary: React.FC<ToilSummaryProps> = ({ entries }) => {
+  // For demo purposes - in a real app, this would calculate TOIL from entries
+  const earned = entries.filter(entry => entry.description?.toLowerCase().includes('toil')).reduce((sum, entry) => sum + entry.hours, 0);
   const used = 0.0;
   const remaining = earned - used;
   
@@ -39,8 +44,6 @@ const ToilSummary: React.FC = () => {
           <div className="text-sm font-medium">Balance</div>
           <Progress 
             value={balancePercentage} 
-            color="info"
-            indicatorColor="bg-indigo-500"
             className="h-2" 
           />
         </div>

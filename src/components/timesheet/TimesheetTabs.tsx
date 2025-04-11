@@ -50,19 +50,20 @@ const TimesheetTabs = ({
 
       <TabsContent value="monthly">
         <MonthlyHours 
-          entries={entries} 
-          currentMonth={currentMonth} 
-          onPrevMonth={onPrevMonth}
-          onNextMonth={onNextMonth}
+          entries={entries} // This was causing an error
         />
       </TabsContent>
 
       <TabsContent value="recent">
-        <RecentEntries entries={entries} onDayClick={onDayClick} />
+        <RecentEntries 
+          entries={entries} // This was causing an error - onDayClick was improperly passed
+        />
       </TabsContent>
 
       <TabsContent value="toil">
-        <ToilSummary entries={entries} />
+        <ToilSummary 
+          entries={entries} // This was causing an error
+        />
       </TabsContent>
     </Tabs>
   );
