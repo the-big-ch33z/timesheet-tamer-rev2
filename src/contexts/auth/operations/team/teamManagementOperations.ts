@@ -2,18 +2,13 @@
 import { Team, UserRole } from '@/types';
 import { auditService } from '@/services/auditService';
 import { syncService } from '@/services/syncService';
-import { AuthStateType } from './AuthProvider';
+import { AuthStateType } from '../../AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 
-export const createTeamOperations = (state: AuthStateType, toast: ReturnType<typeof useToast>) => {
-  const getTeamById = (teamId: string) => {
-    return state.teams.find(team => team.id === teamId);
-  };
-
-  const getTeamsByManager = (managerId: string) => {
-    return state.teams.filter(team => team.managerId === managerId);
-  };
-
+export const createTeamManagementOperations = (
+  state: AuthStateType, 
+  toast: ReturnType<typeof useToast>
+) => {
   const createTeam = async (name: string, managerId: string) => {
     try {
       if (!state.currentUser || state.currentUser.role !== 'admin') {
@@ -217,12 +212,10 @@ export const createTeamOperations = (state: AuthStateType, toast: ReturnType<typ
   };
 
   return {
-    getTeamById,
-    getTeamsByManager,
     createTeam,
     assignManagerToTeam,
     deleteTeam
   };
 };
 
-export type TeamOperationsType = ReturnType<typeof createTeamOperations>;
+export type TeamManagementOperationsType = ReturnType<typeof createTeamManagementOperations>;

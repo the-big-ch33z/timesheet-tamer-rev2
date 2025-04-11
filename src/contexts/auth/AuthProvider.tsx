@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from './useAuthState';
 import { createUserOperations } from './operations';
-import { createTeamOperations } from './teamOperations';
+import { createTeamOperations } from './operations/team';
 import { createOrganizationOperations } from './organizationOperations';
 import { createAuthOperations } from './operations/authOperations';
 import { AuthContextType } from './types';
