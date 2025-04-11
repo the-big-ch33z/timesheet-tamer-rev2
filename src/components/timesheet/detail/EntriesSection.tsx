@@ -47,7 +47,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     onAddEntry(newEntry);
     
     // Keep the form open to allow adding multiple entries
-    // setIsAddingEntry(false);
+    // (Don't close the form after adding an entry)
   };
 
   return (
