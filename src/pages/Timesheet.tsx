@@ -1,7 +1,6 @@
 
 import React from "react";
 import UserInfo from "@/components/timesheet/UserInfo";
-import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
@@ -10,12 +9,9 @@ import { TimesheetProvider, useTimesheetContext } from "@/contexts/timesheet";
 // Create a wrapper component that uses the context
 const TimesheetContent = () => {
   const {
-    selectedDay,
-    activeTab,
     isViewingOtherUser,
     viewedUser,
     canViewTimesheet,
-    getDayEntries,
   } = useTimesheetContext();
 
   // Check for permission or if user exists
@@ -39,15 +35,6 @@ const TimesheetContent = () => {
       <UserInfo user={viewedUser} />
 
       <TimesheetTabs />
-
-      {selectedDay && activeTab === "timesheet" && (
-        <div className="mb-8">
-          <TimesheetEntryDetail 
-            date={selectedDay}
-            entries={getDayEntries(selectedDay)}
-          />
-        </div>
-      )}
     </div>
   );
 };

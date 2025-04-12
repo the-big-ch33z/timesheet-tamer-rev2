@@ -1,32 +1,14 @@
 
 import React from "react";
-import { format } from "date-fns";
-import { TimeEntry } from "@/types";
-import DetailHeader from "./detail/DetailHeader";
 
 interface TimesheetEntryDetailProps {
   date: Date;
-  entries: TimeEntry[];
+  entries: any[];
 }
 
-const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
-  date,
-  entries
-}) => {
-  const formattedDate = format(date, "MMM d, yyyy");
-  
-  return (
-    <div className="bg-white rounded-lg border shadow-sm">
-      <DetailHeader date={date} formattedDate={formattedDate} />
-      <div className="p-6 space-y-6">
-        <div className="p-6 text-center bg-gray-50 border rounded-md">
-          <p className="text-gray-500">
-            Timesheet entry functionality has been removed
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+// This component has been completely removed and doesn't render anything
+const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = () => {
+  return null;
 };
 
 export default TimesheetEntryDetail;
