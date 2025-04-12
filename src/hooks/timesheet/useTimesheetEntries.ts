@@ -60,10 +60,6 @@ export const useTimesheetEntries = (userId?: string) => {
   return {
     entries,
     getUserEntries,
-    getDayEntries,
-    // These are kept as no-op functions to maintain interface compatibility
-    addEntry: () => logger.info("Add entry functionality has been removed"),
-    deleteEntry: () => logger.info("Delete entry functionality has been removed"),
-    updateEntry: () => logger.info("Update entry functionality has been removed"),
+    getDayEntries
   };
 };

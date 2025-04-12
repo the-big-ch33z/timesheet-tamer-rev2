@@ -25,10 +25,7 @@ export interface TimesheetContextType {
   handleDayClick: (day: Date) => void;
   setSelectedDay: (day: Date | null) => void;
   
-  // Entry operations (now just stub functions)
-  addEntry: (entry: Omit<TimeEntry, "id">) => void;
-  deleteEntry: (id: string) => void;
-  updateEntry: (id: string, updatedEntry: Partial<TimeEntry>) => void;
+  // Read-only entry operations
   getUserEntries: () => TimeEntry[];
   getDayEntries: (day: Date) => TimeEntry[];
 }

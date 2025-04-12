@@ -41,8 +41,6 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
     getDayEntries
   } = useTimesheetEntries(targetUserId);
 
-  const { isAdmin, isManager } = useRolePermission();
-  
   // This is now read-only for all users
   const canEditTimesheet = false;
 
@@ -64,11 +62,7 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
     handleDayClick,
     setSelectedDay,
     getUserEntries,
-    getDayEntries,
-    // Provide no-op functions to maintain interface compatibility
-    addEntry: () => {},
-    deleteEntry: () => {},
-    updateEntry: () => {}
+    getDayEntries
   };
 
   return (

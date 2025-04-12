@@ -2,12 +2,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 import { useLogger } from "../useLogger";
 
 export const useEntryManagement = (userId?: string) => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const { toast } = useToast();
   const logger = useLogger("EntryManagement");
   
   // Load entries from localStorage
@@ -34,27 +32,6 @@ export const useEntryManagement = (userId?: string) => {
       logger.debug("Saved entries to localStorage", { count: entries.length });
     }
   }, [entries, logger]);
-
-  const addEntry = useCallback((entry: TimeEntry) => {
-    // Ensure the entry has the correct userId
-    const completeEntry = {
-      ...entry,
-      userId: entry.userId || userId // Use the entry's userId if provided, otherwise use the hook's userId
-    };
-    
-    setEntries(prev => [...prev, completeEntry]);
-    logger.info("Entry added", { entry: completeEntry });
-  }, [userId, logger]);
-
-  const deleteEntry = useCallback((id: string) => {
-    setEntries(prev => prev.filter(entry => entry.id !== id));
-    logger.info("Entry deleted", { id });
-    
-    toast({
-      title: "Entry deleted",
-      description: "Time entry has been removed",
-    });
-  }, [toast, logger]);
 
   const getUserEntries = useCallback((userIdToFilter?: string) => {
     const targetUserId = userIdToFilter || userId;
@@ -84,9 +61,7 @@ export const useEntryManagement = (userId?: string) => {
 
   return {
     entries,
-    deleteEntry,
     getUserEntries,
-    getDayEntries,
-    addEntry
+    getDayEntries
   };
 };
