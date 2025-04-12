@@ -1,10 +1,15 @@
+
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { Clock, AlertTriangle, Calendar } from "lucide-react";
+import { Clock, AlertTriangle, Calendar, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
 import { calculateHoursFromTimes } from "../entry-dialog/utils/timeCalculations";
+import { Button } from "@/components/ui/button";
+import InlineEntryForm from "../entry-dialog/form/InlineEntryForm";
+import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
+import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -25,6 +30,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [calculatedHours, setCalculatedHours] = useState(8.0);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  
+  // Get visible fields from timesheet settings
+  const { getVisibleFields } = useTimesheetSettings();
+  const visibleFields = getVisibleFields();
   
   // Calculate total hours from entries
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
@@ -79,6 +89,22 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       setEndTime(value);
     }
   };
+  
+  // Form handling for the inline entry
+  const {
+    formState,
+    handleFieldChange,
+    handleSave
+  } = useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => {
+      if (onCreateEntry) {
+        onCreateEntry(startTime, endTime, calculatedHours);
+        setShowEntryForm(false);
+      }
+    },
+    autoSave: false
+  });
   
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -153,13 +179,48 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         </Alert>
       )}
       
-      {!hasEntries && (
+      {!hasEntries && !showEntryForm && (
         <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
           <Calendar className="h-4 w-4 mr-2" />
           <AlertDescription>
             {interactive ? "Set your work hours above to track your time." : "No time entries recorded yet. Add an entry to track your hours."}
           </AlertDescription>
         </Alert>
+      )}
+      
+      {/* Add Entry button */}
+      {interactive && (
+        <div className="mt-4">
+          {!showEntryForm ? (
+            <Button 
+              onClick={() => setShowEntryForm(true)}
+              size="sm"
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Entry
+            </Button>
+          ) : (
+            <div className="mt-2">
+              <InlineEntryForm 
+                visibleFields={visibleFields}
+                formValues={formState}
+                onFieldChange={handleFieldChange}
+                onDelete={() => setShowEntryForm(false)}
+                entryId="new"
+              />
+              <div className="flex justify-end mt-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleSave}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  Save Entry
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
