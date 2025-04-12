@@ -11,6 +11,12 @@ interface TimeEntryItemProps {
 }
 
 const TimeEntryItem: React.FC<TimeEntryItemProps> = ({ entry, onDelete, readOnly = false }) => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete();
+  };
+
   return (
     <div className="flex items-center gap-2 bg-white border rounded-md p-3">
       <div className="w-16 text-center">
@@ -48,7 +54,7 @@ const TimeEntryItem: React.FC<TimeEntryItemProps> = ({ entry, onDelete, readOnly
         <Button
           variant="ghost"
           size="icon"
-          onClick={onDelete}
+          onClick={handleDelete}
           className="text-red-500 hover:text-red-700 hover:bg-red-50"
         >
           <Trash2 className="h-4 w-4" />

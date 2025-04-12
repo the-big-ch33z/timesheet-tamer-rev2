@@ -21,7 +21,14 @@ export const useEntryActions = ({ readOnly = false, onDeleteEntry }: EntryAction
     }
     
     try {
+      // Call the delete function
       onDeleteEntry(id);
+      
+      // Show success toast
+      toast({
+        title: "Entry deleted",
+        description: "Time entry has been successfully removed",
+      });
     } catch (error) {
       toast({
         title: "Error deleting entry",

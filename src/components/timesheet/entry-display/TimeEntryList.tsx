@@ -2,6 +2,7 @@
 import React from "react";
 import { TimeEntry } from "@/types";
 import TimeEntryItem from "./TimeEntryItem";
+import { useEntryActions } from "../hooks/useEntryActions";
 
 interface TimeEntryListProps {
   entries: TimeEntry[];
@@ -14,6 +15,11 @@ const TimeEntryList: React.FC<TimeEntryListProps> = ({
   onDeleteEntry,
   readOnly = false
 }) => {
+  const { handleDeleteEntry } = useEntryActions({ 
+    readOnly, 
+    onDeleteEntry 
+  });
+
   return (
     <div className="space-y-3">
       {entries.length === 0 ? (
@@ -30,7 +36,7 @@ const TimeEntryList: React.FC<TimeEntryListProps> = ({
           <TimeEntryItem 
             key={entry.id} 
             entry={entry} 
-            onDelete={() => onDeleteEntry(entry.id)} 
+            onDelete={() => handleDeleteEntry(entry.id)} 
             readOnly={readOnly}
           />
         ))
