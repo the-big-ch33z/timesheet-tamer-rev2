@@ -6,12 +6,12 @@ export interface EntryActionsOptions {
   onDeleteEntry: (id: string) => void;
 }
 
-export const useEntryActions = ({ readOnly = false }: EntryActionsOptions) => {
+export const useEntryActions = () => {
   const logger = useLogger("EntryActions");
   
-  // Simplified function that logs but doesn't actually do anything
-  const handleDeleteEntry = (id: string) => {
-    logger.info("Entry deletion is no longer supported", { id });
+  // All functionality removed
+  const handleDeleteEntry = () => {
+    logger.info("Entry functionality has been removed");
   };
 
   return {

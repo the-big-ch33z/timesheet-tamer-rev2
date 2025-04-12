@@ -3,7 +3,6 @@ import React from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import DetailHeader from "./detail/DetailHeader";
-import EntriesSection from "./detail/EntriesSection";
 import ScheduleInfoCard from "./detail/ScheduleInfoCard";
 import { useTimesheetContext } from "@/contexts/timesheet";
 
@@ -18,7 +17,6 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
 }) => {
   const { 
     workSchedule,
-    targetUserId
   } = useTimesheetContext();
   
   const formattedDate = format(date, "MMM d, yyyy");
@@ -31,12 +29,12 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
           <ScheduleInfoCard date={date} workSchedule={workSchedule} />
         )}
         
-        <EntriesSection 
-          date={date} 
-          entries={entries} 
-          readOnly={true} // Always read-only now
-          userId={targetUserId}
-        />
+        {/* Entry section removed */}
+        <div className="p-6 text-center bg-gray-50 border rounded-md">
+          <p className="text-gray-500">
+            Timesheet entry functionality has been removed
+          </p>
+        </div>
       </div>
     </div>
   );

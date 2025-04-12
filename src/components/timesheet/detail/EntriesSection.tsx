@@ -22,29 +22,26 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   const formKey = Date.now().toString();
   const logger = useLogger("EntriesSection");
   
-  const { deleteEntry } = useTimesheetContext();
-
   // Simplified no-op functions
   const handleSaveEntry = () => {
     logger.info("Save entry functionality has been removed");
   };
 
   const handleDeleteEntry = (id: string) => {
-    logger.info("Delete entry functionality has been removed");
-    deleteEntry(id);
+    logger.info("Entry functionality has been removed");
   };
 
   return (
     <div className="space-y-4">
       <EntriesHeader 
         date={date} 
-        readOnly={true} // Always read-only
+        readOnly={true}
       />
       
       <EntriesContent
         date={date}
         entries={entries}
-        readOnly={true} // Always read-only
+        readOnly={true}
         userId={userId}
         formKey={`entry-form-${formKey}`}
         onDeleteEntry={handleDeleteEntry}

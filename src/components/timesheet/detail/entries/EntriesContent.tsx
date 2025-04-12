@@ -1,7 +1,6 @@
 
 import React from "react";
 import { TimeEntry } from "@/types";
-import TimeEntryList from "../../entry-display/TimeEntryList";
 
 interface EntriesContentProps {
   date: Date;
@@ -12,17 +11,15 @@ interface EntriesContentProps {
   onDeleteEntry: (id: string) => void;
 }
 
-const EntriesContent: React.FC<EntriesContentProps> = ({
-  entries,
-  onDeleteEntry
-}) => {
+const EntriesContent: React.FC<EntriesContentProps> = () => {
   return (
     <div className="mt-4">
-      <TimeEntryList 
-        entries={entries}
-        onDeleteEntry={onDeleteEntry}
-        readOnly={true} // Always read-only
-      />
+      {/* Timesheet entry display has been removed */}
+      <div className="p-6 text-center bg-gray-50 border rounded-md">
+        <p className="text-gray-500">
+          Timesheet entry display has been disabled
+        </p>
+      </div>
     </div>
   );
 };
