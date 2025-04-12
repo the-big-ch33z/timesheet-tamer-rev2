@@ -2,17 +2,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 import { useLogger } from "../useLogger";
-import { v4 as uuidv4 } from "uuid";
 
 /**
- * Unified hook for managing timesheet entries
- * Handles loading, saving, adding, updating, and deleting entries
+ * Simplified hook for managing timesheet entries
+ * Only handles loading and viewing entries
  */
 export const useTimesheetEntries = (userId?: string) => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const { toast } = useToast();
   const logger = useLogger("TimesheetEntries");
   
   // Load entries from localStorage
@@ -31,93 +28,6 @@ export const useTimesheetEntries = (userId?: string) => {
       logger.error("Error loading entries:", error);
     }
   }, [logger]);
-
-  // Save entries to localStorage when they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('timeEntries', JSON.stringify(entries));
-      logger.debug("Saved entries to localStorage", { count: entries.length });
-    } catch (error) {
-      logger.error("Error saving entries to localStorage:", error);
-    }
-  }, [entries, logger]);
-
-  // Add a new entry
-  const addEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
-    const newEntry: TimeEntry = {
-      ...entry,
-      id: uuidv4(), // Always generate a new ID for the entry
-      userId: entry.userId || userId || ""
-    };
-    
-    setEntries(prev => [...prev, newEntry]);
-    logger.info("Entry added", { entry: newEntry });
-    
-    toast({
-      title: "Entry added",
-      description: "Time entry has been saved successfully",
-      variant: "default",
-      className: "bg-green-50 border-green-200"
-    });
-    
-    return newEntry;
-  }, [userId, logger, toast]);
-
-  // Delete an existing entry
-  const deleteEntry = useCallback((id: string) => {
-    logger.info("Deleting entry from state", { id });
-    
-    // First check if entry exists
-    const entryExists = entries.some(entry => entry.id === id);
-    if (!entryExists) {
-      logger.warn("Attempted to delete non-existent entry", { id });
-      toast({
-        title: "Entry not found",
-        description: "The time entry you're trying to delete could not be found",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Update state with filtered entries
-    setEntries(prev => {
-      const newEntries = prev.filter(entry => entry.id !== id);
-      logger.debug("Entries after deletion", { 
-        originalCount: prev.length, 
-        newCount: newEntries.length,
-        removedId: id
-      });
-      return newEntries;
-    });
-    
-    logger.info("Entry deleted", { id });
-  }, [entries, toast, logger]);
-
-  // Update an existing entry
-  const updateEntry = useCallback((id: string, updatedEntry: Partial<TimeEntry>) => {
-    setEntries(prev => {
-      // First check if entry exists
-      const entryExists = prev.some(entry => entry.id === id);
-      if (!entryExists) {
-        logger.warn("Attempted to update non-existent entry", { id });
-        return prev; // Return unchanged if entry doesn't exist
-      }
-      
-      const updatedEntries = prev.map(entry => 
-        entry.id === id 
-          ? { ...entry, ...updatedEntry, userId: updatedEntry.userId || entry.userId || userId || "" } 
-          : entry
-      );
-      return updatedEntries;
-    });
-    
-    logger.info("Entry updated", { id, updatedEntry });
-    
-    toast({
-      title: "Entry updated",
-      description: "Time entry has been updated",
-    });
-  }, [userId, toast, logger]);
 
   // Get entries for a specific user
   const getUserEntries = useCallback((userIdToFilter?: string) => {
@@ -149,10 +59,11 @@ export const useTimesheetEntries = (userId?: string) => {
 
   return {
     entries,
-    addEntry,
-    deleteEntry,
-    updateEntry,
     getUserEntries,
     getDayEntries,
+    // These are kept as no-op functions to maintain interface compatibility
+    addEntry: () => logger.info("Add entry functionality has been removed"),
+    deleteEntry: () => logger.info("Delete entry functionality has been removed"),
+    updateEntry: () => logger.info("Update entry functionality has been removed"),
   };
 };

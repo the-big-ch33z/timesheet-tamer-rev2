@@ -37,20 +37,14 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
   } = useTimesheet();
   
   const {
-    addEntry,
-    deleteEntry,
-    updateEntry,
     getUserEntries,
     getDayEntries
   } = useTimesheetEntries(targetUserId);
 
   const { isAdmin, isManager } = useRolePermission();
   
-  // Determine if current user can edit this timesheet
-  const canEditTimesheet = useMemo(() => 
-    !isViewingOtherUser || isAdmin() || isManager(),
-    [isViewingOtherUser, isAdmin, isManager]
-  );
+  // This is now read-only for all users
+  const canEditTimesheet = false;
 
   // Combine all values into a single context object
   const contextValue: TimesheetContextType = {
@@ -69,11 +63,12 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
     nextMonth,
     handleDayClick,
     setSelectedDay,
-    addEntry,
-    deleteEntry,
-    updateEntry,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    // Provide no-op functions to maintain interface compatibility
+    addEntry: () => {},
+    deleteEntry: () => {},
+    updateEntry: () => {}
   };
 
   return (
