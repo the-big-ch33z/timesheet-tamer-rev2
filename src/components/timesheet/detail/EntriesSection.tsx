@@ -5,7 +5,6 @@ import EntriesHeader from "./entries/EntriesHeader";
 import EntriesContent from "./entries/EntriesContent";
 import EntriesFooter from "./entries/EntriesFooter";
 import { useLogger } from "@/hooks/useLogger";
-import WorkHoursSection from "./WorkHoursSection";
 
 interface EntriesSectionProps {
   date: Date;
@@ -22,14 +21,12 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
 }) => {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
-  const [showWorkHoursOnly, setShowWorkHoursOnly] = useState(entries.length === 0);
   const logger = useLogger("EntriesSection");
   
-  const { addEntry, deleteEntry, workSchedule } = useTimesheetContext();
+  const { addEntry, deleteEntry } = useTimesheetContext();
 
   const handleAddEntry = useCallback(() => {
     setIsAddingEntry(true);
-    setShowWorkHoursOnly(false);
     // Generate new key to ensure clean form reset
     setFormKey(Date.now());
   }, []);
@@ -62,26 +59,13 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     setFormKey(Date.now());
   }, []);
 
-  // Set up workflow phase handling
-  const completeWorkHoursSetup = useCallback(() => {
-    setShowWorkHoursOnly(false);
-    handleAddEntry();
-  }, [handleAddEntry]);
-
   return (
     <div className="space-y-4">
-      <WorkHoursSection 
-        entries={entries} 
-        date={date} 
-        workSchedule={workSchedule} 
-        interactive={entries.length === 0}
-      />
-      
       <EntriesHeader 
         date={date} 
         readOnly={readOnly} 
         isAddingEntry={isAddingEntry}
-        onAddEntry={entries.length === 0 ? completeWorkHoursSetup : handleAddEntry}
+        onAddEntry={handleAddEntry}
       />
       
       <EntriesContent
