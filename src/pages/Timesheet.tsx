@@ -4,8 +4,8 @@ import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
+import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErrorBoundary";
 import { 
-  TimesheetProvider, 
   useUserTimesheetContext,
   useTimesheetUIContext,
   useEntriesContext,
@@ -54,9 +54,9 @@ const TimesheetContent = () => {
 // Main component that provides the context
 const Timesheet = () => {
   return (
-    <TimesheetProvider>
+    <TimesheetWithErrorBoundary>
       <TimesheetContent />
-    </TimesheetProvider>
+    </TimesheetWithErrorBoundary>
   );
 };
 

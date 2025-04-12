@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Clock } from "lucide-react";
-import { calculateHoursFromTimes } from "../entry-dialog/utils/timeCalculations";
+import { 
+  calculateHoursFromTimes, 
+  calculateHoursVariance,
+  isUndertime 
+} from "../utils/timeCalculations";
 import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
-import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
-import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
 import EntryFormsList from "./components/EntryFormsList";
+import WorkHoursHeader from "./components/WorkHoursHeader";
+import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
+import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -88,8 +93,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   }, [startTime, endTime]);
   
   // Calculate variance from expected hours
-  const hoursVariance = totalHours - calculatedHours;
-  const isUndertime = hoursVariance < 0;
+  const hoursVariance = calculateHoursVariance(totalHours, calculatedHours);
   const hasEntries = entries.length > 0;
   
   // Handle time input changes
@@ -116,15 +120,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-      <div className="flex items-center mb-4">
-        <Clock className="h-5 w-5 mr-2 text-amber-700" />
-        <h3 className="text-lg font-medium text-amber-900">Work Hours</h3>
-        {!hasEntries && (
-          <span className="ml-2 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
-            No entries yet
-          </span>
-        )}
-      </div>
+      <WorkHoursHeader hasEntries={hasEntries} />
       
       {/* Work Hours Display */}
       <WorkHoursDisplay 
@@ -147,7 +143,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       {/* Warnings and Info Alerts */}
       <WorkHoursAlerts 
         hasEntries={hasEntries}
-        isUndertime={isUndertime}
+        isUndertime={isUndertime(hoursVariance)}
         hoursVariance={hoursVariance}
         interactive={interactive}
         showEntryForms={showEntryForms}

@@ -1,11 +1,6 @@
 import React from "react";
 import { EntryFieldConfig } from "@/types";
-import JobNumberField from "../field-types/JobNumberField";
-import RegoField from "../field-types/RegoField";
-import TaskNumberField from "../field-types/TaskNumberField";
-import NotesField from "../field-types/NotesField";
-import HoursField from "../field-types/HoursField";
-import GenericField from "../field-types/GenericField";
+import { renderEntryField } from "../field-renderers/renderEntryField";
 
 interface StandardFieldsGroupProps {
   visibleFields: EntryFieldConfig[];
@@ -54,79 +49,6 @@ const StandardFieldsGroup: React.FC<StandardFieldsGroupProps> = ({
     !['job number', 'rego', 'task number', 'notes', 'hours'].includes(f.name.toLowerCase())
   );
 
-  // Render specific field based on field type and name
-  const renderField = (field: EntryFieldConfig) => {
-    const fieldId = field.id;
-    
-    switch (field.name.toLowerCase()) {
-      case 'job number':
-        return (
-          <JobNumberField
-            id={fieldId}
-            value={jobNumber}
-            onChange={setJobNumber}
-            required={field.required}
-            disabled={disabled}
-          />
-        );
-      case 'rego':
-        return (
-          <RegoField
-            id={fieldId}
-            value={rego}
-            onChange={setRego}
-            required={field.required}
-            disabled={disabled}
-          />
-        );
-      case 'task number':
-        return (
-          <TaskNumberField
-            id={fieldId}
-            value={taskNumber}
-            onChange={setTaskNumber}
-            required={field.required}
-            disabled={disabled}
-          />
-        );
-      case 'notes':
-        return (
-          <NotesField
-            id={fieldId}
-            value={description}
-            onChange={setDescription}
-            required={field.required}
-            disabled={disabled}
-          />
-        );
-      case 'hours':
-        return (
-          <HoursField
-            id={fieldId}
-            value={hours}
-            onChange={setHours}
-            required={field.required}
-            disabled={disabled}
-          />
-        );
-      default:
-        if (!field.name) return null;
-        
-        return (
-          <GenericField
-            id={fieldId}
-            name={field.name}
-            value=""
-            onChange={() => {}}
-            placeholder={field.placeholder || ""}
-            required={field.required}
-            type={field.type === 'textarea' ? "textarea" : "text"}
-            disabled={disabled}
-          />
-        );
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Job Number, Rego, and Task Number fields in a grid */}
@@ -134,7 +56,20 @@ const StandardFieldsGroup: React.FC<StandardFieldsGroupProps> = ({
         <div className="grid grid-cols-2 gap-4">
           {jobRegoTaskFields.map(field => (
             <div key={field.id}>
-              {renderField(field)}
+              {renderEntryField({
+                field,
+                jobNumber,
+                setJobNumber,
+                rego,
+                setRego,
+                taskNumber,
+                setTaskNumber,
+                description,
+                setDescription,
+                hours,
+                setHours,
+                disabled
+              })}
             </div>
           ))}
         </div>
@@ -143,21 +78,60 @@ const StandardFieldsGroup: React.FC<StandardFieldsGroupProps> = ({
       {/* Notes field */}
       {notesFields.map(field => (
         <div key={field.id}>
-          {renderField(field)}
+          {renderEntryField({
+            field,
+            jobNumber,
+            setJobNumber,
+            rego,
+            setRego,
+            taskNumber,
+            setTaskNumber,
+            description,
+            setDescription,
+            hours,
+            setHours,
+            disabled
+          })}
         </div>
       ))}
 
       {/* Hours field */}
       {hoursFields.map(field => (
         <div key={field.id}>
-          {renderField(field)}
+          {renderEntryField({
+            field,
+            jobNumber,
+            setJobNumber,
+            rego,
+            setRego,
+            taskNumber,
+            setTaskNumber,
+            description,
+            setDescription,
+            hours,
+            setHours,
+            disabled
+          })}
         </div>
       ))}
 
       {/* Other custom fields */}
       {otherFields.map(field => (
         <div key={field.id}>
-          {renderField(field)}
+          {renderEntryField({
+            field,
+            jobNumber,
+            setJobNumber,
+            rego,
+            setRego,
+            taskNumber,
+            setTaskNumber,
+            description,
+            setDescription,
+            hours,
+            setHours,
+            disabled
+          })}
         </div>
       ))}
     </div>
