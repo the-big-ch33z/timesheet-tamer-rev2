@@ -123,11 +123,15 @@ const InlineFieldsGroup: React.FC<InlineFieldsGroupProps> = ({
 
   return (
     <div className="flex gap-2 flex-grow">
-      {visibleFields.map(field => field.visible && (
-        <React.Fragment key={field.id}>
-          {renderField(field)}
-        </React.Fragment>
-      ))}
+      {visibleFields.map(field => {
+        if (!field.visible) return null;
+        
+        return (
+          <React.Fragment key={field.id}>
+            {renderField(field)}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };
