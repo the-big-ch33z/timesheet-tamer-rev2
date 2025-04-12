@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback } from "react";
-import { TimeEntry, WorkSchedule } from "@/types";
+import { TimeEntry } from "@/types";
 import { useTimesheetContext } from "@/contexts/timesheet";
 import EntriesHeader from "./entries/EntriesHeader";
 import EntriesContent from "./entries/EntriesContent";

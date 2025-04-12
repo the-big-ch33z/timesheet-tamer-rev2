@@ -1,7 +1,6 @@
 
 import React from "react";
-import { EntryFieldConfig, TimeEntry, WorkSchedule } from "@/types";
-import TimeFields from "./fields/TimeFields";
+import { EntryFieldConfig, TimeEntry } from "@/types";
 import CustomFields from "./fields/CustomFields";
 import InlineEntryForm from "./form/InlineEntryForm";
 import TimeEntryFormButtons from "./form/TimeEntryFormButtons";
@@ -16,7 +15,6 @@ type TimeEntryFormProps = {
   inline?: boolean;
   entryId?: string;
   initialData?: Partial<TimeEntry>;
-  workSchedule?: WorkSchedule;
   formKey?: string | number;
   disabled?: boolean;
   userId?: string;
@@ -31,7 +29,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   inline = false,
   entryId,
   initialData = {},
-  workSchedule,
   formKey,
   disabled = false,
   userId
@@ -52,7 +49,8 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     selectedDate,
     userId,
     autoSave: inline,
-    disabled
+    disabled,
+    autoCalculateHours: false
   });
 
   // Handle form submission
@@ -60,11 +58,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     e.preventDefault();
     handleSave();
   };
-
-  // Check if time fields should be shown
-  const showTimeFields = visibleFields.some(field => 
-    (field.id === 'startTime' || field.id === 'endTime') && field.visible
-  );
 
   // Render inline form
   if (inline) {
@@ -87,18 +80,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       className="space-y-4"
       key={`form-${formKey || 'default'}`}
     >
-      {showTimeFields && (
-        <TimeFields 
-          startTime={formState.startTime}
-          endTime={formState.endTime}
-          setStartTime={(val) => handleFieldChange('startTime', val)}
-          setEndTime={(val) => handleFieldChange('endTime', val)}
-          selectedDate={selectedDate}
-          workSchedule={workSchedule}
-          disabled={disabled}
-        />
-      )}
-
       <CustomFields
         visibleFields={visibleFields}
         jobNumber={formState.jobNumber}

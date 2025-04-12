@@ -3,7 +3,6 @@ import React from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import DetailHeader from "./detail/DetailHeader";
-import WorkHoursSection from "./detail/WorkHoursSection";
 import EntriesSection from "./detail/EntriesSection";
 import ScheduleInfoCard from "./detail/ScheduleInfoCard";
 import { useTimesheetContext } from "@/contexts/timesheet";
@@ -32,13 +31,6 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
         {workSchedule && (
           <ScheduleInfoCard date={date} workSchedule={workSchedule} />
         )}
-        
-        {/* Always display WorkHoursSection regardless of entries */}
-        <WorkHoursSection 
-          entries={entries} 
-          date={date} 
-          workSchedule={workSchedule} 
-        />
         
         <EntriesSection 
           date={date} 

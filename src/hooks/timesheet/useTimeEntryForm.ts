@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { calculateHoursFromTimes } from '@/components/timesheet/entry-dialog/utils/timeCalculations';
 
 export interface TimeEntryFormState {
   hours: string;
@@ -10,8 +9,6 @@ export interface TimeEntryFormState {
   jobNumber: string;
   rego: string;
   taskNumber: string;
-  startTime: string;
-  endTime: string;
   formEdited: boolean;
   userId?: string;
 }
@@ -34,8 +31,7 @@ export const useTimeEntryForm = ({
   selectedDate,
   userId,
   autoSave = false,
-  disabled = false,
-  autoCalculateHours = true
+  disabled = false
 }: UseTimeEntryFormProps) => {
   const { toast } = useToast();
   
@@ -45,8 +41,6 @@ export const useTimeEntryForm = ({
   const [jobNumber, setJobNumber] = useState("");
   const [rego, setRego] = useState("");
   const [taskNumber, setTaskNumber] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("17:00");
   const [formEdited, setFormEdited] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,22 +51,9 @@ export const useTimeEntryForm = ({
     setJobNumber(initialData.jobNumber || "");
     setRego(initialData.rego || "");
     setTaskNumber(initialData.taskNumber || "");
-    setStartTime(initialData.startTime || "09:00");
-    setEndTime(initialData.endTime || "17:00");
     setFormEdited(false);
     setIsSubmitting(false);
   }, [initialData, formKey]);
-
-  // Auto-calculate hours when times change if enabled
-  useEffect(() => {
-    if (autoCalculateHours && startTime && endTime && !disabled) {
-      const calculatedHours = calculateHoursFromTimes(startTime, endTime);
-      // Only update hours if it hasn't been manually edited or is empty
-      if (!hours || !formEdited) {
-        setHours(calculatedHours.toString());
-      }
-    }
-  }, [startTime, endTime, autoCalculateHours, disabled, hours, formEdited]);
 
   // Handle field changes
   const handleFieldChange = useCallback((field: string, value: string) => {
@@ -97,12 +78,6 @@ export const useTimeEntryForm = ({
         break;
       case 'taskNumber':
         setTaskNumber(value);
-        break;
-      case 'startTime':
-        setStartTime(value);
-        break;
-      case 'endTime':
-        setEndTime(value);
         break;
       default:
         break;
@@ -131,11 +106,9 @@ export const useTimeEntryForm = ({
     jobNumber,
     rego,
     taskNumber,
-    startTime,
-    endTime,
     project: initialData.project || "General",
     userId: initialData.userId || userId || "",
-  }), [selectedDate, hours, description, jobNumber, rego, taskNumber, startTime, endTime, initialData, userId]);
+  }), [selectedDate, hours, description, jobNumber, rego, taskNumber, initialData, userId]);
 
   // Handle form submission
   const handleSave = useCallback(() => {
@@ -173,8 +146,6 @@ export const useTimeEntryForm = ({
       jobNumber,
       rego,
       taskNumber,
-      startTime,
-      endTime,
       formEdited,
       userId: initialData.userId || userId
     },
