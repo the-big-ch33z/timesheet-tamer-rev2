@@ -3,7 +3,6 @@ import React from "react";
 import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
-import FloatingActionButton from "@/components/timesheet/FloatingActionButton";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import { TimesheetProvider, useTimesheetContext } from "@/contexts/timesheet";
@@ -16,9 +15,7 @@ const TimesheetContent = () => {
     isViewingOtherUser,
     viewedUser,
     canViewTimesheet,
-    canEditTimesheet,
     getDayEntries,
-    setSelectedDay
   } = useTimesheetContext();
 
   // Check for permission or if user exists
@@ -50,11 +47,6 @@ const TimesheetContent = () => {
             entries={getDayEntries(selectedDay)}
           />
         </div>
-      )}
-
-      {/* Only show FloatingActionButton if user can edit this timesheet */}
-      {canEditTimesheet && (
-        <FloatingActionButton onClick={() => setSelectedDay(new Date())} />
       )}
     </div>
   );
