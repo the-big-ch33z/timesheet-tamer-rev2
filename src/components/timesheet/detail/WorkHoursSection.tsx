@@ -32,6 +32,19 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const [calculatedHours, setCalculatedHours] = useState(8.0);
   const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
   
+  // Create form handlers for ALL possible entry forms upfront
+  // This is important to avoid conditional hook creation
+  const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => {
+      if (onCreateEntry) {
+        onCreateEntry(startTime, endTime, calculatedHours);
+        removeEntryForm(i);
+      }
+    },
+    autoSave: false
+  }));
+  
   // Get visible fields from timesheet settings
   const { getVisibleFields } = useTimesheetSettings();
   const visibleFields = getVisibleFields();
@@ -92,26 +105,15 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   // Add a new entry form
   const addEntryForm = () => {
-    setShowEntryForms(prev => [...prev, true]);
+    // Limit to maximum of 10 forms
+    if (showEntryForms.length < 10) {
+      setShowEntryForms(prev => [...prev, true]);
+    }
   };
   
   // Remove an entry form at specific index
   const removeEntryForm = (index: number) => {
     setShowEntryForms(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  // Create form handlers for each entry form
-  const createEntryFormHandlers = (index: number) => {
-    return useTimeEntryForm({
-      selectedDate: date,
-      onSave: (entry) => {
-        if (onCreateEntry) {
-          onCreateEntry(startTime, endTime, calculatedHours);
-          removeEntryForm(index);
-        }
-      },
-      autoSave: false
-    });
   };
   
   return (
@@ -203,7 +205,9 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
           {showEntryForms.length > 0 && (
             <div className="space-y-4 mt-4 mb-4">
               {showEntryForms.map((_, index) => {
-                const { formState, handleFieldChange, handleSave } = createEntryFormHandlers(index);
+                // Use the pre-created form handlers
+                const { formState, handleFieldChange, handleSave } = formHandlers[index];
+                
                 return (
                   <div key={index} className="bg-white rounded-md shadow p-3 border border-gray-200">
                     <InlineEntryForm 
