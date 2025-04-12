@@ -22,25 +22,14 @@ const TimeEntryList: React.FC<TimeEntryListProps> = ({
 
   return (
     <div className="space-y-3">
-      {entries.length === 0 ? (
-        <div className="text-center py-8 border rounded-md bg-gray-50">
-          <p className="text-muted-foreground">No time entries for this day</p>
-          {!readOnly && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Click the "Add Entry" button to create a new entry
-            </p>
-          )}
-        </div>
-      ) : (
-        entries.map((entry) => (
-          <TimeEntryItem 
-            key={entry.id} 
-            entry={entry} 
-            onDelete={() => handleDeleteEntry(entry.id)} 
-            readOnly={readOnly}
-          />
-        ))
-      )}
+      {entries.map((entry) => (
+        <TimeEntryItem 
+          key={entry.id} 
+          entry={entry} 
+          onDelete={() => handleDeleteEntry(entry.id)} 
+          readOnly={readOnly}
+        />
+      ))}
     </div>
   );
 };

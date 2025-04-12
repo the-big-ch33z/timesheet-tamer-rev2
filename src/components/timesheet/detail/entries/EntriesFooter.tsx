@@ -1,7 +1,5 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { TimeEntry } from "@/types";
 
 interface EntriesFooterProps {
@@ -17,27 +15,8 @@ const EntriesFooter: React.FC<EntriesFooterProps> = ({
   isAddingEntry,
   onAddEntry
 }) => {
-  // Show green "+ Add Entry" button when there are entries and not currently adding one
-  if (readOnly) {
-    return null;
-  }
-
-  // Only show after at least one entry exists and not currently adding an entry
-  if (entries.length === 0 || isAddingEntry) {
-    return null;
-  }
-
-  return (
-    <div className="flex justify-center mt-4">
-      <Button 
-        variant="outline" 
-        onClick={onAddEntry}
-        className="w-full max-w-xs border-dashed bg-green-500 hover:bg-green-600 text-white"
-      >
-        <Plus className="h-4 w-4 mr-1" /> Add Entry
-      </Button>
-    </div>
-  );
+  // Component no longer shows any UI
+  return null;
 };
 
 export default EntriesFooter;
