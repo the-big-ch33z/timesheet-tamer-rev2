@@ -15,6 +15,10 @@ interface EntriesContentProps {
   userId?: string;
   formKey: string;
   onDeleteEntry: (id: string) => void;
+  // Remove these props that are no longer needed
+  // workSchedule?: WorkSchedule;
+  // showWorkHoursOnly?: boolean;
+  // onWorkHoursComplete?: () => void;
 }
 
 const EntriesContent: React.FC<EntriesContentProps> = ({

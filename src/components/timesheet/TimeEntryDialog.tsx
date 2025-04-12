@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { TimeEntry, WorkSchedule } from "@/types";
+import { TimeEntry } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import TimeEntryForm from "./entry-dialog/TimeEntryForm";
@@ -13,7 +13,6 @@ type TimeEntryDialogProps = {
   onCancel?: () => void;
   entryId?: string;
   initialData?: Partial<TimeEntry>;
-  workSchedule?: WorkSchedule;
   userId?: string;
   formKey?: string | number;
 };
@@ -25,7 +24,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
   onCancel,
   entryId,
   initialData = {},
-  workSchedule,
   userId,
   formKey,
 }) => {
@@ -88,7 +86,6 @@ const TimeEntryDialog: React.FC<TimeEntryDialogProps> = ({
         inline={true}
         entryId={entryId}
         initialData={{ ...initialData, userId: initialData.userId || effectiveUserId }}
-        workSchedule={workSchedule}
         formKey={formKey || `form-${Date.now()}`}
         disabled={formSubmitted}
         userId={effectiveUserId}
