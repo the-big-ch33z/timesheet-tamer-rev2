@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { TimeEntry } from "@/types";
 import { useTimesheetContext } from "@/contexts/timesheet";
@@ -21,7 +22,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
   
-  const { addEntry, deleteEntry } = useTimesheetContext();
+  const { addEntry, deleteEntry, workSchedule } = useTimesheetContext();
 
   const handleAddEntry = useCallback(() => {
     setIsAddingEntry(true);
@@ -66,6 +67,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         userId={userId}
         formKey={`entry-form-${formKey}`}
         onDeleteEntry={deleteEntry}
+        workSchedule={workSchedule}
       />
       
       <EntriesFooter 

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule } from "@/types";
 import NewEntryForm from "../../entry-display/NewEntryForm";
 import TimeEntryList from "../../entry-display/TimeEntryList";
 
@@ -14,6 +14,7 @@ interface EntriesContentProps {
   userId?: string;
   formKey: string;
   onDeleteEntry: (id: string) => void;
+  workSchedule?: WorkSchedule;
 }
 
 const EntriesContent: React.FC<EntriesContentProps> = ({
@@ -25,7 +26,8 @@ const EntriesContent: React.FC<EntriesContentProps> = ({
   readOnly,
   userId,
   formKey,
-  onDeleteEntry
+  onDeleteEntry,
+  workSchedule
 }) => {
   return (
     <>
@@ -37,6 +39,7 @@ const EntriesContent: React.FC<EntriesContentProps> = ({
             onSaveEntry={onSaveEntry}
             userId={userId}
             formKey={formKey}
+            workSchedule={workSchedule}
           />
         </div>
       )}

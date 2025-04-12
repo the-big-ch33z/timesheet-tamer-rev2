@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import TimeEntryDialog from "../TimeEntryDialog";
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimesheetContext } from "@/contexts/timesheet";
 
 interface NewEntryFormProps {
@@ -10,6 +10,7 @@ interface NewEntryFormProps {
   onCancel: () => void;
   userId?: string;
   formKey?: string | number;
+  workSchedule?: WorkSchedule;
 }
 
 const NewEntryForm: React.FC<NewEntryFormProps> = ({
@@ -17,11 +18,15 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
   onSaveEntry,
   onCancel,
   userId,
-  formKey
+  formKey,
+  workSchedule
 }) => {
   // Local state to track form submissions
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { workSchedule } = useTimesheetContext();
+  const { workSchedule: contextWorkSchedule } = useTimesheetContext();
+
+  // Use either provided workSchedule or the one from context
+  const effectiveWorkSchedule = workSchedule || contextWorkSchedule;
 
   // Reset submission state when formKey changes
   useEffect(() => {
@@ -46,7 +51,7 @@ const NewEntryForm: React.FC<NewEntryFormProps> = ({
       onSave={handleSaveEntry}
       onCancel={onCancel}
       selectedDate={date}
-      workSchedule={workSchedule}
+      workSchedule={effectiveWorkSchedule}
       userId={userId}
       formKey={formKey} // Use our locally managed unique key
       initialData={{}} // Always start with empty data for new entries

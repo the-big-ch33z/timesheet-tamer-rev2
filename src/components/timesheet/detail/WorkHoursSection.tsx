@@ -91,14 +91,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, work
         </div>
       </div>
       
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          <p className="text-sm text-amber-700">
-            - 30min lunch break<br />
-            <span className="text-green-600">15min smoko break included</span>
-          </p>
-        </div>
-        
+      <div className="flex justify-end items-center">
         <div className="text-right">
           <div className="text-sm text-amber-700">Daily Target:</div>
           <div className="text-xl font-semibold text-amber-900">{expectedHours.toFixed(1)}</div>
