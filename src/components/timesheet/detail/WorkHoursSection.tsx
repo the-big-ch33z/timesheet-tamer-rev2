@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { Clock, AlertTriangle, Calendar, Plus } from "lucide-react";
+import { Clock, AlertTriangle, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
 import { calculateHoursFromTimes } from "../entry-dialog/utils/timeCalculations";
-import { Button } from "@/components/ui/button";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -81,13 +79,6 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       setEndTime(value);
     }
   };
-
-  // Handle creating an entry
-  const handleCreateEntry = () => {
-    if (onCreateEntry) {
-      onCreateEntry(startTime, endTime, calculatedHours);
-    }
-  };
   
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -146,21 +137,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         </div>
       </div>
       
-      <div className="flex justify-between items-center">
+      <div className="flex justify-end">
         <div className="text-right">
           <div className="text-sm text-amber-700">Daily Target:</div>
           <div className="text-xl font-semibold text-amber-900">{calculatedHours.toFixed(1)}</div>
         </div>
-
-        {interactive && !hasEntries && (
-          <Button 
-            onClick={handleCreateEntry}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Create Entry
-          </Button>
-        )}
       </div>
       
       {hasEntries && isUndertime && (
@@ -176,7 +157,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
           <Calendar className="h-4 w-4 mr-2" />
           <AlertDescription>
-            {interactive ? "Set your work hours above, then create an entry to track your time." : "No time entries recorded yet. Add an entry to track your hours."}
+            {interactive ? "Set your work hours above to track your time." : "No time entries recorded yet. Add an entry to track your hours."}
           </AlertDescription>
         </Alert>
       )}
