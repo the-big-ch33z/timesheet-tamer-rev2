@@ -2,10 +2,10 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TabContent from "./TabContent";
-import { useTimesheetContext } from "@/contexts/timesheet";
+import { useTimesheetUIContext } from "@/contexts/timesheet";
 
 const TimesheetTabs = () => {
-  const { activeTab, setActiveTab } = useTimesheetContext();
+  const { activeTab, setActiveTab } = useTimesheetUIContext();
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">

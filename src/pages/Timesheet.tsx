@@ -4,15 +4,27 @@ import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
-import { TimesheetProvider, useTimesheetContext } from "@/contexts/timesheet";
+import { 
+  TimesheetProvider, 
+  useUserTimesheetContext,
+  useTimesheetUIContext,
+  useEntriesContext,
+  useCalendarContext
+} from "@/contexts/timesheet";
 
 // Create a wrapper component that uses the context
 const TimesheetContent = () => {
   const {
-    isViewingOtherUser,
     viewedUser,
-    canViewTimesheet,
-  } = useTimesheetContext();
+    isViewingOtherUser,
+    canViewTimesheet
+  } = useUserTimesheetContext();
+  
+  const { selectedDay } = useCalendarContext();
+  const { getDayEntries } = useEntriesContext();
+  
+  // Get entries for the selected day
+  const dayEntries = selectedDay ? getDayEntries(selectedDay) : [];
 
   // Check for permission or if user exists
   if (!viewedUser || !canViewTimesheet) {

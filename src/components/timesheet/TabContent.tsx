@@ -7,21 +7,16 @@ import MonthlyHours from "./MonthlyHours";
 import RecentEntries from "./RecentEntries";
 import WorkHoursSection from "./detail/WorkHoursSection";
 import { useTabContent } from "./hooks/useTabContent";
-import { useTimesheetContext } from "@/contexts/timesheet";
+import { 
+  useCalendarContext,
+  useUserTimesheetContext,
+  useEntriesContext 
+} from "@/contexts/timesheet";
 
 const TabContent = () => {
-  const { 
-    currentMonth, 
-    entries, 
-    workSchedule, 
-    viewedUser,
-    prevMonth,
-    nextMonth,
-    handleDayClick,
-    selectedDay,
-    canEditTimesheet,
-    createEntry
-  } = useTimesheetContext();
+  const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
+  const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
+  const { entries, createEntry, getDayEntries } = useEntriesContext();
 
   const { sortedEntries } = useTabContent({ 
     entries, 
@@ -44,10 +39,7 @@ const TabContent = () => {
   };
 
   // Get entries for the selected day
-  const dayEntries = selectedDay ? 
-    entries.filter(entry => 
-      entry.date.toDateString() === selectedDay.toDateString()
-    ) : [];
+  const dayEntries = selectedDay ? getDayEntries(selectedDay) : [];
 
   return (
     <>
