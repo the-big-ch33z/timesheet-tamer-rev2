@@ -1,5 +1,5 @@
 
-import { formatHoursFromTimes } from "@/components/timesheet/entry-dialog/utils/timeCalculations";
+import { calculateHoursFromTimes, formatHours } from "@/components/timesheet/entry-dialog/utils/timeCalculations";
 
 /**
  * Calculate variance between actual and expected hours
