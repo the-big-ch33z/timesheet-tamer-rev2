@@ -94,9 +94,6 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         userId={userId}
         formKey={`entry-form-${formKey}`}
         onDeleteEntry={handleDeleteEntry}
-        workSchedule={workSchedule}
-        showWorkHoursOnly={showWorkHoursOnly}
-        onWorkHoursComplete={completeWorkHoursSetup}
       />
       
       <EntriesFooter 
