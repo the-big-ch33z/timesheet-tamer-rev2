@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { calculateHoursFromTimes } from '@/components/timesheet/entry-dialog/utils/timeCalculations';
 
 export interface TimeEntryFormState {
   hours: string;
@@ -23,6 +24,7 @@ export interface UseTimeEntryFormProps {
   userId?: string;
   autoSave?: boolean;
   disabled?: boolean;
+  autoCalculateHours?: boolean;
 }
 
 export const useTimeEntryForm = ({
@@ -32,7 +34,8 @@ export const useTimeEntryForm = ({
   selectedDate,
   userId,
   autoSave = false,
-  disabled = false
+  disabled = false,
+  autoCalculateHours = true
 }: UseTimeEntryFormProps) => {
   const { toast } = useToast();
   
@@ -59,6 +62,17 @@ export const useTimeEntryForm = ({
     setFormEdited(false);
     setIsSubmitting(false);
   }, [initialData, formKey]);
+
+  // Auto-calculate hours when times change if enabled
+  useEffect(() => {
+    if (autoCalculateHours && startTime && endTime && !disabled) {
+      const calculatedHours = calculateHoursFromTimes(startTime, endTime);
+      // Only update hours if it hasn't been manually edited or is empty
+      if (!hours || !formEdited) {
+        setHours(calculatedHours.toString());
+      }
+    }
+  }, [startTime, endTime, autoCalculateHours, disabled, hours, formEdited]);
 
   // Handle field changes
   const handleFieldChange = useCallback((field: string, value: string) => {

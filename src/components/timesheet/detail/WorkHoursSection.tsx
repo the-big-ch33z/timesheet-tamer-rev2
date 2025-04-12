@@ -1,56 +1,82 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Clock, AlertTriangle, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
+import { calculateHoursFromTimes } from "../entry-dialog/utils/timeCalculations";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
   date: Date;
   workSchedule?: WorkSchedule;
+  interactive?: boolean;
 }
 
-const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, workSchedule }) => {
+const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ 
+  entries, 
+  date, 
+  workSchedule,
+  interactive = false
+}) => {
+  // State for times
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("17:00");
+  const [calculatedHours, setCalculatedHours] = useState(8.0);
+  
   // Calculate total hours from entries
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
   
-  // Get start/end times from entries or schedule
-  let startTime = "09:00";
-  let endTime = "17:00";
-  let expectedHours = 8.0;
-  
-  // If we have entries, use the first entry's times
-  if (entries.length > 0) {
-    startTime = entries[0].startTime || startTime;
-    endTime = entries[0].endTime || endTime;
-  } 
-  // Otherwise, try to get times from workSchedule if available
-  else if (workSchedule) {
-    const weekDay = getWeekDay(date);
-    const weekNum = getFortnightWeek(date);
+  // Initialize times from entries or schedule
+  useEffect(() => {
+    let initialStartTime = "09:00";
+    let initialEndTime = "17:00";
     
-    const scheduleDay = workSchedule.weeks[weekNum][weekDay];
-    
-    if (scheduleDay) {
-      startTime = scheduleDay.startTime || startTime;
-      endTime = scheduleDay.endTime || endTime;
+    // If we have entries, use the first entry's times
+    if (entries.length > 0) {
+      initialStartTime = entries[0].startTime || initialStartTime;
+      initialEndTime = entries[0].endTime || initialEndTime;
+    } 
+    // Otherwise, try to get times from workSchedule if available
+    else if (workSchedule) {
+      const weekDay = getWeekDay(date);
+      const weekNum = getFortnightWeek(date);
       
-      // Calculate expected hours from start and end time
-      const startHour = parseInt(startTime.split(':')[0]);
-      const startMinute = parseInt(startTime.split(':')[1]);
-      const endHour = parseInt(endTime.split(':')[0]);
-      const endMinute = parseInt(endTime.split(':')[1]);
+      const scheduleDay = workSchedule.weeks[weekNum][weekDay];
       
-      // Calculate total hours including partial hours
-      expectedHours = endHour - startHour + (endMinute - startMinute) / 60;
+      if (scheduleDay) {
+        initialStartTime = scheduleDay.startTime || initialStartTime;
+        initialEndTime = scheduleDay.endTime || initialEndTime;
+      }
     }
-  }
+    
+    setStartTime(initialStartTime);
+    setEndTime(initialEndTime);
+    
+    // Calculate hours from times
+    const hours = calculateHoursFromTimes(initialStartTime, initialEndTime);
+    setCalculatedHours(hours);
+  }, [entries, date, workSchedule]);
+  
+  // Recalculate hours when times change
+  useEffect(() => {
+    const hours = calculateHoursFromTimes(startTime, endTime);
+    setCalculatedHours(hours);
+  }, [startTime, endTime]);
   
   // Calculate variance from expected hours
-  const hoursVariance = totalHours - expectedHours;
+  const hoursVariance = totalHours - calculatedHours;
   const isUndertime = hoursVariance < 0;
   const hasEntries = entries.length > 0;
+  
+  // Handle time input changes
+  const handleTimeChange = (type: 'start' | 'end', value: string) => {
+    if (type === 'start') {
+      setStartTime(value);
+    } else {
+      setEndTime(value);
+    }
+  };
   
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -67,16 +93,34 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, work
       <div className="grid grid-cols-3 gap-4 mb-3">
         <div>
           <div className="text-sm text-amber-700 mb-1">Start Time</div>
-          <div className="bg-white border border-amber-200 rounded-md p-2 flex items-center">
-            <span className="text-lg">{format(new Date(`2000-01-01T${startTime}`), "h:mm a")}</span>
+          <div className={`${interactive ? 'bg-white' : 'bg-white'} border border-amber-200 rounded-md p-2 flex items-center`}>
+            {interactive ? (
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => handleTimeChange('start', e.target.value)}
+                className="text-lg bg-transparent w-full outline-none"
+              />
+            ) : (
+              <span className="text-lg">{format(new Date(`2000-01-01T${startTime}`), "h:mm a")}</span>
+            )}
             <Clock className="h-4 w-4 ml-2 text-gray-400" />
           </div>
         </div>
         
         <div>
           <div className="text-sm text-amber-700 mb-1">End Time</div>
-          <div className="bg-white border border-amber-200 rounded-md p-2 flex items-center">
-            <span className="text-lg">{format(new Date(`2000-01-01T${endTime}`), "h:mm a")}</span>
+          <div className={`${interactive ? 'bg-white' : 'bg-white'} border border-amber-200 rounded-md p-2 flex items-center`}>
+            {interactive ? (
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => handleTimeChange('end', e.target.value)}
+                className="text-lg bg-transparent w-full outline-none"
+              />
+            ) : (
+              <span className="text-lg">{format(new Date(`2000-01-01T${endTime}`), "h:mm a")}</span>
+            )}
             <Clock className="h-4 w-4 ml-2 text-gray-400" />
           </div>
         </div>
@@ -85,7 +129,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, work
           <div className="text-sm text-amber-700 mb-1">Total Hours</div>
           <div className={`bg-white border ${hasEntries ? 'border-amber-200' : 'border-gray-200'} rounded-md p-2`}>
             <span className={`text-lg ${!hasEntries && 'text-gray-400'}`}>
-              {totalHours.toFixed(1)}
+              {hasEntries ? totalHours.toFixed(1) : calculatedHours.toFixed(1)}
             </span>
           </div>
         </div>
@@ -94,7 +138,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, work
       <div className="flex justify-end items-center">
         <div className="text-right">
           <div className="text-sm text-amber-700">Daily Target:</div>
-          <div className="text-xl font-semibold text-amber-900">{expectedHours.toFixed(1)}</div>
+          <div className="text-xl font-semibold text-amber-900">{calculatedHours.toFixed(1)}</div>
         </div>
       </div>
       
@@ -111,7 +155,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ entries, date, work
         <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
           <Calendar className="h-4 w-4 mr-2" />
           <AlertDescription>
-            No time entries recorded yet. Add an entry to track your hours.
+            {interactive ? "Set your work hours above, then continue to add entries." : "No time entries recorded yet. Add an entry to track your hours."}
           </AlertDescription>
         </Alert>
       )}

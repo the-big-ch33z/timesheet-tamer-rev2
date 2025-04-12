@@ -17,8 +17,13 @@ const EntriesFooter: React.FC<EntriesFooterProps> = ({
   isAddingEntry,
   onAddEntry
 }) => {
-  // Only show the footer button if there are entries, it's not read-only, and not currently adding an entry
-  if (readOnly || entries.length === 0 || isAddingEntry) {
+  // Show green "+ Add Entry" button when there are entries and not currently adding one
+  if (readOnly || isAddingEntry) {
+    return null;
+  }
+
+  // Only show after at least one entry exists
+  if (entries.length === 0) {
     return null;
   }
 
@@ -27,9 +32,9 @@ const EntriesFooter: React.FC<EntriesFooterProps> = ({
       <Button 
         variant="outline" 
         onClick={onAddEntry}
-        className="w-full max-w-xs border-dashed"
+        className="w-full max-w-xs border-dashed bg-green-500 hover:bg-green-600 text-white"
       >
-        <Plus className="h-4 w-4 mr-1" /> Add Another Entry
+        <Plus className="h-4 w-4 mr-1" /> Add Entry
       </Button>
     </div>
   );
