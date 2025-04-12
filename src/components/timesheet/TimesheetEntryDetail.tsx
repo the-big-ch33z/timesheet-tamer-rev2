@@ -3,7 +3,6 @@ import React from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import DetailHeader from "./detail/DetailHeader";
-import { useTimesheetContext } from "@/contexts/timesheet";
 
 interface TimesheetEntryDetailProps {
   date: Date;
@@ -20,7 +19,6 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
     <div className="bg-white rounded-lg border shadow-sm">
       <DetailHeader date={date} formattedDate={formattedDate} />
       <div className="p-6 space-y-6">
-        {/* Entry section removed */}
         <div className="p-6 text-center bg-gray-50 border rounded-md">
           <p className="text-gray-500">
             Timesheet entry functionality has been removed
