@@ -13,6 +13,15 @@ export interface TimeEntryFormState {
   userId?: string;
 }
 
+export interface UseTimeEntryFormReturn {
+  formState: TimeEntryFormState;
+  handleFieldChange: (field: string, value: string) => void;
+  handleSave: () => void;
+  getFormData: () => Omit<TimeEntry, "id">;
+  resetFormEdited: () => void;
+  isSubmitting: boolean;
+}
+
 export interface UseTimeEntryFormProps {
   initialData?: Partial<TimeEntry>;
   formKey?: string | number;
@@ -32,7 +41,7 @@ export const useTimeEntryForm = ({
   userId,
   autoSave = false,
   disabled = false
-}: UseTimeEntryFormProps) => {
+}: UseTimeEntryFormProps): UseTimeEntryFormReturn => {
   const { toast } = useToast();
   
   // Form state

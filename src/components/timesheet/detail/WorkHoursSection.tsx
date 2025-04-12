@@ -1,15 +1,13 @@
-
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { Clock, AlertTriangle, Calendar, Plus } from "lucide-react";
-import { format } from "date-fns";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
+import { Clock } from "lucide-react";
 import { calculateHoursFromTimes } from "../entry-dialog/utils/timeCalculations";
-import { Button } from "@/components/ui/button";
-import InlineEntryForm from "../entry-dialog/form/InlineEntryForm";
+import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
+import WorkHoursDisplay from "./components/WorkHoursDisplay";
+import WorkHoursAlerts from "./components/WorkHoursAlerts";
+import EntryFormsList from "./components/EntryFormsList";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -128,50 +126,16 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         )}
       </div>
       
-      <div className="grid grid-cols-3 gap-4 mb-3">
-        <div>
-          <div className="text-sm text-amber-700 mb-1">Start Time</div>
-          <div className={`${interactive ? 'bg-white' : 'bg-white'} border border-amber-200 rounded-md p-2 flex items-center`}>
-            {interactive ? (
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => handleTimeChange('start', e.target.value)}
-                className="text-lg bg-transparent w-full outline-none"
-              />
-            ) : (
-              <span className="text-lg">{format(new Date(`2000-01-01T${startTime}`), "h:mm a")}</span>
-            )}
-            <Clock className="h-4 w-4 ml-2 text-gray-400" />
-          </div>
-        </div>
-        
-        <div>
-          <div className="text-sm text-amber-700 mb-1">End Time</div>
-          <div className={`${interactive ? 'bg-white' : 'bg-white'} border border-amber-200 rounded-md p-2 flex items-center`}>
-            {interactive ? (
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => handleTimeChange('end', e.target.value)}
-                className="text-lg bg-transparent w-full outline-none"
-              />
-            ) : (
-              <span className="text-lg">{format(new Date(`2000-01-01T${endTime}`), "h:mm a")}</span>
-            )}
-            <Clock className="h-4 w-4 ml-2 text-gray-400" />
-          </div>
-        </div>
-        
-        <div>
-          <div className="text-sm text-amber-700 mb-1">Total Hours</div>
-          <div className={`bg-white border ${hasEntries ? 'border-amber-200' : 'border-gray-200'} rounded-md p-2`}>
-            <span className={`text-lg ${!hasEntries && 'text-gray-400'}`}>
-              {hasEntries ? totalHours.toFixed(1) : calculatedHours.toFixed(1)}
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* Work Hours Display */}
+      <WorkHoursDisplay 
+        startTime={startTime}
+        endTime={endTime}
+        totalHours={totalHours}
+        calculatedHours={calculatedHours}
+        hasEntries={hasEntries}
+        interactive={interactive}
+        onTimeChange={handleTimeChange}
+      />
       
       <div className="flex justify-end">
         <div className="text-right">
@@ -180,74 +144,23 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         </div>
       </div>
       
-      {hasEntries && isUndertime && (
-        <Alert variant="destructive" className="mt-3 bg-red-50 border-red-200 text-red-800">
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            Hours don't match daily entries (under by {Math.abs(hoursVariance).toFixed(1)} hrs)
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {!hasEntries && showEntryForms.length === 0 && (
-        <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
-          <Calendar className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            {interactive ? "Set your work hours above to track your time." : "No time entries recorded yet. Add an entry to track your hours."}
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Warnings and Info Alerts */}
+      <WorkHoursAlerts 
+        hasEntries={hasEntries}
+        isUndertime={isUndertime}
+        hoursVariance={hoursVariance}
+        interactive={interactive}
+        showEntryForms={showEntryForms}
+      />
       
       {/* Entry Forms Section */}
       {interactive && (
-        <div className="mt-4">
-          {/* Entry Forms */}
-          {showEntryForms.length > 0 && (
-            <div className="space-y-4 mt-4 mb-4">
-              {showEntryForms.map((_, index) => {
-                // Use the pre-created form handlers
-                const { formState, handleFieldChange, handleSave } = formHandlers[index];
-                
-                return (
-                  <div key={index} className="bg-white rounded-md shadow p-3 border border-gray-200">
-                    <InlineEntryForm 
-                      visibleFields={[
-                        { id: "job", name: "Job Number", type: "text", required: false, visible: true },
-                        { id: "rego", name: "Rego", type: "text", required: false, visible: true },
-                        { id: "task", name: "Task Number", type: "text", required: false, visible: true },
-                        { id: "notes", name: "Notes", type: "text", required: false, visible: true },
-                        { id: "hours", name: "Hours", type: "number", required: true, visible: true }
-                      ]}
-                      formValues={formState}
-                      onFieldChange={handleFieldChange}
-                      onDelete={() => removeEntryForm(index)}
-                      entryId={`new-${index}`}
-                    />
-                    <div className="flex justify-end mt-2">
-                      <Button 
-                        size="sm" 
-                        onClick={handleSave}
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                      >
-                        Save Entry
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          
-          {/* Add Entry Button */}
-          <Button 
-            onClick={addEntryForm}
-            size="sm"
-            className="bg-green-500 hover:bg-green-600 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Entry
-          </Button>
-        </div>
+        <EntryFormsList 
+          showEntryForms={showEntryForms}
+          formHandlers={formHandlers}
+          addEntryForm={addEntryForm}
+          removeEntryForm={removeEntryForm}
+        />
       )}
     </div>
   );
