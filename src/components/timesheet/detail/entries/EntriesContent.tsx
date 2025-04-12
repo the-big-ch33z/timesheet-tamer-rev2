@@ -1,4 +1,3 @@
-
 import React from "react";
 import { TimeEntry } from "@/types";
 import TimeEntryList from "../../entry-display/TimeEntryList";
@@ -15,11 +14,8 @@ interface EntriesContentProps {
 }
 
 const EntriesContent: React.FC<EntriesContentProps> = ({
-  date,
   entries,
   readOnly,
-  userId,
-  formKey,
   onDeleteEntry
 }) => {
   const logger = useLogger("EntriesContent");

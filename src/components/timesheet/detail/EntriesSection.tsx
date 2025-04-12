@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from "react";
+import React from "react";
 import { TimeEntry } from "@/types";
 import { useTimesheetContext } from "@/contexts/timesheet";
 import EntriesHeader from "./entries/EntriesHeader";
@@ -19,28 +18,21 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   readOnly = false,
   userId
 }) => {
-  const [formKey, setFormKey] = useState(Date.now());
+  // We'll keep formKey for now to maintain the prop structure
+  const formKey = Date.now().toString();
   const logger = useLogger("EntriesSection");
   
-  const { addEntry, deleteEntry } = useTimesheetContext();
+  const { deleteEntry } = useTimesheetContext();
 
-  const handleSaveEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
-    // Just pass the entry data to the context handler
-    addEntry({
-      ...entry,
-      userId: entry.userId || userId
-    });
-    
-    // Generate a new form key to reset the form state
-    setTimeout(() => {
-      setFormKey(Date.now());
-    }, 300);
-  }, [addEntry, userId]);
+  // This is a placeholder function that satisfies the interface but won't be actively used
+  const handleSaveEntry = () => {
+    logger.info("Save entry functionality has been removed");
+  };
 
-  const handleDeleteEntry = useCallback((id: string) => {
+  const handleDeleteEntry = (id: string) => {
     logger.info("Delete entry requested", { id });
     deleteEntry(id);
-  }, [deleteEntry, logger]);
+  };
 
   return (
     <div className="space-y-4">

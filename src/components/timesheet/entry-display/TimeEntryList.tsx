@@ -1,8 +1,6 @@
 
 import React from "react";
 import { TimeEntry } from "@/types";
-import TimeEntryItem from "./TimeEntryItem";
-import { useEntryActions } from "../hooks/useEntryActions";
 
 interface TimeEntryListProps {
   entries: TimeEntry[];
@@ -11,25 +9,15 @@ interface TimeEntryListProps {
 }
 
 const TimeEntryList: React.FC<TimeEntryListProps> = ({ 
-  entries, 
-  onDeleteEntry,
-  readOnly = false
+  entries
 }) => {
-  const { handleDeleteEntry } = useEntryActions({ 
-    readOnly, 
-    onDeleteEntry 
-  });
-
   return (
-    <div className="space-y-3">
-      {entries.map((entry) => (
-        <TimeEntryItem 
-          key={entry.id} 
-          entry={entry} 
-          onDelete={() => handleDeleteEntry(entry.id)} 
-          readOnly={readOnly}
-        />
-      ))}
+    <div className="p-6 text-center bg-gray-50 border rounded-md">
+      <p className="text-gray-500">
+        {entries.length > 0 
+          ? `${entries.length} time entries recorded` 
+          : "No time entries for this day"}
+      </p>
     </div>
   );
 };

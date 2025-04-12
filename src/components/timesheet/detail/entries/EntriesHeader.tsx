@@ -8,8 +8,7 @@ interface EntriesHeaderProps {
 }
 
 const EntriesHeader: React.FC<EntriesHeaderProps> = ({
-  date,
-  readOnly
+  date
 }) => {
   const dayName = format(date, "EEEE");
   
