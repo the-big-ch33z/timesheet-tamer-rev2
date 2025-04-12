@@ -3,6 +3,7 @@ import React from "react";
 import { TimeEntry } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { useLogger } from "@/hooks/useLogger";
 
 interface TimeEntryItemProps {
   entry: TimeEntry;
@@ -11,9 +12,12 @@ interface TimeEntryItemProps {
 }
 
 const TimeEntryItem: React.FC<TimeEntryItemProps> = ({ entry, onDelete, readOnly = false }) => {
+  const logger = useLogger("TimeEntryItem");
+  
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    logger.debug("Delete button clicked for entry", { id: entry.id });
     onDelete();
   };
 
@@ -56,6 +60,7 @@ const TimeEntryItem: React.FC<TimeEntryItemProps> = ({ entry, onDelete, readOnly
           size="icon"
           onClick={handleDelete}
           className="text-red-500 hover:text-red-700 hover:bg-red-50"
+          type="button"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

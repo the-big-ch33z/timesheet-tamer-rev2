@@ -3,6 +3,7 @@ import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import NewEntryForm from "../../entry-display/NewEntryForm";
 import TimeEntryList from "../../entry-display/TimeEntryList";
+import { useLogger } from "@/hooks/useLogger";
 
 interface EntriesContentProps {
   isAddingEntry: boolean;
@@ -29,6 +30,13 @@ const EntriesContent: React.FC<EntriesContentProps> = ({
   onDeleteEntry,
   workSchedule
 }) => {
+  const logger = useLogger("EntriesContent");
+  
+  const handleDeleteEntry = (id: string) => {
+    logger.info("Delete entry forwarded to parent", { id });
+    onDeleteEntry(id);
+  };
+  
   return (
     <>
       {isAddingEntry && (
@@ -46,7 +54,7 @@ const EntriesContent: React.FC<EntriesContentProps> = ({
 
       <TimeEntryList 
         entries={entries}
-        onDeleteEntry={onDeleteEntry}
+        onDeleteEntry={handleDeleteEntry}
         readOnly={readOnly}
       />
     </>

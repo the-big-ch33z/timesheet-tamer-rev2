@@ -34,9 +34,11 @@ export const useTimesheetEntries = (userId?: string) => {
 
   // Save entries to localStorage when they change
   useEffect(() => {
-    if (entries.length > 0) {
+    try {
       localStorage.setItem('timeEntries', JSON.stringify(entries));
       logger.debug("Saved entries to localStorage", { count: entries.length });
+    } catch (error) {
+      logger.error("Error saving entries to localStorage:", error);
     }
   }, [entries, logger]);
 
@@ -63,24 +65,52 @@ export const useTimesheetEntries = (userId?: string) => {
 
   // Delete an existing entry
   const deleteEntry = useCallback((id: string) => {
-    setEntries(prev => prev.filter(entry => entry.id !== id));
-    logger.info("Entry deleted", { id });
+    logger.info("Deleting entry from state", { id });
     
-    toast({
-      title: "Entry deleted",
-      description: "Time entry has been removed",
+    // First check if entry exists
+    const entryExists = entries.some(entry => entry.id === id);
+    if (!entryExists) {
+      logger.warn("Attempted to delete non-existent entry", { id });
+      toast({
+        title: "Entry not found",
+        description: "The time entry you're trying to delete could not be found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Update state with filtered entries
+    setEntries(prev => {
+      const newEntries = prev.filter(entry => entry.id !== id);
+      logger.debug("Entries after deletion", { 
+        originalCount: prev.length, 
+        newCount: newEntries.length,
+        removedId: id
+      });
+      return newEntries;
     });
-  }, [toast, logger]);
+    
+    logger.info("Entry deleted", { id });
+  }, [entries, toast, logger]);
 
   // Update an existing entry
   const updateEntry = useCallback((id: string, updatedEntry: Partial<TimeEntry>) => {
-    setEntries(prev => 
-      prev.map(entry => 
+    setEntries(prev => {
+      // First check if entry exists
+      const entryExists = prev.some(entry => entry.id === id);
+      if (!entryExists) {
+        logger.warn("Attempted to update non-existent entry", { id });
+        return prev; // Return unchanged if entry doesn't exist
+      }
+      
+      const updatedEntries = prev.map(entry => 
         entry.id === id 
           ? { ...entry, ...updatedEntry, userId: updatedEntry.userId || entry.userId || userId || "" } 
           : entry
-      )
-    );
+      );
+      return updatedEntries;
+    });
+    
     logger.info("Entry updated", { id, updatedEntry });
     
     toast({

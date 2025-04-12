@@ -5,6 +5,7 @@ import { useTimesheetContext } from "@/contexts/timesheet";
 import EntriesHeader from "./entries/EntriesHeader";
 import EntriesContent from "./entries/EntriesContent";
 import EntriesFooter from "./entries/EntriesFooter";
+import { useLogger } from "@/hooks/useLogger";
 
 interface EntriesSectionProps {
   date: Date;
@@ -21,6 +22,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
 }) => {
   const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [formKey, setFormKey] = useState(Date.now());
+  const logger = useLogger("EntriesSection");
   
   const { addEntry, deleteEntry, workSchedule } = useTimesheetContext();
 
@@ -48,6 +50,11 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     }, 300);
   }, [addEntry, userId]);
 
+  const handleDeleteEntry = useCallback((id: string) => {
+    logger.info("Delete entry requested", { id });
+    deleteEntry(id);
+  }, [deleteEntry, logger]);
+
   return (
     <div className="space-y-4">
       <EntriesHeader 
@@ -66,7 +73,7 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         readOnly={readOnly}
         userId={userId}
         formKey={`entry-form-${formKey}`}
-        onDeleteEntry={deleteEntry}
+        onDeleteEntry={handleDeleteEntry}
         workSchedule={workSchedule}
       />
       
