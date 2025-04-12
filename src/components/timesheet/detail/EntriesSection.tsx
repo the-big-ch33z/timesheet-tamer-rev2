@@ -6,6 +6,7 @@ import EntriesHeader from "./entries/EntriesHeader";
 import EntriesContent from "./entries/EntriesContent";
 import EntriesFooter from "./entries/EntriesFooter";
 import { useLogger } from "@/hooks/useLogger";
+import WorkHoursSection from "./WorkHoursSection";
 
 interface EntriesSectionProps {
   date: Date;
@@ -70,6 +71,13 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
 
   return (
     <div className="space-y-4">
+      <WorkHoursSection 
+        entries={entries} 
+        date={date} 
+        workSchedule={workSchedule} 
+        interactive={entries.length === 0}
+      />
+      
       <EntriesHeader 
         date={date} 
         readOnly={readOnly} 

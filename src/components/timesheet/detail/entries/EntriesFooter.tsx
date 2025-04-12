@@ -18,12 +18,12 @@ const EntriesFooter: React.FC<EntriesFooterProps> = ({
   onAddEntry
 }) => {
   // Show green "+ Add Entry" button when there are entries and not currently adding one
-  if (readOnly || isAddingEntry) {
+  if (readOnly) {
     return null;
   }
 
-  // Only show after at least one entry exists
-  if (entries.length === 0) {
+  // Only show after at least one entry exists and not currently adding an entry
+  if (entries.length === 0 || isAddingEntry) {
     return null;
   }
 

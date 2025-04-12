@@ -46,13 +46,6 @@ const EntriesContent: React.FC<EntriesContentProps> = ({
   
   return (
     <>
-      <WorkHoursSection 
-        entries={entries} 
-        date={date} 
-        workSchedule={workSchedule} 
-        interactive={entries.length === 0}
-      />
-
       {showWorkHoursOnly && entries.length === 0 && onWorkHoursComplete && (
         <div className="flex justify-center mt-4">
           <Button 
