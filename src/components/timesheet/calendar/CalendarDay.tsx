@@ -72,11 +72,6 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                     {totalHours}h
                   </span>
                 )}
-                {workHours && (
-                  <span className="text-xs text-gray-500 mt-1">
-                    {workHours.startTime}-{workHours.endTime}
-                  </span>
-                )}
               </div>
             </div>
 
