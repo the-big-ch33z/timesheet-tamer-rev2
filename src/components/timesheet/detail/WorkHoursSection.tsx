@@ -30,7 +30,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [calculatedHours, setCalculatedHours] = useState(8.0);
-  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
   
   // Get visible fields from timesheet settings
   const { getVisibleFields } = useTimesheetSettings();
@@ -90,21 +90,29 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     }
   };
   
-  // Form handling for the inline entry
-  const {
-    formState,
-    handleFieldChange,
-    handleSave
-  } = useTimeEntryForm({
-    selectedDate: date,
-    onSave: (entry) => {
-      if (onCreateEntry) {
-        onCreateEntry(startTime, endTime, calculatedHours);
-        setShowEntryForm(false);
-      }
-    },
-    autoSave: false
-  });
+  // Add a new entry form
+  const addEntryForm = () => {
+    setShowEntryForms(prev => [...prev, true]);
+  };
+  
+  // Remove an entry form at specific index
+  const removeEntryForm = (index: number) => {
+    setShowEntryForms(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Create form handlers for each entry form
+  const createEntryFormHandlers = (index: number) => {
+    return useTimeEntryForm({
+      selectedDate: date,
+      onSave: (entry) => {
+        if (onCreateEntry) {
+          onCreateEntry(startTime, endTime, calculatedHours);
+          removeEntryForm(index);
+        }
+      },
+      autoSave: false
+    });
+  };
   
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -179,7 +187,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         </Alert>
       )}
       
-      {!hasEntries && !showEntryForm && (
+      {!hasEntries && showEntryForms.length === 0 && (
         <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
           <Calendar className="h-4 w-4 mr-2" />
           <AlertDescription>
@@ -188,38 +196,53 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         </Alert>
       )}
       
-      {/* Add Entry button */}
+      {/* Entry Forms Section */}
       {interactive && (
         <div className="mt-4">
-          {!showEntryForm ? (
-            <Button 
-              onClick={() => setShowEntryForm(true)}
-              size="sm"
-              className="bg-green-500 hover:bg-green-600 text-white"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Entry
-            </Button>
-          ) : (
-            <div className="mt-2">
-              <InlineEntryForm 
-                visibleFields={visibleFields}
-                formValues={formState}
-                onFieldChange={handleFieldChange}
-                onDelete={() => setShowEntryForm(false)}
-                entryId="new"
-              />
-              <div className="flex justify-end mt-2">
-                <Button 
-                  size="sm" 
-                  onClick={handleSave}
-                  className="bg-green-500 hover:bg-green-600 text-white"
-                >
-                  Save Entry
-                </Button>
-              </div>
+          {/* Entry Forms */}
+          {showEntryForms.length > 0 && (
+            <div className="space-y-4 mt-4 mb-4">
+              {showEntryForms.map((_, index) => {
+                const { formState, handleFieldChange, handleSave } = createEntryFormHandlers(index);
+                return (
+                  <div key={index} className="bg-white rounded-md shadow p-3 border border-gray-200">
+                    <InlineEntryForm 
+                      visibleFields={[
+                        { id: "job", name: "Job Number", type: "text", required: false, visible: true },
+                        { id: "rego", name: "Rego", type: "text", required: false, visible: true },
+                        { id: "task", name: "Task Number", type: "text", required: false, visible: true },
+                        { id: "notes", name: "Notes", type: "text", required: false, visible: true },
+                        { id: "hours", name: "Hours", type: "number", required: true, visible: true }
+                      ]}
+                      formValues={formState}
+                      onFieldChange={handleFieldChange}
+                      onDelete={() => removeEntryForm(index)}
+                      entryId={`new-${index}`}
+                    />
+                    <div className="flex justify-end mt-2">
+                      <Button 
+                        size="sm" 
+                        onClick={handleSave}
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        Save Entry
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
+          
+          {/* Add Entry Button */}
+          <Button 
+            onClick={addEntryForm}
+            size="sm"
+            className="bg-green-500 hover:bg-green-600 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Entry
+          </Button>
         </div>
       )}
     </div>
