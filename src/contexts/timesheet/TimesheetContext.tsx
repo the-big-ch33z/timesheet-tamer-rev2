@@ -3,7 +3,8 @@ import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { TimesheetContextType } from './types';
 import { useTimesheet } from '@/hooks/useTimesheet';
 import { useTimesheetEntries } from '@/hooks/timesheet/useTimesheetEntries';
-import { useRolePermission } from '@/hooks/useRolePermission';
+import { v4 as uuidv4 } from 'uuid';
+import { TimeEntry } from '@/types';
 
 // Create context with default values
 const TimesheetContext = createContext<TimesheetContextType | undefined>(undefined);
@@ -37,12 +38,25 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
   } = useTimesheet();
   
   const {
+    entries,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    addEntry
   } = useTimesheetEntries(targetUserId);
 
+  // Allow creating entries
+  const createEntry = (entryData: Omit<TimeEntry, "id">) => {
+    const newEntry: TimeEntry = {
+      ...entryData,
+      id: uuidv4(),
+      userId: targetUserId || '',
+    };
+    
+    addEntry(newEntry);
+  };
+
   // This is now read-only for all users
-  const canEditTimesheet = false;
+  const canEditTimesheet = true;
 
   // Combine all values into a single context object
   const contextValue: TimesheetContextType = {
@@ -54,7 +68,7 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
     currentMonth,
     selectedDay,
     workSchedule: userWorkSchedule,
-    entries: getUserEntries(),
+    entries,
     activeTab,
     setActiveTab,
     prevMonth,
@@ -62,7 +76,8 @@ export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children 
     handleDayClick,
     setSelectedDay,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    createEntry
   };
 
   return (

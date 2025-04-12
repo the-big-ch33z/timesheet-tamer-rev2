@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import { useLogger } from "../useLogger";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Simplified hook for managing timesheet entries
@@ -27,6 +28,24 @@ export const useTimesheetEntries = (userId?: string) => {
     } catch (error) {
       logger.error("Error loading entries:", error);
     }
+  }, [logger]);
+
+  // Save entries to localStorage when they change
+  useEffect(() => {
+    if (entries.length > 0) {
+      localStorage.setItem('timeEntries', JSON.stringify(entries));
+      logger.debug("Saved entries to localStorage", { count: entries.length });
+    }
+  }, [entries, logger]);
+
+  // Add a new entry
+  const addEntry = useCallback((entry: TimeEntry) => {
+    setEntries(prev => [...prev, entry]);
+    logger.debug("Entry added", { entry });
+    toast({ 
+      title: "Entry added", 
+      description: `Added ${entry.hours} hours to your timesheet` 
+    });
   }, [logger]);
 
   // Get entries for a specific user
@@ -60,6 +79,7 @@ export const useTimesheetEntries = (userId?: string) => {
   return {
     entries,
     getUserEntries,
-    getDayEntries
+    getDayEntries,
+    addEntry
   };
 };

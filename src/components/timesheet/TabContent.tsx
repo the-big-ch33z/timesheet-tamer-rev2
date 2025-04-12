@@ -5,6 +5,7 @@ import TimesheetCalendar from "./TimesheetCalendar";
 import ToilSummary from "./ToilSummary";
 import MonthlyHours from "./MonthlyHours";
 import RecentEntries from "./RecentEntries";
+import WorkHoursSection from "./detail/WorkHoursSection";
 import { useTabContent } from "./hooks/useTabContent";
 import { useTimesheetContext } from "@/contexts/timesheet";
 
@@ -16,7 +17,10 @@ const TabContent = () => {
     viewedUser,
     prevMonth,
     nextMonth,
-    handleDayClick
+    handleDayClick,
+    selectedDay,
+    canEditTimesheet,
+    createEntry
   } = useTimesheetContext();
 
   const { sortedEntries } = useTabContent({ 
@@ -25,6 +29,25 @@ const TabContent = () => {
     workSchedule, 
     user: viewedUser
   });
+
+  // Create a function to create a basic entry from time inputs
+  const handleCreateEntry = (startTime: string, endTime: string, hours: number) => {
+    if (selectedDay && viewedUser) {
+      createEntry({
+        date: selectedDay,
+        hours: hours,
+        startTime: startTime,
+        endTime: endTime,
+        userId: viewedUser.id,
+      });
+    }
+  };
+
+  // Get entries for the selected day
+  const dayEntries = selectedDay ? 
+    entries.filter(entry => 
+      entry.date.toDateString() === selectedDay.toDateString()
+    ) : [];
 
   return (
     <>
@@ -39,6 +62,18 @@ const TabContent = () => {
               onDayClick={handleDayClick}
               workSchedule={workSchedule}
             />
+            
+            {selectedDay && (
+              <div className="mt-6">
+                <WorkHoursSection 
+                  entries={dayEntries}
+                  date={selectedDay}
+                  workSchedule={workSchedule}
+                  interactive={canEditTimesheet}
+                  onCreateEntry={handleCreateEntry}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
