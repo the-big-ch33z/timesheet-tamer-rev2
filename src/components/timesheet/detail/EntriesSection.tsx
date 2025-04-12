@@ -47,7 +47,6 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
         readOnly={true} // Always read-only
         userId={userId}
         formKey={`entry-form-${formKey}`}
-        onSaveEntry={handleSaveEntry}
         onDeleteEntry={handleDeleteEntry}
       />
     </div>
