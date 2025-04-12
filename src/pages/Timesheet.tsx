@@ -1,11 +1,12 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import UserInfo from "@/components/timesheet/UserInfo";
 import TimesheetEntryDetail from "@/components/timesheet/TimesheetEntryDetail";
 import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import { TimesheetProvider, useTimesheetContext } from "@/contexts/timesheet";
+import { toast } from "@/hooks/use-toast";
 
 // Create a wrapper component that uses the context
 const TimesheetContent = () => {
@@ -17,6 +18,15 @@ const TimesheetContent = () => {
     canViewTimesheet,
     getDayEntries,
   } = useTimesheetContext();
+
+  // Display toast message once when component mounts
+  useEffect(() => {
+    toast({
+      title: "Timesheet is now view only",
+      description: "Entry creation and modification has been disabled.",
+      duration: 4000,
+    });
+  }, []);
 
   // Check for permission or if user exists
   if (!viewedUser || !canViewTimesheet) {

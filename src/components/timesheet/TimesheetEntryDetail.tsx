@@ -18,7 +18,6 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
 }) => {
   const { 
     workSchedule,
-    canEditTimesheet,
     targetUserId
   } = useTimesheetContext();
   
@@ -35,7 +34,7 @@ const TimesheetEntryDetail: React.FC<TimesheetEntryDetailProps> = ({
         <EntriesSection 
           date={date} 
           entries={entries} 
-          readOnly={!canEditTimesheet}
+          readOnly={true} // Always read-only now
           userId={targetUserId}
         />
       </div>

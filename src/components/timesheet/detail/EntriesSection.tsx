@@ -18,19 +18,19 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
   readOnly = false,
   userId
 }) => {
-  // We'll keep formKey for now to maintain the prop structure
+  // Keep formKey to maintain the component structure
   const formKey = Date.now().toString();
   const logger = useLogger("EntriesSection");
   
   const { deleteEntry } = useTimesheetContext();
 
-  // This is a placeholder function that satisfies the interface but won't be actively used
+  // Simplified no-op functions
   const handleSaveEntry = () => {
     logger.info("Save entry functionality has been removed");
   };
 
   const handleDeleteEntry = (id: string) => {
-    logger.info("Delete entry requested", { id });
+    logger.info("Delete entry functionality has been removed");
     deleteEntry(id);
   };
 
@@ -38,13 +38,13 @@ const EntriesSection: React.FC<EntriesSectionProps> = ({
     <div className="space-y-4">
       <EntriesHeader 
         date={date} 
-        readOnly={readOnly}
+        readOnly={true} // Always read-only
       />
       
       <EntriesContent
         date={date}
         entries={entries}
-        readOnly={readOnly}
+        readOnly={true} // Always read-only
         userId={userId}
         formKey={`entry-form-${formKey}`}
         onSaveEntry={handleSaveEntry}

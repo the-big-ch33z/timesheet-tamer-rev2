@@ -1,6 +1,7 @@
 
 import React from "react";
 import { format } from "date-fns";
+import { LockIcon } from "lucide-react";
 
 interface EntriesHeaderProps {
   date: Date;
@@ -17,6 +18,10 @@ const EntriesHeader: React.FC<EntriesHeaderProps> = ({
       <h3 className="text-lg font-medium">
         {dayName}'s Entries
       </h3>
+      <div className="flex items-center text-gray-500 text-sm">
+        <LockIcon className="h-4 w-4 mr-1" />
+        <span>View Only</span>
+      </div>
     </div>
   );
 };

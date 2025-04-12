@@ -1,7 +1,7 @@
+
 import React from "react";
 import { TimeEntry } from "@/types";
 import TimeEntryList from "../../entry-display/TimeEntryList";
-import { useLogger } from "@/hooks/useLogger";
 
 interface EntriesContentProps {
   date: Date;
@@ -18,19 +18,13 @@ const EntriesContent: React.FC<EntriesContentProps> = ({
   readOnly,
   onDeleteEntry
 }) => {
-  const logger = useLogger("EntriesContent");
-  
-  const handleDeleteEntry = (id: string) => {
-    logger.info("Delete entry forwarded to parent", { id });
-    onDeleteEntry(id);
-  };
-  
+  // Simplified component with no handler logic
   return (
     <div className="mt-4">
       <TimeEntryList 
         entries={entries}
-        onDeleteEntry={handleDeleteEntry}
-        readOnly={readOnly}
+        onDeleteEntry={onDeleteEntry}
+        readOnly={true} // Always read-only now
       />
     </div>
   );
