@@ -1,16 +1,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useTimesheetContext as useTimesheetUserContext } from '@/hooks/timesheet/useTimesheetContext';
-import { User, WorkSchedule } from '@/types';
-
-interface UserTimesheetContextType {
-  targetUserId?: string;
-  viewedUser?: User;
-  isViewingOtherUser: boolean;
-  canViewTimesheet: boolean;
-  canEditTimesheet: boolean;
-  workSchedule?: WorkSchedule;
-}
+import { UserTimesheetContextType } from '../types';
 
 const UserTimesheetContext = createContext<UserTimesheetContextType | undefined>(undefined);
 
@@ -22,7 +13,11 @@ export const useUserTimesheetContext = (): UserTimesheetContextType => {
   return context;
 };
 
-export const UserTimesheetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+interface UserTimesheetProviderProps {
+  children: ReactNode;
+}
+
+export const UserTimesheetProvider: React.FC<UserTimesheetProviderProps> = ({ children }) => {
   const {
     targetUserId,
     viewedUser,
@@ -34,7 +29,7 @@ export const UserTimesheetProvider: React.FC<{ children: ReactNode }> = ({ child
   // This was hardcoded in the original TimesheetContext
   const canEditTimesheet = true;
   
-  const value = {
+  const value: UserTimesheetContextType = {
     targetUserId,
     viewedUser,
     isViewingOtherUser,

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { TimesheetProvider } from "@/contexts/timesheet/TimesheetContext";
 import ErrorBoundary from "../common/ErrorBoundary";
 import { useToast } from "@/components/ui/use-toast";
@@ -8,7 +8,11 @@ interface TimesheetWithErrorBoundaryProps {
   children: React.ReactNode;
 }
 
-const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = ({ children }) => {
+/**
+ * Component that wraps timesheet content in an error boundary
+ * Memoized to prevent unnecessary re-renders
+ */
+const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = memo(({ children }) => {
   const { toast } = useToast();
 
   const handleTimesheetError = (error: Error) => {
@@ -26,6 +30,8 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = ({
       </TimesheetProvider>
     </ErrorBoundary>
   );
-};
+});
+
+TimesheetWithErrorBoundary.displayName = 'TimesheetWithErrorBoundary';
 
 export default TimesheetWithErrorBoundary;

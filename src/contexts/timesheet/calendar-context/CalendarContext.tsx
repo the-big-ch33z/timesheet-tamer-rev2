@@ -1,15 +1,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useCalendarState } from '@/hooks/timesheet/useCalendarState';
-
-interface CalendarContextType {
-  currentMonth: Date;
-  selectedDay: Date | null;
-  prevMonth: () => void;
-  nextMonth: () => void;
-  handleDayClick: (day: Date) => void;
-  setSelectedDay: (day: Date | null) => void;
-}
+import { CalendarContextType } from '../types';
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
@@ -21,7 +13,11 @@ export const useCalendarContext = (): CalendarContextType => {
   return context;
 };
 
-export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+interface CalendarProviderProps {
+  children: ReactNode;
+}
+
+export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) => {
   const {
     currentMonth,
     selectedDay,
@@ -31,7 +27,7 @@ export const CalendarProvider: React.FC<{ children: ReactNode }> = ({ children }
     setSelectedDay
   } = useCalendarState();
   
-  const value = {
+  const value: CalendarContextType = {
     currentMonth,
     selectedDay,
     prevMonth,

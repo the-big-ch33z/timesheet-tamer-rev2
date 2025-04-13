@@ -2,14 +2,8 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useTimesheetEntries } from '@/hooks/timesheet/useTimesheetEntries';
 import { TimeEntry } from '@/types';
+import { EntriesContextType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-
-interface EntriesContextType {
-  entries: TimeEntry[];
-  getUserEntries: () => TimeEntry[];
-  getDayEntries: (day: Date) => TimeEntry[];
-  createEntry: (entry: Omit<TimeEntry, "id">) => void;
-}
 
 const EntriesContext = createContext<EntriesContextType | undefined>(undefined);
 

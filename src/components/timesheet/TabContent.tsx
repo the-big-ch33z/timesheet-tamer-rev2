@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import TimesheetCalendar from "./TimesheetCalendar";
 import ToilSummary from "./ToilSummary";
@@ -13,7 +13,7 @@ import {
   useEntriesContext 
 } from "@/contexts/timesheet";
 
-const TabContent = () => {
+const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
   const { entries, createEntry, getDayEntries } = useEntriesContext();
@@ -38,8 +38,10 @@ const TabContent = () => {
     }
   };
 
-  // Get entries for the selected day
-  const dayEntries = selectedDay ? getDayEntries(selectedDay) : [];
+  // Get entries for the selected day - memoized to prevent recalculation on each render
+  const dayEntries = useMemo(() => 
+    selectedDay ? getDayEntries(selectedDay) : []
+  , [selectedDay, getDayEntries]);
 
   return (
     <>

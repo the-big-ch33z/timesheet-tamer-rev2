@@ -1,10 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface TimesheetUIContextType {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-}
+import { TimesheetUIContextType } from '../types';
 
 const TimesheetUIContext = createContext<TimesheetUIContextType | undefined>(undefined);
 
@@ -16,10 +12,14 @@ export const useTimesheetUIContext = (): TimesheetUIContextType => {
   return context;
 };
 
-export const TimesheetUIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+interface TimesheetUIProviderProps {
+  children: ReactNode;
+}
+
+export const TimesheetUIProvider: React.FC<TimesheetUIProviderProps> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<string>("timesheet");
   
-  const value = {
+  const value: TimesheetUIContextType = {
     activeTab,
     setActiveTab
   };

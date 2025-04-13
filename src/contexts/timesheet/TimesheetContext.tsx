@@ -1,9 +1,9 @@
 
 import React, { ReactNode } from 'react';
-import { CalendarProvider, useCalendarContext } from './calendar-context/CalendarContext';
-import { UserTimesheetProvider, useUserTimesheetContext } from './user-context/UserTimesheetContext';
-import { EntriesProvider, useEntriesContext } from './entries-context/EntriesContext';
-import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/TimesheetUIContext';
+import { CalendarProvider } from './calendar-context/CalendarContext';
+import { UserTimesheetProvider } from './user-context/UserTimesheetContext';
+import { EntriesProvider } from './entries-context/EntriesContext';
+import { TimesheetUIProvider } from './ui-context/TimesheetUIContext';
 import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTimesheetContext';
 
 // Re-export individual context hooks
@@ -28,8 +28,12 @@ export const useTimesheetContext = () => {
   };
 };
 
+interface TimesheetProviderProps {
+  children: ReactNode;
+}
+
 // Provider component that wraps all specialized providers
-export const TimesheetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }) => {
   const { targetUserId } = useTimesheetUser();
   
   return (

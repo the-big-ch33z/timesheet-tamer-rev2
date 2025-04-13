@@ -1,12 +1,16 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Clock } from "lucide-react";
 
 interface WorkHoursHeaderProps {
   hasEntries: boolean;
 }
 
-const WorkHoursHeader: React.FC<WorkHoursHeaderProps> = ({ hasEntries }) => {
+/**
+ * Header component for work hours section
+ * Memoized to prevent unnecessary re-renders
+ */
+const WorkHoursHeader: React.FC<WorkHoursHeaderProps> = memo(({ hasEntries }) => {
   return (
     <div className="flex items-center mb-4">
       <Clock className="h-5 w-5 mr-2 text-amber-700" />
@@ -18,6 +22,9 @@ const WorkHoursHeader: React.FC<WorkHoursHeaderProps> = ({ hasEntries }) => {
       )}
     </div>
   );
-};
+});
+
+// Display name for debugging
+WorkHoursHeader.displayName = 'WorkHoursHeader';
 
 export default WorkHoursHeader;
