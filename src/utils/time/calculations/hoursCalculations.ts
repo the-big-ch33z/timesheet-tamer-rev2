@@ -1,4 +1,3 @@
-
 /**
  * Hours calculation utilities
  * Functions for calculating hours between times and related operations
@@ -77,7 +76,6 @@ export const calculateMonthlyTargetHours = (fortnightHours: number, monthOrWorkD
     // If we received a Date, get the work days in that month
     let workDaysInMonth: number;
     if (monthOrWorkDays instanceof Date) {
-      const { getWorkdaysInMonth } = require('../scheduleUtils');
       workDaysInMonth = getWorkdaysInMonth(monthOrWorkDays);
       logger.debug(`Calculated ${workDaysInMonth} workdays in month ${monthOrWorkDays.toISOString().substr(0, 7)}`);
     } else {
