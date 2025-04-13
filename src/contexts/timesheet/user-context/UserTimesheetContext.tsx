@@ -30,7 +30,6 @@ export const UserTimesheetProvider: React.FC<UserTimesheetProviderProps> = ({ ch
   const canEditTimesheet = true;
   
   const value: UserTimesheetContextType = {
-    targetUserId,
     viewedUser,
     isViewingOtherUser,
     canViewTimesheet,
