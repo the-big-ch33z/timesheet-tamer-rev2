@@ -6,7 +6,7 @@ import EntryFormItem from "./EntryFormItem";
 interface EntryFormsListProps {
   showEntryForms: boolean[];
   formHandlers: UseTimeEntryFormReturn[];
-  handleSaveEntry?: (index: number) => void;
+  handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;
   addEntryForm?: () => void;  // Optional prop
 }
@@ -33,7 +33,7 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
             key={`form-${index}`}
             formState={formHandler.formState}
             handleFieldChange={(field, value) => formHandler.handleFieldChange(field, value)}
-            handleSave={() => handleSaveEntry?.(index)}
+            handleSave={() => handleSaveEntry(index)}
             onDelete={() => removeEntryForm(index)}
             entryId={`new-${index}`}
           />
