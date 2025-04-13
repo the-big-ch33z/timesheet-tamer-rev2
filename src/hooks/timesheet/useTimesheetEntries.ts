@@ -32,10 +32,9 @@ export const useTimesheetEntries = (userId?: string) => {
 
   // Save entries to localStorage when they change
   useEffect(() => {
-    if (entries.length > 0) {
-      localStorage.setItem('timeEntries', JSON.stringify(entries));
-      logger.debug("Saved entries to localStorage", { count: entries.length });
-    }
+    // Save entries whether empty or not to properly handle deletion
+    localStorage.setItem('timeEntries', JSON.stringify(entries));
+    logger.debug("Saved entries to localStorage", { count: entries.length });
   }, [entries, logger]);
 
   // Add a new entry

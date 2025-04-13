@@ -8,7 +8,6 @@ interface EntryListProps {
 }
 
 const EntryList: React.FC<EntryListProps> = ({ entries }) => {
-  // Add debug logs to see what entries are being passed
   console.log("EntryList entries:", entries);
   
   if (entries.length === 0) {
@@ -24,7 +23,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries }) => {
       <h3 className="text-sm font-medium text-gray-700 mb-2">Time Entries:</h3>
       <div className="space-y-2">
         {entries.map(entry => (
-          <EntryListItem key={entry.id} entry={entry} />
+          <EntryListItem key={`entry-${entry.id}`} entry={entry} />
         ))}
       </div>
     </div>

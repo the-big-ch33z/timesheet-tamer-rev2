@@ -119,6 +119,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     setShowEntryForms(prev => prev.filter((_, i) => i !== index));
   };
   
+  // Force re-render when entries change
+  useEffect(() => {
+    console.log("Entries updated in WorkHoursSection:", entries.length);
+  }, [entries]);
+  
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
       <WorkHoursHeader hasEntries={hasEntries} />
@@ -151,7 +156,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       />
       
       {/* Entry List with Delete functionality */}
-      {hasEntries && <EntryList entries={entries} />}
+      {hasEntries && <EntryList entries={entries} key={`entries-${entries.length}`} />}
       
       {/* Entry Forms Section */}
       {interactive && (

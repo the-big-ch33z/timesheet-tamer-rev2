@@ -13,7 +13,6 @@ interface EntryListItemProps {
 const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
   const { deleteEntry } = useEntriesContext();
   
-  // Add a debug log to verify entry properties and delete functionality
   const handleDelete = () => {
     console.log("Deleting entry:", entry.id);
     deleteEntry(entry.id);
@@ -27,7 +26,7 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
           <span className="text-sm text-gray-500">
             {entry.startTime && entry.endTime ? 
               `${entry.startTime} - ${entry.endTime}` : 
-              format(entry.date, "MMM d, yyyy")}
+              format(new Date(entry.date), "MMM d, yyyy")}
           </span>
         </div>
         
