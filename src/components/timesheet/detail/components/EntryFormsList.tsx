@@ -1,57 +1,43 @@
 
 import React from "react";
-import EntryFormItem from "./EntryFormItem";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
+import EntryFormItem from "../components/EntryFormItem";
 
 interface EntryFormsListProps {
   showEntryForms: boolean[];
   formHandlers: UseTimeEntryFormReturn[];
-  addEntryForm: () => void;
+  handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;
 }
 
 const EntryFormsList: React.FC<EntryFormsListProps> = ({
   showEntryForms,
   formHandlers,
-  addEntryForm,
+  handleSaveEntry,
   removeEntryForm
 }) => {
-  // Only display forms if there are any to show
-  const shouldShowForms = showEntryForms.length > 0;
+  if (showEntryForms.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="mt-4">
-      {/* Entry Forms */}
-      {shouldShowForms && (
-        <div className="space-y-4 mt-4 mb-4">
-          {showEntryForms.map((_, index) => {
-            const { formState, handleFieldChange, handleSave } = formHandlers[index];
-            
-            return (
-              <EntryFormItem
-                key={`form-${index}`}
-                formState={formState}
-                handleFieldChange={handleFieldChange}
-                handleSave={handleSave}
-                onDelete={() => removeEntryForm(index)}
-                entryId={`new-${index}`}
-              />
-            );
-          })}
-        </div>
-      )}
-      
-      {/* Add Entry Button */}
-      <Button 
-        onClick={addEntryForm}
-        size="sm"
-        className="bg-green-500 hover:bg-green-600 text-white"
-      >
-        <Plus className="h-4 w-4 mr-1" />
-        Add Entry
-      </Button>
+    <div className="space-y-4 mt-4 mb-4">
+      {showEntryForms.map((_, index) => {
+        const formHandler = formHandlers[index];
+        
+        if (!formHandler) return null;
+        
+        return (
+          <EntryFormItem
+            key={`form-${index}`}
+            formState={formHandler.formState}
+            handleFieldChange={(field, value) => formHandler.handleFieldChange(field, value)}
+            handleSave={() => handleSaveEntry(index)}
+            onDelete={() => removeEntryForm(index)}
+            entryId={`new-${index}`}
+          />
+        );
+      })}
     </div>
   );
 };

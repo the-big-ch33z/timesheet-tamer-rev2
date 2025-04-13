@@ -9,7 +9,10 @@ import WorkHoursHeader from "../components/WorkHoursHeader";
 import TimeEntryDisplay from "../components/TimeEntryDisplay";
 import WorkHoursAlerts from "../components/WorkHoursAlerts";
 import EntryList from "../components/EntryList";
-import TimeEntryFormManager from "./TimeEntryFormManager";
+import { useEntryForms } from "../hooks/useEntryForms";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import EntryFormsList from "../components/EntryFormsList";
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
@@ -79,10 +82,46 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     interactive
   });
   
+  // Setup entry forms management
+  const {
+    showEntryForms,
+    addEntryForm,
+    removeEntryForm,
+    refreshForms
+  } = useEntryForms({ 
+    formHandlers 
+  });
+  
   // Calculate totals
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
   const hoursVariance = calculateHoursVariance(totalHours, calculatedHours);
   const hasEntries = entries.length > 0;
+  
+  // Handle saving an entry form
+  const handleSaveEntry = (index: number) => {
+    if (!interactive || !formHandlers[index]) return;
+
+    const formHandler = formHandlers[index];
+    const formData = formHandler.getFormData();
+    
+    console.log("Saving entry with data:", formData);
+    
+    onCreateEntry?.(
+      formData.startTime || startTime,
+      formData.endTime || endTime,
+      parseFloat(formData.hours.toString()) || calculatedHours
+    );
+    
+    // Reset the form
+    formHandler.resetFormEdited();
+    formHandler.resetForm();
+    
+    // Force a re-render after the entry is added
+    setTimeout(() => {
+      console.log("Refreshing forms after save");
+      refreshForms();
+    }, 100);
+  };
   
   // Log when entries update
   useEffect(() => {
@@ -129,16 +168,26 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       {/* Entry List with Delete functionality */}
       {hasEntries && <EntryList entries={entries} />}
       
-      {/* Form Manager Component */}
-      {interactive && (
-        <TimeEntryFormManager
+      {/* Entry Forms List */}
+      {interactive && showEntryForms.length > 0 && (
+        <EntryFormsList
+          showEntryForms={showEntryForms}
           formHandlers={formHandlers}
-          interactive={interactive}
-          onCreateEntry={onCreateEntry || (() => {})}
-          startTime={startTime}
-          endTime={endTime}
-          calculatedHours={calculatedHours}
+          handleSaveEntry={handleSaveEntry}
+          removeEntryForm={removeEntryForm}
         />
+      )}
+      
+      {/* Add Entry Button */}
+      {interactive && (
+        <Button 
+          onClick={addEntryForm}
+          size="sm"
+          className="bg-green-500 hover:bg-green-600 text-white"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Entry
+        </Button>
       )}
     </div>
   );
