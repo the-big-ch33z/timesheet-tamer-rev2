@@ -1,10 +1,12 @@
+
 import { useCallback, useEffect, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
-import { calculateHoursVariance, isUndertime } from "../../utils/timeUtils";
+import { calculateHoursVariance, isUndertime } from "@/utils/time/calculations/varianceCalculations";
 import { useEntryForms } from "./useEntryForms";
 import { format } from "date-fns";
+import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
 
 interface UseTimeEntryStateProps {
   entries: TimeEntry[];
@@ -45,16 +47,11 @@ export const useTimeEntryState = ({
     initialStartTime = entries[0].startTime || initialStartTime;
     initialEndTime = entries[0].endTime || initialEndTime;
   } else if (workSchedule) {
-    const { getWeekDay, getFortnightWeek } = require("../../utils/scheduleUtils");
+    const scheduleInfo = getDayScheduleInfo(date, workSchedule);
     
-    const weekDay = getWeekDay(date);
-    const weekNum = getFortnightWeek(date);
-    
-    const scheduleDay = workSchedule.weeks[weekNum][weekDay];
-    
-    if (scheduleDay) {
-      initialStartTime = scheduleDay.startTime || initialStartTime;
-      initialEndTime = scheduleDay.endTime || initialEndTime;
+    if (scheduleInfo?.hours) {
+      initialStartTime = scheduleInfo.hours.startTime || initialStartTime;
+      initialEndTime = scheduleInfo.hours.endTime || initialEndTime;
     }
   }
 

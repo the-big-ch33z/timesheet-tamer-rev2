@@ -1,26 +1,8 @@
 
-import { getDaysInMonth, isWeekend } from "date-fns";
-
 /**
- * Gets the number of workdays (Monday-Friday) in the given month
+ * Date utility functions
  */
-export function getWorkdaysInMonth(date: Date): number {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const daysInMonth = getDaysInMonth(new Date(year, month));
-  
-  let workdays = 0;
-  
-  for (let day = 1; day <= daysInMonth; day++) {
-    const currentDate = new Date(year, month, day);
-    // Count days that are not weekends
-    if (!isWeekend(currentDate)) {
-      workdays++;
-    }
-  }
-  
-  return workdays;
-}
+import { getWorkdaysInMonth } from '@/utils/time/scheduleUtils';
 
 /**
  * Calculates the target hours based on fortnight hours and work days in month
@@ -35,3 +17,6 @@ export function calculateMonthlyTargetHours(fortnightHours: number, date: Date):
   // Round to 1 decimal place
   return Math.round(targetHours * 10) / 10;
 }
+
+// Re-export the workdays function for backward compatibility
+export { getWorkdaysInMonth } from '@/utils/time/scheduleUtils';

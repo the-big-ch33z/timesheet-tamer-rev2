@@ -1,14 +1,9 @@
 
 /**
  * Calculations utilities index file
- * This file exports all calculation utilities in a way that allows for tree-shaking
- * This helps reduce bundle size by only including the functions that are actually used
+ * This file is kept for backward compatibility
+ * New code should import from @/utils/time/calculations
  */
 
-// Re-export from our consolidated timeUtils file
-export { 
-  calculateHoursFromTimes, 
-  formatHours,
-  calculateHoursVariance,
-  isUndertime
-} from '../timeUtils';
+// Re-export all utility functions from the new centralized location
+export * from '@/utils/time/calculations';

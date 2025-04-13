@@ -1,6 +1,7 @@
 
 import React from "react";
 import TimeInputField from "./TimeInputField";
+import { formatDisplayHours } from "@/utils/time/formatting/timeFormatting";
 
 interface TimeDisplayProps {
   startTime: string;
@@ -49,7 +50,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
         <div className="text-sm text-amber-700 mb-1">Total Hours</div>
         <div className={`bg-white border ${hasEntries ? 'border-amber-200' : 'border-gray-200'} rounded-md p-2`}>
           <span className={`text-lg ${!hasEntries && 'text-gray-400'}`}>
-            {hasEntries ? totalHours.toFixed(1) : calculatedHours.toFixed(1)}
+            {hasEntries ? formatDisplayHours(totalHours) : formatDisplayHours(calculatedHours)}
           </span>
         </div>
       </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
-import { format } from "date-fns";
+import { formatTimeForDisplay } from "@/utils/time/formatting/timeFormatting";
 
 interface TimeInputFieldProps {
   label: string;
@@ -51,7 +51,7 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
           />
         ) : (
           <span className="text-lg">
-            {format(new Date(`2000-01-01T${localValue}`), "h:mm a")}
+            {formatTimeForDisplay(localValue)}
           </span>
         )}
         <Clock className="h-4 w-4 ml-2 text-gray-400" />

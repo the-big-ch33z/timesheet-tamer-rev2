@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User, WorkSchedule } from "@/types";
-import { getWorkdaysInMonth } from "@/lib/date-utils";
+import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
 import { useUserMetrics } from "@/contexts/user-metrics";
 
