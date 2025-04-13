@@ -28,20 +28,26 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
   entryId,
   disabled = false
 }) => {
+  // Function to handle each field change
+  const handleChange = (field: string, value: string) => {
+    console.log(`Field changed: ${field} = ${value}`);
+    onFieldChange(field, value);
+  };
+
   return (
     <div className={`flex items-center gap-2 bg-white border rounded-md p-2 ${disabled ? 'opacity-75' : ''}`}>
       <CustomFields
         visibleFields={visibleFields}
         jobNumber={formValues.jobNumber}
-        setJobNumber={(val) => onFieldChange('jobNumber', val)}
+        setJobNumber={(val) => handleChange('jobNumber', val)}
         rego={formValues.rego}
-        setRego={(val) => onFieldChange('rego', val)}
+        setRego={(val) => handleChange('rego', val)}
         taskNumber={formValues.taskNumber}
-        setTaskNumber={(val) => onFieldChange('taskNumber', val)}
+        setTaskNumber={(val) => handleChange('taskNumber', val)}
         description={formValues.description}
-        setDescription={(val) => onFieldChange('description', val)}
+        setDescription={(val) => handleChange('description', val)}
         hours={formValues.hours}
-        setHours={(val) => onFieldChange('hours', val)}
+        setHours={(val) => handleChange('hours', val)}
         inline={true}
         disabled={disabled}
       />

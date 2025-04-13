@@ -38,24 +38,25 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const [key, setKey] = useState(Date.now()); // Add a key to force re-render
   
   // Create form handlers for ALL possible entry forms upfront
-  // This is important to avoid conditional hook creation
   const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
     selectedDate: date,
     onSave: (entry) => {
       if (onCreateEntry) {
         // Pass the data to the parent handler
+        console.log("Saving entry with data:", entry);
         onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, parseFloat(entry.hours.toString()) || calculatedHours);
         
         // Reset the form instead of removing it
         formHandlers[i].resetFormEdited();
         
-        // Clear form fields - you'd need to add this function to the useTimeEntryForm hook
+        // Clear form fields
         formHandlers[i].resetForm();
         
         // Force a re-render after the entry is added
-        setTimeout(() => setKey(Date.now()), 100);
-        
-        console.log("Entry saved, form reset but kept visible");
+        setTimeout(() => {
+          console.log("Forcing re-render after save");
+          setKey(Date.now());
+        }, 100);
       }
     },
     autoSave: false
@@ -122,12 +123,14 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const addEntryForm = () => {
     // Limit to maximum of 10 forms
     if (showEntryForms.length < 10) {
+      console.log("Adding new entry form");
       setShowEntryForms(prev => [...prev, true]);
     }
   };
   
   // Remove an entry form at specific index
   const removeEntryForm = (index: number) => {
+    console.log("Removing entry form at index:", index);
     setShowEntryForms(prev => prev.filter((_, i) => i !== index));
   };
   

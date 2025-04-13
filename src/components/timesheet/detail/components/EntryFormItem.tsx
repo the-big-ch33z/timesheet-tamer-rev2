@@ -21,6 +21,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   entryId,
   disabled = false
 }) => {
+  const onFieldChange = (field: string, value: string) => {
+    console.log(`EntryFormItem field change: ${field} = ${value}`);
+    handleFieldChange(field, value);
+  };
+
   return (
     <div className="bg-white rounded-md shadow p-3 border border-gray-200">
       <InlineEntryForm 
@@ -32,7 +37,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           { id: "hours", name: "Hours", type: "number", required: true, visible: true }
         ]}
         formValues={formState}
-        onFieldChange={handleFieldChange}
+        onFieldChange={onFieldChange}
         onDelete={onDelete}
         entryId={entryId}
         disabled={disabled}

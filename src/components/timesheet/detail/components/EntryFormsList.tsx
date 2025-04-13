@@ -31,7 +31,7 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
             
             return (
               <EntryFormItem
-                key={`form-${index}-${Date.now()}`}
+                key={`form-${index}`}
                 formState={formState}
                 handleFieldChange={handleFieldChange}
                 handleSave={handleSave}
