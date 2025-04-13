@@ -8,14 +8,21 @@ import { useEntriesContext } from "@/contexts/timesheet";
 
 interface EntryListItemProps {
   entry: TimeEntry;
+  onDelete?: () => void;  // Making this prop optional with a ? and explicitly defining it
 }
 
-const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
+const EntryListItem: React.FC<EntryListItemProps> = ({ entry, onDelete }) => {
   const { deleteEntry } = useEntriesContext();
   
   const handleDelete = () => {
     console.log("Deleting entry:", entry.id);
-    deleteEntry(entry.id);
+    
+    // Use the provided onDelete if available, otherwise use the context method
+    if (onDelete) {
+      onDelete();
+    } else {
+      deleteEntry(entry.id);
+    }
   };
   
   // Ensure entry.date is a Date object for formatting
