@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 
@@ -8,7 +8,9 @@ interface EntryListProps {
 }
 
 const EntryList: React.FC<EntryListProps> = ({ entries }) => {
-  console.log("EntryList entries:", entries);
+  useEffect(() => {
+    console.log("EntryList rendering with entries:", entries.length);
+  }, [entries]);
   
   if (entries.length === 0) {
     return (
@@ -23,7 +25,10 @@ const EntryList: React.FC<EntryListProps> = ({ entries }) => {
       <h3 className="text-sm font-medium text-gray-700 mb-2">Time Entries:</h3>
       <div className="space-y-2">
         {entries.map(entry => (
-          <EntryListItem key={`entry-${entry.id}`} entry={entry} />
+          <EntryListItem 
+            key={`entry-${entry.id}-${Date.now()}`} 
+            entry={entry} 
+          />
         ))}
       </div>
     </div>

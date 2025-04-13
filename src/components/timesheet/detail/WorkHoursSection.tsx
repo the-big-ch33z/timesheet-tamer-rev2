@@ -35,6 +35,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const [endTime, setEndTime] = useState("17:00");
   const [calculatedHours, setCalculatedHours] = useState(8.0);
   const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
+  const [key, setKey] = useState(Date.now()); // Add a key to force re-render
   
   // Create form handlers for ALL possible entry forms upfront
   // This is important to avoid conditional hook creation
@@ -42,8 +43,10 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     selectedDate: date,
     onSave: (entry) => {
       if (onCreateEntry) {
-        onCreateEntry(startTime, endTime, calculatedHours);
+        onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, parseFloat(entry.hours.toString()) || calculatedHours);
         removeEntryForm(i);
+        // Force a re-render after the entry is added
+        setTimeout(() => setKey(Date.now()), 100);
       }
     },
     autoSave: false
@@ -119,7 +122,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     setShowEntryForms(prev => prev.filter((_, i) => i !== index));
   };
   
-  // Force re-render when entries change
+  // Log when entries update
   useEffect(() => {
     console.log("Entries updated in WorkHoursSection:", entries.length);
   }, [entries]);
@@ -156,7 +159,12 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       />
       
       {/* Entry List with Delete functionality */}
-      {hasEntries && <EntryList entries={entries} key={`entries-list-${entries.length}-${Date.now()}`} />}
+      {hasEntries && (
+        <EntryList 
+          entries={entries} 
+          key={`entries-list-${entries.length}-${key}`}
+        />
+      )}
       
       {/* Entry Forms Section */}
       {interactive && (
@@ -165,6 +173,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
           formHandlers={formHandlers}
           addEntryForm={addEntryForm}
           removeEntryForm={removeEntryForm}
+          key={`entry-forms-${showEntryForms.length}-${key}`}
         />
       )}
     </div>

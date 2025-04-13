@@ -52,7 +52,12 @@ const TabContent: React.FC = () => {
   // Get entries for the selected day - memoized to prevent recalculation on each render
   const dayEntries = useMemo(() => 
     selectedDay ? getDayEntries(selectedDay) : []
-  , [selectedDay, getDayEntries]);
+  , [selectedDay, getDayEntries, entries]); // Add entries dependency to refresh when entries change
+
+  // Generate unique key for WorkHoursSection to force proper re-render when day selection or entries change
+  const workHoursSectionKey = useMemo(() => 
+    selectedDay ? `work-hours-${selectedDay.toISOString()}-${dayEntries.length}-${Date.now()}` : 'no-day'
+  , [selectedDay, dayEntries.length]);
 
   return (
     <>
@@ -79,7 +84,7 @@ const TabContent: React.FC = () => {
                     workSchedule={workSchedule}
                     interactive={canEditTimesheet}
                     onCreateEntry={handleCreateEntry}
-                    key={`work-hours-${selectedDay.toISOString()}-${dayEntries.length}`}
+                    key={workHoursSectionKey}
                   />
                 </Suspense>
               </div>

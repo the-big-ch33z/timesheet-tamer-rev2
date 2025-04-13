@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { format, isEqual, parseISO } from "date-fns";
 import { TimeEntry } from "@/types";
 import { useLogger } from "../useLogger";
 import { toast } from "@/hooks/use-toast";
@@ -104,15 +104,12 @@ export const useTimesheetEntries = (userId?: string) => {
         : new Date(entry.date);
       
       const entryDateFormatted = format(entryDate, "yyyy-MM-dd");
-      const isMatch = entryDateFormatted === dayFormatted;
-      
-      return isMatch;
+      return entryDateFormatted === dayFormatted;
     });
     
     logger.debug("Retrieved entries for day", { 
-      date: format(day, "yyyy-MM-dd"), 
-      count: dayEntries.length,
-      entries: dayEntries
+      date: dayFormatted, 
+      count: dayEntries.length
     });
     
     return dayEntries;
