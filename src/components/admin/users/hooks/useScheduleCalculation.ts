@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { WorkSchedule } from "@/types";
-import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
+import { calculateFortnightHoursFromSchedule } from "@/utils/time/scheduleUtils";
 
 interface UseScheduleCalculationProps {
   useDefaultSchedule: boolean;

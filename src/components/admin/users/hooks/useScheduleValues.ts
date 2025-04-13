@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { UseFormWatch, UseFormSetValue } from "react-hook-form";
 import { UserEditFormValues } from "./useEditUserForm";
 import { useWorkSchedule } from "@/contexts/work-schedule";
-import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
+import { calculateFortnightHoursFromSchedule } from "@/utils/time/scheduleUtils";
 
 interface UseScheduleValuesProps {
   watch: UseFormWatch<UserEditFormValues>;

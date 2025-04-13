@@ -4,7 +4,7 @@ import { WorkSchedule } from "@/types";
 import TimeInput from "./time/TimeInput";
 import TimeWarningDialog from "./time/TimeWarningDialog";
 import TimeWarningAlert from "./time/TimeWarningAlert";
-import { validateTime } from "./time/TimeValidation";
+import { validateTime } from "@/utils/time/validation/timeValidation";
 
 interface TimeFieldsProps {
   startTime: string;

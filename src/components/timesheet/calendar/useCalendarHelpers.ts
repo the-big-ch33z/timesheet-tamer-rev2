@@ -2,6 +2,7 @@
 import { WeekDay, WorkSchedule, Holiday } from "@/types";
 import { format } from "date-fns";
 import { startOfYear } from "date-fns";
+import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 
 export interface DayStatus {
   isWeekend: boolean;
@@ -25,20 +26,6 @@ export const useCalendarHelpers = () => {
       6: 'saturday'
     };
     return dayMap[date.getDay()];
-  };
-
-  // Determine which fortnight week (1 or 2) a given date falls into
-  const getFortnightWeek = (date: Date): 1 | 2 => {
-    // Start of the year as a reference point
-    const yearStart = startOfYear(new Date(date.getFullYear(), 0, 1));
-    
-    // Calculate weeks since start of year (0-indexed)
-    const weeksSinceYearStart = Math.floor(
-      (date.getTime() - yearStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
-    );
-    
-    // Convert to 1 or 2 based on odd or even week number
-    return ((weeksSinceYearStart % 2) + 1) as 1 | 2;
   };
 
   // Check if a day is a working day according to the schedule
@@ -102,7 +89,6 @@ export const useCalendarHelpers = () => {
 
   return {
     getWeekDayFromDate,
-    getFortnightWeek,
     isWorkingDay,
     getWorkHoursForDay,
     checkIsHoliday,
