@@ -8,6 +8,7 @@ interface TimeInputProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   disabled?: boolean;
 }
 
@@ -16,6 +17,7 @@ const TimeInput: React.FC<TimeInputProps> = ({
   label, 
   value, 
   onChange,
+  onBlur,
   disabled = false
 }) => {
   return (
@@ -26,6 +28,7 @@ const TimeInput: React.FC<TimeInputProps> = ({
           name={label}
           value={value}
           onChange={onChange}
+          onBlur={onBlur}
           required
           disabled={disabled}
           className="pr-10"

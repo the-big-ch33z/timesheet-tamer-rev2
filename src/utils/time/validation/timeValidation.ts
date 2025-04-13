@@ -24,7 +24,25 @@ export const validateTime = (
   workSchedule?: WorkSchedule
 ): ValidationResult => {
   try {
-    if (!workSchedule || !selectedDate) return { valid: true };
+    // First check if both times are provided and valid
+    if (!start || !end) {
+      return { 
+        valid: false,
+        message: !start ? "Start time is required" : "End time is required"
+      };
+    }
+
+    if (!isValidTimeFormat(start) || !isValidTimeFormat(end)) {
+      return { 
+        valid: false,
+        message: "Time must be in valid HH:MM format"
+      };
+    }
+
+    // If no schedule provided, just validate basic time logic
+    if (!workSchedule || !selectedDate) {
+      return validateTimeOrder(start, end);
+    }
 
     const weekDay = getWeekDay(selectedDate);
     const weekNum = getFortnightWeek(selectedDate);
@@ -124,6 +142,14 @@ export const validateTimeFormat = (timeString: string, fieldName: string = 'Time
  */
 export const validateTimeOrder = (startTime: string, endTime: string, allowOvernight: boolean = true): ValidationResult => {
   try {
+    // Check if inputs are valid before comparing
+    if (!startTime || !endTime) {
+      return {
+        valid: false,
+        message: !startTime ? "Start time is required" : "End time is required"
+      };
+    }
+    
     if (!isValidTimeFormat(startTime) || !isValidTimeFormat(endTime)) {
       return {
         valid: false,

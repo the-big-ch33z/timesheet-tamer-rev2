@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
+import { validateTimeOrder } from "@/utils/time/validation";
 
 interface UseWorkHoursProps {
   initialStartTime?: string;
@@ -33,8 +34,8 @@ export const useWorkHours = ({
     setCalculatedHours(hours);
   }, [initialStartTime, initialEndTime]);
   
-  // Handle time input changes
-  const handleTimeChange = (type: 'start' | 'end', value: string) => {
+  // Handle time input changes with better validation
+  const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     console.log(`WorkHoursSection time change: ${type} = ${value}, interactive=${interactive}`);
     
     if (!interactive) {
@@ -43,30 +44,29 @@ export const useWorkHours = ({
     }
     
     try {
+      // Make sure we have valid values to work with
+      const currentStartTime = type === 'start' ? value : startTime;
+      const currentEndTime = type === 'end' ? value : endTime;
+      
+      // Validate the time order
+      const validation = validateTimeOrder(currentStartTime, currentEndTime);
+      
+      if (!validation.valid) {
+        toast({
+          title: "Invalid time range",
+          description: validation.message || "Please check your time inputs",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // If validation passes, update the times
       if (type === 'start') {
         console.log(`Setting start time from ${startTime} to ${value}`);
         setStartTime(value);
-        
-        // Check if start time is after end time
-        if (value > endTime) {
-          toast({
-            title: "Invalid time range",
-            description: "Start time cannot be later than end time",
-            variant: "destructive"
-          });
-        } 
       } else {
         console.log(`Setting end time from ${endTime} to ${value}`);
         setEndTime(value);
-        
-        // Check if end time is before start time
-        if (value < startTime) {
-          toast({
-            title: "Invalid time range",
-            description: "End time cannot be earlier than start time",
-            variant: "destructive"
-          });
-        }
       }
     } catch (error) {
       console.error("Error updating time:", error);
@@ -76,7 +76,7 @@ export const useWorkHours = ({
         variant: "destructive"
       });
     }
-  };
+  }, [startTime, endTime, interactive, toast]);
   
   // Recalculate hours when times change
   useEffect(() => {
