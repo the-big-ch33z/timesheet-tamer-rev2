@@ -40,7 +40,14 @@ export const useTimesheetEntries = (userId?: string) => {
   // Add a new entry
   const addEntry = useCallback((entry: TimeEntry) => {
     logger.debug("Adding entry", { entry });
-    setEntries(prev => [...prev, entry]);
+    
+    // Ensure date is a Date object
+    const entryWithDate = {
+      ...entry,
+      date: entry.date instanceof Date ? entry.date : new Date(entry.date)
+    };
+    
+    setEntries(prev => [...prev, entryWithDate]);
     
     // Use setTimeout to avoid React state update issues with toast
     setTimeout(() => {
@@ -97,6 +104,10 @@ export const useTimesheetEntries = (userId?: string) => {
     const userEntries = getUserEntries(userIdToFilter);
     const dayFormatted = format(day, "yyyy-MM-dd");
     
+    logger.debug(`Getting entries for date: ${dayFormatted}`, {
+      totalUserEntries: userEntries.length
+    });
+    
     const dayEntries = userEntries.filter(entry => {
       // Ensure entry.date is a Date object
       const entryDate = entry.date instanceof Date 
@@ -104,7 +115,13 @@ export const useTimesheetEntries = (userId?: string) => {
         : new Date(entry.date);
       
       const entryDateFormatted = format(entryDate, "yyyy-MM-dd");
-      return entryDateFormatted === dayFormatted;
+      
+      const isMatch = entryDateFormatted === dayFormatted;
+      logger.debug(`Entry date: ${entryDateFormatted}, target: ${dayFormatted}, match: ${isMatch}`, {
+        entry: entry.id
+      });
+      
+      return isMatch;
     });
     
     logger.debug("Retrieved entries for day", { 

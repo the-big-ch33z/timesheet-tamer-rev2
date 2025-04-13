@@ -2,6 +2,7 @@
 import React, { useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
+import { format } from "date-fns";
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -10,6 +11,12 @@ interface EntryListProps {
 const EntryList: React.FC<EntryListProps> = ({ entries }) => {
   useEffect(() => {
     console.log("EntryList rendering with entries:", entries.length);
+    if (entries.length > 0) {
+      entries.forEach(entry => {
+        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+        console.log("EntryList item date:", format(entryDate, "yyyy-MM-dd"), "Entry id:", entry.id);
+      });
+    }
   }, [entries]);
   
   if (entries.length === 0) {
@@ -26,7 +33,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries }) => {
       <div className="space-y-2">
         {entries.map(entry => (
           <EntryListItem 
-            key={`entry-${entry.id}-${Date.now()}`} 
+            key={`entry-${entry.id}`} 
             entry={entry} 
           />
         ))}

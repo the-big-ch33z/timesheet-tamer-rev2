@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
@@ -9,6 +10,7 @@ import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
 import EntryList from "./components/EntryList";
 import EntryFormsList from "./components/EntryFormsList";
+import { format } from "date-fns";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -25,6 +27,18 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
   interactive = false,
   onCreateEntry
 }) => {
+  // Debug entries being passed in
+  useEffect(() => {
+    console.log("WorkHoursContainer received date:", format(date, "yyyy-MM-dd"));
+    console.log("WorkHoursContainer received entries:", entries);
+    if (entries.length > 0) {
+      entries.forEach(entry => {
+        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+        console.log("Entry date:", format(entryDate, "yyyy-MM-dd"), "Entry id:", entry.id);
+      });
+    }
+  }, [entries, date]);
+
   // Create form handlers for ALL possible entry forms upfront
   const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
     selectedDate: date,

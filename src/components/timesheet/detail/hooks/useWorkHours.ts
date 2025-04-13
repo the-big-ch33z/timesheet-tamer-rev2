@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { calculateHoursFromTimes } from "../../utils/timeCalculations";
 import { useToast } from "@/hooks/use-toast";

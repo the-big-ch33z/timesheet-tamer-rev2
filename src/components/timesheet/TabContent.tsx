@@ -1,5 +1,5 @@
 
-import React, { useMemo, Suspense, lazy } from "react";
+import React, { useMemo, Suspense, lazy, useEffect } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { useTabContent } from "./hooks/useTabContent";
 import { 
@@ -7,6 +7,7 @@ import {
   useUserTimesheetContext,
   useEntriesContext 
 } from "@/contexts/timesheet";
+import { format } from "date-fns";
 
 // Lazy load components
 const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
@@ -50,9 +51,29 @@ const TabContent: React.FC = () => {
   };
 
   // Get entries for the selected day - memoized to prevent recalculation on each render
-  const dayEntries = useMemo(() => 
-    selectedDay ? getDayEntries(selectedDay) : []
-  , [selectedDay, getDayEntries, entries]); // Add entries dependency to refresh when entries change
+  const dayEntries = useMemo(() => {
+    if (!selectedDay) return [];
+    
+    const dayEntriesList = getDayEntries(selectedDay);
+    console.log("TabContent: Got day entries for", format(selectedDay, "yyyy-MM-dd"), 
+      "count:", dayEntriesList.length);
+    
+    if (dayEntriesList.length > 0) {
+      dayEntriesList.forEach(entry => {
+        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+        console.log("TabContent day entry date:", format(entryDate, "yyyy-MM-dd"), "Entry id:", entry.id);
+      });
+    }
+    
+    return dayEntriesList;
+  }, [selectedDay, getDayEntries, entries]);
+
+  // Log when selected day changes
+  useEffect(() => {
+    if (selectedDay) {
+      console.log("Selected day changed to:", format(selectedDay, "yyyy-MM-dd"));
+    }
+  }, [selectedDay]);
 
   // Generate unique key for WorkHoursSection to force proper re-render when day selection or entries change
   const workHoursSectionKey = useMemo(() => 
