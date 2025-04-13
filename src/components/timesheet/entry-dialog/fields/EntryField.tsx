@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
+// Export the type so it can be imported in other files
+export type EntryFieldType = "text" | "number" | "email" | "password" | "date" | "time" | "textarea";
+
 interface EntryFieldProps {
   id: string;
   name: string;
@@ -13,7 +16,7 @@ interface EntryFieldProps {
   placeholder?: string;
   required?: boolean;
   inline?: boolean;
-  type?: "text" | "number" | "email" | "password" | "date" | "time" | "textarea";
+  type?: EntryFieldType;
   className?: string;
   min?: string;
   max?: string;
