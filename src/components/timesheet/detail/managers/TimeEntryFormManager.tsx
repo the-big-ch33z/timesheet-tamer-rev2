@@ -2,7 +2,6 @@
 import React from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormsList from "../components/EntryFormsList";
-import { useEntryForms } from "../hooks/useEntryForms";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -13,54 +12,22 @@ interface TimeEntryFormManagerProps {
   startTime: string;
   endTime: string;
   calculatedHours: number;
-  addFormHandler?: () => void;
+  showEntryForms: boolean[];
+  addEntryForm: () => void;
+  removeEntryForm: (index: number) => void;
+  handleSaveEntry: (index: number) => void;
+  key: number;
 }
 
 const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   formHandlers,
   interactive,
-  onCreateEntry,
-  startTime,
-  endTime,
-  calculatedHours,
-  addFormHandler
+  showEntryForms,
+  addEntryForm,
+  removeEntryForm,
+  handleSaveEntry,
+  key
 }) => {
-  const {
-    showEntryForms,
-    addEntryForm,
-    removeEntryForm,
-    refreshForms
-  } = useEntryForms({ 
-    formHandlers,
-    onNeedMoreHandlers: addFormHandler 
-  });
-
-  // Handle saving an entry form
-  const handleSaveEntry = (index: number) => {
-    if (!interactive || !formHandlers[index]) return;
-
-    const formHandler = formHandlers[index];
-    const formData = formHandler.getFormData();
-    
-    console.log("Saving entry with data:", formData);
-    
-    onCreateEntry(
-      formData.startTime || startTime,
-      formData.endTime || endTime,
-      parseFloat(formData.hours.toString()) || calculatedHours
-    );
-    
-    // Reset the form
-    formHandler.resetFormEdited();
-    formHandler.resetForm();
-    
-    // Force a re-render after the entry is added
-    setTimeout(() => {
-      console.log("Refreshing forms after save");
-      refreshForms();
-    }, 100);
-  };
-
   if (!interactive) return null;
 
   return (
@@ -72,6 +39,7 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
           formHandlers={formHandlers}
           handleSaveEntry={handleSaveEntry}
           removeEntryForm={removeEntryForm}
+          key={`forms-list-${key}`}
         />
       )}
       

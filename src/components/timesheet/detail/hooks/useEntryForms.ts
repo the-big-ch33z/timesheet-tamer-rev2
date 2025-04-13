@@ -5,14 +5,13 @@ import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 interface UseEntryFormsProps {
   formHandlers: UseTimeEntryFormReturn[];
   maxForms?: number;
-  onNeedMoreHandlers?: () => void;
 }
 
 export const useEntryForms = ({
   formHandlers,
-  maxForms = 10,
-  onNeedMoreHandlers
+  maxForms = 5
 }: UseEntryFormsProps) => {
+  // Track which forms are visible (initially none)
   const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
   const [key, setKey] = useState(Date.now()); // Key to force re-render
   
@@ -20,17 +19,12 @@ export const useEntryForms = ({
   const addEntryForm = useCallback(() => {
     // Limit to maximum number of forms
     if (showEntryForms.length < maxForms) {
-      console.log("Adding new entry form");
+      console.log("Adding new entry form at index:", showEntryForms.length);
       setShowEntryForms(prev => [...prev, true]);
-      
-      // Check if we need more handlers
-      const newFormIndex = showEntryForms.length;
-      if (!formHandlers[newFormIndex] && onNeedMoreHandlers) {
-        console.log("Requesting new form handler at index:", newFormIndex);
-        onNeedMoreHandlers();
-      }
+    } else {
+      console.log("Maximum number of forms reached:", maxForms);
     }
-  }, [showEntryForms.length, formHandlers, maxForms, onNeedMoreHandlers]);
+  }, [showEntryForms.length, maxForms]);
   
   // Remove an entry form at specific index
   const removeEntryForm = useCallback((index: number) => {

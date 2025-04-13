@@ -16,6 +16,9 @@ interface UseTimeEntryStateProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
+// Maximum number of form handlers to pre-initialize
+const MAX_FORM_HANDLERS = 5;
+
 export const useTimeEntryState = ({
   entries,
   date,
@@ -23,34 +26,7 @@ export const useTimeEntryState = ({
   interactive,
   onCreateEntry
 }: UseTimeEntryStateProps) => {
-  // Instead of creating all form handlers upfront, we'll create a small initial set
-  // and add more only when needed
-  const [formHandlers, setFormHandlers] = useState<ReturnType<typeof useTimeEntryForm>[]>([]);
-  
-  // Initialize with a single form handler
-  useEffect(() => {
-    if (formHandlers.length === 0) {
-      const initialHandler = useTimeEntryForm({
-        selectedDate: date,
-        onSave: (entry) => {
-          if (onCreateEntry) {
-            console.log("Saving entry with data from form handler:", entry);
-            onCreateEntry(
-              entry.startTime || startTime,
-              entry.endTime || endTime,
-              parseFloat(entry.hours.toString()) || calculatedHours
-            );
-          }
-        },
-        autoSave: false,
-        autoCalculateHours: true,
-        disabled: !interactive
-      });
-      
-      setFormHandlers([initialHandler]);
-    }
-  }, []);
-
+  // Get initial time values from entries or schedule
   let initialStartTime = "09:00";
   let initialEndTime = "17:00";
 
@@ -65,6 +41,69 @@ export const useTimeEntryState = ({
       initialEndTime = scheduleInfo.hours.endTime || initialEndTime;
     }
   }
+  
+  // Pre-initialize a fixed number of form handlers upfront
+  // This avoids calling hooks dynamically or conditionally
+  const formHandler1 = useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => handleEntrySubmission(entry, 0),
+    autoSave: false,
+    autoCalculateHours: true,
+    disabled: !interactive
+  });
+  
+  const formHandler2 = useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => handleEntrySubmission(entry, 1),
+    autoSave: false,
+    autoCalculateHours: true,
+    disabled: !interactive
+  });
+  
+  const formHandler3 = useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => handleEntrySubmission(entry, 2),
+    autoSave: false,
+    autoCalculateHours: true,
+    disabled: !interactive
+  });
+  
+  const formHandler4 = useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => handleEntrySubmission(entry, 3),
+    autoSave: false,
+    autoCalculateHours: true,
+    disabled: !interactive
+  });
+  
+  const formHandler5 = useTimeEntryForm({
+    selectedDate: date,
+    onSave: (entry) => handleEntrySubmission(entry, 4),
+    autoSave: false,
+    autoCalculateHours: true,
+    disabled: !interactive
+  });
+  
+  // Combine all handlers in an array for easier access
+  const formHandlers = useMemo(() => [
+    formHandler1,
+    formHandler2,
+    formHandler3,
+    formHandler4,
+    formHandler5
+  ], [formHandler1, formHandler2, formHandler3, formHandler4, formHandler5]);
+  
+  // Function to handle form submission
+  const handleEntrySubmission = useCallback((entry: any, index: number) => {
+    if (onCreateEntry) {
+      console.log("Saving entry with data from form handler:", entry, "at index:", index);
+      onCreateEntry(
+        entry.startTime || startTime,
+        entry.endTime || endTime,
+        parseFloat(entry.hours.toString()) || calculatedHours
+      );
+    }
+  }, [onCreateEntry]);
 
   const {
     startTime,
@@ -78,29 +117,6 @@ export const useTimeEntryState = ({
     interactive
   });
 
-  // Create a function to add new form handlers on demand
-  const addFormHandler = useCallback(() => {
-    if (formHandlers.length >= 10) return; // Limit to 10 form handlers
-    
-    const newHandler = useTimeEntryForm({
-      selectedDate: date,
-      onSave: (entry) => {
-        if (onCreateEntry) {
-          onCreateEntry(
-            entry.startTime || startTime,
-            entry.endTime || endTime,
-            parseFloat(entry.hours.toString()) || calculatedHours
-          );
-        }
-      },
-      autoSave: false,
-      autoCalculateHours: true,
-      disabled: !interactive
-    });
-    
-    setFormHandlers(prev => [...prev, newHandler]);
-  }, [date, startTime, endTime, calculatedHours, onCreateEntry, interactive]);
-
   const {
     showEntryForms,
     addEntryForm,
@@ -109,7 +125,7 @@ export const useTimeEntryState = ({
     key
   } = useEntryForms({ 
     formHandlers,
-    onNeedMoreHandlers: addFormHandler
+    maxForms: MAX_FORM_HANDLERS
   });
 
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
@@ -167,7 +183,6 @@ export const useTimeEntryState = ({
     removeEntryForm,
     
     interactive,
-    isUndertime: isUndertime(hoursVariance),
-    addFormHandler
+    isUndertime: isUndertime(hoursVariance)
   };
 };

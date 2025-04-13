@@ -8,7 +8,6 @@ interface EntryFormsListProps {
   formHandlers: UseTimeEntryFormReturn[];
   handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;
-  addEntryForm?: () => void;  // Optional prop
 }
 
 const EntryFormsList: React.FC<EntryFormsListProps> = ({
@@ -24,12 +23,12 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
   return (
     <div className="space-y-4 mt-4 mb-4">
       {showEntryForms.map((_, index) => {
-        // Only render forms that have corresponding handlers
+        // Only render forms that have corresponding handlers and are shown
         const formHandler = formHandlers[index];
         
         if (!formHandler) {
           console.log("No form handler for index:", index);
-          return <div key={`form-loading-${index}`} className="p-3 animate-pulse bg-gray-100 rounded">Loading form...</div>;
+          return null;
         }
         
         return (

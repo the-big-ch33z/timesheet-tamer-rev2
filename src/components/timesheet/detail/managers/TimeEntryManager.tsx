@@ -2,10 +2,10 @@
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
-import TimeEntryFormManager from "./TimeEntryFormManager";
 import TimeHeaderSection from "../components/TimeHeaderSection";
 import EntriesDisplaySection from "../components/EntriesDisplaySection";
 import WorkHoursAlerts from "../components/WorkHoursAlerts";
+import TimeEntryFormManager from "./TimeEntryFormManager";
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
@@ -38,9 +38,7 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     handleTimeChange,
     handleSaveEntry,
     addEntryForm,
-    removeEntryForm,
-    
-    addFormHandler
+    removeEntryForm
   } = useTimeEntryState({ 
     entries, 
     date, 
@@ -80,7 +78,11 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
           startTime={startTime}
           endTime={endTime}
           calculatedHours={calculatedHours}
-          addFormHandler={addFormHandler}
+          showEntryForms={showEntryForms}
+          addEntryForm={addEntryForm}
+          removeEntryForm={removeEntryForm}
+          handleSaveEntry={handleSaveEntry}
+          key={key}
         />
       )}
       
