@@ -1,11 +1,6 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, Suspense, lazy } from "react";
 import { TabsContent } from "@/components/ui/tabs";
-import TimesheetCalendar from "./TimesheetCalendar";
-import ToilSummary from "./ToilSummary";
-import MonthlyHours from "./MonthlyHours";
-import RecentEntries from "./RecentEntries";
-import WorkHoursSection from "./detail/WorkHoursSection";
 import { useTabContent } from "./hooks/useTabContent";
 import { 
   useCalendarContext,
@@ -13,11 +8,27 @@ import {
   useEntriesContext 
 } from "@/contexts/timesheet";
 
+// Lazy load components
+const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
+const WorkHoursSection = lazy(() => import("./detail/WorkHoursSection"));
+const MonthlyHours = lazy(() => import("./MonthlyHours"));
+const ToilSummary = lazy(() => import("./ToilSummary"));
+const RecentEntries = lazy(() => import("./RecentEntries"));
+
+// Loading component
+const LoadingComponent = () => (
+  <div className="animate-pulse p-4 space-y-4">
+    <div className="h-32 bg-gray-200 rounded"></div>
+    <div className="h-32 bg-gray-200 rounded"></div>
+  </div>
+);
+
 const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
   const { entries, createEntry, getDayEntries } = useEntriesContext();
 
+  // Use memoized results from the hook to prevent unnecessary re-renders
   const { sortedEntries } = useTabContent({ 
     entries, 
     currentMonth, 
@@ -48,36 +59,45 @@ const TabContent: React.FC = () => {
       <TabsContent value="timesheet" className="mt-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <TimesheetCalendar 
-              currentMonth={currentMonth}
-              entries={entries}
-              onPrevMonth={prevMonth}
-              onNextMonth={nextMonth}
-              onDayClick={handleDayClick}
-              workSchedule={workSchedule}
-            />
+            <Suspense fallback={<LoadingComponent />}>
+              <TimesheetCalendar 
+                currentMonth={currentMonth}
+                entries={entries}
+                onPrevMonth={prevMonth}
+                onNextMonth={nextMonth}
+                onDayClick={handleDayClick}
+                workSchedule={workSchedule}
+              />
+            </Suspense>
             
             {selectedDay && (
               <div className="mt-6">
-                <WorkHoursSection 
-                  entries={dayEntries}
-                  date={selectedDay}
-                  workSchedule={workSchedule}
-                  interactive={canEditTimesheet}
-                  onCreateEntry={handleCreateEntry}
-                />
+                <Suspense fallback={<LoadingComponent />}>
+                  <WorkHoursSection 
+                    entries={dayEntries}
+                    date={selectedDay}
+                    workSchedule={workSchedule}
+                    interactive={canEditTimesheet}
+                    onCreateEntry={handleCreateEntry}
+                  />
+                </Suspense>
               </div>
             )}
           </div>
 
           <div className="space-y-6">
-            <MonthlyHours 
-              entries={entries} 
-              user={viewedUser} 
-              currentMonth={currentMonth} 
-              workSchedule={workSchedule}
-            />
-            <ToilSummary entries={entries} />
+            <Suspense fallback={<LoadingComponent />}>
+              <MonthlyHours 
+                entries={entries} 
+                user={viewedUser} 
+                currentMonth={currentMonth} 
+                workSchedule={workSchedule}
+              />
+            </Suspense>
+            
+            <Suspense fallback={<LoadingComponent />}>
+              <ToilSummary entries={entries} />
+            </Suspense>
           </div>
         </div>
       </TabsContent>
@@ -85,11 +105,14 @@ const TabContent: React.FC = () => {
       <TabsContent value="recent">
         <div className="bg-gray-50 p-8 rounded-lg">
           <h3 className="text-xl font-medium mb-4">Recent Time Entries</h3>
-          <RecentEntries entries={sortedEntries} />
+          <Suspense fallback={<LoadingComponent />}>
+            <RecentEntries entries={sortedEntries} />
+          </Suspense>
         </div>
       </TabsContent>
     </>
   );
 };
 
-export default TabContent;
+// Export a memoized version of the component to prevent unnecessary re-renders
+export default React.memo(TabContent);

@@ -1,9 +1,5 @@
 
-import React from "react";
-import UserInfo from "@/components/timesheet/UserInfo";
-import TimesheetTabs from "@/components/timesheet/TimesheetTabs";
-import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
-import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
+import React, { Suspense, lazy } from "react";
 import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErrorBoundary";
 import { 
   useUserTimesheetContext,
@@ -11,6 +7,20 @@ import {
   useEntriesContext,
   useCalendarContext
 } from "@/contexts/timesheet";
+import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
+import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
+
+// Lazy-loaded components
+const UserInfo = lazy(() => import("@/components/timesheet/UserInfo"));
+const TimesheetTabs = lazy(() => import("@/components/timesheet/TimesheetTabs"));
+
+// Loading placeholder
+const LoadingComponent = () => (
+  <div className="animate-pulse p-4 space-y-4">
+    <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+    <div className="h-32 bg-gray-200 rounded"></div>
+  </div>
+);
 
 // Create a wrapper component that uses the context
 const TimesheetContent = () => {
@@ -44,9 +54,13 @@ const TimesheetContent = () => {
         isViewingOtherUser={isViewingOtherUser}
       />
 
-      <UserInfo user={viewedUser} />
+      <Suspense fallback={<LoadingComponent />}>
+        <UserInfo user={viewedUser} />
+      </Suspense>
 
-      <TimesheetTabs />
+      <Suspense fallback={<LoadingComponent />}>
+        <TimesheetTabs />
+      </Suspense>
     </div>
   );
 };
