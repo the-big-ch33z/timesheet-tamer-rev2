@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { calculateHoursFromTimes } from "@/utils/time/calculations/hoursCalculations";
+import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 

@@ -1,7 +1,6 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { TimeEntryFormState, UseTimeEntryFormProps } from './types/timeEntryTypes';
-import { calculateHoursFromTimes } from "@/utils/time/calculations/hoursCalculations";
+import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { useToast } from "@/hooks/use-toast";
 
 /**

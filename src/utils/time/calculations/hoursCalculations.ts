@@ -65,15 +65,25 @@ export const calculateHoursFromTimes = (startTime: string, endTime: string): num
 /**
  * Calculate monthly target hours based on fortnight hours
  * @param fortnightHours Hours for a fortnight
- * @param workDaysInMonth Number of work days in the month
+ * @param workDaysInMonth Number of work days in the month (or actual date)
  * @returns Target hours for the month
  * @throws TimeCalculationError if inputs are invalid
  */
-export const calculateMonthlyTargetHours = (fortnightHours: number, workDaysInMonth: number): number => {
+export const calculateMonthlyTargetHours = (fortnightHours: number, monthOrWorkDays: Date | number): number => {
   try {
-    // Input validation using our validators
+    // Input validation
     validateNumberInRange(fortnightHours, 'Fortnight hours', 0, 168);
-    validateNumberInRange(workDaysInMonth, 'Work days in month', 0, 31);
+    
+    // If we received a Date, get the work days in that month
+    let workDaysInMonth: number;
+    if (monthOrWorkDays instanceof Date) {
+      const { getWorkdaysInMonth } = require('../scheduleUtils');
+      workDaysInMonth = getWorkdaysInMonth(monthOrWorkDays);
+      logger.debug(`Calculated ${workDaysInMonth} workdays in month ${monthOrWorkDays.toISOString().substr(0, 7)}`);
+    } else {
+      workDaysInMonth = monthOrWorkDays;
+      validateNumberInRange(workDaysInMonth, 'Work days in month', 0, 31);
+    }
     
     const fortnightWorkDays = 10; // Standard number of work days in a fortnight
     
@@ -94,7 +104,7 @@ export const calculateMonthlyTargetHours = (fortnightHours: number, workDaysInMo
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`Unexpected error calculating monthly target hours: ${message}`, error);
       throw new TimeCalculationError(
-        `Failed to calculate monthly target hours from ${fortnightHours} fortnight hours and ${workDaysInMonth} work days: ${message}`
+        `Failed to calculate monthly target hours from ${fortnightHours} fortnight hours: ${message}`
       );
     }
   }

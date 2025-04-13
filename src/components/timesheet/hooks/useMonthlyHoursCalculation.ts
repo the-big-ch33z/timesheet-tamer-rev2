@@ -4,7 +4,7 @@ import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/lib/date-utils";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
-import { calculateAdjustedFortnightHours } from "@/utils/time/calculations/hoursCalculations";
+import { calculateAdjustedFortnightHours } from "@/utils/time/calculations";
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],

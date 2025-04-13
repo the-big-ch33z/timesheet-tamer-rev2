@@ -1,9 +1,8 @@
-
 import { useCallback, useEffect, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
-import { calculateHoursVariance, isUndertime } from "@/utils/time/calculations/varianceCalculations";
+import { calculateHoursVariance, isUndertime } from "@/utils/time/calculations";
 import { useEntryForms } from "./useEntryForms";
 import { format } from "date-fns";
 import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";

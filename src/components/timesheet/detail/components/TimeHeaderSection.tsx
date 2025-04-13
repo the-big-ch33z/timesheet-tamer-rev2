@@ -2,7 +2,7 @@
 import React from "react";
 import WorkHoursHeader from "./WorkHoursHeader";
 import TimeDisplay from "./TimeDisplay";
-import { formatDisplayHours } from "@/utils/time/formatting/timeFormatting";
+import { formatDisplayHours } from "@/utils/time/formatting";
 
 interface TimeHeaderSectionProps {
   hasEntries: boolean;
