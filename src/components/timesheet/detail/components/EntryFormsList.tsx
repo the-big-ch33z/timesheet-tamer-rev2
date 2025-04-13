@@ -18,17 +18,20 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
   addEntryForm,
   removeEntryForm
 }) => {
+  // Only display forms if there are any to show
+  const shouldShowForms = showEntryForms.length > 0;
+
   return (
     <div className="mt-4">
       {/* Entry Forms */}
-      {showEntryForms.length > 0 && (
+      {shouldShowForms && (
         <div className="space-y-4 mt-4 mb-4">
           {showEntryForms.map((_, index) => {
             const { formState, handleFieldChange, handleSave } = formHandlers[index];
             
             return (
               <EntryFormItem
-                key={index}
+                key={`form-${index}-${Date.now()}`}
                 formState={formState}
                 handleFieldChange={handleFieldChange}
                 handleSave={handleSave}

@@ -43,10 +43,19 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     selectedDate: date,
     onSave: (entry) => {
       if (onCreateEntry) {
+        // Pass the data to the parent handler
         onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, parseFloat(entry.hours.toString()) || calculatedHours);
-        removeEntryForm(i);
+        
+        // Reset the form instead of removing it
+        formHandlers[i].resetFormEdited();
+        
+        // Clear form fields - you'd need to add this function to the useTimeEntryForm hook
+        formHandlers[i].resetForm();
+        
         // Force a re-render after the entry is added
         setTimeout(() => setKey(Date.now()), 100);
+        
+        console.log("Entry saved, form reset but kept visible");
       }
     },
     autoSave: false

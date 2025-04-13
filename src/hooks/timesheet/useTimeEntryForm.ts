@@ -19,6 +19,7 @@ export interface UseTimeEntryFormReturn {
   handleSave: () => void;
   getFormData: () => Omit<TimeEntry, "id">;
   resetFormEdited: () => void;
+  resetForm: () => void; // New function to reset form values
   isSubmitting: boolean;
 }
 
@@ -119,6 +120,16 @@ export const useTimeEntryForm = ({
     userId: initialData.userId || userId || "",
   }), [selectedDate, hours, description, jobNumber, rego, taskNumber, initialData, userId]);
 
+  // Reset form fields
+  const resetForm = useCallback(() => {
+    setHours("");
+    setDescription("");
+    setJobNumber("");
+    setRego("");
+    setTaskNumber("");
+    console.log("Form fields reset");
+  }, []);
+
   // Handle form submission
   const handleSave = useCallback(() => {
     if (disabled || isSubmitting) return;
@@ -162,6 +173,7 @@ export const useTimeEntryForm = ({
     handleSave,
     getFormData,
     resetFormEdited: () => setFormEdited(false),
+    resetForm, // New function to reset form fields
     isSubmitting
   };
 };
