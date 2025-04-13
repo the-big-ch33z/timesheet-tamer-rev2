@@ -33,7 +33,6 @@ const EntryFormsSection: React.FC<EntryFormsSectionProps> = ({
           formHandlers={formHandlers}
           handleSaveEntry={handleSaveEntry}
           removeEntryForm={removeEntryForm}
-          addEntryForm={addEntryForm}
         />
       )}
       
