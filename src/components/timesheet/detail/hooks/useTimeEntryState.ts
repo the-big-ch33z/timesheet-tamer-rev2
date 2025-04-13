@@ -157,15 +157,16 @@ export const useTimeEntryState = ({
 
   // New function to save all pending changes
   const saveAllPendingChanges = useCallback(() => {
-    if (!interactive) return false; // Return false instead of undefined
+    if (!interactive) return false;
     
     console.log("Checking all form handlers for pending changes");
     let changesSaved = false;
     
     formHandlers.forEach((handler, index) => {
       if (handler && showEntryForms.includes(index)) {
-        // Use the boolean return value directly - don't convert to number
-        if (handler.saveIfEdited()) {
+        // Fix: Explicitly check the boolean return value
+        const wasSaved = handler.saveIfEdited();
+        if (wasSaved === true) {
           console.log(`Saved pending changes in form handler ${index}`);
           changesSaved = true;
         }
