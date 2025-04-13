@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { Clock } from "lucide-react";
 import { 
   calculateHoursFromTimes, 
   calculateHoursVariance,
@@ -11,6 +11,7 @@ import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
 import EntryFormsList from "./components/EntryFormsList";
 import WorkHoursHeader from "./components/WorkHoursHeader";
+import EntryList from "./components/EntryList";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
 
@@ -148,6 +149,9 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         interactive={interactive}
         showEntryForms={showEntryForms}
       />
+      
+      {/* Entry List with Delete functionality */}
+      {hasEntries && <EntryList entries={entries} />}
       
       {/* Entry Forms Section */}
       {interactive && (

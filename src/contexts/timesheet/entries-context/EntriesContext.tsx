@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { useTimesheetEntries } from '@/hooks/timesheet/useTimesheetEntries';
 import { TimeEntry } from '@/types';
 import { EntriesContextType } from '../types';
@@ -25,7 +25,8 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
     entries,
     getUserEntries,
     getDayEntries,
-    addEntry
+    addEntry,
+    deleteEntry
   } = useTimesheetEntries(userId);
   
   // Allow creating entries
@@ -43,7 +44,8 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
     entries,
     getUserEntries,
     getDayEntries,
-    createEntry
+    createEntry,
+    deleteEntry
   };
   
   return (

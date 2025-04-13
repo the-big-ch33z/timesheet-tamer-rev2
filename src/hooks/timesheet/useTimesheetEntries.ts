@@ -48,6 +48,21 @@ export const useTimesheetEntries = (userId?: string) => {
     });
   }, [logger]);
 
+  // Delete an entry
+  const deleteEntry = useCallback((entryId: string) => {
+    setEntries(prev => {
+      const filteredEntries = prev.filter(entry => entry.id !== entryId);
+      if (filteredEntries.length < prev.length) {
+        logger.debug("Entry deleted", { entryId });
+        toast({
+          title: "Entry deleted",
+          description: "Time entry has been removed from your timesheet"
+        });
+      }
+      return filteredEntries;
+    });
+  }, [logger]);
+
   // Get entries for a specific user
   const getUserEntries = useCallback((userIdToFilter?: string) => {
     const targetUserId = userIdToFilter || userId;
@@ -80,6 +95,7 @@ export const useTimesheetEntries = (userId?: string) => {
     entries,
     getUserEntries,
     getDayEntries,
-    addEntry
+    addEntry,
+    deleteEntry
   };
 };
