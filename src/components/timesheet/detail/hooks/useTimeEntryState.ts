@@ -1,12 +1,13 @@
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
-import { calculateHoursVariance, isUndertime } from "@/utils/time/calculations";
 import { useEntryForms } from "./useEntryForms";
 import { format } from "date-fns";
-import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
+import { useTimeEntryStats } from "./useTimeEntryStats";
+import { useTimeEntryFormHandling } from "./useTimeEntryFormHandling";
+import { useTimeEntryInitialValues } from "./useTimeEntryInitialValues";
 
 interface UseTimeEntryStateProps {
   entries: TimeEntry[];
@@ -19,6 +20,10 @@ interface UseTimeEntryStateProps {
 // Maximum number of form handlers to pre-initialize
 const MAX_FORM_HANDLERS = 5;
 
+/**
+ * Main hook for time entry state management
+ * Composes several smaller, focused hooks
+ */
 export const useTimeEntryState = ({
   entries,
   date,
@@ -27,20 +32,11 @@ export const useTimeEntryState = ({
   onCreateEntry
 }: UseTimeEntryStateProps) => {
   // Get initial time values from entries or schedule
-  let initialStartTime = "09:00";
-  let initialEndTime = "17:00";
-
-  if (entries.length > 0) {
-    initialStartTime = entries[0].startTime || initialStartTime;
-    initialEndTime = entries[0].endTime || initialEndTime;
-  } else if (workSchedule) {
-    const scheduleInfo = getDayScheduleInfo(date, workSchedule);
-    
-    if (scheduleInfo?.hours) {
-      initialStartTime = scheduleInfo.hours.startTime || initialStartTime;
-      initialEndTime = scheduleInfo.hours.endTime || initialEndTime;
-    }
-  }
+  const { initialStartTime, initialEndTime } = useTimeEntryInitialValues({
+    entries,
+    date,
+    workSchedule
+  });
   
   // Pre-initialize a fixed number of form handlers upfront
   // This avoids calling hooks dynamically or conditionally
@@ -92,19 +88,8 @@ export const useTimeEntryState = ({
     formHandler4,
     formHandler5
   ], [formHandler1, formHandler2, formHandler3, formHandler4, formHandler5]);
-  
-  // Function to handle form submission
-  const handleEntrySubmission = useCallback((entry: any, index: number) => {
-    if (onCreateEntry) {
-      console.log("Saving entry with data from form handler:", entry, "at index:", index);
-      onCreateEntry(
-        entry.startTime || startTime,
-        entry.endTime || endTime,
-        parseFloat(entry.hours.toString()) || calculatedHours
-      );
-    }
-  }, [onCreateEntry]);
 
+  // Handle time calculations and time input changes
   const {
     startTime,
     endTime,
@@ -117,6 +102,7 @@ export const useTimeEntryState = ({
     interactive
   });
 
+  // Handle form state (showing/hiding, adding/removing forms)
   const {
     showEntryForms,
     addEntryForm,
@@ -128,59 +114,34 @@ export const useTimeEntryState = ({
     maxForms: MAX_FORM_HANDLERS
   });
 
-  const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-  const hoursVariance = calculateHoursVariance(totalHours, calculatedHours);
-  const hasEntries = entries.length > 0;
+  // Calculate stats like total hours and variance
+  const {
+    totalHours,
+    hoursVariance,
+    hasEntries,
+    isUndertime
+  } = useTimeEntryStats({
+    entries,
+    calculatedHours
+  });
 
-  const handleSaveEntry = useCallback((index: number) => {
-    if (!interactive || !formHandlers[index]) return;
+  // Handle form submissions and entry creation
+  const {
+    handleEntrySubmission,
+    handleSaveEntry,
+    saveAllPendingChanges
+  } = useTimeEntryFormHandling({
+    formHandlers,
+    showEntryForms,
+    interactive,
+    onCreateEntry,
+    startTime,
+    endTime,
+    calculatedHours,
+    refreshForms
+  });
 
-    const formHandler = formHandlers[index];
-    const formData = formHandler.getFormData();
-    
-    console.log("Saving entry with data:", formData);
-    
-    onCreateEntry?.(
-      formData.startTime || startTime,
-      formData.endTime || endTime,
-      parseFloat(formData.hours.toString()) || calculatedHours
-    );
-    
-    formHandler.resetFormEdited();
-    formHandler.resetForm();
-    
-    setTimeout(() => {
-      console.log("Refreshing forms after save");
-      refreshForms();
-    }, 100);
-  }, [interactive, formHandlers, startTime, endTime, calculatedHours, onCreateEntry, refreshForms]);
-
-  // New function to save all pending changes
-  const saveAllPendingChanges = useCallback(() => {
-    if (!interactive) return false;
-    
-    console.log("Checking all form handlers for pending changes");
-    let changesSaved = false;
-    
-    formHandlers.forEach((handler, index) => {
-      if (handler && showEntryForms.includes(index)) {
-        // Fix: Explicitly check the boolean return value
-        const wasSaved = handler.saveIfEdited();
-        if (wasSaved === true) {
-          console.log(`Saved pending changes in form handler ${index}`);
-          changesSaved = true;
-        }
-      }
-    });
-    
-    if (changesSaved) {
-      // Refresh forms after saving to ensure clean state
-      setTimeout(refreshForms, 100);
-    }
-    
-    return changesSaved;
-  }, [formHandlers, showEntryForms, interactive, refreshForms]);
-
+  // Log entries for debugging
   useEffect(() => {
     console.log("Entries updated in TimeEntryState:", entries.length);
     if (entries.length > 0) {
@@ -210,6 +171,6 @@ export const useTimeEntryState = ({
     saveAllPendingChanges,
     
     interactive,
-    isUndertime: isUndertime(hoursVariance)
+    isUndertime
   };
 };
