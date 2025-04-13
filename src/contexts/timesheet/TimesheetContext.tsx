@@ -1,12 +1,12 @@
 
 import React, { ReactNode } from 'react';
-import { CalendarProvider } from './calendar-context/CalendarContext';
-import { UserTimesheetProvider } from './user-context/UserTimesheetContext';
-import { EntriesProvider } from './entries-context/EntriesContext';
-import { TimesheetUIProvider } from './ui-context/TimesheetUIContext';
+import { CalendarProvider, useCalendarContext } from './calendar-context/CalendarContext';
+import { UserTimesheetProvider, useUserTimesheetContext } from './user-context/UserTimesheetContext';
+import { EntriesProvider, useEntriesContext } from './entries-context/EntriesContext';
+import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTimesheetContext';
 
-// Re-export individual context hooks
+// Re-export individual context hooks for easier access from components
 export { useCalendarContext } from './calendar-context/CalendarContext';
 export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
 export { useEntriesContext } from './entries-context/EntriesContext';
