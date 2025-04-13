@@ -1,5 +1,5 @@
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { TimeEntry } from "@/types";
 import { useFormStateManagement } from './useFormStateManagement';
 import { useFormSubmission } from './useFormSubmission';
@@ -46,6 +46,23 @@ export const useTimeEntryForm = ({
     disabled
   });
 
+  // Track last selected date to detect changes
+  const lastSelectedDateRef = useRef<Date | null>(null);
+  
+  useEffect(() => {
+    // If the date changes and we have unsaved changes, save them
+    if (lastSelectedDateRef.current && 
+        selectedDate && 
+        lastSelectedDateRef.current.getTime() !== selectedDate.getTime() && 
+        formState.formEdited) {
+      console.log("Date changed with unsaved form data - auto-saving");
+      handleSaveInternal(formState, resetFormEdited);
+    }
+    
+    // Update the ref with current date
+    lastSelectedDateRef.current = selectedDate;
+  }, [selectedDate, formState, handleSaveInternal, resetFormEdited]);
+
   // Check if form has content
   const hasContent = useMemo(() => {
     return !!(formState.hours || formState.description || formState.jobNumber || 
@@ -62,6 +79,16 @@ export const useTimeEntryForm = ({
     () => handleSaveInternal(formState, resetFormEdited)
   );
 
+  // Create a method to check and save any pending changes
+  const saveIfEdited = useCallback(() => {
+    if (formState.formEdited && hasContent && !disabled && !isSubmitting) {
+      console.log("Form has unsaved changes - saving before action");
+      handleSaveInternal(formState, resetFormEdited);
+      return true;
+    }
+    return false;
+  }, [formState, hasContent, disabled, isSubmitting, handleSaveInternal, resetFormEdited]);
+
   // Create wrapper functions
   const handleSave = useCallback(() => {
     handleSaveInternal(formState, resetFormEdited);
@@ -75,6 +102,7 @@ export const useTimeEntryForm = ({
     formState,
     handleFieldChange,
     handleSave,
+    saveIfEdited, // New method to check and save if needed
     getFormData,
     resetFormEdited,
     resetForm,

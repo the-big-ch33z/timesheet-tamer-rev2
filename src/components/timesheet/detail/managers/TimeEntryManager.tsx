@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useCallback } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
 import TimeHeaderSection from "../components/TimeHeaderSection";
@@ -38,7 +38,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     handleTimeChange,
     handleSaveEntry,
     addEntryForm,
-    removeEntryForm
+    removeEntryForm,
+    saveAllPendingChanges // New function to save all pending changes
   } = useTimeEntryState({ 
     entries, 
     date, 
@@ -46,6 +47,21 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     interactive,
     onCreateEntry
   });
+
+  // Add a global event listener for saving pending changes
+  useEffect(() => {
+    if (!interactive) return;
+
+    const handleSavePendingChanges = () => {
+      console.log("TimeEntryManager: Global save event received");
+      saveAllPendingChanges();
+    };
+
+    window.addEventListener('timesheet:save-pending-changes', handleSavePendingChanges);
+    return () => {
+      window.removeEventListener('timesheet:save-pending-changes', handleSavePendingChanges);
+    };
+  }, [saveAllPendingChanges, interactive]);
 
   return (
     <div key={`entry-manager-${key}`} className="space-y-4">

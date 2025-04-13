@@ -1,24 +1,6 @@
 
 import { TimeEntry } from "@/types";
 
-/**
- * State for time entry form
- */
-export interface TimeEntryFormState {
-  hours: string;
-  description: string;
-  jobNumber: string;
-  rego: string;
-  taskNumber: string;
-  formEdited: boolean;
-  userId?: string;
-  startTime: string;
-  endTime: string;
-}
-
-/**
- * Props for useTimeEntryForm hook
- */
 export interface UseTimeEntryFormProps {
   initialData?: Partial<TimeEntry>;
   formKey?: string | number;
@@ -30,13 +12,23 @@ export interface UseTimeEntryFormProps {
   autoCalculateHours?: boolean;
 }
 
-/**
- * Return type for useTimeEntryForm hook
- */
+export interface TimeEntryFormState {
+  hours: string;
+  description: string;
+  jobNumber: string;
+  rego: string;
+  taskNumber: string;
+  userId?: string;
+  startTime: string;
+  endTime: string;
+  formEdited: boolean;
+}
+
 export interface UseTimeEntryFormReturn {
   formState: TimeEntryFormState;
   handleFieldChange: (field: string, value: string) => void;
   handleSave: () => void;
+  saveIfEdited: () => boolean; // New method to check and save if needed
   getFormData: () => Omit<TimeEntry, "id">;
   resetFormEdited: () => void;
   resetForm: () => void;

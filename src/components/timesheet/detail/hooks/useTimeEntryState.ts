@@ -155,6 +155,30 @@ export const useTimeEntryState = ({
     }, 100);
   }, [interactive, formHandlers, startTime, endTime, calculatedHours, onCreateEntry, refreshForms]);
 
+  // New function to save all pending changes
+  const saveAllPendingChanges = useCallback(() => {
+    if (!interactive) return;
+    
+    console.log("Checking all form handlers for pending changes");
+    let changesSaved = false;
+    
+    formHandlers.forEach((handler, index) => {
+      if (handler && showEntryForms.includes(index)) {
+        if (handler.saveIfEdited()) {
+          console.log(`Saved pending changes in form handler ${index}`);
+          changesSaved = true;
+        }
+      }
+    });
+    
+    if (changesSaved) {
+      // Refresh forms after saving to ensure clean state
+      setTimeout(refreshForms, 100);
+    }
+    
+    return changesSaved;
+  }, [formHandlers, showEntryForms, interactive, refreshForms]);
+
   useEffect(() => {
     console.log("Entries updated in TimeEntryState:", entries.length);
     if (entries.length > 0) {
@@ -181,6 +205,7 @@ export const useTimeEntryState = ({
     handleSaveEntry,
     addEntryForm,
     removeEntryForm,
+    saveAllPendingChanges, // New function added to return value
     
     interactive,
     isUndertime: isUndertime(hoursVariance)

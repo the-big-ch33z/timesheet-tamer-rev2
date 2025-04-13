@@ -8,6 +8,7 @@ import CalendarHeader from "./calendar/CalendarHeader";
 import CalendarLegend from "./calendar/CalendarLegend";
 import CalendarWeekdayHeader from "./calendar/CalendarWeekdayHeader";
 import CalendarGrid from "./calendar/CalendarGrid";
+import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 
 interface TimesheetCalendarProps {
   currentMonth: Date;
@@ -39,6 +40,17 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const monthStartDay = getDay(monthStart);
 
+  // Wrap month navigation to trigger saving
+  const handlePrevMonth = () => {
+    triggerGlobalSave();
+    onPrevMonth();
+  };
+  
+  const handleNextMonth = () => {
+    triggerGlobalSave();
+    onNextMonth();
+  };
+
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
     onDayClick(day);
@@ -50,8 +62,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
         {/* Calendar Header */}
         <CalendarHeader 
           currentMonth={currentMonth}
-          onPrevMonth={onPrevMonth}
-          onNextMonth={onNextMonth}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
         />
         
         {/* Calendar Legend */}
