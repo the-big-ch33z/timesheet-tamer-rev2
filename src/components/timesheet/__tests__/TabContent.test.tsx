@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { render, screen } from './utils/test-utils';
+import './utils/setupTests'; // Import the setup file for Jest DOM matchers
 import TabContent from '../TabContent';
 import { useCalendarContext, useUserTimesheetContext, useEntriesContext } from '@/contexts/timesheet';
 
