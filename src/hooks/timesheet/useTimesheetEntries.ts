@@ -42,23 +42,36 @@ export const useTimesheetEntries = (userId?: string) => {
   const addEntry = useCallback((entry: TimeEntry) => {
     setEntries(prev => [...prev, entry]);
     logger.debug("Entry added", { entry });
-    toast({ 
-      title: "Entry added", 
-      description: `Added ${entry.hours} hours to your timesheet` 
-    });
+    // Use setTimeout to avoid infinite render loop with toast
+    setTimeout(() => {
+      toast({ 
+        title: "Entry added", 
+        description: `Added ${entry.hours} hours to your timesheet` 
+      });
+    }, 0);
   }, [logger]);
 
   // Delete an entry
   const deleteEntry = useCallback((entryId: string) => {
+    logger.debug("Attempting to delete entry", { entryId });
+    
     setEntries(prev => {
+      const entryToDelete = prev.find(entry => entry.id === entryId);
       const filteredEntries = prev.filter(entry => entry.id !== entryId);
+      
       if (filteredEntries.length < prev.length) {
         logger.debug("Entry deleted", { entryId });
-        toast({
-          title: "Entry deleted",
-          description: "Time entry has been removed from your timesheet"
-        });
+        // Use setTimeout to avoid infinite render loop with toast
+        setTimeout(() => {
+          toast({
+            title: "Entry deleted",
+            description: "Time entry has been removed from your timesheet"
+          });
+        }, 0);
+      } else {
+        logger.warn("Entry not found for deletion", { entryId });
       }
+      
       return filteredEntries;
     });
   }, [logger]);
@@ -81,13 +94,19 @@ export const useTimesheetEntries = (userId?: string) => {
   // Get entries for a specific day and user
   const getDayEntries = useCallback((day: Date, userIdToFilter?: string) => {
     const userEntries = getUserEntries(userIdToFilter);
-    const dayEntries = userEntries.filter(
-      (entry) => format(entry.date, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
-    );
+    const dayFormatted = format(day, "yyyy-MM-dd");
+    
+    const dayEntries = userEntries.filter(entry => {
+      const entryDate = format(new Date(entry.date), "yyyy-MM-dd");
+      return entryDate === dayFormatted;
+    });
+    
     logger.debug("Retrieved entries for day", { 
       date: format(day, "yyyy-MM-dd"), 
-      count: dayEntries.length 
+      count: dayEntries.length,
+      entries: dayEntries
     });
+    
     return dayEntries;
   }, [getUserEntries, logger]);
 

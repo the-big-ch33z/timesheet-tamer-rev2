@@ -8,6 +8,9 @@ interface EntryListProps {
 }
 
 const EntryList: React.FC<EntryListProps> = ({ entries }) => {
+  // Add debug logs to see what entries are being passed
+  console.log("EntryList entries:", entries);
+  
   if (entries.length === 0) {
     return (
       <div className="text-center py-4 text-gray-500">

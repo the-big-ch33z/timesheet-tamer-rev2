@@ -13,6 +13,12 @@ interface EntryListItemProps {
 const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
   const { deleteEntry } = useEntriesContext();
   
+  // Add a debug log to verify entry properties and delete functionality
+  const handleDelete = () => {
+    console.log("Deleting entry:", entry.id);
+    deleteEntry(entry.id);
+  };
+  
   return (
     <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md bg-white mb-2">
       <div className="flex-1">
@@ -42,7 +48,7 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
         variant="ghost"
         size="icon"
         className="text-red-500 hover:text-red-700 hover:bg-red-50"
-        onClick={() => deleteEntry(entry.id)}
+        onClick={handleDelete}
         aria-label="Delete entry"
       >
         <Trash2 size={18} />
