@@ -1,8 +1,9 @@
+
 /**
  * Hours calculation utilities
  * Functions for calculating hours between times and related operations
  */
-import { calculateFortnightHoursFromSchedule } from '../scheduleUtils';
+import { calculateFortnightHoursFromSchedule, getWorkdaysInMonth } from '../scheduleUtils';
 import { WorkSchedule } from '@/types';
 import { 
   TimeCalculationError, 
