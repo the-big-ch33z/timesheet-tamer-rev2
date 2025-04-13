@@ -1,9 +1,8 @@
-
 import { useState } from "react";
-import { TimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
+import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 
 interface UseEntryFormsProps {
-  formHandlers: TimeEntryFormReturn[];
+  formHandlers: UseTimeEntryFormReturn[];
   maxForms?: number;
 }
 

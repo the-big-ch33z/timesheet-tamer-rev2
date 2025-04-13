@@ -3,7 +3,7 @@ import React from "react";
 import EntryFormItem from "./EntryFormItem";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { UseTimeEntryFormReturn } from "@/hooks/timesheet/useTimeEntryForm";
+import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 
 interface EntryFormsListProps {
   showEntryForms: boolean[];

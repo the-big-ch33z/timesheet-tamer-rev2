@@ -1,13 +1,12 @@
-
 import { useState, useEffect } from 'react';
 import { calculateHoursFromTimes } from "../../utils/timeCalculations";
 import { useToast } from "@/hooks/use-toast";
-import { TimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
+import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 
 interface UseWorkHoursProps {
   initialStartTime?: string;
   initialEndTime?: string;
-  formHandlers: TimeEntryFormReturn[];
+  formHandlers: UseTimeEntryFormReturn[];
   interactive: boolean;
 }
 
