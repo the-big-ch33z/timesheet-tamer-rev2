@@ -167,6 +167,7 @@ export const useTimeEntryState = ({
     removeEntryForm,
     
     interactive,
-    isUndertime: isUndertime(hoursVariance)
+    isUndertime: isUndertime(hoursVariance),
+    addFormHandler
   };
 };

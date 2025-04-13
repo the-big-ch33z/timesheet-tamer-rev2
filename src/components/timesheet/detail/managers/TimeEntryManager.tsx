@@ -67,6 +67,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
         hasEntries={hasEntries}
         hoursVariance={hoursVariance}
         isUndertime={isUndertime}
+        interactive={interactive}
+        showEntryForms={showEntryForms.length > 0}
       />
       
       {/* Time entry form manager */}
@@ -85,7 +87,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       {/* Display existing entries */}
       <EntriesDisplaySection
         entries={entries}
-        interactive={interactive}
+        hasEntries={hasEntries}
+        formsListKey={key}
       />
     </div>
   );
