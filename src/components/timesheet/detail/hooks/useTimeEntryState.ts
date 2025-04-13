@@ -164,6 +164,7 @@ export const useTimeEntryState = ({
     
     formHandlers.forEach((handler, index) => {
       if (handler && showEntryForms.includes(index)) {
+        // Use the boolean return value directly - don't convert to number
         if (handler.saveIfEdited()) {
           console.log(`Saved pending changes in form handler ${index}`);
           changesSaved = true;
@@ -205,7 +206,7 @@ export const useTimeEntryState = ({
     handleSaveEntry,
     addEntryForm,
     removeEntryForm,
-    saveAllPendingChanges, // New function added to return value
+    saveAllPendingChanges,
     
     interactive,
     isUndertime: isUndertime(hoursVariance)
