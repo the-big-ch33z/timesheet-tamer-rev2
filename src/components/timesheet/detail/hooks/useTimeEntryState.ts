@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo } from "react";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
@@ -22,22 +23,33 @@ export const useTimeEntryState = ({
   interactive,
   onCreateEntry
 }: UseTimeEntryStateProps) => {
-  const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
-    selectedDate: date,
-    onSave: (entry) => {
-      if (onCreateEntry) {
-        console.log("Saving entry with data from form handler:", entry);
-        onCreateEntry(
-          entry.startTime || startTime,
-          entry.endTime || endTime,
-          parseFloat(entry.hours.toString()) || calculatedHours
-        );
-      }
-    },
-    autoSave: false,
-    autoCalculateHours: true,
-    disabled: !interactive
-  }));
+  // Instead of creating all form handlers upfront, we'll create a small initial set
+  // and add more only when needed
+  const [formHandlers, setFormHandlers] = useState<ReturnType<typeof useTimeEntryForm>[]>([]);
+  
+  // Initialize with a single form handler
+  useEffect(() => {
+    if (formHandlers.length === 0) {
+      const initialHandler = useTimeEntryForm({
+        selectedDate: date,
+        onSave: (entry) => {
+          if (onCreateEntry) {
+            console.log("Saving entry with data from form handler:", entry);
+            onCreateEntry(
+              entry.startTime || startTime,
+              entry.endTime || endTime,
+              parseFloat(entry.hours.toString()) || calculatedHours
+            );
+          }
+        },
+        autoSave: false,
+        autoCalculateHours: true,
+        disabled: !interactive
+      });
+      
+      setFormHandlers([initialHandler]);
+    }
+  }, []);
 
   let initialStartTime = "09:00";
   let initialEndTime = "17:00";
@@ -66,6 +78,29 @@ export const useTimeEntryState = ({
     interactive
   });
 
+  // Create a function to add new form handlers on demand
+  const addFormHandler = useCallback(() => {
+    if (formHandlers.length >= 10) return; // Limit to 10 form handlers
+    
+    const newHandler = useTimeEntryForm({
+      selectedDate: date,
+      onSave: (entry) => {
+        if (onCreateEntry) {
+          onCreateEntry(
+            entry.startTime || startTime,
+            entry.endTime || endTime,
+            parseFloat(entry.hours.toString()) || calculatedHours
+          );
+        }
+      },
+      autoSave: false,
+      autoCalculateHours: true,
+      disabled: !interactive
+    });
+    
+    setFormHandlers(prev => [...prev, newHandler]);
+  }, [date, startTime, endTime, calculatedHours, onCreateEntry, interactive]);
+
   const {
     showEntryForms,
     addEntryForm,
@@ -73,7 +108,8 @@ export const useTimeEntryState = ({
     refreshForms,
     key
   } = useEntryForms({ 
-    formHandlers 
+    formHandlers,
+    onNeedMoreHandlers: addFormHandler
   });
 
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);

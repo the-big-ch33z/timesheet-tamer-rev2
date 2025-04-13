@@ -13,6 +13,7 @@ interface TimeEntryFormManagerProps {
   startTime: string;
   endTime: string;
   calculatedHours: number;
+  addFormHandler?: () => void;
 }
 
 const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
@@ -21,14 +22,18 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   onCreateEntry,
   startTime,
   endTime,
-  calculatedHours
+  calculatedHours,
+  addFormHandler
 }) => {
   const {
     showEntryForms,
     addEntryForm,
     removeEntryForm,
     refreshForms
-  } = useEntryForms({ formHandlers });
+  } = useEntryForms({ 
+    formHandlers,
+    onNeedMoreHandlers: addFormHandler 
+  });
 
   // Handle saving an entry form
   const handleSaveEntry = (index: number) => {
@@ -82,9 +87,5 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
     </div>
   );
 };
-
-// Import EntryFormItem to avoid circular dependencies
-import EntryFormItem from "../components/EntryFormItem";
-import InlineEntryForm from "@/components/timesheet/entry-dialog/form/InlineEntryForm";
 
 export default TimeEntryFormManager;

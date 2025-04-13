@@ -2,16 +2,16 @@
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
+import TimeEntryFormManager from "./TimeEntryFormManager";
 import TimeHeaderSection from "../components/TimeHeaderSection";
-import WorkHoursAlerts from "../components/WorkHoursAlerts";
 import EntriesDisplaySection from "../components/EntriesDisplaySection";
-import EntryFormsSection from "../components/EntryFormsSection";
+import WorkHoursAlerts from "../components/WorkHoursAlerts";
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
   date: Date;
   workSchedule?: WorkSchedule;
-  interactive?: boolean;
+  interactive: boolean;
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
@@ -19,10 +19,9 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   entries,
   date,
   workSchedule,
-  interactive = true,
+  interactive,
   onCreateEntry
 }) => {
-  // Use the custom hook to manage all timesheet state
   const {
     startTime,
     endTime,
@@ -30,27 +29,30 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     totalHours,
     hasEntries,
     hoursVariance,
+    isUndertime,
+    
     formHandlers,
     showEntryForms,
     key,
+    
     handleTimeChange,
     handleSaveEntry,
     addEntryForm,
     removeEntryForm,
-    interactive: isInteractive,
-    isUndertime
-  } = useTimeEntryState({
-    entries,
-    date,
-    workSchedule,
+    
+    addFormHandler
+  } = useTimeEntryState({ 
+    entries, 
+    date, 
+    workSchedule, 
     interactive,
     onCreateEntry
   });
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-      {/* Time Display and Header Section */}
-      <TimeHeaderSection 
+    <div key={`entry-manager-${key}`} className="space-y-4">
+      {/* Header section with time display */}
+      <TimeHeaderSection
         hasEntries={hasEntries}
         startTime={startTime}
         endTime={endTime}
@@ -60,29 +62,29 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
         onTimeChange={handleTimeChange}
       />
       
-      {/* Alerts Section */}
+      {/* Alerts for overtime/undertime */}
       <WorkHoursAlerts
         hasEntries={hasEntries}
-        isUndertime={isUndertime}
         hoursVariance={hoursVariance}
-        interactive={interactive}
-        showEntryForms={showEntryForms.length > 0}
+        isUndertime={isUndertime}
       />
       
-      {/* Entries List Section */}
-      <EntriesDisplaySection 
+      {/* Time entry form manager */}
+      {interactive && (
+        <TimeEntryFormManager
+          formHandlers={formHandlers}
+          interactive={interactive}
+          onCreateEntry={onCreateEntry || (() => {})}
+          startTime={startTime}
+          endTime={endTime}
+          calculatedHours={calculatedHours}
+          addFormHandler={addFormHandler}
+        />
+      )}
+      
+      {/* Display existing entries */}
+      <EntriesDisplaySection
         entries={entries}
-        hasEntries={hasEntries}
-        formsListKey={key}
-      />
-      
-      {/* Entry Forms and Add Button Section */}
-      <EntryFormsSection 
-        showEntryForms={showEntryForms}
-        formHandlers={formHandlers}
-        handleSaveEntry={handleSaveEntry}
-        removeEntryForm={removeEntryForm}
-        addEntryForm={addEntryForm}
         interactive={interactive}
       />
     </div>
