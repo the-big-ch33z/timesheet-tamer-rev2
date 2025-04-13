@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
@@ -123,6 +122,32 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
   const hoursVariance = calculateHoursVariance(totalHours, calculatedHours);
   const hasEntries = entries.length > 0;
   
+  // Handle saving an entry form
+  const handleSaveEntry = (index: number) => {
+    if (!interactive || !formHandlers[index]) return;
+
+    const formHandler = formHandlers[index];
+    const formData = formHandler.getFormData();
+    
+    console.log("Saving entry with data:", formData);
+    
+    onCreateEntry?.(
+      formData.startTime || startTime, 
+      formData.endTime || endTime, 
+      parseFloat(formData.hours.toString()) || calculatedHours
+    );
+    
+    // Reset the form
+    formHandler.resetFormEdited();
+    formHandler.resetForm();
+    
+    // Force a re-render after the entry is added
+    setTimeout(() => {
+      console.log("Refreshing forms after save");
+      refreshForms();
+    }, 100);
+  };
+  
   // Log when entries update
   useEffect(() => {
     console.log("Entries updated in WorkHoursContainer:", entries.length);
@@ -156,7 +181,7 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
         isUndertime={isUndertime(hoursVariance)}
         hoursVariance={hoursVariance}
         interactive={interactive}
-        showEntryForms={showEntryForms}
+        showEntryForms={showEntryForms.length > 0}
       />
       
       {/* Entry List with Delete functionality */}
@@ -168,14 +193,26 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
       )}
       
       {/* Entry Forms Section */}
-      {interactive && (
+      {interactive && showEntryForms.length > 0 && (
         <EntryFormsList 
           showEntryForms={showEntryForms}
           formHandlers={formHandlers}
-          addEntryForm={addEntryForm}
+          handleSaveEntry={handleSaveEntry}
           removeEntryForm={removeEntryForm}
           key={`entry-forms-${showEntryForms.length}-${key}`}
         />
+      )}
+      
+      {/* Add Entry Button - moved outside of EntryFormsList for consistency */}
+      {interactive && (
+        <Button 
+          onClick={addEntryForm}
+          size="sm"
+          className="bg-green-500 hover:bg-green-600 text-white"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Entry
+        </Button>
       )}
     </div>
   );

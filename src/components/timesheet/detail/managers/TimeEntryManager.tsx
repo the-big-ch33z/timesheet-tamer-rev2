@@ -162,7 +162,7 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
         isUndertime={isUndertime(hoursVariance)}
         hoursVariance={hoursVariance}
         interactive={interactive}
-        showEntryForms={formHandlers.some(f => f.formState.formEdited)}
+        showEntryForms={showEntryForms.length > 0}
       />
       
       {/* Entry List with Delete functionality */}
