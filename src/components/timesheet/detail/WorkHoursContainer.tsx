@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
@@ -10,6 +11,8 @@ import WorkHoursAlerts from "./components/WorkHoursAlerts";
 import EntryList from "./components/EntryList";
 import EntryFormsList from "./components/EntryFormsList";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -23,7 +26,7 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
   entries, 
   date, 
   workSchedule,
-  interactive = true, // Changed default to true to ensure time editing works
+  interactive = true, 
   onCreateEntry
 }) => {
   // Debug entries being passed in
@@ -67,7 +70,7 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
     },
     autoSave: false,
     autoCalculateHours: true,
-    disabled: !interactive // Fix: Pass the interactive state to disable forms when not interactive
+    disabled: !interactive
   }));
 
   // Initialize start and end times
