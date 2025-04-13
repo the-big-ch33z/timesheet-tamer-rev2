@@ -62,7 +62,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         }, 100);
       }
     },
-    autoSave: false
+    autoSave: false,
+    autoCalculateHours: true
   }));
   
   // Get visible fields from timesheet settings
@@ -95,6 +96,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       }
     }
     
+    console.log(`Initializing times: ${initialStartTime} to ${initialEndTime}`);
     setStartTime(initialStartTime);
     setEndTime(initialEndTime);
     
@@ -105,6 +107,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   // Recalculate hours when times change
   useEffect(() => {
+    console.log(`Time change detected in WorkHoursSection: ${startTime} to ${endTime}`);
     const hours = calculateHoursFromTimes(startTime, endTime);
     setCalculatedHours(hours);
     
@@ -112,6 +115,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     formHandlers.forEach(handler => {
       if (handler) {
         handler.updateTimes(startTime, endTime);
+        handler.setHoursFromTimes();
       }
     });
   }, [startTime, endTime]);
@@ -122,10 +126,16 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   // Handle time input changes
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    if (!interactive) return;
+    console.log(`WorkHoursSection time change: ${type} = ${value}, interactive=${interactive}`);
+    
+    if (!interactive) {
+      console.log("Not in interactive mode, ignoring time change");
+      return;
+    }
     
     try {
       if (type === 'start') {
+        console.log(`Setting start time from ${startTime} to ${value}`);
         setStartTime(value);
         
         // Check if start time is after end time
@@ -137,6 +147,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
           });
         } 
       } else {
+        console.log(`Setting end time from ${endTime} to ${value}`);
         setEndTime(value);
         
         // Check if end time is before start time
@@ -148,8 +159,6 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
           });
         }
       }
-      
-      console.log(`Time updated: ${type} = ${value}, calculating new hours`);
     } catch (error) {
       console.error("Error updating time:", error);
     }

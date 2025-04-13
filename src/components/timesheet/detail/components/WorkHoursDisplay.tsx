@@ -23,7 +23,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   onTimeChange
 }) => {
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    console.log(`Time changed: ${type} = ${value}`);
+    console.log(`WorkHoursDisplay: Time changed: ${type} = ${value}`);
     onTimeChange(type, value);
   };
 
@@ -38,7 +38,6 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
               value={startTime}
               onChange={(e) => handleTimeChange('start', e.target.value)}
               className="text-lg bg-transparent w-full outline-none"
-              disabled={!interactive}
             />
           ) : (
             <span className="text-lg">{format(new Date(`2000-01-01T${startTime}`), "h:mm a")}</span>
@@ -56,7 +55,6 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
               value={endTime}
               onChange={(e) => handleTimeChange('end', e.target.value)}
               className="text-lg bg-transparent w-full outline-none"
-              disabled={!interactive}
             />
           ) : (
             <span className="text-lg">{format(new Date(`2000-01-01T${endTime}`), "h:mm a")}</span>

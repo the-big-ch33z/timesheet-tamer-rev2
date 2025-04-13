@@ -10,6 +10,8 @@ import { isUndertime } from "./calculations/hoursVariance";
  */
 export const calculateHoursFromTimes = (startTime: string, endTime: string): number => {
   try {
+    console.log(`Calculating hours from times: ${startTime} to ${endTime}`);
+    
     // Parse the time strings into hours and minutes
     const [startHours, startMinutes] = startTime.split(':').map(Number);
     const [endHours, endMinutes] = endTime.split(':').map(Number);
@@ -24,6 +26,7 @@ export const calculateHoursFromTimes = (startTime: string, endTime: string): num
     
     // Convert minutes to hours with 1 decimal place
     const hours = Math.round(diffMinutes / 6) / 10;
+    console.log(`Calculated hours: ${hours}`);
     return hours;
   } catch (error) {
     console.error("Error calculating hours from times:", error);

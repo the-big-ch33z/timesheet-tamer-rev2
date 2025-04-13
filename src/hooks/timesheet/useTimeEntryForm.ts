@@ -12,6 +12,8 @@ export interface TimeEntryFormState {
   taskNumber: string;
   formEdited: boolean;
   userId?: string;
+  startTime: string;
+  endTime: string;
 }
 
 export interface UseTimeEntryFormReturn {
@@ -22,7 +24,7 @@ export interface UseTimeEntryFormReturn {
   resetFormEdited: () => void;
   resetForm: () => void;
   updateTimes: (startTime: string, endTime: string) => void;
-  setHoursFromTimes: () => void;
+  setHoursFromTimes: () => number;
   isSubmitting: boolean;
 }
 
@@ -44,7 +46,8 @@ export const useTimeEntryForm = ({
   selectedDate,
   userId,
   autoSave = false,
-  disabled = false
+  disabled = false,
+  autoCalculateHours = false
 }: UseTimeEntryFormProps): UseTimeEntryFormReturn => {
   const { toast } = useToast();
   
@@ -63,6 +66,7 @@ export const useTimeEntryForm = ({
 
   // Reset form when initialData or formKey changes
   useEffect(() => {
+    console.log("Resetting form with initialData:", initialData);
     setHours(initialData.hours?.toString() || "");
     setDescription(initialData.description || "");
     setJobNumber(initialData.jobNumber || "");
@@ -76,6 +80,8 @@ export const useTimeEntryForm = ({
 
   // Handle field changes
   const handleFieldChange = useCallback((field: string, value: string) => {
+    console.log(`Field changed in useTimeEntryForm: ${field} = ${value}, disabled=${disabled}`);
+    
     if (disabled) return;
     
     if (!formEdited) {
@@ -100,17 +106,26 @@ export const useTimeEntryForm = ({
         break;
       case 'startTime':
         setStartTime(value);
+        if (autoCalculateHours) {
+          const calculatedHours = calculateHoursFromTimes(value, endTime);
+          setHours(calculatedHours.toFixed(1));
+        }
         break;
       case 'endTime':
         setEndTime(value);
+        if (autoCalculateHours) {
+          const calculatedHours = calculateHoursFromTimes(startTime, value);
+          setHours(calculatedHours.toFixed(1));
+        }
         break;
       default:
         break;
     }
-  }, [formEdited, disabled]);
+  }, [formEdited, disabled, autoCalculateHours, startTime, endTime]);
 
   // Update time values
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
+    console.log(`Updating times in useTimeEntryForm: ${newStartTime} to ${newEndTime}`);
     setStartTime(newStartTime);
     setEndTime(newEndTime);
   }, []);
@@ -118,6 +133,7 @@ export const useTimeEntryForm = ({
   // Calculate and set hours based on start and end times
   const setHoursFromTimes = useCallback(() => {
     const calculatedHours = calculateHoursFromTimes(startTime, endTime);
+    console.log(`Setting hours from times: ${startTime} to ${endTime} = ${calculatedHours}`);
     setHours(calculatedHours.toFixed(1));
     return calculatedHours;
   }, [startTime, endTime]);
@@ -152,12 +168,12 @@ export const useTimeEntryForm = ({
 
   // Reset form fields
   const resetForm = useCallback(() => {
+    console.log("Resetting form fields");
     setHours("");
     setDescription("");
     setJobNumber("");
     setRego("");
     setTaskNumber("");
-    console.log("Form fields reset");
   }, []);
 
   // Handle form submission
@@ -168,6 +184,8 @@ export const useTimeEntryForm = ({
     try {
       setIsSubmitting(true);
       const formData = getFormData();
+      
+      console.log("Saving form with data:", formData);
       
       if (onSave) {
         onSave(formData);
@@ -197,7 +215,9 @@ export const useTimeEntryForm = ({
       rego,
       taskNumber,
       formEdited,
-      userId: initialData.userId || userId
+      userId: initialData.userId || userId,
+      startTime,
+      endTime
     },
     handleFieldChange,
     handleSave,
