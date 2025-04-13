@@ -1,8 +1,7 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
-import { format } from "date-fns";
 import { useEntriesContext } from "@/contexts/timesheet";
 
 interface EntryListProps {
@@ -11,20 +10,10 @@ interface EntryListProps {
 
 const EntryList: React.FC<EntryListProps> = ({ entries }) => {
   const { deleteEntry } = useEntriesContext();
-
-  useEffect(() => {
-    console.log("EntryList rendering with entries:", entries.length);
-    if (entries.length > 0) {
-      entries.forEach(entry => {
-        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-        console.log("EntryList item date:", format(entryDate, "yyyy-MM-dd"), "Entry id:", entry.id);
-      });
-    }
-  }, [entries]);
   
   // Handle entry deletion
   const handleDeleteEntry = (entryId: string) => {
-    console.log("Deleting entry:", entryId);
+    console.log("EntryList: Deleting entry:", entryId);
     deleteEntry(entryId);
   };
   

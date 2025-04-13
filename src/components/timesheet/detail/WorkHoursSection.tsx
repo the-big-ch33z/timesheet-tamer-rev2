@@ -1,7 +1,8 @@
 
-import React, { useMemo } from "react";
+import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import WorkHoursContainer from "./WorkHoursContainer";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
+import TimeEntryManager from "./managers/TimeEntryManager";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -11,19 +12,23 @@ interface WorkHoursSectionProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
-const WorkHoursSection: React.FC<WorkHoursSectionProps> = (props) => {
-  // Create a key based on date and entries to ensure proper re-rendering
-  const sectionKey = useMemo(() => 
-    props.date ? 
-      `work-hours-${props.date.toISOString()}-${props.entries.length}-${Date.now()}` : 
-      'no-date'
-  , [props.date, props.entries.length]);
-  
+const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
+  entries,
+  date,
+  workSchedule,
+  interactive = true,
+  onCreateEntry
+}) => {
   return (
-    <WorkHoursContainer
-      {...props}
-      key={sectionKey}
-    />
+    <TimeEntryProvider selectedDate={date} userId={entries[0]?.userId}>
+      <TimeEntryManager
+        entries={entries}
+        date={date}
+        workSchedule={workSchedule}
+        interactive={interactive}
+        onCreateEntry={onCreateEntry}
+      />
+    </TimeEntryProvider>
   );
 };
 
