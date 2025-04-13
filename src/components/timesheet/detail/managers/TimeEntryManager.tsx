@@ -87,7 +87,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     showEntryForms,
     addEntryForm,
     removeEntryForm,
-    refreshForms
+    refreshForms,
+    key
   } = useEntryForms({ 
     formHandlers 
   });
@@ -166,7 +167,12 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       />
       
       {/* Entry List with Delete functionality */}
-      {hasEntries && <EntryList entries={entries} />}
+      {hasEntries && (
+        <EntryList 
+          entries={entries}
+          key={`entries-list-${entries.length}-${key}`}
+        />
+      )}
       
       {/* Entry Forms List */}
       {interactive && showEntryForms.length > 0 && (

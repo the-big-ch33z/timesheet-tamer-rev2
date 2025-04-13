@@ -8,7 +8,7 @@ interface WorkHoursAlertsProps {
   isUndertime: boolean;
   hoursVariance: number;
   interactive: boolean;
-  showEntryForms: boolean[];
+  showEntryForms: boolean;
 }
 
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
@@ -29,7 +29,7 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
         </Alert>
       )}
       
-      {!hasEntries && showEntryForms.length === 0 && (
+      {!hasEntries && !showEntryForms && (
         <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
           <Calendar className="h-4 w-4 mr-2" />
           <AlertDescription>

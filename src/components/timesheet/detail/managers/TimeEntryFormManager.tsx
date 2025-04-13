@@ -62,22 +62,12 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
     <div className="mt-4">
       {/* Entry Forms */}
       {showEntryForms.length > 0 && (
-        <div className="space-y-4 mt-4 mb-4">
-          {showEntryForms.map((_, index) => {
-            const formHandler = formHandlers[index];
-            
-            return (
-              <EntryFormItem
-                key={`form-${index}`}
-                formState={formHandler.formState}
-                handleFieldChange={(field, value) => formHandler.handleFieldChange(field, value)}
-                handleSave={() => handleSaveEntry(index)}
-                onDelete={() => removeEntryForm(index)}
-                entryId={`new-${index}`}
-              />
-            );
-          })}
-        </div>
+        <EntryFormsList
+          showEntryForms={showEntryForms}
+          formHandlers={formHandlers}
+          handleSaveEntry={handleSaveEntry}
+          removeEntryForm={removeEntryForm}
+        />
       )}
       
       {/* Add Entry Button */}
@@ -93,62 +83,8 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   );
 };
 
-// Re-export the EntryFormItem component here to avoid circular dependencies
-import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
-
-interface EntryFormItemProps {
-  formState: TimeEntryFormState;
-  handleFieldChange: (field: string, value: string) => void;
-  handleSave: () => void;
-  onDelete: () => void;
-  entryId: string;
-  disabled?: boolean;
-}
-
-const EntryFormItem: React.FC<EntryFormItemProps> = ({
-  formState,
-  handleFieldChange,
-  handleSave,
-  onDelete,
-  entryId,
-  disabled = false
-}) => {
-  const onFieldChange = (field: string, value: string) => {
-    console.log(`EntryFormItem field change: ${field} = ${value}`);
-    handleFieldChange(field, value);
-  };
-
-  return (
-    <div className="bg-white rounded-md shadow p-3 border border-gray-200">
-      <InlineEntryForm 
-        visibleFields={[
-          { id: "job", name: "Job Number", type: "text", required: false, visible: true },
-          { id: "rego", name: "Rego", type: "text", required: false, visible: true },
-          { id: "task", name: "Task Number", type: "text", required: false, visible: true },
-          { id: "notes", name: "Notes", type: "text", required: false, visible: true },
-          { id: "hours", name: "Hours", type: "number", required: true, visible: true }
-        ]}
-        formValues={formState}
-        onFieldChange={onFieldChange}
-        onDelete={onDelete}
-        entryId={entryId}
-        disabled={disabled}
-      />
-      <div className="flex justify-end mt-2">
-        <Button 
-          size="sm" 
-          onClick={handleSave}
-          className="bg-green-500 hover:bg-green-600 text-white"
-          disabled={disabled || !formState.formEdited}
-        >
-          Save Entry
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-// Import InlineEntryForm to avoid circular dependencies
+// Import EntryFormItem to avoid circular dependencies
+import EntryFormItem from "../components/EntryFormItem";
 import InlineEntryForm from "@/components/timesheet/entry-dialog/form/InlineEntryForm";
 
 export default TimeEntryFormManager;
