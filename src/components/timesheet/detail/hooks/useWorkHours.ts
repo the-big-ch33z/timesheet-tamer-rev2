@@ -24,6 +24,15 @@ export const useWorkHours = ({
   const [endTime, setEndTime] = useState(initialEndTime);
   const [calculatedHours, setCalculatedHours] = useState(8.0);
   
+  // Initialize with provided times
+  useEffect(() => {
+    console.log(`Initializing useWorkHours with times: ${initialStartTime} to ${initialEndTime}`);
+    setStartTime(initialStartTime);
+    setEndTime(initialEndTime);
+    const hours = calculateHoursFromTimes(initialStartTime, initialEndTime);
+    setCalculatedHours(hours);
+  }, [initialStartTime, initialEndTime]);
+  
   // Handle time input changes
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
     console.log(`WorkHoursSection time change: ${type} = ${value}, interactive=${interactive}`);
@@ -61,6 +70,11 @@ export const useWorkHours = ({
       }
     } catch (error) {
       console.error("Error updating time:", error);
+      toast({
+        title: "Error updating time",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
     }
   };
   
@@ -71,13 +85,15 @@ export const useWorkHours = ({
     setCalculatedHours(hours);
     
     // Update any existing form handlers with the new times
-    formHandlers.forEach(handler => {
-      if (handler) {
-        handler.updateTimes(startTime, endTime);
-        handler.setHoursFromTimes();
-      }
-    });
-  }, [startTime, endTime, formHandlers]);
+    if (interactive) {
+      formHandlers.forEach(handler => {
+        if (handler) {
+          handler.updateTimes(startTime, endTime);
+          handler.setHoursFromTimes();
+        }
+      });
+    }
+  }, [startTime, endTime, formHandlers, interactive]);
 
   return {
     startTime,

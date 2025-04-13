@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { TimeEntryFormState, UseTimeEntryFormProps } from './types/timeEntryTypes';
 import { calculateHoursFromTimes } from "@/components/timesheet/utils/timeCalculations";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * Hook to manage form state and field changes
@@ -12,6 +13,8 @@ export const useFormStateManagement = ({
   disabled = false,
   autoCalculateHours = false
 }: Pick<UseTimeEntryFormProps, 'initialData' | 'formKey' | 'disabled' | 'autoCalculateHours'>) => {
+  const { toast } = useToast();
+  
   // Form state
   const [hours, setHours] = useState("");
   const [description, setDescription] = useState("");
@@ -41,52 +44,66 @@ export const useFormStateManagement = ({
   const handleFieldChange = useCallback((field: string, value: string) => {
     console.log(`Field changed in useFormStateManagement: ${field} = ${value}, disabled=${disabled}`);
     
-    if (disabled) return;
+    if (disabled) {
+      console.log("Form is disabled, ignoring field change");
+      return;
+    }
     
-    if (!formEdited) {
-      setFormEdited(true);
+    // Always mark form as edited when a field changes
+    setFormEdited(true);
+    
+    try {
+      switch (field) {
+        case 'hours':
+          setHours(value);
+          break;
+        case 'description':
+          setDescription(value);
+          break;
+        case 'jobNumber':
+          setJobNumber(value);
+          break;
+        case 'rego':
+          setRego(value);
+          break;
+        case 'taskNumber':
+          setTaskNumber(value);
+          break;
+        case 'startTime':
+          setStartTime(value);
+          if (autoCalculateHours) {
+            const calculatedHours = calculateHoursFromTimes(value, endTime);
+            setHours(calculatedHours.toFixed(1));
+          }
+          break;
+        case 'endTime':
+          setEndTime(value);
+          if (autoCalculateHours) {
+            const calculatedHours = calculateHoursFromTimes(startTime, value);
+            setHours(calculatedHours.toFixed(1));
+          }
+          break;
+        default:
+          console.warn(`Unknown field: ${field}`);
+          break;
+      }
+    } catch (error) {
+      console.error("Error handling field change:", error);
+      toast({
+        title: "Error updating field",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
     }
-
-    switch (field) {
-      case 'hours':
-        setHours(value);
-        break;
-      case 'description':
-        setDescription(value);
-        break;
-      case 'jobNumber':
-        setJobNumber(value);
-        break;
-      case 'rego':
-        setRego(value);
-        break;
-      case 'taskNumber':
-        setTaskNumber(value);
-        break;
-      case 'startTime':
-        setStartTime(value);
-        if (autoCalculateHours) {
-          const calculatedHours = calculateHoursFromTimes(value, endTime);
-          setHours(calculatedHours.toFixed(1));
-        }
-        break;
-      case 'endTime':
-        setEndTime(value);
-        if (autoCalculateHours) {
-          const calculatedHours = calculateHoursFromTimes(startTime, value);
-          setHours(calculatedHours.toFixed(1));
-        }
-        break;
-      default:
-        break;
-    }
-  }, [formEdited, disabled, autoCalculateHours, startTime, endTime]);
+  }, [disabled, autoCalculateHours, startTime, endTime, toast]);
 
   // Update time values
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
     console.log(`Updating times in form state management: ${newStartTime} to ${newEndTime}`);
     setStartTime(newStartTime);
     setEndTime(newEndTime);
+    // Mark form as edited when times are updated
+    setFormEdited(true);
   }, []);
 
   // Calculate hours from times
@@ -94,6 +111,8 @@ export const useFormStateManagement = ({
     const calculatedHours = calculateHoursFromTimes(startTime, endTime);
     console.log(`Setting hours from times: ${startTime} to ${endTime} = ${calculatedHours}`);
     setHours(calculatedHours.toFixed(1));
+    // Mark form as edited when hours are calculated
+    setFormEdited(true);
     return calculatedHours;
   }, [startTime, endTime]);
 
@@ -105,6 +124,7 @@ export const useFormStateManagement = ({
     setJobNumber("");
     setRego("");
     setTaskNumber("");
+    setFormEdited(false);
   }, []);
 
   // Current form state

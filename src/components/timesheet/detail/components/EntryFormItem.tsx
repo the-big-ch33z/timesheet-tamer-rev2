@@ -47,7 +47,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           size="sm" 
           onClick={handleSave}
           className="bg-green-500 hover:bg-green-600 text-white"
-          disabled={disabled}
+          disabled={disabled || !formState.formEdited} // Only enable save when form has been edited
         >
           Save Entry
         </Button>

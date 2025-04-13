@@ -1,5 +1,5 @@
 
-import React, { useMemo, Suspense, lazy, useEffect } from "react";
+import React, { useMemo, Suspense, lazy, useEffect, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { useTabContent } from "./hooks/useTabContent";
 import { 
@@ -28,6 +28,9 @@ const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
   const { entries, createEntry, getDayEntries } = useEntriesContext();
+  
+  // Force component re-render when entries change
+  const [refreshKey, setRefreshKey] = useState(Date.now());
 
   // Use memoized results from the hook to prevent unnecessary re-renders
   const { sortedEntries } = useTabContent({ 
@@ -40,13 +43,26 @@ const TabContent: React.FC = () => {
   // Create a function to create a basic entry from time inputs
   const handleCreateEntry = (startTime: string, endTime: string, hours: number) => {
     if (selectedDay && viewedUser) {
+      console.log("Creating new entry:", { startTime, endTime, hours, date: selectedDay, userId: viewedUser.id });
+      
       createEntry({
         date: selectedDay,
         hours: hours,
         startTime: startTime,
         endTime: endTime,
         userId: viewedUser.id,
+        description: '',  // Add empty description to ensure the object has all fields
+        jobNumber: '',
+        rego: '',
+        taskNumber: '',
+        project: 'General',
       });
+      
+      // Force a refresh of the component after an entry is created
+      setTimeout(() => {
+        console.log("Forcing refresh after entry creation");
+        setRefreshKey(Date.now());
+      }, 100);
     }
   };
 
@@ -66,7 +82,7 @@ const TabContent: React.FC = () => {
     }
     
     return dayEntriesList;
-  }, [selectedDay, getDayEntries, entries]);
+  }, [selectedDay, getDayEntries, entries, refreshKey]);
 
   // Log when selected day changes
   useEffect(() => {
@@ -77,8 +93,13 @@ const TabContent: React.FC = () => {
 
   // Generate unique key for WorkHoursSection to force proper re-render when day selection or entries change
   const workHoursSectionKey = useMemo(() => 
-    selectedDay ? `work-hours-${selectedDay.toISOString()}-${dayEntries.length}-${Date.now()}` : 'no-day'
-  , [selectedDay, dayEntries.length]);
+    selectedDay ? `work-hours-${selectedDay.toISOString()}-${dayEntries.length}-${refreshKey}` : 'no-day'
+  , [selectedDay, dayEntries.length, refreshKey]);
+
+  // When entries change, update the refresh key to force re-render
+  useEffect(() => {
+    setRefreshKey(Date.now());
+  }, [entries.length]);
 
   return (
     <>

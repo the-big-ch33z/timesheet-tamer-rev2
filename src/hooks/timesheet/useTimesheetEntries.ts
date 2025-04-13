@@ -4,6 +4,7 @@ import { format, isEqual, parseISO } from "date-fns";
 import { TimeEntry } from "@/types";
 import { useLogger } from "../useLogger";
 import { toast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Simplified hook for managing timesheet entries
@@ -44,10 +45,20 @@ export const useTimesheetEntries = (userId?: string) => {
     // Ensure date is a Date object
     const entryWithDate = {
       ...entry,
+      id: entry.id || uuidv4(), // Ensure entry has an ID
       date: entry.date instanceof Date ? entry.date : new Date(entry.date)
     };
     
-    setEntries(prev => [...prev, entryWithDate]);
+    // Add entry to state
+    setEntries(prev => {
+      // Check if entry already exists (to avoid duplicates)
+      const exists = prev.some(e => e.id === entryWithDate.id);
+      if (exists) {
+        logger.debug("Entry already exists, updating", { entryId: entryWithDate.id });
+        return prev.map(e => e.id === entryWithDate.id ? entryWithDate : e);
+      }
+      return [...prev, entryWithDate];
+    });
     
     // Use setTimeout to avoid React state update issues with toast
     setTimeout(() => {
@@ -64,21 +75,21 @@ export const useTimesheetEntries = (userId?: string) => {
     
     setEntries(prev => {
       const entryToDelete = prev.find(entry => entry.id === entryId);
-      const filteredEntries = prev.filter(entry => entry.id !== entryId);
-      
-      if (filteredEntries.length < prev.length) {
-        logger.debug("Entry deleted successfully", { entryId });
-        
-        // Use setTimeout to avoid React state update issues with toast
-        setTimeout(() => {
-          toast({
-            title: "Entry deleted",
-            description: "Time entry has been removed from your timesheet"
-          });
-        }, 10);
-      } else {
+      if (!entryToDelete) {
         logger.warn("Entry not found for deletion", { entryId });
+        return prev;
       }
+      
+      const filteredEntries = prev.filter(entry => entry.id !== entryId);
+      logger.debug("Entry deleted successfully", { entryId });
+      
+      // Use setTimeout to avoid React state update issues with toast
+      setTimeout(() => {
+        toast({
+          title: "Entry deleted",
+          description: "Time entry has been removed from your timesheet"
+        });
+      }, 10);
       
       return filteredEntries;
     });
@@ -132,11 +143,24 @@ export const useTimesheetEntries = (userId?: string) => {
     return dayEntries;
   }, [getUserEntries, logger]);
 
+  // Create a new entry with a UUID
+  const createEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
+    const newEntry: TimeEntry = {
+      ...entryData,
+      id: uuidv4()
+    };
+    
+    logger.debug("Creating new entry", { entry: newEntry });
+    addEntry(newEntry);
+    return newEntry.id;
+  }, [addEntry, logger]);
+
   return {
     entries,
     getUserEntries,
     getDayEntries,
     addEntry,
-    deleteEntry
+    deleteEntry,
+    createEntry
   };
 };

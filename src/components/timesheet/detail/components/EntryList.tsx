@@ -3,12 +3,15 @@ import React, { useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { format } from "date-fns";
+import { useEntriesContext } from "@/contexts/timesheet";
 
 interface EntryListProps {
   entries: TimeEntry[];
 }
 
 const EntryList: React.FC<EntryListProps> = ({ entries }) => {
+  const { deleteEntry } = useEntriesContext();
+
   useEffect(() => {
     console.log("EntryList rendering with entries:", entries.length);
     if (entries.length > 0) {
@@ -18,6 +21,12 @@ const EntryList: React.FC<EntryListProps> = ({ entries }) => {
       });
     }
   }, [entries]);
+  
+  // Handle entry deletion
+  const handleDeleteEntry = (entryId: string) => {
+    console.log("Deleting entry:", entryId);
+    deleteEntry(entryId);
+  };
   
   if (entries.length === 0) {
     return (
@@ -34,7 +43,8 @@ const EntryList: React.FC<EntryListProps> = ({ entries }) => {
         {entries.map(entry => (
           <EntryListItem 
             key={`entry-${entry.id}`} 
-            entry={entry} 
+            entry={entry}
+            onDelete={() => handleDeleteEntry(entry.id)}
           />
         ))}
       </div>

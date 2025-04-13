@@ -24,20 +24,21 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
   entries, 
   date, 
   workSchedule,
-  interactive = false,
+  interactive = true, // Changed default to true to ensure time editing works
   onCreateEntry
 }) => {
   // Debug entries being passed in
   useEffect(() => {
     console.log("WorkHoursContainer received date:", format(date, "yyyy-MM-dd"));
     console.log("WorkHoursContainer received entries:", entries);
+    console.log("WorkHoursContainer interactive mode:", interactive);
     if (entries.length > 0) {
       entries.forEach(entry => {
         const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
         console.log("Entry date:", format(entryDate, "yyyy-MM-dd"), "Entry id:", entry.id);
       });
     }
-  }, [entries, date]);
+  }, [entries, date, interactive]);
 
   // Create form handlers for ALL possible entry forms upfront
   const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
@@ -66,7 +67,8 @@ const WorkHoursContainer: React.FC<WorkHoursSectionProps> = ({
       }
     },
     autoSave: false,
-    autoCalculateHours: true
+    autoCalculateHours: true,
+    disabled: !interactive // Fix: Pass the interactive state to disable forms when not interactive
   }));
 
   // Initialize start and end times
