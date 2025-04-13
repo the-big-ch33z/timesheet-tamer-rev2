@@ -157,7 +157,7 @@ export const useTimeEntryState = ({
 
   // New function to save all pending changes
   const saveAllPendingChanges = useCallback(() => {
-    if (!interactive) return;
+    if (!interactive) return false; // Return false instead of undefined
     
     console.log("Checking all form handlers for pending changes");
     let changesSaved = false;
