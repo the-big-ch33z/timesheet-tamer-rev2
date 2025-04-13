@@ -14,6 +14,7 @@ import WorkHoursHeader from "./components/WorkHoursHeader";
 import EntryList from "./components/EntryList";
 import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -30,6 +31,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   interactive = false,
   onCreateEntry
 }) => {
+  const { toast } = useToast();
+  
   // State for times
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
@@ -104,6 +107,13 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   useEffect(() => {
     const hours = calculateHoursFromTimes(startTime, endTime);
     setCalculatedHours(hours);
+    
+    // Update any existing form handlers with the new times
+    formHandlers.forEach(handler => {
+      if (handler) {
+        handler.updateTimes(startTime, endTime);
+      }
+    });
   }, [startTime, endTime]);
   
   // Calculate variance from expected hours
@@ -112,10 +122,36 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   // Handle time input changes
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    if (type === 'start') {
-      setStartTime(value);
-    } else {
-      setEndTime(value);
+    if (!interactive) return;
+    
+    try {
+      if (type === 'start') {
+        setStartTime(value);
+        
+        // Check if start time is after end time
+        if (value > endTime) {
+          toast({
+            title: "Invalid time range",
+            description: "Start time cannot be later than end time",
+            variant: "destructive"
+          });
+        } 
+      } else {
+        setEndTime(value);
+        
+        // Check if end time is before start time
+        if (value < startTime) {
+          toast({
+            title: "Invalid time range",
+            description: "End time cannot be earlier than start time",
+            variant: "destructive"
+          });
+        }
+      }
+      
+      console.log(`Time updated: ${type} = ${value}, calculating new hours`);
+    } catch (error) {
+      console.error("Error updating time:", error);
     }
   };
   
@@ -125,6 +161,13 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     if (showEntryForms.length < 10) {
       console.log("Adding new entry form");
       setShowEntryForms(prev => [...prev, true]);
+      
+      // Initialize the new form with current start/end times
+      const newFormIndex = showEntryForms.length;
+      if (formHandlers[newFormIndex]) {
+        formHandlers[newFormIndex].updateTimes(startTime, endTime);
+        formHandlers[newFormIndex].setHoursFromTimes();
+      }
     }
   };
   

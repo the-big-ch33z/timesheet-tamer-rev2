@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { calculateHoursFromTimes } from "@/components/timesheet/utils/timeCalculations";
 
 export interface TimeEntryFormState {
   hours: string;
@@ -19,7 +20,9 @@ export interface UseTimeEntryFormReturn {
   handleSave: () => void;
   getFormData: () => Omit<TimeEntry, "id">;
   resetFormEdited: () => void;
-  resetForm: () => void; // New function to reset form values
+  resetForm: () => void;
+  updateTimes: (startTime: string, endTime: string) => void;
+  setHoursFromTimes: () => void;
   isSubmitting: boolean;
 }
 
@@ -53,6 +56,10 @@ export const useTimeEntryForm = ({
   const [taskNumber, setTaskNumber] = useState("");
   const [formEdited, setFormEdited] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Time state (for entry creation)
+  const [startTime, setStartTime] = useState(initialData.startTime || "09:00");
+  const [endTime, setEndTime] = useState(initialData.endTime || "17:00");
 
   // Reset form when initialData or formKey changes
   useEffect(() => {
@@ -61,6 +68,8 @@ export const useTimeEntryForm = ({
     setJobNumber(initialData.jobNumber || "");
     setRego(initialData.rego || "");
     setTaskNumber(initialData.taskNumber || "");
+    setStartTime(initialData.startTime || "09:00");
+    setEndTime(initialData.endTime || "17:00");
     setFormEdited(false);
     setIsSubmitting(false);
   }, [initialData, formKey]);
@@ -89,10 +98,29 @@ export const useTimeEntryForm = ({
       case 'taskNumber':
         setTaskNumber(value);
         break;
+      case 'startTime':
+        setStartTime(value);
+        break;
+      case 'endTime':
+        setEndTime(value);
+        break;
       default:
         break;
     }
   }, [formEdited, disabled]);
+
+  // Update time values
+  const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
+    setStartTime(newStartTime);
+    setEndTime(newEndTime);
+  }, []);
+
+  // Calculate and set hours based on start and end times
+  const setHoursFromTimes = useCallback(() => {
+    const calculatedHours = calculateHoursFromTimes(startTime, endTime);
+    setHours(calculatedHours.toFixed(1));
+    return calculatedHours;
+  }, [startTime, endTime]);
 
   // Auto-save effect for inline forms
   useEffect(() => {
@@ -118,7 +146,9 @@ export const useTimeEntryForm = ({
     taskNumber,
     project: initialData.project || "General",
     userId: initialData.userId || userId || "",
-  }), [selectedDate, hours, description, jobNumber, rego, taskNumber, initialData, userId]);
+    startTime,
+    endTime,
+  }), [selectedDate, hours, description, jobNumber, rego, taskNumber, initialData, userId, startTime, endTime]);
 
   // Reset form fields
   const resetForm = useCallback(() => {
@@ -173,7 +203,9 @@ export const useTimeEntryForm = ({
     handleSave,
     getFormData,
     resetFormEdited: () => setFormEdited(false),
-    resetForm, // New function to reset form fields
+    resetForm,
+    updateTimes,
+    setHoursFromTimes,
     isSubmitting
   };
 };
