@@ -75,25 +75,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </div>
             </div>
 
-            {/* Entry indicators */}
-            {hasEntries && (
-              <div className="mt-2">
-                {entries.slice(0, 1).map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="text-xs p-1 mb-1 bg-indigo-100 rounded truncate"
-                  >
-                    {entry.project} ({entry.hours}h)
-                  </div>
-                ))}
-                {entries.length > 1 && (
-                  <div className="text-xs text-indigo-600">
-                    +{entries.length - 1} more
-                  </div>
-                )}
-              </div>
-            )}
-
+            {/* Entry indicators removed */}
+            
             {/* Holiday indicator */}
             {dayHoliday && (
               <div className="text-xs text-amber-700 mt-1 font-medium">
