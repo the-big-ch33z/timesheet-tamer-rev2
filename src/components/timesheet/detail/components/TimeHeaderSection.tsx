@@ -1,7 +1,7 @@
 
 import React from "react";
 import WorkHoursHeader from "./WorkHoursHeader";
-import TimeEntryDisplay from "./TimeEntryDisplay";
+import TimeDisplay from "./TimeDisplay";
 
 interface TimeHeaderSectionProps {
   hasEntries: boolean;
@@ -26,7 +26,7 @@ const TimeHeaderSection: React.FC<TimeHeaderSectionProps> = ({
     <>
       <WorkHoursHeader hasEntries={hasEntries} />
       
-      <TimeEntryDisplay
+      <TimeDisplay
         startTime={startTime}
         endTime={endTime}
         calculatedHours={calculatedHours}

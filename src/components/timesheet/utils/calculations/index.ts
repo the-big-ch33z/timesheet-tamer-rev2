@@ -5,6 +5,10 @@
  * This helps reduce bundle size by only including the functions that are actually used
  */
 
-// Re-export specific functions instead of entire modules
-export { calculateHoursFromTimes, formatHours } from './timeCalculations';
-export { calculateHoursVariance } from './hoursVariance';
+// Re-export from our consolidated timeUtils file
+export { 
+  calculateHoursFromTimes, 
+  formatHours,
+  calculateHoursVariance,
+  isUndertime
+} from '../timeUtils';

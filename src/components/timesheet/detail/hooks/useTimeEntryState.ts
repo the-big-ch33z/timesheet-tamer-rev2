@@ -1,9 +1,8 @@
-
 import { useCallback, useEffect, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
-import { calculateHoursVariance, isUndertime } from "../utils/timeCalculations";
+import { calculateHoursVariance, isUndertime } from "../../utils/timeUtils";
 import { useEntryForms } from "./useEntryForms";
 import { format } from "date-fns";
 
@@ -22,7 +21,6 @@ export const useTimeEntryState = ({
   interactive,
   onCreateEntry
 }: UseTimeEntryStateProps) => {
-  // Initialize form handlers for entry forms
   const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
     selectedDate: date,
     onSave: (entry) => {
@@ -39,11 +37,10 @@ export const useTimeEntryState = ({
     autoCalculateHours: true,
     disabled: !interactive
   }));
-  
-  // Determine initial time values
+
   let initialStartTime = "09:00";
   let initialEndTime = "17:00";
-  
+
   if (entries.length > 0) {
     initialStartTime = entries[0].startTime || initialStartTime;
     initialEndTime = entries[0].endTime || initialEndTime;
@@ -60,8 +57,7 @@ export const useTimeEntryState = ({
       initialEndTime = scheduleDay.endTime || initialEndTime;
     }
   }
-  
-  // Handle time calculations
+
   const {
     startTime,
     endTime,
@@ -73,8 +69,7 @@ export const useTimeEntryState = ({
     formHandlers,
     interactive
   });
-  
-  // Setup entry forms management
+
   const {
     showEntryForms,
     addEntryForm,
@@ -84,13 +79,11 @@ export const useTimeEntryState = ({
   } = useEntryForms({ 
     formHandlers 
   });
-  
-  // Calculate totals
+
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
   const hoursVariance = calculateHoursVariance(totalHours, calculatedHours);
   const hasEntries = entries.length > 0;
-  
-  // Handle saving an entry form
+
   const handleSaveEntry = useCallback((index: number) => {
     if (!interactive || !formHandlers[index]) return;
 
@@ -105,18 +98,15 @@ export const useTimeEntryState = ({
       parseFloat(formData.hours.toString()) || calculatedHours
     );
     
-    // Reset the form
     formHandler.resetFormEdited();
     formHandler.resetForm();
     
-    // Force a re-render after the entry is added
     setTimeout(() => {
       console.log("Refreshing forms after save");
       refreshForms();
     }, 100);
   }, [interactive, formHandlers, startTime, endTime, calculatedHours, onCreateEntry, refreshForms]);
-  
-  // Log when entries update
+
   useEffect(() => {
     console.log("Entries updated in TimeEntryState:", entries.length);
     if (entries.length > 0) {
@@ -128,7 +118,6 @@ export const useTimeEntryState = ({
   }, [entries]);
 
   return {
-    // Time and calculation values
     startTime,
     endTime,
     calculatedHours,
@@ -136,18 +125,15 @@ export const useTimeEntryState = ({
     hasEntries,
     hoursVariance,
     
-    // Form management
     formHandlers,
     showEntryForms,
     key,
 
-    // Event handlers
     handleTimeChange,
     handleSaveEntry,
     addEntryForm,
     removeEntryForm,
     
-    // UI state
     interactive,
     isUndertime: isUndertime(hoursVariance)
   };
