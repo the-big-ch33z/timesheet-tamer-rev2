@@ -3,6 +3,7 @@
  * Time utilities for timesheet components
  * Consolidates duplicate time calculation functions
  */
+import { format } from 'date-fns';
 
 /**
  * Calculates hours between start and end time
