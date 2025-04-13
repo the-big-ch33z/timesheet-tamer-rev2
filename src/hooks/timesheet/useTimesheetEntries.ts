@@ -39,15 +39,16 @@ export const useTimesheetEntries = (userId?: string) => {
 
   // Add a new entry
   const addEntry = useCallback((entry: TimeEntry) => {
+    logger.debug("Adding entry", { entry });
     setEntries(prev => [...prev, entry]);
-    logger.debug("Entry added", { entry });
-    // Use setTimeout to avoid infinite render loop with toast
+    
+    // Use setTimeout to avoid React state update issues with toast
     setTimeout(() => {
       toast({ 
         title: "Entry added", 
         description: `Added ${entry.hours} hours to your timesheet` 
       });
-    }, 0);
+    }, 10);
   }, [logger]);
 
   // Delete an entry
@@ -59,14 +60,15 @@ export const useTimesheetEntries = (userId?: string) => {
       const filteredEntries = prev.filter(entry => entry.id !== entryId);
       
       if (filteredEntries.length < prev.length) {
-        logger.debug("Entry deleted", { entryId });
-        // Use setTimeout to avoid infinite render loop with toast
+        logger.debug("Entry deleted successfully", { entryId });
+        
+        // Use setTimeout to avoid React state update issues with toast
         setTimeout(() => {
           toast({
             title: "Entry deleted",
             description: "Time entry has been removed from your timesheet"
           });
-        }, 0);
+        }, 10);
       } else {
         logger.warn("Entry not found for deletion", { entryId });
       }
@@ -96,8 +98,15 @@ export const useTimesheetEntries = (userId?: string) => {
     const dayFormatted = format(day, "yyyy-MM-dd");
     
     const dayEntries = userEntries.filter(entry => {
-      const entryDate = format(new Date(entry.date), "yyyy-MM-dd");
-      return entryDate === dayFormatted;
+      // Ensure entry.date is a Date object
+      const entryDate = entry.date instanceof Date 
+        ? entry.date 
+        : new Date(entry.date);
+      
+      const entryDateFormatted = format(entryDate, "yyyy-MM-dd");
+      const isMatch = entryDateFormatted === dayFormatted;
+      
+      return isMatch;
     });
     
     logger.debug("Retrieved entries for day", { 

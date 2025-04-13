@@ -18,6 +18,9 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
     deleteEntry(entry.id);
   };
   
+  // Ensure entry.date is a Date object for formatting
+  const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+  
   return (
     <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md bg-white mb-2">
       <div className="flex-1">
@@ -26,7 +29,7 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry }) => {
           <span className="text-sm text-gray-500">
             {entry.startTime && entry.endTime ? 
               `${entry.startTime} - ${entry.endTime}` : 
-              format(new Date(entry.date), "MMM d, yyyy")}
+              format(entryDate, "MMM d, yyyy")}
           </span>
         </div>
         

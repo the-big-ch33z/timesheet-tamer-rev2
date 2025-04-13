@@ -79,6 +79,7 @@ const TabContent: React.FC = () => {
                     workSchedule={workSchedule}
                     interactive={canEditTimesheet}
                     onCreateEntry={handleCreateEntry}
+                    key={`work-hours-${selectedDay.toISOString()}-${dayEntries.length}`}
                   />
                 </Suspense>
               </div>
