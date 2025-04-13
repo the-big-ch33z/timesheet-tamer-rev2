@@ -1,4 +1,3 @@
-
 import React from "react";
 import { EntryFieldConfig } from "@/types";
 import JobNumberField from "../field-types/JobNumberField";
@@ -23,6 +22,7 @@ interface RenderEntryFieldProps {
   disabled?: boolean;
   inline?: boolean;
   showLabel?: boolean;
+  key?: string; // Accept key prop but don't use it directly (will be handled by React)
 }
 
 export const renderEntryField = ({
@@ -39,7 +39,7 @@ export const renderEntryField = ({
   setHours,
   disabled = false,
   inline = false,
-  showLabel = true
+  showLabel = true,
 }: RenderEntryFieldProps) => {
   const fieldId = field.id;
   

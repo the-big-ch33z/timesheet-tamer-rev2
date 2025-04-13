@@ -37,26 +37,24 @@ const InlineFieldsGroup: React.FC<InlineFieldsGroupProps> = ({
       {visibleFields.map(field => {
         if (!field.visible) return null;
         
-        return (
-          <React.Fragment key={field.id}>
-            {renderEntryField({
-              field,
-              jobNumber,
-              setJobNumber,
-              rego,
-              setRego,
-              taskNumber,
-              setTaskNumber,
-              description,
-              setDescription,
-              hours,
-              setHours,
-              disabled,
-              inline: true,
-              showLabel: false
-            })}
-          </React.Fragment>
-        );
+        // Render the field directly instead of wrapping in a Fragment
+        return renderEntryField({
+          field,
+          jobNumber,
+          setJobNumber,
+          rego,
+          setRego,
+          taskNumber,
+          setTaskNumber,
+          description,
+          setDescription,
+          hours,
+          setHours,
+          disabled,
+          inline: true,
+          showLabel: false,
+          key: field.id // Add key here instead of on the Fragment
+        });
       })}
     </div>
   );
