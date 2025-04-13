@@ -1,6 +1,7 @@
 
 import { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
+import { render, RenderOptions, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { TimesheetProvider } from '@/contexts/timesheet';
 import { AuthProvider } from '@/contexts/auth';
@@ -36,6 +37,4 @@ const customRender = (
 
 // Re-export everything from testing-library
 export * from '@testing-library/react';
-
-// Override render method
 export { customRender as render };
