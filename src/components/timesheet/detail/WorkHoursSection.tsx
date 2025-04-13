@@ -1,20 +1,7 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { 
-  calculateHoursFromTimes, 
-  calculateHoursVariance,
-  isUndertime 
-} from "../utils/timeCalculations";
-import { getFortnightWeek, getWeekDay } from "../utils/scheduleUtils";
-import WorkHoursDisplay from "./components/WorkHoursDisplay";
-import WorkHoursAlerts from "./components/WorkHoursAlerts";
-import EntryFormsList from "./components/EntryFormsList";
-import WorkHoursHeader from "./components/WorkHoursHeader";
-import EntryList from "./components/EntryList";
-import { useTimesheetSettings } from "@/contexts/TimesheetSettingsContext";
-import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
-import { useToast } from "@/hooks/use-toast";
+import WorkHoursContainer from "./WorkHoursContainer";
 
 interface WorkHoursSectionProps {
   entries: TimeEntry[];
@@ -24,223 +11,19 @@ interface WorkHoursSectionProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
-const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({ 
-  entries, 
-  date, 
-  workSchedule,
-  interactive = false,
-  onCreateEntry
-}) => {
-  const { toast } = useToast();
+const WorkHoursSection: React.FC<WorkHoursSectionProps> = (props) => {
+  // Create a key based on date and entries to ensure proper re-rendering
+  const sectionKey = useMemo(() => 
+    props.date ? 
+      `work-hours-${props.date.toISOString()}-${props.entries.length}-${Date.now()}` : 
+      'no-date'
+  , [props.date, props.entries.length]);
   
-  // State for times
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("17:00");
-  const [calculatedHours, setCalculatedHours] = useState(8.0);
-  const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
-  const [key, setKey] = useState(Date.now()); // Add a key to force re-render
-  
-  // Create form handlers for ALL possible entry forms upfront
-  const formHandlers = Array(10).fill(null).map((_, i) => useTimeEntryForm({
-    selectedDate: date,
-    onSave: (entry) => {
-      if (onCreateEntry) {
-        // Pass the data to the parent handler
-        console.log("Saving entry with data:", entry);
-        onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, parseFloat(entry.hours.toString()) || calculatedHours);
-        
-        // Reset the form instead of removing it
-        formHandlers[i].resetFormEdited();
-        
-        // Clear form fields
-        formHandlers[i].resetForm();
-        
-        // Force a re-render after the entry is added
-        setTimeout(() => {
-          console.log("Forcing re-render after save");
-          setKey(Date.now());
-        }, 100);
-      }
-    },
-    autoSave: false,
-    autoCalculateHours: true
-  }));
-  
-  // Get visible fields from timesheet settings
-  const { getVisibleFields } = useTimesheetSettings();
-  const visibleFields = getVisibleFields();
-  
-  // Calculate total hours from entries
-  const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-  
-  // Initialize times from entries or schedule
-  useEffect(() => {
-    let initialStartTime = "09:00";
-    let initialEndTime = "17:00";
-    
-    // If we have entries, use the first entry's times
-    if (entries.length > 0) {
-      initialStartTime = entries[0].startTime || initialStartTime;
-      initialEndTime = entries[0].endTime || initialEndTime;
-    } 
-    // Otherwise, try to get times from workSchedule if available
-    else if (workSchedule) {
-      const weekDay = getWeekDay(date);
-      const weekNum = getFortnightWeek(date);
-      
-      const scheduleDay = workSchedule.weeks[weekNum][weekDay];
-      
-      if (scheduleDay) {
-        initialStartTime = scheduleDay.startTime || initialStartTime;
-        initialEndTime = scheduleDay.endTime || initialEndTime;
-      }
-    }
-    
-    console.log(`Initializing times: ${initialStartTime} to ${initialEndTime}`);
-    setStartTime(initialStartTime);
-    setEndTime(initialEndTime);
-    
-    // Calculate hours from times
-    const hours = calculateHoursFromTimes(initialStartTime, initialEndTime);
-    setCalculatedHours(hours);
-  }, [entries, date, workSchedule]);
-  
-  // Recalculate hours when times change
-  useEffect(() => {
-    console.log(`Time change detected in WorkHoursSection: ${startTime} to ${endTime}`);
-    const hours = calculateHoursFromTimes(startTime, endTime);
-    setCalculatedHours(hours);
-    
-    // Update any existing form handlers with the new times
-    formHandlers.forEach(handler => {
-      if (handler) {
-        handler.updateTimes(startTime, endTime);
-        handler.setHoursFromTimes();
-      }
-    });
-  }, [startTime, endTime]);
-  
-  // Calculate variance from expected hours
-  const hoursVariance = calculateHoursVariance(totalHours, calculatedHours);
-  const hasEntries = entries.length > 0;
-  
-  // Handle time input changes
-  const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    console.log(`WorkHoursSection time change: ${type} = ${value}, interactive=${interactive}`);
-    
-    if (!interactive) {
-      console.log("Not in interactive mode, ignoring time change");
-      return;
-    }
-    
-    try {
-      if (type === 'start') {
-        console.log(`Setting start time from ${startTime} to ${value}`);
-        setStartTime(value);
-        
-        // Check if start time is after end time
-        if (value > endTime) {
-          toast({
-            title: "Invalid time range",
-            description: "Start time cannot be later than end time",
-            variant: "destructive"
-          });
-        } 
-      } else {
-        console.log(`Setting end time from ${endTime} to ${value}`);
-        setEndTime(value);
-        
-        // Check if end time is before start time
-        if (value < startTime) {
-          toast({
-            title: "Invalid time range",
-            description: "End time cannot be earlier than start time",
-            variant: "destructive"
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error updating time:", error);
-    }
-  };
-  
-  // Add a new entry form
-  const addEntryForm = () => {
-    // Limit to maximum of 10 forms
-    if (showEntryForms.length < 10) {
-      console.log("Adding new entry form");
-      setShowEntryForms(prev => [...prev, true]);
-      
-      // Initialize the new form with current start/end times
-      const newFormIndex = showEntryForms.length;
-      if (formHandlers[newFormIndex]) {
-        formHandlers[newFormIndex].updateTimes(startTime, endTime);
-        formHandlers[newFormIndex].setHoursFromTimes();
-      }
-    }
-  };
-  
-  // Remove an entry form at specific index
-  const removeEntryForm = (index: number) => {
-    console.log("Removing entry form at index:", index);
-    setShowEntryForms(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  // Log when entries update
-  useEffect(() => {
-    console.log("Entries updated in WorkHoursSection:", entries.length);
-  }, [entries]);
-
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-      <WorkHoursHeader hasEntries={hasEntries} />
-      
-      {/* Work Hours Display */}
-      <WorkHoursDisplay 
-        startTime={startTime}
-        endTime={endTime}
-        totalHours={totalHours}
-        calculatedHours={calculatedHours}
-        hasEntries={hasEntries}
-        interactive={interactive}
-        onTimeChange={handleTimeChange}
-      />
-      
-      <div className="flex justify-end">
-        <div className="text-right">
-          <div className="text-sm text-amber-700">Daily Target:</div>
-          <div className="text-xl font-semibold text-amber-900">{calculatedHours.toFixed(1)}</div>
-        </div>
-      </div>
-      
-      {/* Warnings and Info Alerts */}
-      <WorkHoursAlerts 
-        hasEntries={hasEntries}
-        isUndertime={isUndertime(hoursVariance)}
-        hoursVariance={hoursVariance}
-        interactive={interactive}
-        showEntryForms={showEntryForms}
-      />
-      
-      {/* Entry List with Delete functionality */}
-      {hasEntries && (
-        <EntryList 
-          entries={entries} 
-          key={`entries-list-${entries.length}-${key}`}
-        />
-      )}
-      
-      {/* Entry Forms Section */}
-      {interactive && (
-        <EntryFormsList 
-          showEntryForms={showEntryForms}
-          formHandlers={formHandlers}
-          addEntryForm={addEntryForm}
-          removeEntryForm={removeEntryForm}
-          key={`entry-forms-${showEntryForms.length}-${key}`}
-        />
-      )}
-    </div>
+    <WorkHoursContainer
+      {...props}
+      key={sectionKey}
+    />
   );
 };
 
