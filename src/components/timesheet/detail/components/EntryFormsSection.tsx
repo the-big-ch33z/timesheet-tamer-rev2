@@ -6,7 +6,7 @@ import EntryFormsList from "./EntryFormsList";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 
 interface EntryFormsSectionProps {
-  showEntryForms: boolean[];
+  showEntryForms: number[];
   formHandlers: UseTimeEntryFormReturn[];
   handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;

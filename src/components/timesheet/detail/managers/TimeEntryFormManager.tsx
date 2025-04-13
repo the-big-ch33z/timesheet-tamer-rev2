@@ -12,7 +12,7 @@ interface TimeEntryFormManagerProps {
   startTime: string;
   endTime: string;
   calculatedHours: number;
-  showEntryForms: boolean[];
+  showEntryForms: number[];
   addEntryForm: () => void;
   removeEntryForm: (index: number) => void;
   handleSaveEntry: (index: number) => void;

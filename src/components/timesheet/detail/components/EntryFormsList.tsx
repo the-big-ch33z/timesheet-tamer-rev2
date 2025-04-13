@@ -4,7 +4,7 @@ import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormItem from "./EntryFormItem";
 
 interface EntryFormsListProps {
-  showEntryForms: boolean[];
+  showEntryForms: number[];
   formHandlers: UseTimeEntryFormReturn[];
   handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;
@@ -22,8 +22,8 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
 
   return (
     <div className="space-y-4 mt-4 mb-4">
-      {showEntryForms.map((_, index) => {
-        // Only render forms that have corresponding handlers and are shown
+      {showEntryForms.map((index) => {
+        // Only render forms that have corresponding handlers
         const formHandler = formHandlers[index];
         
         if (!formHandler) {

@@ -11,16 +11,17 @@ export const useEntryForms = ({
   formHandlers,
   maxForms = 5
 }: UseEntryFormsProps) => {
-  // Track which forms are visible (initially none)
-  const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
+  // Track which forms are visible by their indices (initially empty array)
+  const [showEntryForms, setShowEntryForms] = useState<number[]>([]);
   const [key, setKey] = useState(Date.now()); // Key to force re-render
   
   // Add a new entry form
   const addEntryForm = useCallback(() => {
     // Limit to maximum number of forms
     if (showEntryForms.length < maxForms) {
-      console.log("Adding new entry form at index:", showEntryForms.length);
-      setShowEntryForms(prev => [...prev, true]);
+      const newIndex = showEntryForms.length;
+      console.log("Adding new entry form at index:", newIndex);
+      setShowEntryForms(prev => [...prev, newIndex]);
     } else {
       console.log("Maximum number of forms reached:", maxForms);
     }
@@ -29,7 +30,7 @@ export const useEntryForms = ({
   // Remove an entry form at specific index
   const removeEntryForm = useCallback((index: number) => {
     console.log("Removing entry form at index:", index);
-    setShowEntryForms(prev => prev.filter((_, i) => i !== index));
+    setShowEntryForms(prev => prev.filter(i => i !== index));
   }, []);
   
   // Force a re-render
