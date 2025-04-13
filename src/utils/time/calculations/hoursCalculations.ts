@@ -5,57 +5,36 @@
  */
 import { calculateFortnightHoursFromSchedule } from '../scheduleUtils';
 import { WorkSchedule } from '@/types';
-import { useLogger } from '@/hooks/useLogger';
+import { 
+  TimeCalculationError, 
+  TimeValidationError,
+  validateTimeString, 
+  validateNumberInRange,
+  createTimeLogger,
+  safeCalculation
+} from '../errors/timeErrorHandling';
 
 // Create a logger instance for calculations
-const logger = {
-  error: (message: string, error?: any) => console.error(`[TimeCalculations] ${message}`, error),
-  warn: (message: string, data?: any) => console.warn(`[TimeCalculations] ${message}`, data),
-  debug: (message: string, data?: any) => console.debug(`[TimeCalculations] ${message}`, data)
-};
-
-/**
- * Validates time string format (HH:MM)
- * @param timeStr Time string to validate
- * @returns True if valid, false otherwise
- */
-const isValidTimeFormat = (timeStr: string): boolean => {
-  if (!timeStr) return false;
-  return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
-};
+const logger = createTimeLogger('HoursCalculations');
 
 /**
  * Calculates hours between start and end time
  * @param startTime Start time in HH:MM format
  * @param endTime End time in HH:MM format
  * @returns Number of hours between times
- * @throws Error if time format is invalid
+ * @throws TimeCalculationError if time format is invalid or calculation fails
  */
 export const calculateHoursFromTimes = (startTime: string, endTime: string): number => {
   try {
     logger.debug(`Calculating hours from times: ${startTime} to ${endTime}`);
     
-    // Input validation
-    if (!startTime || !endTime) {
-      throw new Error("Start time and end time must be provided");
-    }
-    
-    if (!isValidTimeFormat(startTime)) {
-      throw new Error(`Invalid start time format: ${startTime}. Expected HH:MM format.`);
-    }
-    
-    if (!isValidTimeFormat(endTime)) {
-      throw new Error(`Invalid end time format: ${endTime}. Expected HH:MM format.`);
-    }
+    // Input validation with our improved validators
+    validateTimeString(startTime, 'Start time');
+    validateTimeString(endTime, 'End time');
     
     // Parse the time strings into hours and minutes
     const [startHours, startMinutes] = startTime.split(':').map(Number);
     const [endHours, endMinutes] = endTime.split(':').map(Number);
-    
-    // Additional validation for parsed values
-    if (isNaN(startHours) || isNaN(startMinutes) || isNaN(endHours) || isNaN(endMinutes)) {
-      throw new Error("Failed to parse time components");
-    }
     
     // Calculate the difference in minutes
     let diffMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
@@ -71,12 +50,14 @@ export const calculateHoursFromTimes = (startTime: string, endTime: string): num
     logger.debug(`Calculated hours: ${hours}`);
     return hours;
   } catch (error) {
-    logger.error("Error calculating hours from times:", error);
-    // Rethrow with more context if it's not already an Error object
-    if (error instanceof Error) {
+    // Handle and rethrow with better context
+    if (error instanceof TimeCalculationError) {
+      logger.error(`Failed to calculate hours: ${error.message}`, error);
       throw error;
     } else {
-      throw new Error(`Failed to calculate hours: ${error}`);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Unexpected error calculating hours: ${message}`, error);
+      throw new TimeCalculationError(`Failed to calculate hours between ${startTime} and ${endTime}: ${message}`);
     }
   }
 };
@@ -86,18 +67,13 @@ export const calculateHoursFromTimes = (startTime: string, endTime: string): num
  * @param fortnightHours Hours for a fortnight
  * @param workDaysInMonth Number of work days in the month
  * @returns Target hours for the month
- * @throws Error if inputs are invalid
+ * @throws TimeCalculationError if inputs are invalid
  */
 export const calculateMonthlyTargetHours = (fortnightHours: number, workDaysInMonth: number): number => {
   try {
-    // Input validation
-    if (isNaN(fortnightHours) || fortnightHours < 0) {
-      throw new Error(`Invalid fortnight hours: ${fortnightHours}. Must be a non-negative number.`);
-    }
-    
-    if (isNaN(workDaysInMonth) || workDaysInMonth < 0) {
-      throw new Error(`Invalid work days in month: ${workDaysInMonth}. Must be a non-negative number.`);
-    }
+    // Input validation using our validators
+    validateNumberInRange(fortnightHours, 'Fortnight hours', 0, 168);
+    validateNumberInRange(workDaysInMonth, 'Work days in month', 0, 31);
     
     const fortnightWorkDays = 10; // Standard number of work days in a fortnight
     
@@ -110,11 +86,16 @@ export const calculateMonthlyTargetHours = (fortnightHours: number, workDaysInMo
     
     return roundedHours;
   } catch (error) {
-    logger.error("Error calculating monthly target hours:", error);
-    if (error instanceof Error) {
+    // Handle and rethrow with better context
+    if (error instanceof TimeCalculationError) {
+      logger.error(`Failed to calculate monthly target hours: ${error.message}`, error);
       throw error;
     } else {
-      throw new Error(`Failed to calculate monthly target hours: ${error}`);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Unexpected error calculating monthly target hours: ${message}`, error);
+      throw new TimeCalculationError(
+        `Failed to calculate monthly target hours from ${fortnightHours} fortnight hours and ${workDaysInMonth} work days: ${message}`
+      );
     }
   }
 };
@@ -124,7 +105,7 @@ export const calculateMonthlyTargetHours = (fortnightHours: number, workDaysInMo
  * @param workSchedule The work schedule
  * @param userFte User's full-time equivalent value (0-1)
  * @returns Adjusted fortnight hours
- * @throws Error if inputs are invalid
+ * @throws TimeCalculationError if inputs are invalid
  */
 export const calculateAdjustedFortnightHours = (
   workSchedule?: WorkSchedule, 
@@ -138,9 +119,7 @@ export const calculateAdjustedFortnightHours = (
     }
     
     // Validate FTE
-    if (isNaN(userFte) || userFte < 0 || userFte > 2) {
-      throw new Error(`Invalid FTE value: ${userFte}. Must be between 0 and 2.`);
-    }
+    validateNumberInRange(userFte, 'Full-time equivalent (FTE)', 0, 2);
     
     // Calculate fortnight hours based on the schedule
     const scheduleHours = calculateFortnightHoursFromSchedule(workSchedule);
@@ -155,11 +134,16 @@ export const calculateAdjustedFortnightHours = (
     
     return scheduleHours;
   } catch (error) {
-    logger.error("Error calculating adjusted fortnight hours:", error);
-    if (error instanceof Error) {
+    // Handle and rethrow with better context
+    if (error instanceof TimeCalculationError) {
+      logger.error(`Failed to calculate adjusted fortnight hours: ${error.message}`, error);
       throw error;
     } else {
-      throw new Error(`Failed to calculate adjusted fortnight hours: ${error}`);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Unexpected error calculating adjusted fortnight hours: ${message}`, error);
+      throw new TimeCalculationError(
+        `Failed to calculate adjusted fortnight hours with FTE ${userFte}: ${message}`
+      );
     }
   }
 };

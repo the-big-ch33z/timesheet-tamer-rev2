@@ -15,19 +15,39 @@ export class TimeCalculationError extends Error {
 }
 
 /**
+ * Custom error class for time validation errors
+ */
+export class TimeValidationError extends TimeCalculationError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TimeValidationError';
+  }
+}
+
+/**
+ * Custom error class for time format errors
+ */
+export class TimeFormatError extends TimeCalculationError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TimeFormatError';
+  }
+}
+
+/**
  * Validates a time string is in HH:MM format
  * @param timeStr The time string to validate
  * @param fieldName Name of the field for error message
  * @returns The validated time string
- * @throws TimeCalculationError if validation fails
+ * @throws TimeValidationError if validation fails
  */
 export const validateTimeString = (timeStr: string, fieldName: string = 'Time'): string => {
   if (!timeStr) {
-    throw new TimeCalculationError(`${fieldName} is required`);
+    throw new TimeValidationError(`${fieldName} is required`);
   }
   
   if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr)) {
-    throw new TimeCalculationError(
+    throw new TimeValidationError(
       `${fieldName} "${timeStr}" is not valid. Must be in HH:MM format (24-hour).`
     );
   }
@@ -42,7 +62,7 @@ export const validateTimeString = (timeStr: string, fieldName: string = 'Time'):
  * @param min Minimum allowed value (inclusive)
  * @param max Maximum allowed value (inclusive)
  * @returns The validated number
- * @throws TimeCalculationError if validation fails
+ * @throws TimeValidationError if validation fails
  */
 export const validateNumberInRange = (
   value: number,
@@ -51,11 +71,11 @@ export const validateNumberInRange = (
   max: number = Number.MAX_SAFE_INTEGER
 ): number => {
   if (isNaN(value)) {
-    throw new TimeCalculationError(`${fieldName} must be a valid number`);
+    throw new TimeValidationError(`${fieldName} must be a valid number`);
   }
   
   if (value < min || value > max) {
-    throw new TimeCalculationError(
+    throw new TimeValidationError(
       `${fieldName} must be between ${min} and ${max}, got ${value}`
     );
   }
@@ -87,4 +107,47 @@ export const safeCalculation = <T extends (...args: any[]) => any>(
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new TimeCalculationError(`${errorContext}: ${errorMessage}`);
   }
+};
+
+/**
+ * Create consistent logger structure for time utilities
+ * @param context The context (usually component or function name)
+ * @returns Logger object with standard methods
+ */
+export const createTimeLogger = (context: string) => {
+  return {
+    error: (message: string, error?: any) => 
+      console.error(`[Time:${context}] ${message}`, error),
+    warn: (message: string, data?: any) => 
+      console.warn(`[Time:${context}] ${message}`, data),
+    info: (message: string, data?: any) => 
+      console.info(`[Time:${context}] ${message}`, data),
+    debug: (message: string, data?: any) => 
+      console.debug(`[Time:${context}] ${message}`, data)
+  };
+};
+
+/**
+ * Formats an error message with context
+ * @param baseMessage Base error message
+ * @param context Context information
+ * @param details Additional error details
+ * @returns Formatted error message
+ */
+export const formatErrorMessage = (
+  baseMessage: string,
+  context?: string,
+  details?: string
+): string => {
+  let message = baseMessage;
+  
+  if (context) {
+    message = `${context}: ${message}`;
+  }
+  
+  if (details) {
+    message = `${message} (${details})`;
+  }
+  
+  return message;
 };
