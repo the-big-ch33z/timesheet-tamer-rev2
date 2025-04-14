@@ -16,6 +16,16 @@ interface CalendarGridProps {
   onDayClick: (day: Date) => void;
 }
 
+// Define the DayStatusInfo interface to match what CalendarDay expects
+interface DayStatusInfo {
+  isWeekend: boolean;
+  dayHoliday: boolean;
+  holidayName: string | null;
+  isRDO: boolean;
+  workHours: { startTime: string; endTime: string } | null;
+  isWorkDay: boolean;
+}
+
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   daysInMonth,
   monthStartDay,
@@ -25,7 +35,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   holidays,
   onDayClick
 }) => {
-  const { getDayStatus } = useCalendarHelpers();
+  const { getDayState } = useCalendarHelpers();
   const today = new Date();
 
   const getDayEntries = (day: Date) => {
@@ -44,6 +54,48 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return areSameDates(day, today);
   };
 
+  // Convert from getDayState output to DayStatusInfo format
+  const getDayStatus = (day: Date): DayStatusInfo => {
+    // Get the base state from useCalendarHelpers
+    const baseState = getDayState(day, selectedDate, new Date(day.getFullYear(), day.getMonth(), 1));
+    
+    // Get holiday information
+    const holiday = holidays.find(h => 
+      formatDateForComparison(new Date(h.date)) === formatDateForComparison(day)
+    );
+    
+    // Check if it's an RDO using the workSchedule
+    let isRDO = false;
+    let dayWorkHours = null;
+    
+    if (workSchedule) {
+      // This is a simplified version - in a real app, you would likely have
+      // more complex logic to determine if it's an RDO based on the workSchedule
+      const scheduleInfo = workSchedule.weeks;
+      const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
+      
+      // Basic check for RDO
+      isRDO = workSchedule.rdoDays[1].includes(weekdayName as any) || 
+              workSchedule.rdoDays[2].includes(weekdayName as any);
+      
+      // Get work hours if defined for this day
+      const week = 1; // Simplified - would need logic to determine the actual week
+      if (scheduleInfo[week] && scheduleInfo[week][weekdayName as any]) {
+        dayWorkHours = scheduleInfo[week][weekdayName as any];
+      }
+    }
+    
+    // Return in the format expected by CalendarDay
+    return {
+      isWeekend: baseState.isWeekend,
+      dayHoliday: !!holiday,
+      holidayName: holiday ? holiday.name : null,
+      isRDO: isRDO,
+      workHours: dayWorkHours,
+      isWorkDay: baseState.isWorkingDay && !isRDO && !holiday
+    };
+  };
+
   return (
     <div className="grid grid-cols-7 gap-2">
       {/* Empty cells for days before the start of the month */}
@@ -54,7 +106,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       {/* Days of the month */}
       {daysInMonth.map((day) => {
         const dayEntries = getDayEntries(day);
-        const status = getDayStatus(day, workSchedule, holidays);
+        const status = getDayStatus(day);
         
         return (
           <CalendarDay

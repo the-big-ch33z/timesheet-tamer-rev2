@@ -50,7 +50,7 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
     [workSchedule, checkIsWorkingDay]
   );
   
-  // Rename getDayState to getDayStatus for API compatibility
+  // For backward compatibility and to fix the current errors
   const getDayStatus = getDayState;
 
   return { getDayState, getDayStatus, checkIsWorkingDay };
