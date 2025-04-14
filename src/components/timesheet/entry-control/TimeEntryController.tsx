@@ -4,6 +4,7 @@ import { TimeEntry } from '@/types';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
 import { DraftProvider } from '@/contexts/timesheet/draft-context/DraftContext';
 import EntryInterface from './EntryInterface';
+import { useLogger } from '@/hooks/useLogger';
 
 interface TimeEntryControllerProps {
   date: Date;
@@ -16,24 +17,25 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   userId,
   interactive = true
 }) => {
-  const { createEntry, dayEntries, getDayEntries, deleteEntry } = useTimeEntryContext();
+  const { createEntry, dayEntries, deleteEntry } = useTimeEntryContext();
+  const logger = useLogger('TimeEntryController');
 
   const handleCreateEntry = useCallback((entry: Omit<TimeEntry, "id">) => {
-    console.debug("[TimeEntryController] Creating entry:", entry);
+    logger.debug("[TimeEntryController] Creating entry:", entry);
     if (createEntry) {
       const newEntryId = createEntry({
         ...entry,
         userId,
         date
       });
-      console.debug("[TimeEntryController] Entry created with ID:", newEntryId);
+      logger.debug("[TimeEntryController] Entry created with ID:", newEntryId);
       return newEntryId;
     }
     return null;
   }, [createEntry, userId, date]);
 
   const handleDeleteEntry = useCallback((entryId: string) => {
-    console.debug("[TimeEntryController] Deleting entry:", entryId);
+    logger.debug("[TimeEntryController] Deleting entry:", entryId);
     if (deleteEntry) {
       return deleteEntry(entryId);
     }

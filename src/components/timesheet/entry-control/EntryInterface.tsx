@@ -6,6 +6,7 @@ import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
 import EntryWizard from '../entry-wizard/EntryWizard';
 import ExistingEntriesList from '../detail/components/ExistingEntriesList';
+import { useLogger } from '@/hooks/useLogger';
 
 interface EntryInterfaceProps {
   date: Date;
@@ -25,6 +26,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   existingEntries
 }) => {
   const [showWizard, setShowWizard] = useState(false);
+  const logger = useLogger('EntryInterface');
 
   const handleLaunchWizard = () => {
     setShowWizard(true);
@@ -35,7 +37,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   };
 
   const handleWizardSubmit = (entry: Omit<TimeEntry, "id">) => {
-    console.debug("[EntryInterface] Submitting entry:", entry);
+    logger.debug("[EntryInterface] Submitting entry:", entry);
     const result = onCreateEntry(entry);
     if (result) {
       setShowWizard(false);

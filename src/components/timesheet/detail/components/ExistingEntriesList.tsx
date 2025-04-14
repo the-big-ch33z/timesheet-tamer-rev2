@@ -7,12 +7,14 @@ interface ExistingEntriesListProps {
   entries: TimeEntry[];
   date: Date;
   interactive?: boolean;
+  onDeleteEntry?: (entryId: string) => boolean;
 }
 
 const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
   entries,
   date,
-  interactive = true
+  interactive = true,
+  onDeleteEntry
 }) => {
   // Format date for display
   const formattedDate = date.toLocaleDateString(undefined, { 
@@ -34,7 +36,8 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
           </h3>
           <EntryList 
             entries={entries} 
-            interactive={interactive} 
+            interactive={interactive}
+            onDelete={onDeleteEntry}
           />
         </>
       )}
