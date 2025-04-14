@@ -47,7 +47,7 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
     });
   }, [formValues, entryId]);
 
-  // Function to handle each field change with enhanced logging
+  // Function to handle each field change with enhanced logging and debouncing
   const handleChange = (field: string, value: string) => {
     console.debug(`[InlineEntryForm] Field '${field}' changing for ID: ${entryId || 'new'}`, {
       from: (formValues as any)[field],

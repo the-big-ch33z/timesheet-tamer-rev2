@@ -1,40 +1,43 @@
 
 import React from "react";
 import { TimeEntry } from "@/types";
-import { format } from "date-fns";
 import EntryList from "./EntryList";
 
 interface ExistingEntriesListProps {
   entries: TimeEntry[];
   date: Date;
-  interactive: boolean;
+  interactive?: boolean;
 }
 
 const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
   entries,
   date,
-  interactive
+  interactive = true
 }) => {
-  // Filter entries for the current date
-  const filteredEntries = entries.filter(entry => {
-    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-    return format(entryDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
+  // Format date for display
+  const formattedDate = date.toLocaleDateString(undefined, { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
   });
   
-  // Don't render if there are no entries
-  if (filteredEntries.length === 0) {
-    return null;
-  }
-
+  // Log for debugging
+  console.debug(`[ExistingEntriesList] Rendering for ${formattedDate}, ${entries.length} entries, interactive=${interactive}`);
+  
   return (
-    <div className="mb-4">
-      <h3 className="text-sm font-medium text-gray-500 mb-2">
-        Existing Entries ({filteredEntries.length})
-      </h3>
-      <EntryList 
-        entries={filteredEntries}
-        interactive={interactive}
-      />
+    <div className="mt-4">
+      {entries.length > 0 && (
+        <>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            Existing entries for {formattedDate}:
+          </h3>
+          <EntryList 
+            entries={entries} 
+            interactive={interactive} 
+          />
+        </>
+      )}
     </div>
   );
 };

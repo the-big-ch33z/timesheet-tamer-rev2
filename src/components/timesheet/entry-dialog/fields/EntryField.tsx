@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -42,11 +42,20 @@ const EntryField: React.FC<EntryFieldProps> = ({
   disabled = false,
   showLabel = true,
 }) => {
+  const [touched, setTouched] = useState(false);
+  const [localValue, setLocalValue] = useState(value);
+  
+  // Update local value when prop changes
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+  
   // Enhanced logging when component renders
   console.debug(`[EntryField] Rendering field '${name}' (id: ${id}):`, {
     value: value,
     disabled: disabled,
     type: type,
+    required: required,
   });
 
   // Log when value changes from props
@@ -57,23 +66,37 @@ const EntryField: React.FC<EntryFieldProps> = ({
   // Enhanced change handler with more detailed logging
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
-    console.debug(`[EntryField] '${name}' value changing from '${value}' to '${newValue}'`);
+    console.debug(`[EntryField] '${name}' value changing from '${localValue}' to '${newValue}'`);
+    
+    // Update local state first for immediate feedback
+    setLocalValue(newValue);
     
     // Call the provided onChange function
     onChange(newValue);
     
     // Verify the event was processed
     console.debug(`[EntryField] '${name}' onChange event dispatched`);
+    
+    // Mark as touched
+    if (!touched) {
+      setTouched(true);
+    }
   };
 
   // Enhanced blur handler with logging
   const handleBlur = () => {
-    console.debug(`[EntryField] '${name}' blur event - final value: '${value}'`);
+    console.debug(`[EntryField] '${name}' blur event - final value: '${localValue}'`);
+    setTouched(true);
+    
     if (onBlur) {
       onBlur();
       console.debug(`[EntryField] '${name}' onBlur callback executed`);
     }
   };
+
+  // Determine if field is in error state
+  const hasError = required && touched && !localValue;
+  const fieldClasses = `${className} ${hasError ? 'border-red-500' : ''}`;
 
   return (
     <div className={inline ? "flex items-center gap-2" : "space-y-2"}>
@@ -82,7 +105,7 @@ const EntryField: React.FC<EntryFieldProps> = ({
           htmlFor={id}
           className={`text-sm font-medium ${
             inline ? "mb-0 min-w-24" : "mb-1 block"
-          }`}
+          } ${hasError ? 'text-red-500' : ''}`}
         >
           {name}
           {required && <span className="text-red-500 ml-1">*</span>}
@@ -92,25 +115,26 @@ const EntryField: React.FC<EntryFieldProps> = ({
       {type === "textarea" ? (
         <Textarea
           id={id}
-          value={value}
+          value={localValue}
           onChange={handleChange}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={className}
+          className={fieldClasses}
           disabled={disabled}
           required={required}
           data-field-name={name}
           data-testid={`textarea-${id}`}
+          aria-invalid={hasError}
         />
       ) : (
         <Input
           id={id}
           type={type}
-          value={value}
+          value={localValue}
           onChange={handleChange}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={className}
+          className={fieldClasses}
           min={min}
           max={max}
           step={step}
@@ -118,7 +142,14 @@ const EntryField: React.FC<EntryFieldProps> = ({
           required={required}
           data-field-name={name}
           data-testid={`input-${id}`}
+          aria-invalid={hasError}
         />
+      )}
+      
+      {hasError && (
+        <div className={`text-xs text-red-500 ${inline ? 'ml-2' : 'mt-1'}`}>
+          {name} is required
+        </div>
       )}
     </div>
   );

@@ -22,6 +22,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   disabled = false
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [localFormState, setLocalFormState] = useState(formState);
   
   // Enhanced logging for component rendering
   console.debug(`[EntryFormItem] Rendering form item for entryId=${entryId}`, {
@@ -35,6 +36,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     taskNumber: formState.taskNumber
   });
   
+  // Update local state when formState changes
+  useEffect(() => {
+    setLocalFormState(formState);
+  }, [formState]);
+  
   // Track when disabled prop changes
   useEffect(() => {
     console.debug(`[EntryFormItem] Disabled state changed for entry ${entryId}: ${disabled}`);
@@ -45,11 +51,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     console.debug(`[EntryFormItem] Form edited state changed for entry ${entryId}: ${formState.formEdited}`);
   }, [formState.formEdited, entryId]);
 
-  // Enhanced field change handler with detailed logging
+  // Enhanced field change handler with detailed logging and local state management
   const onFieldChange = (field: string, value: string) => {
     console.debug(`[EntryFormItem] Field change for entry ${entryId}: ${field}=${value}`, {
       disabled,
-      currentValue: (formState as any)[field]
+      currentValue: (localFormState as any)[field]
     });
     
     if (disabled) {
@@ -57,6 +63,13 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
       return;
     }
     
+    // Update local state first for immediate UI feedback
+    setLocalFormState(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Then update parent state
     handleFieldChange(field, value);
     console.debug(`[EntryFormItem] Field change handler executed for ${entryId}`);
   };
@@ -99,11 +112,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
 
   // Check if form has content to determine save button state
   const hasContent = !!(
-    formState.hours || 
-    formState.description || 
-    formState.jobNumber || 
-    formState.rego || 
-    formState.taskNumber
+    localFormState.hours || 
+    localFormState.description || 
+    localFormState.jobNumber || 
+    localFormState.rego || 
+    localFormState.taskNumber
   );
   
   const canSave = !disabled && formState.formEdited && hasContent;
@@ -120,7 +133,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           { id: "notes", name: "Notes", type: "text", required: false, visible: true },
           { id: "hours", name: "Hours", type: "number", required: true, visible: true }
         ]}
-        formValues={formState}
+        formValues={localFormState}
         onFieldChange={onFieldChange}
         onDelete={handleDelete}
         entryId={entryId}

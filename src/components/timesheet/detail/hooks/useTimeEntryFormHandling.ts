@@ -53,7 +53,7 @@ export const useTimeEntryFormHandling = ({
     };
   }, [interactive]);
 
-  // Handle entry submission with better logging and feedback
+  // Enhanced entry submission with validation
   const handleEntrySubmission = useCallback((entry: TimeEntry, index: number) => {
     console.debug(`[useTimeEntryFormHandling] Entry submission for index ${index}, interactive=${interactive}`, entry);
     
@@ -63,7 +63,18 @@ export const useTimeEntryFormHandling = ({
       return;
     }
     
-    // Don't submit empty entries (except hours)
+    // Validate required fields before submission
+    if (!entry.hours) {
+      console.debug("[useTimeEntryFormHandling] Missing hours in entry submission");
+      toast({
+        title: "Hours are required",
+        description: "Please enter the number of hours before saving",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Don't submit completely empty entries
     if (!entry.hours && !entry.description && !entry.jobNumber && !entry.rego && !entry.taskNumber) {
       console.debug("[useTimeEntryFormHandling] Skipping empty entry submission");
       toast({
@@ -77,6 +88,7 @@ export const useTimeEntryFormHandling = ({
     // Create entry if onCreateEntry is provided
     if (onCreateEntry) {
       console.debug("[useTimeEntryFormHandling] Creating entry with onCreateEntry:", entry);
+      
       // We use the saved entry data to create a new entry
       onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, entry.hours);
       
@@ -85,19 +97,24 @@ export const useTimeEntryFormHandling = ({
         title: "Entry created",
         description: `Added ${entry.hours} hours to your timesheet`,
       });
+      
+      // Reset the form and refresh the form list
+      formHandlers[index].resetForm();
+      refreshForms();
+      
+      // Update last save time
+      lastSaveTime.current = Date.now();
     } else {
       console.debug("[useTimeEntryFormHandling] No onCreateEntry function provided");
+      toast({
+        title: "Could not save entry",
+        description: "The save function is not available",
+        variant: "destructive"
+      });
     }
-
-    // Reset the form and refresh the form list
-    formHandlers[index].resetForm();
-    refreshForms();
-    
-    // Update last save time
-    lastSaveTime.current = Date.now();
   }, [interactive, onCreateEntry, startTime, endTime, formHandlers, refreshForms, toast]);
 
-  // Handle save entry with improved feedback
+  // Enhanced save entry with improved validation
   const handleSaveEntry = useCallback((index: number) => {
     console.debug(`[useTimeEntryFormHandling] handleSaveEntry called for index ${index}, interactive=${interactive}`);
     
@@ -133,11 +150,23 @@ export const useTimeEntryFormHandling = ({
       toast({
         title: "Cannot save empty entry",
         description: "Please add some details to your entry before saving",
-        variant: "destructive" // Changed from "warning" to "destructive"
+        variant: "destructive"
       });
       return;
     }
     
+    // Validate required fields
+    if (!formState.hours) {
+      console.debug("[useTimeEntryFormHandling] Missing hours in save operation");
+      toast({
+        title: "Hours are required",
+        description: "Please enter the number of hours before saving",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // All validation passed, proceed with save
     formHandlers[index].handleSave();
     lastSaveTime.current = now;
     
@@ -161,6 +190,7 @@ export const useTimeEntryFormHandling = ({
     
     try {
       let changesSaved = false;
+      let errors = 0;
       
       // Save any pending changes in visible forms
       showEntryForms.forEach(index => {
@@ -169,12 +199,19 @@ export const useTimeEntryFormHandling = ({
           return;
         }
         
-        // Only save forms that have content and have been edited
+        // Only attempt to save forms that have content and have been edited
         const formState = formHandlers[index].formState;
         const hasContent = !!(formState.hours || formState.description || formState.jobNumber || 
                             formState.rego || formState.taskNumber);
         
         if (hasContent && formState.formEdited) {
+          // Check if hours is provided (required field)
+          if (!formState.hours) {
+            console.debug(`[useTimeEntryFormHandling] Form ${index} is missing required hours field`);
+            errors++;
+            return;
+          }
+          
           const saved = formHandlers[index].saveIfEdited();
           changesSaved = changesSaved || saved;
           
@@ -186,7 +223,15 @@ export const useTimeEntryFormHandling = ({
         }
       });
       
-      if (!changesSaved) {
+      if (errors > 0) {
+        toast({
+          title: `${errors} ${errors === 1 ? 'entry' : 'entries'} not saved`,
+          description: "Please enter hours for all entries before saving",
+          variant: "destructive"
+        });
+      }
+      
+      if (!changesSaved && errors === 0) {
         console.debug("[useTimeEntryFormHandling] No changes needed saving");
       }
       

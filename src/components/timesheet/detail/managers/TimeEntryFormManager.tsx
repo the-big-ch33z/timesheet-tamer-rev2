@@ -36,9 +36,11 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   
   // Handle save all entries
   const handleSaveAll = () => {
+    console.debug("[TimeEntryFormManager] Save All button clicked");
     setIsSaving(true);
     try {
-      saveAllPendingChanges();
+      const saved = saveAllPendingChanges();
+      console.debug("[TimeEntryFormManager] Save All completed, entries saved:", saved);
     } finally {
       // Reset saving state after a short delay to show feedback
       setTimeout(() => setIsSaving(false), 500);
@@ -49,6 +51,9 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   const hasEditedForms = showEntryForms.some(
     index => index < formHandlers.length && formHandlers[index].formState.formEdited
   );
+
+  // Check if there are any current forms
+  const hasOpenForms = showEntryForms.length > 0;
 
   return (
     <div className="mt-4">
@@ -80,15 +85,31 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
         </div>
       )}
       
-      {/* Add Entry Button */}
-      <Button 
-        onClick={addEntryForm}
-        size="sm"
-        className="bg-green-500 hover:bg-green-600 text-white"
-      >
-        <Plus className="h-4 w-4 mr-1" />
-        Add Entry
-      </Button>
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        {/* Add Entry Button */}
+        <Button 
+          onClick={addEntryForm}
+          size="sm"
+          className="bg-green-500 hover:bg-green-600 text-white"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          {hasOpenForms ? "Add Another Entry" : "Add Entry"}
+        </Button>
+        
+        {/* Save All Button - Alternative position when no forms are edited */}
+        {hasOpenForms && !hasEditedForms && (
+          <Button 
+            onClick={handleSaveAll}
+            size="sm"
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+            disabled={isSaving}
+          >
+            <Save className="h-4 w-4 mr-1" />
+            {isSaving ? "Saving..." : "Save All"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
