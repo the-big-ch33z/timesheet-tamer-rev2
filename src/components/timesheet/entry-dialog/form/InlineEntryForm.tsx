@@ -28,9 +28,13 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
   entryId,
   disabled = false
 }) => {
+  // Add console log to track disabled state
+  console.debug(`[InlineEntryForm] Rendering form with disabled=${disabled}, entryId=${entryId || 'new'}`);
+  console.debug(`[InlineEntryForm] Form values:`, formValues);
+
   // Function to handle each field change
   const handleChange = (field: string, value: string) => {
-    console.log(`Field changed: ${field} = ${value}`);
+    console.debug(`[InlineEntryForm] Field changed: ${field} = ${value}`);
     onFieldChange(field, value);
   };
 

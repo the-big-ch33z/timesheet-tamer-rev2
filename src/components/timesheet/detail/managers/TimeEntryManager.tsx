@@ -22,6 +22,9 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   interactive,
   onCreateEntry
 }) => {
+  // Add console log to track interactive state
+  console.debug(`[TimeEntryManager] Rendering with interactive=${interactive}, entries=${entries.length}, date=${date.toISOString()}`);
+
   const {
     startTime,
     endTime,
@@ -39,7 +42,7 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     handleSaveEntry,
     addEntryForm,
     removeEntryForm,
-    saveAllPendingChanges // New function to save all pending changes
+    saveAllPendingChanges
   } = useTimeEntryState({ 
     entries, 
     date, 
@@ -50,6 +53,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
 
   // Add a global event listener for saving pending changes
   useEffect(() => {
+    console.debug(`[TimeEntryManager] Setting up global save event listener, interactive=${interactive}`);
+    
     if (!interactive) return;
 
     const handleSavePendingChanges = () => {
@@ -62,6 +67,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       window.removeEventListener('timesheet:save-pending-changes', handleSavePendingChanges);
     };
   }, [saveAllPendingChanges, interactive]);
+
+  console.debug(`[TimeEntryManager] showEntryForms=${showEntryForms.length}, formHandlers=${formHandlers.length}`);
 
   return (
     <div key={`entry-manager-${key}`} className="space-y-4">

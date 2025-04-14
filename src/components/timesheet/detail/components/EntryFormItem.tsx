@@ -21,8 +21,12 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   entryId,
   disabled = false
 }) => {
+  // Add console log to track disabled state and form state
+  console.debug(`[EntryFormItem] Rendering with disabled=${disabled}, entryId=${entryId}`);
+  console.debug(`[EntryFormItem] Form state:`, formState);
+
   const onFieldChange = (field: string, value: string) => {
-    console.log(`EntryFormItem field change: ${field} = ${value}`);
+    console.debug(`[EntryFormItem] Field change: ${field} = ${value}`);
     handleFieldChange(field, value);
   };
 
@@ -49,7 +53,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           className="bg-green-500 hover:bg-green-600 text-white"
           disabled={disabled || !formState.formEdited} // Only enable save when form has been edited
         >
-          Save Entry
+          Save Entry {disabled ? '(Disabled)' : ''}
         </Button>
       </div>
     </div>

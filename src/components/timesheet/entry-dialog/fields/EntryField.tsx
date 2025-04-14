@@ -42,7 +42,11 @@ const EntryField: React.FC<EntryFieldProps> = ({
   disabled = false,
   showLabel = true,
 }) => {
+  // Add console log to track disabled state
+  console.debug(`[EntryField] Rendering field '${name}' (id: ${id}) with disabled=${disabled}, value='${value}'`);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    console.debug(`[EntryField] '${name}' value changed to: '${e.target.value}'`);
     onChange(e.target.value);
   };
 

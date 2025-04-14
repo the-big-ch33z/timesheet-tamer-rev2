@@ -19,6 +19,9 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
+  // Add console log to track interactive state
+  console.debug(`[WorkHoursSection] Rendering with interactive=${interactive}, entries=${entries.length}, date=${date.toISOString()}`);
+  
   return (
     <TimeEntryProvider selectedDate={date} userId={entries[0]?.userId}>
       <TimeEntryManager

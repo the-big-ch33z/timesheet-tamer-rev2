@@ -30,6 +30,9 @@ const GenericField: React.FC<GenericFieldProps> = ({
   showLabel = true,
   className = "",
 }) => {
+  // Add console log to track disabled state
+  console.debug(`[GenericField] Rendering field '${name}' with disabled=${disabled}`);
+  
   return (
     <EntryField
       id={id}
