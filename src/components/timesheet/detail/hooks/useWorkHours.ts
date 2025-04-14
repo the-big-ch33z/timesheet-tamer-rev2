@@ -75,8 +75,8 @@ export const useWorkHours = ({
       console.log(`[useWorkHours] Using custom saved hours for ${userId} on ${dateString}`);
       const savedHours = getWorkHours(date, userId);
       
-      setStartTime(savedHours.startTime);
-      setEndTime(savedHours.endTime);
+      setStartTime(savedHours.startTime || "");
+      setEndTime(savedHours.endTime || "");
     } 
     // If no custom hours, check the work schedule
     else if (workSchedule) {
@@ -85,8 +85,8 @@ export const useWorkHours = ({
       
       if (scheduleInfo?.hours && scheduleInfo.isWorkingDay) {
         console.log(`[useWorkHours] Using schedule hours: ${scheduleInfo.hours.startTime} - ${scheduleInfo.hours.endTime}`);
-        setStartTime(scheduleInfo.hours.startTime);
-        setEndTime(scheduleInfo.hours.endTime);
+        setStartTime(scheduleInfo.hours.startTime || "");
+        setEndTime(scheduleInfo.hours.endTime || "");
       } else {
         // Use empty values if schedule doesn't have hours for this day or it's not a workday
         console.log(`[useWorkHours] Not a scheduled work day, using empty values`);

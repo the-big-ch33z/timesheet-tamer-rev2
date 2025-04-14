@@ -99,8 +99,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     if (savedHours) {
       console.debug(`[WorkHoursContext] Found saved hours for ${dateString}:`, savedHours);
       return {
-        startTime: savedHours.startTime,
-        endTime: savedHours.endTime,
+        startTime: savedHours.startTime || "",
+        endTime: savedHours.endTime || "",
         isCustom: savedHours.isCustom
       };
     }
@@ -121,6 +121,21 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const key = `${userId}-${dateString}`;
     
     console.debug(`[WorkHoursContext] Saving custom hours for ${dateString}:`, { startTime, endTime });
+    
+    // Only save if we have actual values
+    if (!startTime && !endTime) {
+      console.debug(`[WorkHoursContext] Both times are empty, removing entry if exists`);
+      
+      // If both values are empty and we have an existing entry, delete it
+      if (workHoursMap.has(key)) {
+        setWorkHoursMap(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(key);
+          return newMap;
+        });
+      }
+      return;
+    }
     
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);

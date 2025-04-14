@@ -25,18 +25,21 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
   
   // Update local value when prop changes
   useEffect(() => {
+    console.log(`[TimeInputField] Value prop updated for ${label}: '${value}'`);
     setLocalValue(value);
-  }, [value]);
+  }, [value, label]);
   
   // Handle input changes with debounce
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    console.log(`[TimeInputField] Input changed for ${label}: '${newValue}'`);
     setLocalValue(newValue);
     
     // Debounce the update to parent component
     // This reduces the number of state updates when typing
     const timer = setTimeout(() => {
       if (interactive && newValue !== value) {
+        console.log(`[TimeInputField] Debounced update for ${label}: '${newValue}'`);
         onChange(newValue);
       }
     }, 300);

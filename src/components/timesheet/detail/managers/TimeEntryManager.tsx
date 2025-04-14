@@ -56,11 +56,12 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
     console.debug("[TimeEntryManager] Creating entry from wizard", entry);
     
-    // Ensure entry has all fields populated with at least default values
+    // Do NOT set default time values - only use what's provided or already set
     const completeEntry = {
       ...entry,
       userId: entry.userId || userId, // Ensure we have a userId
       date: date,
+      // Only use startTime/endTime if they exist, don't set defaults
       startTime: entry.startTime || startTime,
       endTime: entry.endTime || endTime
     };

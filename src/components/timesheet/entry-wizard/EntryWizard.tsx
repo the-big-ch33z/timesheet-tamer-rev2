@@ -103,8 +103,9 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
         rego: formValues.rego || '',
         taskNumber: formValues.taskNumber || '',
         userId: formValues.userId || userId,
-        startTime: initialValues.startTime || '',
-        endTime: initialValues.endTime || '',
+        // Don't set default values for times if not provided
+        startTime: formValues.startTime || '',
+        endTime: formValues.endTime || '',
         project: formValues.project || 'General'
       };
       
