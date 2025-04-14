@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormProps } from './types/timeEntryTypes';
@@ -16,6 +16,18 @@ export const useFormSubmission = ({
 }: Pick<UseTimeEntryFormProps, 'initialData' | 'selectedDate' | 'userId' | 'onSave' | 'disabled'>) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Track when disabled flag changes
+  useEffect(() => {
+    console.debug(`[useFormSubmission] Disabled state changed to: ${disabled}`);
+  }, [disabled]);
+
+  // Track when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      console.debug(`[useFormSubmission] Selected date changed to: ${selectedDate.toISOString()}`);
+    }
+  }, [selectedDate]);
 
   // Prepare form data for submission
   const getFormData = useCallback((formState: {

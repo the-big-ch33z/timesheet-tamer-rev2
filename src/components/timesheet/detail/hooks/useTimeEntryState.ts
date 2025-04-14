@@ -31,6 +31,11 @@ export const useTimeEntryState = ({
   interactive,
   onCreateEntry
 }: UseTimeEntryStateProps) => {
+  // Track when interactive flag changes
+  useEffect(() => {
+    console.debug(`[useTimeEntryState] Interactive flag changed to: ${interactive}`);
+  }, [interactive]);
+  
   // Get initial time values from entries or schedule
   const { initialStartTime, initialEndTime } = useTimeEntryInitialValues({
     entries,

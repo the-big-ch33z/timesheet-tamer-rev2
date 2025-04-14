@@ -15,6 +15,11 @@ export const useFormStateManagement = ({
 }: Pick<UseTimeEntryFormProps, 'initialData' | 'formKey' | 'disabled' | 'autoCalculateHours'>) => {
   const { toast } = useToast();
   
+  // Track when disabled flag changes
+  useEffect(() => {
+    console.debug(`[useFormStateManagement] Disabled state changed to: ${disabled}`);
+  }, [disabled]);
+  
   // Form state
   const [hours, setHours] = useState("");
   const [description, setDescription] = useState("");

@@ -1,5 +1,5 @@
 
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import TimeInputField from "./TimeInputField";
 import { formatDisplayHours } from "@/utils/time/formatting/timeFormatting";
 
@@ -22,6 +22,11 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
   interactive,
   onTimeChange
 }) => {
+  // Track when interactive flag changes
+  useEffect(() => {
+    console.debug(`[TimeDisplay] Interactive flag changed to: ${interactive}`);
+  }, [interactive]);
+
   // Handle time changes from child components with improved error handling
   const handleTimeChange = useCallback((type: 'start' | 'end') => (value: string) => {
     console.log(`TimeDisplay: Time changed: ${type} = ${value}`);

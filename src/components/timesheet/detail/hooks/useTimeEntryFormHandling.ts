@@ -1,6 +1,7 @@
 
 import { useCallback } from "react";
-import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
+import { UseTimeEntryFormReturn } from "@/hooks/timesheet/useTimeEntryForm";
+import { TimeEntry } from "@/types";
 
 interface UseTimeEntryFormHandlingProps {
   formHandlers: UseTimeEntryFormReturn[];
@@ -14,7 +15,7 @@ interface UseTimeEntryFormHandlingProps {
 }
 
 /**
- * Hook for handling form submissions and entry creation
+ * Hook to handle form submissions and entry creation
  */
 export const useTimeEntryFormHandling = ({
   formHandlers,
@@ -24,116 +25,81 @@ export const useTimeEntryFormHandling = ({
   startTime,
   endTime,
   calculatedHours,
-  refreshForms
+  refreshForms,
 }: UseTimeEntryFormHandlingProps) => {
-  // Handle form submission
-  const handleEntrySubmission = useCallback((entry: any, index: number) => {
-    console.debug("[useTimeEntryFormHandling] handleEntrySubmission called:", entry, "at index:", index);
+
+  // Handle entry submission
+  const handleEntrySubmission = useCallback((entry: TimeEntry, index: number) => {
+    console.debug(`[useTimeEntryFormHandling] Entry submission for index ${index}, interactive=${interactive}`);
     
-    if (!onCreateEntry) {
-      console.warn("[useTimeEntryFormHandling] No onCreateEntry function provided, cannot save entry");
+    // Check if interactive mode is disabled
+    if (!interactive) {
+      console.debug("[useTimeEntryFormHandling] Interactive mode disabled, aborting submission");
       return;
     }
-    
-    console.debug("[useTimeEntryFormHandling] Saving entry with data from form handler:", entry);
-    
-    const entryStartTime = entry.startTime || startTime;
-    const entryEndTime = entry.endTime || endTime;
-    const entryHours = parseFloat(entry.hours.toString()) || calculatedHours;
-    
-    console.debug("[useTimeEntryFormHandling] Processed entry data:", { 
-      startTime: entryStartTime, 
-      endTime: entryEndTime, 
-      hours: entryHours 
-    });
-    
-    onCreateEntry(
-      entryStartTime,
-      entryEndTime,
-      entryHours
-    );
-    
-    console.debug("[useTimeEntryFormHandling] Entry creation complete");
-  }, [onCreateEntry, startTime, endTime, calculatedHours]);
 
-  // Save a specific entry form
+    // Create entry if onCreateEntry is provided
+    if (onCreateEntry) {
+      console.debug("[useTimeEntryFormHandling] Creating entry:", entry);
+      onCreateEntry(startTime, endTime, entry.hours);
+    } else {
+      console.debug("[useTimeEntryFormHandling] No onCreateEntry function provided");
+    }
+
+    // Reset the form and refresh the form list
+    formHandlers[index].resetForm();
+    refreshForms();
+  }, [interactive, onCreateEntry, startTime, endTime, formHandlers, refreshForms]);
+
+  // Handle save entry (wrapper for form handler)
   const handleSaveEntry = useCallback((index: number) => {
-    console.debug("[useTimeEntryFormHandling] handleSaveEntry called for index:", index);
+    console.debug(`[useTimeEntryFormHandling] handleSaveEntry called for index ${index}, interactive=${interactive}`);
     
     if (!interactive) {
-      console.debug("[useTimeEntryFormHandling] Not interactive, ignoring save request");
+      console.debug("[useTimeEntryFormHandling] Interactive mode disabled, aborting save");
       return;
     }
     
-    const formHandler = formHandlers[index];
-    if (!formHandler) {
-      console.warn("[useTimeEntryFormHandling] No form handler found for index:", index);
+    if (index < 0 || index >= formHandlers.length) {
+      console.error(`[useTimeEntryFormHandling] Invalid index: ${index}`);
       return;
     }
+    
+    formHandlers[index].handleSave();
+  }, [interactive, formHandlers]);
 
-    console.debug("[useTimeEntryFormHandling] Getting form data from handler");
-    const formData = formHandler.getFormData();
-    
-    console.debug("[useTimeEntryFormHandling] Saving entry with data:", formData);
-    
-    onCreateEntry?.(
-      formData.startTime || startTime,
-      formData.endTime || endTime,
-      parseFloat(formData.hours.toString()) || calculatedHours
-    );
-    
-    console.debug("[useTimeEntryFormHandling] Resetting form state after save");
-    formHandler.resetFormEdited();
-    formHandler.resetForm();
-    
-    setTimeout(() => {
-      console.debug("[useTimeEntryFormHandling] Refreshing forms after save");
-      refreshForms();
-    }, 100);
-  }, [interactive, formHandlers, startTime, endTime, calculatedHours, onCreateEntry, refreshForms]);
-
-  // Save all pending changes across all forms
+  // Save all pending changes
   const saveAllPendingChanges = useCallback(() => {
-    console.debug("[useTimeEntryFormHandling] saveAllPendingChanges called, interactive:", interactive);
+    console.debug(`[useTimeEntryFormHandling] saveAllPendingChanges called, interactive=${interactive}, forms shown=${showEntryForms.length}`);
     
     if (!interactive) {
-      console.debug("[useTimeEntryFormHandling] Not interactive, ignoring save request");
-      return false;
+      console.debug("[useTimeEntryFormHandling] Interactive mode disabled, aborting save all");
+      return;
     }
     
-    console.debug("[useTimeEntryFormHandling] Checking form handlers for pending changes, showEntryForms:", showEntryForms);
     let changesSaved = false;
     
-    formHandlers.forEach((handler, index) => {
-      if (!handler) {
-        console.debug(`[useTimeEntryFormHandling] No handler at index ${index}`);
+    // Save any pending changes in visible forms
+    showEntryForms.forEach(index => {
+      if (index < 0 || index >= formHandlers.length) {
+        console.error(`[useTimeEntryFormHandling] Invalid form index: ${index}`);
         return;
       }
       
-      console.debug(`[useTimeEntryFormHandling] Checking handler at index ${index}, form in showEntryForms:`, showEntryForms.includes(index));
+      const saved = formHandlers[index].saveIfEdited();
+      changesSaved = changesSaved || saved;
       
-      if (handler && showEntryForms.includes(index)) {
-        // Check if saveIfEdited returns true (indicating changes were saved)
-        const wasSaved = handler.saveIfEdited();
-        console.debug(`[useTimeEntryFormHandling] Handler ${index} saveIfEdited returned:`, wasSaved);
-        
-        if (wasSaved === true) {
-          console.debug(`[useTimeEntryFormHandling] Saved pending changes in form handler ${index}`);
-          changesSaved = true;
-        }
+      if (saved) {
+        console.debug(`[useTimeEntryFormHandling] Saved changes for form ${index}`);
       }
     });
     
-    if (changesSaved) {
-      // Refresh forms after saving to ensure clean state
-      console.debug("[useTimeEntryFormHandling] Changes were saved, refreshing forms");
-      setTimeout(refreshForms, 100);
-    } else {
-      console.debug("[useTimeEntryFormHandling] No changes were saved");
+    if (!changesSaved) {
+      console.debug("[useTimeEntryFormHandling] No changes needed saving");
     }
     
     return changesSaved;
-  }, [formHandlers, showEntryForms, interactive, refreshForms]);
+  }, [interactive, showEntryForms, formHandlers]);
 
   return {
     handleEntrySubmission,

@@ -29,6 +29,11 @@ export const useTimeEntryForm = ({
     autoCalculateHours
   });
   
+  // Track when disabled flag changes
+  useEffect(() => {
+    console.debug(`[useTimeEntryForm] Disabled state changed to: ${disabled}`);
+  }, [disabled]);
+  
   // Use specialized hooks
   const {
     formState,
