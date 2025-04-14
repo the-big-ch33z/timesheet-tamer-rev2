@@ -7,6 +7,7 @@ import { validateTimeOrder } from "@/utils/time/validation";
 import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
 import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
 import { WorkSchedule } from "@/types";
+import { DEFAULT_WORK_HOURS } from '@/constants/defaults';
 
 interface UseWorkHoursProps {
   initialStartTime?: string;
@@ -19,8 +20,8 @@ interface UseWorkHoursProps {
 }
 
 export const useWorkHours = ({
-  initialStartTime = "09:00",
-  initialEndTime = "17:00",
+  initialStartTime,
+  initialEndTime,
   formHandlers,
   interactive,
   date,
@@ -31,8 +32,8 @@ export const useWorkHours = ({
   const { getWorkHours, saveWorkHours, hasCustomWorkHours } = useWorkHoursContext();
   
   // State for times
-  const [startTime, setStartTime] = useState(initialStartTime);
-  const [endTime, setEndTime] = useState(initialEndTime);
+  const [startTime, setStartTime] = useState(initialStartTime || DEFAULT_WORK_HOURS.START_TIME);
+  const [endTime, setEndTime] = useState(initialEndTime || DEFAULT_WORK_HOURS.END_TIME);
   const [calculatedHours, setCalculatedHours] = useState(8.0);
   
   // Flag to track if we're currently making a manual time change
@@ -55,8 +56,8 @@ export const useWorkHours = ({
     
     if (!userId || !date) {
       console.log("[useWorkHours] No userId or date, using initial values");
-      setStartTime(initialStartTime);
-      setEndTime(initialEndTime);
+      setStartTime(initialStartTime || DEFAULT_WORK_HOURS.START_TIME);
+      setEndTime(initialEndTime || DEFAULT_WORK_HOURS.END_TIME);
       return;
     }
 
@@ -80,15 +81,15 @@ export const useWorkHours = ({
       } else {
         // Fall back to defaults if schedule doesn't have hours for this day
         console.log(`[useWorkHours] No schedule hours for this day, using defaults`);
-        setStartTime(initialStartTime);
-        setEndTime(initialEndTime);
+        setStartTime(DEFAULT_WORK_HOURS.START_TIME);
+        setEndTime(DEFAULT_WORK_HOURS.END_TIME);
       }
     } 
     // No custom hours or schedule - use defaults
     else {
-      console.log(`[useWorkHours] Using default hours: ${initialStartTime} - ${initialEndTime}`);
-      setStartTime(initialStartTime);
-      setEndTime(initialEndTime);
+      console.log(`[useWorkHours] Using default hours: ${DEFAULT_WORK_HOURS.START_TIME} - ${DEFAULT_WORK_HOURS.END_TIME}`);
+      setStartTime(DEFAULT_WORK_HOURS.START_TIME);
+      setEndTime(DEFAULT_WORK_HOURS.END_TIME);
     }
     
   }, [dateString, userId, initialStartTime, initialEndTime, getWorkHours, hasCustomWorkHours, workSchedule]);

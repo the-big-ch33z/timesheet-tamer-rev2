@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
+import { DEFAULT_WORK_HOURS } from '@/constants/defaults';
 
 // Define the data structure for storing work hours
 interface WorkHoursData {
@@ -107,8 +108,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     // Return default values if not found
     console.debug(`[WorkHoursContext] No saved hours for ${dateString}, using defaults`);
     return {
-      startTime: '09:00',
-      endTime: '17:00',
+      startTime: DEFAULT_WORK_HOURS.START_TIME,
+      endTime: DEFAULT_WORK_HOURS.END_TIME,
       isCustom: false
     };
   }, [workHoursMap]);

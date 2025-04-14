@@ -26,3 +26,11 @@ export const FORM_PLACEHOLDERS = {
   FTE: '1.0',
   FORTNIGHT_HOURS: '80'
 };
+
+/**
+ * Default work hours
+ */
+export const DEFAULT_WORK_HOURS = {
+  START_TIME: "09:00",
+  END_TIME: "17:00"
+};

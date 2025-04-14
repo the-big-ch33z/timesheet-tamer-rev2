@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
+import { DEFAULT_WORK_HOURS } from "@/constants/defaults";
 
 interface UseTimeEntryInitialValuesProps {
   entries: TimeEntry[];
@@ -19,8 +20,8 @@ export const useTimeEntryInitialValues = ({
 }: UseTimeEntryInitialValuesProps) => {
   // Get initial time values from entries or schedule
   const { initialStartTime, initialEndTime } = useMemo(() => {
-    let startTime = "09:00";
-    let endTime = "17:00";
+    let startTime = DEFAULT_WORK_HOURS.START_TIME;
+    let endTime = DEFAULT_WORK_HOURS.END_TIME;
 
     if (entries.length > 0) {
       startTime = entries[0].startTime || startTime;
