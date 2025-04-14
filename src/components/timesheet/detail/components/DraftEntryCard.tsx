@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
@@ -20,7 +20,7 @@ const DraftEntryCard: React.FC<DraftEntryCardProps> = ({
   onSubmitEntry,
   initialValues = {}
 }) => {
-  const { draft, hasDraft, clearDraft } = useDraftContext();
+  const { draftEntry, hasDraft, clearDraft } = useDraftContext();
   const [isEditing, setIsEditing] = useState(false);
 
   // If there's no draft, don't render anything
@@ -55,7 +55,7 @@ const DraftEntryCard: React.FC<DraftEntryCardProps> = ({
         onSubmit={handleSubmit}
         onCancel={handleCancelEdit}
         initialValues={{
-          ...(draft || {}),
+          ...(draftEntry || {}),
           ...initialValues
         }}
       />
@@ -71,16 +71,16 @@ const DraftEntryCard: React.FC<DraftEntryCardProps> = ({
       
       <CardContent className="pt-4 pb-2">
         <div className="space-y-1">
-          {draft?.hours && (
-            <p className="text-sm"><span className="font-medium">Hours:</span> {draft.hours}</p>
+          {draftEntry?.hours && (
+            <p className="text-sm"><span className="font-medium">Hours:</span> {draftEntry.hours}</p>
           )}
           
-          {draft?.jobNumber && (
-            <p className="text-sm"><span className="font-medium">Job:</span> {draft.jobNumber}</p>
+          {draftEntry?.jobNumber && (
+            <p className="text-sm"><span className="font-medium">Job:</span> {draftEntry.jobNumber}</p>
           )}
           
-          {draft?.description && (
-            <p className="text-sm"><span className="font-medium">Description:</span> {draft.description.substring(0, 50)}{draft.description.length > 50 ? '...' : ''}</p>
+          {draftEntry?.description && (
+            <p className="text-sm"><span className="font-medium">Description:</span> {draftEntry.description.substring(0, 50)}{draftEntry.description.length > 50 ? '...' : ''}</p>
           )}
         </div>
       </CardContent>
