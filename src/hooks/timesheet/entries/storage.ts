@@ -20,12 +20,19 @@ export const loadEntriesFromStorage = (logger: ReturnType<typeof useLogger>) => 
           logger.warn('Invalid date in entry:', entry);
         }
         
+        // Preserve all entry fields, making sure date is valid
         return {
           ...entry,
           date: entryDate || new Date()
         };
       });
       logger.debug("Loaded entries from localStorage", { count: parsedEntries.length });
+      
+      // Log some sample entries to verify data structure
+      if (parsedEntries.length > 0) {
+        logger.debug("Sample entry from storage:", parsedEntries[0]);
+      }
+      
       return parsedEntries;
     } else {
       logger.debug("No entries found in localStorage");
@@ -97,9 +104,15 @@ export const createEntrySaver = (logger: ReturnType<typeof useLogger>) => {
           entriesToSave = Array.from(entriesMap.values());
         }
         
-        // Save to localStorage
+        // Save to localStorage - ensure we're saving complete entries
         localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesToSave));
         logger.debug("Saved entries to localStorage successfully", { count: entriesToSave.length });
+        
+        // Log first entry details to verify structure
+        if (entriesToSave.length > 0) {
+          logger.debug("Sample saved entry:", entriesToSave[0]);
+        }
+        
         return true;
       } catch (error) {
         logger.error("Error saving entries to localStorage:", error);

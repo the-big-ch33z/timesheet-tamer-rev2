@@ -12,13 +12,20 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
   values,
   onFieldChange
 }) => {
-  // Handle changes for each field
-  const handleHoursChange = (value: string) => {
-    const numValue = parseFloat(value) || 0;
-    onFieldChange('hours', numValue);
+  // Handle changes for each field with consistent processing
+  const handleFieldChange = (field: string, value: string) => {
+    console.debug(`[EntryFormStep] Field change: ${field}=${value}`);
+    
+    // Special handling for numeric fields
+    if (field === 'hours') {
+      const numValue = parseFloat(value) || 0;
+      onFieldChange('hours', numValue);
+    } else {
+      onFieldChange(field, value);
+    }
   };
   
-  // Helper to ensure string values
+  // Helper to ensure string values for display
   const ensureString = (value: any): string => {
     return value !== undefined && value !== null ? String(value) : '';
   };
@@ -30,8 +37,8 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
           <EntryField
             id="hours"
             name="Hours"
-            value={values.hours?.toString() || ''}
-            onChange={handleHoursChange}
+            value={ensureString(values.hours)}
+            onChange={(value) => handleFieldChange('hours', value)}
             placeholder="Enter hours"
             type="number"
             min="0"
@@ -46,7 +53,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
             id="jobNumber"
             name="Job Number"
             value={ensureString(values.jobNumber)}
-            onChange={(value) => onFieldChange('jobNumber', value)}
+            onChange={(value) => handleFieldChange('jobNumber', value)}
             placeholder="Enter job number"
             showLabel={true}
           />
@@ -59,7 +66,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
             id="rego"
             name="Rego"
             value={ensureString(values.rego)}
-            onChange={(value) => onFieldChange('rego', value)}
+            onChange={(value) => handleFieldChange('rego', value)}
             placeholder="Enter rego"
             showLabel={true}
           />
@@ -70,8 +77,32 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
             id="taskNumber"
             name="Task Number"
             value={ensureString(values.taskNumber)}
-            onChange={(value) => onFieldChange('taskNumber', value)}
+            onChange={(value) => handleFieldChange('taskNumber', value)}
             placeholder="Enter task number"
+            showLabel={true}
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <EntryField
+            id="startTime"
+            name="Start Time"
+            value={ensureString(values.startTime)}
+            onChange={(value) => handleFieldChange('startTime', value)}
+            placeholder="e.g. 09:00"
+            showLabel={true}
+          />
+        </div>
+        
+        <div>
+          <EntryField
+            id="endTime"
+            name="End Time"
+            value={ensureString(values.endTime)}
+            onChange={(value) => handleFieldChange('endTime', value)}
+            placeholder="e.g. 17:00"
             showLabel={true}
           />
         </div>
@@ -82,7 +113,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
           id="description"
           name="Description"
           value={ensureString(values.description)}
-          onChange={(value) => onFieldChange('description', value)}
+          onChange={(value) => handleFieldChange('description', value)}
           placeholder="Enter description"
           type="textarea"
           showLabel={true}

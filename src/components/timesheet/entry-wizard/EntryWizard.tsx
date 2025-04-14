@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useDraftContext } from '@/contexts/timesheet/draft-context/DraftContext';
@@ -30,12 +30,20 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   const [formValues, setFormValues] = useState<Partial<TimeEntry>>({
     ...initialValues,
     date,
-    userId
+    userId,
+    // Ensure we have default values for core fields
+    startTime: initialValues.startTime || '09:00',
+    endTime: initialValues.endTime || '17:00',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { saveDraft, clearDraft } = useDraftContext();
   const { toast } = useToast();
+  
+  // Log values whenever they change for debugging
+  useEffect(() => {
+    console.debug('[EntryWizard] Form values updated:', formValues);
+  }, [formValues]);
 
   const handleFieldChange = (field: string, value: string | number) => {
     console.debug(`[EntryWizard] Field change: ${field}=${value}`);
@@ -103,6 +111,7 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
         project: formValues.project || 'General'
       };
       
+      console.debug("[EntryWizard] Final submission data:", entryToSubmit);
       onSubmit(entryToSubmit);
       clearDraft(); // Clear draft after successful submission
       toast({

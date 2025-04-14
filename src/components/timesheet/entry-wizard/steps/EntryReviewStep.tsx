@@ -11,6 +11,9 @@ const EntryReviewStep: React.FC<EntryReviewStepProps> = ({ values }) => {
   // Helper to check if a value exists and isn't empty
   const hasValue = (val: any) => val !== undefined && val !== null && val !== '';
   
+  // Log all values for debugging
+  console.debug('[EntryReviewStep] Reviewing values:', values);
+  
   return (
     <div className="space-y-4">
       <h4 className="text-sm font-medium text-gray-500">Please review your entry details before submitting:</h4>

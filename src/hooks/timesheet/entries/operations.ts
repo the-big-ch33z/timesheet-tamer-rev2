@@ -27,11 +27,15 @@ export const createEntryOperations = (
     }
     
     // Ensure entry has an ID and valid date
+    // But preserve ALL other fields from the original entry
     const entryWithDate = {
       ...entry,
       id: entry.id || uuidv4(),
       date: entryDate
     };
+    
+    // Log the complete entry that will be added to ensure all fields are present
+    logger.debug("Completed entry before adding:", entryWithDate);
     
     // Add entry to state
     setEntries(prev => {
@@ -79,8 +83,11 @@ export const createEntryOperations = (
     });
   };
 
-  // Create a new entry with a UUID
+  // Create a new entry with a UUID - preserve all input fields
   const createEntry = (entryData: Omit<TimeEntry, "id">) => {
+    // Log received data for verification
+    logger.debug("Creating new entry with data:", entryData);
+    
     // Validate date
     const entryDate = ensureDate(entryData.date);
     if (!entryDate) {
@@ -93,13 +100,14 @@ export const createEntryOperations = (
       return "";
     }
     
+    // Create new entry object with all fields preserved
     const newEntry: TimeEntry = {
       ...entryData,
       id: uuidv4(),
       date: entryDate
     };
     
-    logger.debug("Creating new entry", { entry: newEntry });
+    logger.debug("Finalized new entry:", newEntry);
     addEntry(newEntry);
     return newEntry.id;
   };

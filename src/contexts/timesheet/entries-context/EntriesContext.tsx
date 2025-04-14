@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { useTimesheetEntries } from '@/hooks/timesheet/useTimesheetEntries';
 import { TimeEntry } from '@/types';
 import { EntriesContextType } from '../types';
@@ -68,9 +68,13 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
       description: entryData.description,
       jobNumber: entryData.jobNumber,
       rego: entryData.rego,
-      taskNumber: entryData.taskNumber
+      taskNumber: entryData.taskNumber,
+      startTime: entryData.startTime,
+      endTime: entryData.endTime,
+      project: entryData.project
     });
     
+    // Create a complete entry with all fields preserved
     const newEntry: TimeEntry = {
       ...entryData,
       id: uuidv4(),
@@ -80,7 +84,14 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
     
     console.debug('[EntriesContext] Adding validated entry:', newEntry);
     addEntry(newEntry);
+    
+    return newEntry.id;
   };
+  
+  // Add debugging for entries changes
+  useEffect(() => {
+    console.debug('[EntriesContext] Entries updated, count:', entries.length);
+  }, [entries]);
   
   const value: EntriesContextType = {
     entries,
