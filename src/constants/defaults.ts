@@ -28,9 +28,9 @@ export const FORM_PLACEHOLDERS = {
 };
 
 /**
- * Default work hours
+ * Placeholder work hours (no longer defaults, just placeholders)
  */
 export const DEFAULT_WORK_HOURS = {
-  START_TIME: "09:00",
-  END_TIME: "17:00"
+  START_TIME: "",
+  END_TIME: ""
 };

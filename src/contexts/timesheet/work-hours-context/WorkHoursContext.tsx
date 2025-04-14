@@ -105,11 +105,11 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       };
     }
     
-    // Return default values if not found
-    console.debug(`[WorkHoursContext] No saved hours for ${dateString}, using defaults`);
+    // Return empty values if not found (no defaults)
+    console.debug(`[WorkHoursContext] No saved hours for ${dateString}, returning empty values`);
     return {
-      startTime: DEFAULT_WORK_HOURS.START_TIME,
-      endTime: DEFAULT_WORK_HOURS.END_TIME,
+      startTime: "",
+      endTime: "",
       isCustom: false
     };
   }, [workHoursMap]);

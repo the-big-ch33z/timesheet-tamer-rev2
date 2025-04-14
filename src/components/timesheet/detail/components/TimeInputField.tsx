@@ -10,6 +10,7 @@ interface TimeInputFieldProps {
   onChange: (value: string) => void;
   interactive?: boolean;
   testId?: string;
+  placeholder?: string;
 }
 
 const TimeInputField: React.FC<TimeInputFieldProps> = ({
@@ -17,7 +18,8 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
   value,
   onChange,
   interactive = true,
-  testId
+  testId,
+  placeholder = "--:--"
 }) => {
   const [localValue, setLocalValue] = useState(value);
   
@@ -52,8 +54,9 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
           value={localValue}
           onChange={handleChange}
           disabled={!interactive}
-          className="pr-10"
+          className={`pr-10 ${!localValue ? 'text-gray-400' : ''}`}
           data-testid={testId}
+          placeholder={placeholder}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <Clock className="h-4 w-4 text-gray-500" />

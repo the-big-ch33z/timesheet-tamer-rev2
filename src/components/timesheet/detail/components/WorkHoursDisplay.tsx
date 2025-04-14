@@ -38,9 +38,12 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
               value={startTime}
               onChange={(e) => handleTimeChange('start', e.target.value)}
               className="text-lg bg-transparent w-full outline-none"
+              placeholder="Enter start time"
             />
           ) : (
-            <span className="text-lg">{format(new Date(`2000-01-01T${startTime}`), "h:mm a")}</span>
+            <span className="text-lg">
+              {startTime ? format(new Date(`2000-01-01T${startTime}`), "h:mm a") : "--:--"}
+            </span>
           )}
           <Clock className="h-4 w-4 ml-2 text-gray-400" />
         </div>
@@ -55,9 +58,12 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
               value={endTime}
               onChange={(e) => handleTimeChange('end', e.target.value)}
               className="text-lg bg-transparent w-full outline-none"
+              placeholder="Enter end time"
             />
           ) : (
-            <span className="text-lg">{format(new Date(`2000-01-01T${endTime}`), "h:mm a")}</span>
+            <span className="text-lg">
+              {endTime ? format(new Date(`2000-01-01T${endTime}`), "h:mm a") : "--:--"}
+            </span>
           )}
           <Clock className="h-4 w-4 ml-2 text-gray-400" />
         </div>
@@ -66,9 +72,13 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
       <div>
         <div className="text-sm text-amber-700 mb-1">Total Hours</div>
         <div className={`bg-white border ${hasEntries ? 'border-amber-200' : 'border-gray-200'} rounded-md p-2`}>
-          <span className={`text-lg ${!hasEntries && 'text-gray-400'}`}>
-            {hasEntries ? totalHours.toFixed(1) : calculatedHours.toFixed(1)}
-          </span>
+          {!startTime || !endTime ? (
+            <span className="text-sm text-gray-500">Enter start/end times</span>
+          ) : (
+            <span className={`text-lg ${!hasEntries && 'text-gray-400'}`}>
+              {hasEntries ? totalHours.toFixed(1) : calculatedHours.toFixed(1)}
+            </span>
+          )}
         </div>
       </div>
     </div>

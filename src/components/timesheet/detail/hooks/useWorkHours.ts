@@ -7,7 +7,6 @@ import { validateTimeOrder } from "@/utils/time/validation";
 import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
 import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
 import { WorkSchedule } from "@/types";
-import { DEFAULT_WORK_HOURS } from '@/constants/defaults';
 
 interface UseWorkHoursProps {
   initialStartTime?: string;
@@ -32,9 +31,9 @@ export const useWorkHours = ({
   const { getWorkHours, saveWorkHours, hasCustomWorkHours } = useWorkHoursContext();
   
   // State for times
-  const [startTime, setStartTime] = useState(initialStartTime || DEFAULT_WORK_HOURS.START_TIME);
-  const [endTime, setEndTime] = useState(initialEndTime || DEFAULT_WORK_HOURS.END_TIME);
-  const [calculatedHours, setCalculatedHours] = useState(8.0);
+  const [startTime, setStartTime] = useState(initialStartTime || "");
+  const [endTime, setEndTime] = useState(initialEndTime || "");
+  const [calculatedHours, setCalculatedHours] = useState(0);
   
   // Flag to track if we're currently making a manual time change
   // This prevents the useEffect from overriding our manual changes
@@ -48,8 +47,8 @@ export const useWorkHours = ({
   
   // Get times with proper precedence:
   // 1. Custom saved times from localStorage (user overrides)
-  // 2. Schedule-based times
-  // 3. Default times (fallback)
+  // 2. Schedule-based times (only if we have schedule and it's a workday)
+  // 3. Empty values (new approach - no defaults)
   useEffect(() => {
     // Skip this effect if we're currently making a manual change
     if (manualChangeRef.current) {
@@ -65,9 +64,9 @@ export const useWorkHours = ({
     }
     
     if (!userId || !date) {
-      console.log("[useWorkHours] No userId or date, using initial values");
-      setStartTime(initialStartTime || DEFAULT_WORK_HOURS.START_TIME);
-      setEndTime(initialEndTime || DEFAULT_WORK_HOURS.END_TIME);
+      console.log("[useWorkHours] No userId or date, using empty values");
+      setStartTime("");
+      setEndTime("");
       return;
     }
 
@@ -84,22 +83,22 @@ export const useWorkHours = ({
       console.log(`[useWorkHours] No custom hours, checking work schedule for ${dateString}`);
       const scheduleInfo = getDayScheduleInfo(date, workSchedule);
       
-      if (scheduleInfo?.hours) {
+      if (scheduleInfo?.hours && scheduleInfo.isWorkDay) {
         console.log(`[useWorkHours] Using schedule hours: ${scheduleInfo.hours.startTime} - ${scheduleInfo.hours.endTime}`);
         setStartTime(scheduleInfo.hours.startTime);
         setEndTime(scheduleInfo.hours.endTime);
       } else {
-        // Fall back to defaults if schedule doesn't have hours for this day
-        console.log(`[useWorkHours] No schedule hours for this day, using defaults`);
-        setStartTime(DEFAULT_WORK_HOURS.START_TIME);
-        setEndTime(DEFAULT_WORK_HOURS.END_TIME);
+        // Use empty values if schedule doesn't have hours for this day or it's not a workday
+        console.log(`[useWorkHours] Not a scheduled work day, using empty values`);
+        setStartTime("");
+        setEndTime("");
       }
     } 
-    // No custom hours or schedule - use defaults
+    // No custom hours or schedule - use empty values
     else {
-      console.log(`[useWorkHours] Using default hours: ${DEFAULT_WORK_HOURS.START_TIME} - ${DEFAULT_WORK_HOURS.END_TIME}`);
-      setStartTime(DEFAULT_WORK_HOURS.START_TIME);
-      setEndTime(DEFAULT_WORK_HOURS.END_TIME);
+      console.log(`[useWorkHours] Using empty values as no saved times or schedule exists`);
+      setStartTime("");
+      setEndTime("");
     }
     
     // Mark as initialized for this date/user combination
@@ -129,19 +128,22 @@ export const useWorkHours = ({
       const currentStartTime = type === 'start' ? value : startTime;
       const currentEndTime = type === 'end' ? value : endTime;
       
-      // Validate the time order
-      const validation = validateTimeOrder(currentStartTime, currentEndTime);
-      
-      if (!validation.valid) {
-        toast({
-          title: "Invalid time range",
-          description: validation.message || "Please check your time inputs",
-          variant: "destructive"
-        });
-        return;
+      // Only validate if both times are set
+      if (currentStartTime && currentEndTime) {
+        // Validate the time order
+        const validation = validateTimeOrder(currentStartTime, currentEndTime);
+        
+        if (!validation.valid) {
+          toast({
+            title: "Invalid time range",
+            description: validation.message || "Please check your time inputs",
+            variant: "destructive"
+          });
+          return;
+        }
       }
       
-      // If validation passes, update the times
+      // If validation passes or one of the times is empty, update the times
       if (type === 'start') {
         console.log(`[useWorkHours] Setting start time from ${startTime} to ${value}`);
         setStartTime(value);
@@ -150,8 +152,11 @@ export const useWorkHours = ({
         setEndTime(value);
       }
       
-      // Save the updated times
-      if (userId && date) {
+      // Save the updated times - only if both times are provided
+      if (userId && date && (
+        (type === 'start' && value && endTime) || 
+        (type === 'end' && value && startTime)
+      )) {
         console.log(`[useWorkHours] Saving work hours for ${userId} on ${dateString}`);
         saveWorkHours(
           date,
@@ -180,18 +185,24 @@ export const useWorkHours = ({
   
   // Recalculate hours when times change
   useEffect(() => {
-    console.log(`[useWorkHours] Time change detected: ${startTime} to ${endTime}`);
-    const hours = calculateHoursFromTimes(startTime, endTime);
-    setCalculatedHours(hours);
-    
-    // Update any existing form handlers with the new times
-    if (interactive) {
-      formHandlers.forEach(handler => {
-        if (handler) {
-          handler.updateTimes(startTime, endTime);
-          handler.setHoursFromTimes();
-        }
-      });
+    // Only calculate if both times are set
+    if (startTime && endTime) {
+      console.log(`[useWorkHours] Time change detected: ${startTime} to ${endTime}`);
+      const hours = calculateHoursFromTimes(startTime, endTime);
+      setCalculatedHours(hours);
+      
+      // Update any existing form handlers with the new times
+      if (interactive) {
+        formHandlers.forEach(handler => {
+          if (handler) {
+            handler.updateTimes(startTime, endTime);
+            handler.setHoursFromTimes();
+          }
+        });
+      }
+    } else {
+      // If either time is not set, calculated hours is 0
+      setCalculatedHours(0);
     }
   }, [startTime, endTime, formHandlers, interactive]);
 
