@@ -8,18 +8,27 @@ import NotesField from "../field-types/NotesField";
 import HoursField from "../field-types/HoursField";
 import GenericField from "../field-types/GenericField";
 
+// Define a consistent type for field handlers
+type FieldHandler = (value: string) => void;
+
+// Define type for field value-handler pairs
+interface FieldPair {
+  value: string;
+  handler: FieldHandler;
+}
+
 interface RenderEntryFieldProps {
   field: EntryFieldConfig;
   jobNumber: string;
-  setJobNumber: (value: string) => void;
+  setJobNumber: FieldHandler;
   rego: string;
-  setRego: (value: string) => void;
+  setRego: FieldHandler;
   taskNumber: string;
-  setTaskNumber: (value: string) => void;
+  setTaskNumber: FieldHandler;
   description: string;
-  setDescription: (value: string) => void;
+  setDescription: FieldHandler;
   hours: string;
-  setHours: (value: string) => void;
+  setHours: FieldHandler;
   disabled?: boolean;
   inline?: boolean;
   showLabel?: boolean;
@@ -121,28 +130,29 @@ export const renderEntryField = ({
       if (!field.name) return null;
       
       // Attempt to infer field type based on name if not matching the above cases
-      let inferredHandler = () => {};
-      let inferredValue = "";
+      // Initialize with a properly typed default handler
+      let fieldPair: FieldPair = {
+        value: "",
+        handler: (value: string) => {
+          console.debug(`[renderEntryField] Default handler called with: ${value}`);
+        }
+      };
       
+      // Infer the correct handler and value based on field name
       if (fieldNameLower.includes('job')) {
-        inferredHandler = setJobNumber;
-        inferredValue = jobNumber;
+        fieldPair = { value: jobNumber, handler: setJobNumber };
         console.debug(`[renderEntryField] Inferred job number field from name: ${field.name}`);
       } else if (fieldNameLower.includes('rego')) {
-        inferredHandler = setRego;
-        inferredValue = rego;
+        fieldPair = { value: rego, handler: setRego };
         console.debug(`[renderEntryField] Inferred rego field from name: ${field.name}`);
       } else if (fieldNameLower.includes('task')) {
-        inferredHandler = setTaskNumber;
-        inferredValue = taskNumber;
+        fieldPair = { value: taskNumber, handler: setTaskNumber };
         console.debug(`[renderEntryField] Inferred task number field from name: ${field.name}`);
       } else if (fieldNameLower.includes('note') || fieldNameLower.includes('desc')) {
-        inferredHandler = setDescription;
-        inferredValue = description;
+        fieldPair = { value: description, handler: setDescription };
         console.debug(`[renderEntryField] Inferred description field from name: ${field.name}`);
       } else if (fieldNameLower.includes('hour')) {
-        inferredHandler = setHours;
-        inferredValue = hours;
+        fieldPair = { value: hours, handler: setHours };
         console.debug(`[renderEntryField] Inferred hours field from name: ${field.name}`);
       }
       
@@ -150,8 +160,8 @@ export const renderEntryField = ({
         <GenericField
           id={fieldId}
           name={field.name}
-          value={inferredValue}
-          onChange={inferredHandler}
+          value={fieldPair.value}
+          onChange={fieldPair.handler}
           placeholder={field.placeholder || ""}
           required={field.required}
           inline={inline}
@@ -162,4 +172,3 @@ export const renderEntryField = ({
       );
   }
 };
-
