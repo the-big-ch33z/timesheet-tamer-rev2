@@ -38,8 +38,8 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
   // Setup storage sync
   useStorageSync(entries, isInitialized, isLoading);
   
-  // Get entry operations
-  const { addEntry, deleteEntry, createEntry } = useEntryOperations(setEntries);
+  // Get entry operations - pass both parameters
+  const { addEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
   
   // Get query functions
   const { getDayEntries, getUserEntries } = useEntryQueries(entries, userId);

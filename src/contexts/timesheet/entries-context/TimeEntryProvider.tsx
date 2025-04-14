@@ -21,7 +21,7 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
   useStorageSync(entries, isInitialized, isLoading);
 
   // Get entry manipulation operations
-  const { addEntry, updateEntry, deleteEntry } = useEntryOperations(entries, setEntries);
+  const { addEntry, updateEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
 
   // Set up query functions
   const { getDayEntries, calculateTotalHours } = useEntryQueries(entries, userId);
@@ -37,7 +37,9 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
     updateEntry,
     deleteEntry,
     calculateTotalHours,
-    isLoading
+    isLoading,
+    createEntry,
+    getDayEntries
   };
 
   return (

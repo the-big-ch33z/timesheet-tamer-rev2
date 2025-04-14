@@ -9,6 +9,8 @@ export interface TimeEntryContextValue {
   deleteEntry: (entryId: string) => void;
   calculateTotalHours: (entriesList?: TimeEntry[]) => number;
   isLoading: boolean;
+  createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
+  getDayEntries: (date: Date) => TimeEntry[];
 }
 
 export interface TimeEntryProviderProps {
