@@ -2,7 +2,7 @@
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
-import TimeEntryManager from "./managers/TimeEntryManager";
+import TimeEntryController from "../entry-control/TimeEntryController";
 import { createTimeLogger } from "@/utils/time/errors";
 
 const logger = createTimeLogger('WorkHoursSection');
@@ -22,7 +22,6 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  // Get userId from entries if available or from localStorage
   const currentUserId = window.localStorage.getItem('currentUserId') || 'default-user';
   const userId = entries.length > 0 ? entries[0].userId : currentUserId;
   
@@ -30,12 +29,10 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   return (
     <TimeEntryProvider selectedDate={date} userId={userId}>
-      <TimeEntryManager
-        entries={entries}
+      <TimeEntryController
         date={date}
-        workSchedule={workSchedule}
+        userId={userId}
         interactive={interactive}
-        onCreateEntry={onCreateEntry}
       />
     </TimeEntryProvider>
   );

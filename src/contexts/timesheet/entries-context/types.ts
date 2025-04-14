@@ -6,7 +6,7 @@ export interface TimeEntryContextValue {
   dayEntries: TimeEntry[];
   addEntry: (entry: Omit<TimeEntry, "id">) => void;
   updateEntry: (entryId: string, updates: Partial<TimeEntry>) => void;
-  deleteEntry: (entryId: string) => void;
+  deleteEntry: (entryId: string) => boolean;
   calculateTotalHours: (entriesList?: TimeEntry[]) => number;
   isLoading: boolean;
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
