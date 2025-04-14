@@ -1,4 +1,3 @@
-
 /**
  * Time Entry Service
  * Provides a consistent interface for all timesheet entry operations
@@ -208,35 +207,43 @@ export const createTimeEntryService = (): TimeEntryService => {
     return false;
   };
   
-  // Delete an entry
+  // Delete an entry and update storage
   const deleteEntry = (entryId: string): boolean => {
     if (!entryId) {
       logger.error("No entry ID provided for deletion");
       return false;
     }
     
-    // Get all entries
-    const allEntries = getAllEntries();
-    
-    // Filter out the entry to delete
-    const filteredEntries = allEntries.filter(entry => entry.id !== entryId);
-    
-    // If no entries were removed, the entry wasn't found
-    if (filteredEntries.length === allEntries.length) {
-      logger.warn(`Entry with ID ${entryId} not found for deletion`);
+    try {
+      // Get all entries
+      const allEntries = getAllEntries();
+      
+      // Find the entry to delete
+      const entryToDelete = allEntries.find(entry => entry.id === entryId);
+      if (!entryToDelete) {
+        logger.warn(`Entry with ID ${entryId} not found for deletion`);
+        return false;
+      }
+      
+      // Filter out the entry to delete
+      const filteredEntries = allEntries.filter(entry => entry.id !== entryId);
+      
+      // Save back to storage
+      const saved = saveEntries(filteredEntries);
+      
+      if (saved) {
+        logger.debug(`Successfully deleted entry ${entryId}`);
+        // Trigger storage event for cross-tab sync
+        window.dispatchEvent(new Event('timesheet:entry-deleted'));
+        return true;
+      }
+      
+      logger.error(`Failed to save after deletion of entry ${entryId}`);
+      return false;
+    } catch (error) {
+      logger.error(`Error deleting entry ${entryId}:`, error);
       return false;
     }
-    
-    // Save back to storage
-    const saved = saveEntries(filteredEntries);
-    
-    if (saved) {
-      logger.debug(`Deleted entry ${entryId}`);
-      return true;
-    }
-    
-    logger.error(`Failed to save after deletion of entry ${entryId}`);
-    return false;
   };
   
   // Calculate total hours from a list of entries

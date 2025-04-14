@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -94,6 +93,8 @@ export const useEntryOperations = (
   const deleteEntry = useCallback((entryId: string) => {
     console.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
     
+    let success = false;
+    
     setEntries(prev => {
       const entryToDelete = prev.find(entry => entry.id === entryId);
       if (!entryToDelete) {
@@ -102,17 +103,20 @@ export const useEntryOperations = (
       }
       
       const filteredEntries = prev.filter(entry => entry.id !== entryId);
-      console.debug("[TimeEntryProvider] Entry deleted, remaining entries:", filteredEntries.length);
+      success = true;
       
+      console.debug("[TimeEntryProvider] Entry deleted, remaining entries:", filteredEntries.length);
+      return filteredEntries;
+    });
+    
+    if (success) {
       toast({
         title: "Entry deleted",
         description: "Time entry has been removed from your timesheet"
       });
-      
-      return filteredEntries;
-    });
+    }
     
-    return true;
+    return success;
   }, [setEntries, toast]);
 
   // Create a new entry with validation
