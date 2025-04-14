@@ -4,6 +4,19 @@ import { format } from "date-fns";
 import { getWeekDay, getFortnightWeek } from "../scheduleUtils";
 
 /**
+ * Check if a time string is in correct HH:MM format
+ */
+export function isValidTimeFormat(time: string): boolean {
+  if (!time) {
+    return false;
+  }
+
+  // Check if it matches the HH:MM pattern
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  return timeRegex.test(time);
+}
+
+/**
  * Validates that a time string is in correct format
  */
 export function validateTimeFormat(time: string): { valid: boolean; message?: string } {
@@ -18,6 +31,18 @@ export function validateTimeFormat(time: string): { valid: boolean; message?: st
   }
 
   return { valid: true };
+}
+
+/**
+ * Throw an error if time format is invalid
+ * @param time Time string to validate
+ * @param fieldName Optional field name for error context
+ */
+export function validateTimeFormatWithError(time: string, fieldName?: string): void {
+  const validation = validateTimeFormat(time);
+  if (!validation.valid) {
+    throw new Error(`${fieldName || 'Time'}: ${validation.message}`);
+  }
 }
 
 /**
@@ -39,6 +64,15 @@ export function validateTimeOrder(
   const endHour = parseInt(end[0]);
   const endMin = parseInt(end[1]);
 
+  // Check for same time
+  if (startHour === endHour && startMin === endMin) {
+    return {
+      valid: false,
+      message: "Start and end time cannot be the same",
+    };
+  }
+
+  // Check if end time is before start time (standard day scenario)
   if (
     startHour > endHour ||
     (startHour === endHour && startMin >= endMin)

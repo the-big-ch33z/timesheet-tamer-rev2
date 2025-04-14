@@ -28,23 +28,20 @@ describe('Time Validation Utilities', () => {
   
   describe('validateTimeFormat', () => {
     it('validates correct time strings without throwing', () => {
-      expect(() => validateTimeFormat('00:00', 'Start time')).not.toThrow();
-      expect(() => validateTimeFormat('09:30', 'End time')).not.toThrow();
-      expect(() => validateTimeFormat('23:59', 'Break time')).not.toThrow();
+      expect(validateTimeFormat('00:00').valid).toBeTruthy();
+      expect(validateTimeFormat('09:30').valid).toBeTruthy();
+      expect(validateTimeFormat('23:59').valid).toBeTruthy();
     });
     
-    it('throws with proper context for invalid times', () => {
-      expect(() => validateTimeFormat('9:30', 'Start time')).toThrow(TimeValidationError);
-      expect(() => validateTimeFormat('24:00', 'End time')).toThrow(TimeValidationError);
-      expect(() => validateTimeFormat('', 'Break time')).toThrow(TimeValidationError);
+    it('returns invalid for incorrect time formats', () => {
+      expect(validateTimeFormat('9:30').valid).toBeFalsy();
+      expect(validateTimeFormat('24:00').valid).toBeFalsy();
+      expect(validateTimeFormat('').valid).toBeFalsy();
       
       // Check for context in error messages
-      try {
-        validateTimeFormat('9:30', 'Start time');
-      } catch (error) {
-        expect(error instanceof TimeValidationError).toBe(true);
-        expect((error as Error).message).toContain('Start time');
-      }
+      const result = validateTimeFormat('9:30');
+      expect(result.valid).toBeFalsy();
+      expect(result.message).toBeDefined();
     });
   });
   

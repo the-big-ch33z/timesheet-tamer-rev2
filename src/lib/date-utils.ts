@@ -3,7 +3,7 @@
  * Date utility functions
  */
 import { getWorkdaysInMonth } from '@/utils/time/scheduleUtils';
-import { calculateMonthlyTargetHours as calculateMonthlyTarget } from '@/utils/time/calculations';
+import { calculateMonthlyTargetHours as calculateMonthlyTarget } from '@/utils/time/calculations/hoursCalculations';
 import { formatDate, formatDateForDisplay } from '@/utils/time/formatting';
 import { isValidDate, ensureDate, areSameDates } from '@/utils/time/validation';
 

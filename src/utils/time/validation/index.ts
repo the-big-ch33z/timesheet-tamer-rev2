@@ -13,7 +13,8 @@ export * from './dateValidation';
 export {
   validateTimeOrder,
   isValidTimeFormat,
-  validateTimeFormat
+  validateTimeFormat,
+  validateTime
 } from './timeValidation';
 
 export {

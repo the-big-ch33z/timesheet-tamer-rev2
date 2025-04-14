@@ -6,5 +6,5 @@
  */
 
 // Re-export all utility functions from the new centralized location
-export * from '@/utils/time/calculations';
+export * from '@/utils/time/calculations/hoursCalculations';
 export * from '@/utils/time/calculations/varianceCalculations';

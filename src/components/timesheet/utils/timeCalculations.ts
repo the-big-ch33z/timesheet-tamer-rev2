@@ -5,6 +5,18 @@
  * New code should import from @/utils/time/calculations
  */
 
-// Re-export all utility functions from the new centralized location
-export * from '@/utils/time/calculations';
-export * from '@/utils/time/calculations/varianceCalculations';
+// Re-export specific utility functions to avoid ambiguous exports
+export { 
+  calculateHoursFromTimes,
+  calculateMonthlyTargetHours,
+  calculateAdjustedFortnightHours,
+  calculateFortnightHoursFromSchedule
+} from '@/utils/time/calculations/hoursCalculations';
+
+export { 
+  calculateHoursVariance,
+  isUndertime,
+  safeCalculateVariance
+} from '@/utils/time/calculations/varianceCalculations';
+
+export * from '@/utils/time/formatting/timeFormatting';
