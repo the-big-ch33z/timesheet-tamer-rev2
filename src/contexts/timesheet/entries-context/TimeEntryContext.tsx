@@ -38,10 +38,13 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
 }) => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
-  // Load entries on mount
+  // Load entries on mount - only once
   useEffect(() => {
+    if (isInitialized) return;
+    
     const loadEntries = () => {
       try {
         console.debug("[TimeEntryContext] Loading entries from localStorage");
@@ -56,6 +59,8 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
           console.debug("[TimeEntryContext] First few entries:", parsedEntries.slice(0, 3));
         } else {
           console.debug("[TimeEntryContext] No entries found in localStorage");
+          // Initialize with empty array to prevent future loads
+          localStorage.setItem('timeEntries', JSON.stringify([]));
         }
       } catch (error) {
         console.error("[TimeEntryContext] Error loading entries:", error);
@@ -66,24 +71,25 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
         });
       } finally {
         setIsLoading(false);
+        setIsInitialized(true);
       }
     };
 
     loadEntries();
-  }, [toast]);
+  }, [toast, isInitialized]);
 
-  // Save entries when they change
+  // Save entries when they change - with proper dependency array
   useEffect(() => {
-    if (!isLoading) { // Don't save during initial load
-      try {
-        console.debug("[TimeEntryContext] Saving entries to localStorage:", entries.length);
-        localStorage.setItem('timeEntries', JSON.stringify(entries));
-        console.debug("[TimeEntryContext] Saved entries to localStorage successfully");
-      } catch (error) {
-        console.error("[TimeEntryContext] Error saving entries to localStorage:", error);
-      }
+    if (!isInitialized || isLoading) return; // Don't save during initial load
+    
+    try {
+      console.debug("[TimeEntryContext] Saving entries to localStorage:", entries.length);
+      localStorage.setItem('timeEntries', JSON.stringify(entries));
+      console.debug("[TimeEntryContext] Saved entries to localStorage successfully");
+    } catch (error) {
+      console.error("[TimeEntryContext] Error saving entries to localStorage:", error);
     }
-  }, [entries, isLoading]);
+  }, [entries, isLoading, isInitialized]);
 
   // Filter entries for the selected day
   const dayEntries = useCallback(() => {

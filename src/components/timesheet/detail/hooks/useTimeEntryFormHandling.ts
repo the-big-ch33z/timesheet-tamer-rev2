@@ -30,7 +30,7 @@ export const useTimeEntryFormHandling = ({
 
   // Handle entry submission
   const handleEntrySubmission = useCallback((entry: TimeEntry, index: number) => {
-    console.debug(`[useTimeEntryFormHandling] Entry submission for index ${index}, interactive=${interactive}`);
+    console.debug(`[useTimeEntryFormHandling] Entry submission for index ${index}, interactive=${interactive}`, entry);
     
     // Check if interactive mode is disabled
     if (!interactive) {
@@ -40,8 +40,9 @@ export const useTimeEntryFormHandling = ({
 
     // Create entry if onCreateEntry is provided
     if (onCreateEntry) {
-      console.debug("[useTimeEntryFormHandling] Creating entry:", entry);
-      onCreateEntry(startTime, endTime, entry.hours);
+      console.debug("[useTimeEntryFormHandling] Creating entry with onCreateEntry:", entry);
+      // We use the saved entry data to create a new entry in the context
+      onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, entry.hours);
     } else {
       console.debug("[useTimeEntryFormHandling] No onCreateEntry function provided");
     }
@@ -74,7 +75,7 @@ export const useTimeEntryFormHandling = ({
     
     if (!interactive) {
       console.debug("[useTimeEntryFormHandling] Interactive mode disabled, aborting save all");
-      return;
+      return false;
     }
     
     let changesSaved = false;

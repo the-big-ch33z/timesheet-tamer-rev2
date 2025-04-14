@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { format, isEqual, parseISO } from "date-fns";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import { useLogger } from "../useLogger";
 import { toast } from "@/hooks/use-toast";
@@ -12,11 +12,17 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const useTimesheetEntries = (userId?: string) => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const isInitializedRef = useRef(false);
   const logger = useLogger("TimesheetEntries");
   
-  // Load entries from localStorage
+  // Load entries from localStorage only once on mount
   useEffect(() => {
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+    
     try {
+      logger.debug("Loading entries from localStorage");
       const savedEntries = localStorage.getItem('timeEntries');
       if (savedEntries) {
         const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
@@ -25,18 +31,47 @@ export const useTimesheetEntries = (userId?: string) => {
         }));
         setEntries(parsedEntries);
         logger.debug("Loaded entries from localStorage", { count: parsedEntries.length });
+      } else {
+        logger.debug("No entries found in localStorage");
+        // Initialize with empty array to prevent future save/load cycles
+        localStorage.setItem('timeEntries', JSON.stringify([]));
       }
     } catch (error) {
       logger.error("Error loading entries:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, [logger]);
 
-  // Save entries to localStorage when they change
+  // Save entries to localStorage when they change - with debounce
+  const saveEntriesRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
-    // Save entries whether empty or not to properly handle deletion
-    localStorage.setItem('timeEntries', JSON.stringify(entries));
-    logger.debug("Saved entries to localStorage", { count: entries.length });
-  }, [entries, logger]);
+    // Don't save during initial load
+    if (isLoading) return;
+    
+    // Clear any pending save operation
+    if (saveEntriesRef.current) {
+      clearTimeout(saveEntriesRef.current);
+    }
+    
+    // Debounce save operation
+    saveEntriesRef.current = setTimeout(() => {
+      try {
+        logger.debug("Saving entries to localStorage", { count: entries.length });
+        localStorage.setItem('timeEntries', JSON.stringify(entries));
+        logger.debug("Saved entries to localStorage successfully");
+      } catch (error) {
+        logger.error("Error saving entries to localStorage:", error);
+      }
+    }, 300);
+    
+    return () => {
+      if (saveEntriesRef.current) {
+        clearTimeout(saveEntriesRef.current);
+      }
+    };
+  }, [entries, isLoading, logger]);
 
   // Add a new entry
   const addEntry = useCallback((entry: TimeEntry) => {
@@ -127,12 +162,7 @@ export const useTimesheetEntries = (userId?: string) => {
       
       const entryDateFormatted = format(entryDate, "yyyy-MM-dd");
       
-      const isMatch = entryDateFormatted === dayFormatted;
-      logger.debug(`Entry date: ${entryDateFormatted}, target: ${dayFormatted}, match: ${isMatch}`, {
-        entry: entry.id
-      });
-      
-      return isMatch;
+      return entryDateFormatted === dayFormatted;
     });
     
     logger.debug("Retrieved entries for day", { 
@@ -161,6 +191,7 @@ export const useTimesheetEntries = (userId?: string) => {
     getDayEntries,
     addEntry,
     deleteEntry,
-    createEntry
+    createEntry,
+    isLoading
   };
 };

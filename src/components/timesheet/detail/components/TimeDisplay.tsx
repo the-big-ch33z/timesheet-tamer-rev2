@@ -29,13 +29,20 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
 
   // Handle time changes from child components with improved error handling
   const handleTimeChange = useCallback((type: 'start' | 'end') => (value: string) => {
-    console.log(`TimeDisplay: Time changed: ${type} = ${value}`);
-    if (!value) {
-      console.log(`TimeDisplay: Empty ${type} time value received, using default`);
+    console.debug(`[TimeDisplay] Time changed: ${type} = ${value}, interactive=${interactive}`);
+    
+    if (!interactive) {
+      console.debug("[TimeDisplay] Not interactive, ignoring time change");
       return;
     }
+    
+    if (!value) {
+      console.warn(`[TimeDisplay] Empty ${type} time value received, using default`);
+      return;
+    }
+    
     onTimeChange(type, value);
-  }, [onTimeChange]);
+  }, [onTimeChange, interactive]);
 
   return (
     <div className="grid grid-cols-3 gap-4 mb-3">
