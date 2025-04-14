@@ -1,8 +1,9 @@
 
 import { 
-  validateTimeString, 
+  validateTime, 
   validateTimeOrder,
-  isValidTimeFormat
+  isValidTimeFormat,
+  validateTimeFormat
 } from '../timeValidation';
 import { TimeValidationError } from '../../errors/timeErrorHandling';
 
@@ -25,21 +26,21 @@ describe('Time Validation Utilities', () => {
     });
   });
   
-  describe('validateTimeString', () => {
+  describe('validateTimeFormat', () => {
     it('validates correct time strings without throwing', () => {
-      expect(() => validateTimeString('00:00', 'Start time')).not.toThrow();
-      expect(() => validateTimeString('09:30', 'End time')).not.toThrow();
-      expect(() => validateTimeString('23:59', 'Break time')).not.toThrow();
+      expect(() => validateTimeFormat('00:00', 'Start time')).not.toThrow();
+      expect(() => validateTimeFormat('09:30', 'End time')).not.toThrow();
+      expect(() => validateTimeFormat('23:59', 'Break time')).not.toThrow();
     });
     
     it('throws with proper context for invalid times', () => {
-      expect(() => validateTimeString('9:30', 'Start time')).toThrow(TimeValidationError);
-      expect(() => validateTimeString('24:00', 'End time')).toThrow(TimeValidationError);
-      expect(() => validateTimeString('', 'Break time')).toThrow(TimeValidationError);
+      expect(() => validateTimeFormat('9:30', 'Start time')).toThrow(TimeValidationError);
+      expect(() => validateTimeFormat('24:00', 'End time')).toThrow(TimeValidationError);
+      expect(() => validateTimeFormat('', 'Break time')).toThrow(TimeValidationError);
       
       // Check for context in error messages
       try {
-        validateTimeString('9:30', 'Start time');
+        validateTimeFormat('9:30', 'Start time');
       } catch (error) {
         expect(error instanceof TimeValidationError).toBe(true);
         expect((error as Error).message).toContain('Start time');

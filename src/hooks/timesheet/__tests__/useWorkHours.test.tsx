@@ -84,13 +84,16 @@ describe('useWorkHours Hook', () => {
     const testDate = new Date();
     const { result } = renderHook(() => useWorkHours('test-user'));
     
+    // Mock the context methods to spy on them
+    const mockWorkHoursContext = require('@/contexts/timesheet/work-hours-context/WorkHoursContext').useWorkHoursContext();
+    
     act(() => {
       const success = result.current.saveWorkHoursForDate(testDate, '09:00', '17:00', 'test-user');
       expect(success).toBe(true);
     });
     
     // Check if the context's saveWorkHours was called with the right parameters
-    expect(result.current.useWorkHoursContext.saveWorkHours).toHaveBeenCalledWith(
+    expect(mockWorkHoursContext.saveWorkHours).toHaveBeenCalledWith(
       testDate,
       'test-user',
       '09:00',
@@ -113,12 +116,15 @@ describe('useWorkHours Hook', () => {
     const testDate = new Date();
     const { result } = renderHook(() => useWorkHours('test-user'));
     
+    // Mock the context methods to spy on them
+    const mockWorkHoursContext = require('@/contexts/timesheet/work-hours-context/WorkHoursContext').useWorkHoursContext();
+    
     act(() => {
       result.current.resetWorkHours(testDate, 'test-user');
     });
     
     // Check if the context's resetDayWorkHours was called with the right parameters
-    expect(result.current.useWorkHoursContext.resetDayWorkHours).toHaveBeenCalledWith(
+    expect(mockWorkHoursContext.resetDayWorkHours).toHaveBeenCalledWith(
       testDate,
       'test-user'
     );
@@ -131,6 +137,14 @@ describe('useWorkHours Hook', () => {
     const hours = result.current.calculateDayHours(testDate);
     
     // Should get 8 hours from the user's custom hours
+    expect(hours).toBe(8);
+  });
+  
+  it('calculates auto hours correctly', () => {
+    const { result } = renderHook(() => useWorkHours());
+    
+    const hours = result.current.calculateAutoHours('08:00', '16:00');
+    
     expect(hours).toBe(8);
   });
 });
