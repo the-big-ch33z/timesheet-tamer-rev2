@@ -3,7 +3,7 @@
  * Date validation utilities
  * Functions for validating date values
  */
-import { isValid, parseISO, isSameDay, isAfter, isBefore } from 'date-fns';
+import { isValid, parseISO, isSameDay, isAfter, isBefore, format } from 'date-fns';
 import { formatDate } from '../formatting/timeFormatting';
 
 /**
@@ -118,3 +118,52 @@ export const getTodayAtMidnight = (): Date => {
   today.setHours(0, 0, 0, 0);
   return today;
 };
+
+/**
+ * Format date for consistent comparison (YYYY-MM-DD format)
+ * @param date Date to format
+ * @returns Formatted date string or empty string if invalid
+ */
+export const formatDateForComparison = (date: Date | string | null | undefined): string => {
+  const validDate = ensureDate(date);
+  if (!validDate) return '';
+  
+  return format(validDate, 'yyyy-MM-dd');
+};
+
+/**
+ * Validate that start time comes before end time
+ * @param startTime Start time string (HH:mm format)
+ * @param endTime End time string (HH:mm format)
+ * @returns Validation result with valid flag and optional error message
+ */
+export const validateTimeOrder = (startTime: string, endTime: string): { valid: boolean; message?: string } => {
+  if (!startTime || !endTime) {
+    return { valid: false, message: 'Both start and end times are required' };
+  }
+  
+  try {
+    // Convert to comparable values (assume same date)
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    const startValue = startHour * 60 + startMinute;
+    const endValue = endHour * 60 + endMinute;
+    
+    if (startValue >= endValue) {
+      return { 
+        valid: false, 
+        message: 'End time must be after start time' 
+      };
+    }
+    
+    return { valid: true };
+  } catch (error) {
+    console.error("Error validating time order:", error);
+    return { 
+      valid: false, 
+      message: 'Invalid time format' 
+    };
+  }
+};
+
