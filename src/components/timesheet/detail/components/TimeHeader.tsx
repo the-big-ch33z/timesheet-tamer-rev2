@@ -40,14 +40,15 @@ const TimeHeader: React.FC<TimeHeaderProps> = ({
         onTimeChange={onTimeChange}
       />
       
-      {/* Show alerts if there are entries */}
-      {hasEntries && (
-        <WorkHoursAlerts
-          hoursVariance={hoursVariance}
-          isUndertime={isUndertime}
-          date={date}
-        />
-      )}
+      {/* Show alerts if there are entries or display the no-entries message */}
+      <WorkHoursAlerts
+        hasEntries={hasEntries}
+        isUndertime={isUndertime}
+        hoursVariance={hoursVariance}
+        interactive={interactive}
+        date={date}
+        showEntryForms={false}
+      />
     </div>
   );
 };

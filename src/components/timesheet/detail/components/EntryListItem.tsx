@@ -10,9 +10,14 @@ import { ensureDate } from "@/utils/time/validation";
 interface EntryListItemProps {
   entry: TimeEntry;
   onDelete?: () => void;
+  interactive?: boolean;
 }
 
-const EntryListItem: React.FC<EntryListItemProps> = ({ entry, onDelete }) => {
+const EntryListItem: React.FC<EntryListItemProps> = ({ 
+  entry, 
+  onDelete,
+  interactive = true 
+}) => {
   const { deleteEntry } = useEntriesContext();
   
   const handleDelete = () => {
@@ -55,15 +60,17 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry, onDelete }) => {
         )}
       </div>
       
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-        onClick={handleDelete}
-        aria-label="Delete entry"
-      >
-        <Trash2 size={18} />
-      </Button>
+      {interactive && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+          onClick={handleDelete}
+          aria-label="Delete entry"
+        >
+          <Trash2 size={18} />
+        </Button>
+      )}
     </div>
   );
 };

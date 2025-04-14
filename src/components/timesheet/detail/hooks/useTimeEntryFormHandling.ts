@@ -133,7 +133,7 @@ export const useTimeEntryFormHandling = ({
       toast({
         title: "Cannot save empty entry",
         description: "Please add some details to your entry before saving",
-        variant: "warning"
+        variant: "destructive" // Changed from "warning" to "destructive"
       });
       return;
     }

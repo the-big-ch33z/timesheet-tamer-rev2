@@ -6,9 +6,10 @@ import { useEntriesContext } from "@/contexts/timesheet";
 
 interface EntryListProps {
   entries: TimeEntry[];
+  interactive?: boolean;
 }
 
-const EntryList: React.FC<EntryListProps> = ({ entries }) => {
+const EntryList: React.FC<EntryListProps> = ({ entries, interactive = true }) => {
   const { deleteEntry } = useEntriesContext();
   
   // Handle entry deletion
@@ -34,6 +35,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries }) => {
             key={`entry-${entry.id}`} 
             entry={entry}
             onDelete={() => handleDeleteEntry(entry.id)}
+            interactive={interactive}
           />
         ))}
       </div>

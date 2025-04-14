@@ -8,7 +8,8 @@ interface WorkHoursAlertsProps {
   isUndertime: boolean;
   hoursVariance: number;
   interactive: boolean;
-  showEntryForms: boolean;
+  showEntryForms?: boolean;
+  date?: Date; // Make date optional
 }
 
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
@@ -16,7 +17,8 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   isUndertime,
   hoursVariance,
   interactive,
-  showEntryForms
+  showEntryForms = false,
+  date // Accept date prop
 }) => {
   return (
     <>
