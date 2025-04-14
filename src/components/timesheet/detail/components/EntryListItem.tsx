@@ -36,35 +36,24 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
   const formattedDate = formatDateForDisplay(entryDate);
   
   return (
-    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md bg-white mb-2">
-      <div className="flex-1">
-        <div className="flex items-center justify-between">
-          <span className="font-medium">{entry.hours} hours</span>
-          <span className="text-sm text-gray-500">
-            {entry.startTime && entry.endTime ? 
-              `${entry.startTime} - ${entry.endTime}` : 
-              formattedDate}
-          </span>
+    <div className="flex items-center p-3 border border-gray-200 rounded-md bg-white mb-2 space-x-4">
+      <div className="flex-none font-medium w-20">{entry.hours} hours</div>
+      
+      {entry.jobNumber && <div className="flex-none text-sm w-24">Job: {entry.jobNumber}</div>}
+      {entry.rego && <div className="flex-none text-sm w-24">Rego: {entry.rego}</div>}
+      {entry.taskNumber && <div className="flex-none text-sm w-24">Task: {entry.taskNumber}</div>}
+      
+      {entry.description && (
+        <div className="flex-1 text-sm text-gray-600 truncate">
+          {entry.description}
         </div>
-        
-        {/* Show entry details if available */}
-        {(entry.jobNumber || entry.rego || entry.taskNumber || entry.description) && (
-          <div className="text-sm text-gray-700 mt-1">
-            {entry.jobNumber && <span className="mr-2">Job: {entry.jobNumber}</span>}
-            {entry.rego && <span className="mr-2">Rego: {entry.rego}</span>}
-            {entry.taskNumber && <span>Task: {entry.taskNumber}</span>}
-            {entry.description && (
-              <p className="mt-1 text-gray-600 text-sm">{entry.description}</p>
-            )}
-          </div>
-        )}
-      </div>
+      )}
       
       {interactive && (
         <Button
           variant="ghost"
           size="icon"
-          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+          className="flex-none text-red-500 hover:text-red-700 hover:bg-red-50"
           onClick={handleDelete}
           aria-label="Delete entry"
         >

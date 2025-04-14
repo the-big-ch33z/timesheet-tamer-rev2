@@ -1,4 +1,3 @@
-
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
@@ -7,6 +6,7 @@ import ExistingEntriesList from "../components/ExistingEntriesList";
 import { DraftProvider } from "@/contexts/timesheet/draft-context/DraftContext";
 import DraftEntryCard from "../components/DraftEntryCard";
 import NewEntryLauncher from "../components/NewEntryLauncher";
+import { useEntriesContext } from "@/contexts/timesheet";
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
@@ -40,15 +40,27 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     onCreateEntry
   });
   
+  // Get the entries context for direct access to create/delete methods
+  const entriesContext = useEntriesContext();
+  
   // Handler for creating a new entry from the wizard
   const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
+    console.debug("[TimeEntryManager] Creating entry from wizard", entry);
+    
     if (onCreateEntry && entry.hours && typeof entry.hours === 'number') {
-      console.debug("[TimeEntryManager] Creating entry from wizard", entry);
+      // Use the provided callback if available
       onCreateEntry(
         entry.startTime || startTime,
         entry.endTime || endTime,
         entry.hours
       );
+    } else if (entry.hours && typeof entry.hours === 'number') {
+      // Otherwise use the context method directly
+      entriesContext.createEntry({
+        ...entry,
+        date: date,
+        userId: entry.userId || ''
+      });
     }
   };
   

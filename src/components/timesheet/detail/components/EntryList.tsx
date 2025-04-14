@@ -3,6 +3,7 @@ import React from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useEntriesContext } from "@/contexts/timesheet";
+import { useToast } from "@/hooks/use-toast";
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -11,11 +12,19 @@ interface EntryListProps {
 
 const EntryList: React.FC<EntryListProps> = ({ entries, interactive = true }) => {
   const { deleteEntry } = useEntriesContext();
+  const { toast } = useToast();
   
   // Handle entry deletion
   const handleDeleteEntry = (entryId: string) => {
     console.log("EntryList: Deleting entry:", entryId);
+    
     deleteEntry(entryId);
+    
+    // Provide feedback to user
+    toast({
+      title: "Entry deleted",
+      description: "The timesheet entry has been removed successfully",
+    });
   };
   
   if (entries.length === 0) {
@@ -28,7 +37,6 @@ const EntryList: React.FC<EntryListProps> = ({ entries, interactive = true }) =>
 
   return (
     <div className="mt-4">
-      <h3 className="text-sm font-medium text-gray-700 mb-2">Time Entries:</h3>
       <div className="space-y-2">
         {entries.map(entry => (
           <EntryListItem 
