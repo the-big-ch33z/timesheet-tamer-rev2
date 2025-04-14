@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns'; // Add this import
 import { TimeEntry } from '@/types';
 import { timeEntryService } from '@/utils/time/services/timeEntryService';
 import { useToast } from '@/hooks/use-toast';
