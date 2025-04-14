@@ -9,5 +9,5 @@ export * from './useTimeEntryService';
 export * from './useLogger';
 export * from './use-toast';
 export * from './timesheet/useWorkHours';
+export * from './timesheet/useTimesheetWorkHours';
 // Add other hooks as needed
-

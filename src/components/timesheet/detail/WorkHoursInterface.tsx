@@ -133,7 +133,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
               label="Start Time"
               value={startTime}
               onChange={(value) => handleTimeChange('start', value)}
-              disabled={!interactive}
+              interactive={interactive}
             />
           </div>
           <div>
@@ -141,7 +141,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
               label="End Time"
               value={endTime}
               onChange={(value) => handleTimeChange('end', value)}
-              disabled={!interactive}
+              interactive={interactive}
             />
           </div>
         </div>
