@@ -83,7 +83,7 @@ export const useWorkHours = ({
       console.log(`[useWorkHours] No custom hours, checking work schedule for ${dateString}`);
       const scheduleInfo = getDayScheduleInfo(date, workSchedule);
       
-      if (scheduleInfo?.hours && scheduleInfo.isWorkDay) {
+      if (scheduleInfo?.hours && scheduleInfo.isWorkingDay) {
         console.log(`[useWorkHours] Using schedule hours: ${scheduleInfo.hours.startTime} - ${scheduleInfo.hours.endTime}`);
         setStartTime(scheduleInfo.hours.startTime);
         setEndTime(scheduleInfo.hours.endTime);

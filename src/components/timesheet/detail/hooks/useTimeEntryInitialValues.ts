@@ -30,7 +30,7 @@ export const useTimeEntryInitialValues = ({
       // Check schedule but only use if it's a work day
       const scheduleInfo = getDayScheduleInfo(date, workSchedule);
       
-      if (scheduleInfo?.hours && scheduleInfo.isWorkDay) {
+      if (scheduleInfo?.hours && scheduleInfo.isWorkingDay) {
         startTime = scheduleInfo.hours.startTime || startTime;
         endTime = scheduleInfo.hours.endTime || endTime;
       }
