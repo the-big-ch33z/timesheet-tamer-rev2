@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { TimeEntry, WorkSchedule, User } from "@/types";
 import { isSameMonth, parseISO } from 'date-fns';
-import { ensureDate } from '@/utils/time/validation';
+import { ensureDate, formatDateForComparison } from '@/utils/time/validation';
 
 export interface TabContentProps {
   entries: TimeEntry[];
@@ -21,15 +21,21 @@ export const useTabContent = ({ entries, currentMonth }: TabContentProps) => {
     })
   , [entries]);
   
-  // Filter entries for the current month
+  // Filter entries for the current month with improved date handling
   const currentMonthEntries = useMemo(() => 
     entries.filter(entry => {
       const entryDate = ensureDate(entry.date);
-      if (!entryDate) return false;
+      if (!entryDate) {
+        console.warn(`[useTabContent] Invalid date found in entry, skipping:`, entry);
+        return false;
+      }
       
       return isSameMonth(entryDate, currentMonth);
     })
   , [entries, currentMonth]);
+  
+  // Log entries count for debugging
+  console.debug(`[useTabContent] Filtered ${currentMonthEntries.length} entries for ${formatDateForComparison(currentMonth)}`);
   
   return {
     sortedEntries,

@@ -6,6 +6,7 @@ import TimeHeaderSection from "../components/TimeHeaderSection";
 import EntriesDisplaySection from "../components/EntriesDisplaySection";
 import WorkHoursAlerts from "../components/WorkHoursAlerts";
 import TimeEntryFormManager from "./TimeEntryFormManager";
+import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
@@ -51,14 +52,14 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     onCreateEntry
   });
 
-  // Add a global event listener for saving pending changes
+  // Register global event listener for saving pending changes
   useEffect(() => {
     console.debug(`[TimeEntryManager] Setting up global save event listener, interactive=${interactive}`);
     
     if (!interactive) return;
 
     const handleSavePendingChanges = () => {
-      console.log("TimeEntryManager: Global save event received");
+      console.log("[TimeEntryManager] Global save event received");
       saveAllPendingChanges();
     };
 
@@ -67,6 +68,32 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       window.removeEventListener('timesheet:save-pending-changes', handleSavePendingChanges);
     };
   }, [saveAllPendingChanges, interactive]);
+  
+  // Auto-save on date change
+  useEffect(() => {
+    return () => {
+      if (interactive) {
+        // Save pending changes when component unmounts (which happens on date change)
+        console.debug("[TimeEntryManager] Component unmounting, triggering auto-save");
+        saveAllPendingChanges();
+      }
+    };
+  }, [interactive, saveAllPendingChanges]);
+
+  // Auto-save on window beforeunload
+  useEffect(() => {
+    if (!interactive) return;
+    
+    const handleBeforeUnload = () => {
+      console.debug("[TimeEntryManager] Window unloading, saving pending changes");
+      triggerGlobalSave();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [interactive]);
 
   console.debug(`[TimeEntryManager] showEntryForms=${showEntryForms.length}, formHandlers=${formHandlers.length}`);
 

@@ -23,6 +23,36 @@ interface TimeEntryContextValue {
 
 const TimeEntryContext = createContext<TimeEntryContextValue | undefined>(undefined);
 
+// Storage key constant to ensure consistency
+const STORAGE_KEY = 'timeEntries';
+
+// Lock mechanism to prevent simultaneous writes to localStorage
+const storageWriteLock = {
+  isLocked: false,
+  lockTimeout: null as NodeJS.Timeout | null,
+  acquire: function(): boolean {
+    if (this.isLocked) return false;
+    
+    this.isLocked = true;
+    
+    // Auto-release lock after 2 seconds as a safety measure
+    if (this.lockTimeout) clearTimeout(this.lockTimeout);
+    this.lockTimeout = setTimeout(() => {
+      this.release();
+      console.warn("[TimeEntryContext] Storage lock auto-released after timeout");
+    }, 2000);
+    
+    return true;
+  },
+  release: function(): void {
+    this.isLocked = false;
+    if (this.lockTimeout) {
+      clearTimeout(this.lockTimeout);
+      this.lockTimeout = null;
+    }
+  }
+};
+
 export const useTimeEntryContext = () => {
   const context = useContext(TimeEntryContext);
   if (!context) {
@@ -39,6 +69,7 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   // Validate the selectedDate
@@ -57,7 +88,7 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
     const loadEntries = () => {
       try {
         console.debug("[TimeEntryContext] Loading entries from localStorage");
-        const savedEntries = localStorage.getItem('timeEntries');
+        const savedEntries = localStorage.getItem(STORAGE_KEY);
         if (savedEntries) {
           const parsedEntries = JSON.parse(savedEntries).map((entry: any) => {
             // Ensure entry.date is a valid Date object
@@ -77,7 +108,7 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
         } else {
           console.debug("[TimeEntryContext] No entries found in localStorage");
           // Initialize with empty array to prevent future loads
-          localStorage.setItem('timeEntries', JSON.stringify([]));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
         }
       } catch (error) {
         console.error("[TimeEntryContext] Error loading entries:", error);
@@ -95,18 +126,118 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
     loadEntries();
   }, [toast, isInitialized]);
 
-  // Save entries when they change - with proper dependency array
+  // Save entries with conflict resolution
+  const saveEntriesToStorage = useCallback((entriesToSave: TimeEntry[]) => {
+    console.debug("[TimeEntryContext] Attempting to save entries", { count: entriesToSave.length });
+    
+    // Try to acquire the lock
+    if (!storageWriteLock.acquire()) {
+      console.debug("[TimeEntryContext] Storage write lock busy, scheduling retry");
+      
+      // Schedule a retry after a short delay
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => saveEntriesToStorage(entriesToSave), 300);
+      return;
+    }
+    
+    try {
+      // Read the latest state to check for conflicts
+      const currentSaved = localStorage.getItem(STORAGE_KEY);
+      let currentEntries: TimeEntry[] = [];
+      
+      if (currentSaved) {
+        try {
+          currentEntries = JSON.parse(currentSaved);
+        } catch (e) {
+          console.error("[TimeEntryContext] Error parsing current entries", e);
+          currentEntries = [];
+        }
+      }
+      
+      // Check for conflicts by comparing entry counts
+      if (isInitialized && currentEntries.length !== entriesToSave.length) {
+        console.debug("[TimeEntryContext] Potential conflict detected, merging entries", { 
+          current: currentEntries.length, 
+          new: entriesToSave.length 
+        });
+        
+        // Merge entries using a Map to avoid duplicates
+        const entriesMap = new Map<string, TimeEntry>();
+        entriesToSave.forEach(entry => entriesMap.set(entry.id, entry));
+        
+        // Add entries that aren't in our state
+        currentEntries.forEach(entry => {
+          if (!entriesMap.has(entry.id)) {
+            console.debug("[TimeEntryContext] Keeping entry from localStorage", { id: entry.id });
+            entriesMap.set(entry.id, entry);
+          }
+        });
+        
+        // Convert map back to array
+        entriesToSave = Array.from(entriesMap.values());
+      }
+      
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesToSave));
+      console.debug("[TimeEntryContext] Saved entries successfully", { count: entriesToSave.length });
+    } catch (error) {
+      console.error("[TimeEntryContext] Error saving entries:", error);
+    } finally {
+      // Release the lock
+      storageWriteLock.release();
+    }
+  }, [isInitialized]);
+
+  // Save entries when they change - with debounce
   useEffect(() => {
     if (!isInitialized || isLoading) return; // Don't save during initial load
     
-    try {
-      console.debug("[TimeEntryContext] Saving entries to localStorage:", entries.length);
-      localStorage.setItem('timeEntries', JSON.stringify(entries));
-      console.debug("[TimeEntryContext] Saved entries to localStorage successfully");
-    } catch (error) {
-      console.error("[TimeEntryContext] Error saving entries to localStorage:", error);
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [entries, isLoading, isInitialized]);
+    
+    // Debounce save operation
+    saveTimeoutRef.current = setTimeout(() => {
+      saveEntriesToStorage(entries);
+    }, 500);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [entries, isInitialized, isLoading, saveEntriesToStorage]);
+
+  // Save on unmount to ensure latest state is persisted
+  useEffect(() => {
+    return () => {
+      if (isInitialized && !isLoading) {
+        console.debug("[TimeEntryContext] Saving entries on unmount");
+        saveEntriesToStorage(entries);
+      }
+    };
+  }, [entries, isInitialized, isLoading, saveEntriesToStorage]);
+
+  // Save on window unload/close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isInitialized && !isLoading) {
+        console.debug("[TimeEntryContext] Saving entries before page unload");
+        // Use synchronous localStorage save for beforeunload
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        } catch (error) {
+          console.error("[TimeEntryContext] Error saving on unload:", error);
+        }
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [entries, isInitialized, isLoading]);
 
   // Filter entries for the selected day
   const dayEntries = useCallback(() => {
