@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 
 // Define the data structure for storing work hours
@@ -81,14 +81,14 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   }, [workHoursMap]);
   
   // Check if there are custom hours saved for a specific date
-  const hasCustomWorkHours = (date: Date, userId: string): boolean => {
+  const hasCustomWorkHours = useCallback((date: Date, userId: string): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
     return workHoursMap.has(key) && workHoursMap.get(key)?.isCustom === true;
-  };
+  }, [workHoursMap]);
   
   // Get work hours for a specific date and user
-  const getWorkHours = (date: Date, userId: string): { startTime: string; endTime: string; isCustom: boolean } => {
+  const getWorkHours = useCallback((date: Date, userId: string): { startTime: string; endTime: string; isCustom: boolean } => {
     // Format date to YYYY-MM-DD for consistent lookup
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
@@ -111,10 +111,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       endTime: '17:00',
       isCustom: false
     };
-  };
+  }, [workHoursMap]);
   
   // Save work hours for a specific date and user
-  const saveWorkHours = (date: Date, userId: string, startTime: string, endTime: string): void => {
+  const saveWorkHours = useCallback((date: Date, userId: string, startTime: string, endTime: string): void => {
     // Format date to YYYY-MM-DD for consistent storage
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
@@ -132,10 +132,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       });
       return newMap;
     });
-  };
+  }, []);
   
   // Reset work hours for a specific day to default/schedule
-  const resetDayWorkHours = (date: Date, userId: string): void => {
+  const resetDayWorkHours = useCallback((date: Date, userId: string): void => {
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
     
@@ -148,10 +148,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       }
       return newMap;
     });
-  };
+  }, []);
   
   // Clear all work hours for a user
-  const clearWorkHours = (userId: string): void => {
+  const clearWorkHours = useCallback((userId: string): void => {
     console.debug(`[WorkHoursContext] Clearing all hours for user ${userId}`);
     
     setWorkHoursMap(prev => {
@@ -164,7 +164,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         
       return newMap;
     });
-  };
+  }, []);
   
   const value: WorkHoursContextType = {
     getWorkHours,

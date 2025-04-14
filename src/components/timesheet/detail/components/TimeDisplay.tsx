@@ -41,6 +41,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
       return;
     }
     
+    // Directly call the parent handler to avoid delays
     onTimeChange(type, value);
   }, [onTimeChange, interactive]);
 

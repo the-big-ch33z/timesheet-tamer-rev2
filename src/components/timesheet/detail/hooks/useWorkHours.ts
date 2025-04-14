@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
@@ -35,11 +35,24 @@ export const useWorkHours = ({
   const [endTime, setEndTime] = useState(initialEndTime);
   const [calculatedHours, setCalculatedHours] = useState(8.0);
   
+  // Flag to track if we're currently making a manual time change
+  // This prevents the useEffect from overriding our manual changes
+  const manualChangeRef = useRef(false);
+  
+  // Memoized date string for dependency comparison
+  const dateString = date ? date.toISOString().split('T')[0] : '';
+  
   // Get times with proper precedence:
   // 1. Custom saved times from localStorage (user overrides)
   // 2. Schedule-based times
   // 3. Default times (fallback)
   useEffect(() => {
+    // Skip this effect if we're currently making a manual change
+    if (manualChangeRef.current) {
+      console.log("[useWorkHours] Manual change in progress, skipping automatic update");
+      return;
+    }
+    
     if (!userId || !date) {
       console.log("[useWorkHours] No userId or date, using initial values");
       setStartTime(initialStartTime);
@@ -49,7 +62,7 @@ export const useWorkHours = ({
 
     // Check if we have custom saved hours for this day
     if (hasCustomWorkHours(date, userId)) {
-      console.log(`[useWorkHours] Using custom saved hours for ${userId} on ${date.toISOString().split('T')[0]}`);
+      console.log(`[useWorkHours] Using custom saved hours for ${userId} on ${dateString}`);
       const savedHours = getWorkHours(date, userId);
       
       setStartTime(savedHours.startTime);
@@ -57,7 +70,7 @@ export const useWorkHours = ({
     } 
     // If no custom hours, check the work schedule
     else if (workSchedule) {
-      console.log(`[useWorkHours] No custom hours, checking work schedule for ${date.toISOString().split('T')[0]}`);
+      console.log(`[useWorkHours] No custom hours, checking work schedule for ${dateString}`);
       const scheduleInfo = getDayScheduleInfo(date, workSchedule);
       
       if (scheduleInfo?.hours) {
@@ -78,7 +91,7 @@ export const useWorkHours = ({
       setEndTime(initialEndTime);
     }
     
-  }, [date, userId, initialStartTime, initialEndTime, getWorkHours, hasCustomWorkHours, workSchedule]);
+  }, [dateString, userId, initialStartTime, initialEndTime, getWorkHours, hasCustomWorkHours, workSchedule]);
   
   // Handle time input changes with better validation
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
@@ -90,6 +103,9 @@ export const useWorkHours = ({
     }
     
     try {
+      // Set the manual change flag to prevent the useEffect from overriding this change
+      manualChangeRef.current = true;
+      
       // Make sure we have valid values to work with
       const currentStartTime = type === 'start' ? value : startTime;
       const currentEndTime = type === 'end' ? value : endTime;
@@ -117,7 +133,7 @@ export const useWorkHours = ({
       
       // Save the updated times
       if (userId && date) {
-        console.log(`[useWorkHours] Saving work hours for ${userId}`);
+        console.log(`[useWorkHours] Saving work hours for ${userId} on ${dateString}`);
         saveWorkHours(
           date,
           userId,
@@ -125,6 +141,12 @@ export const useWorkHours = ({
           type === 'end' ? value : endTime
         );
       }
+      
+      // Clear the manual change flag after a short delay to ensure the save completes
+      // before any other effects that might try to reload the values
+      setTimeout(() => {
+        manualChangeRef.current = false;
+      }, 100);
     } catch (error) {
       console.error("[useWorkHours] Error updating time:", error);
       toast({
@@ -132,8 +154,10 @@ export const useWorkHours = ({
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
+      // Ensure we reset the manual change flag even if there's an error
+      manualChangeRef.current = false;
     }
-  }, [startTime, endTime, interactive, toast, date, userId, saveWorkHours]);
+  }, [startTime, endTime, interactive, toast, date, userId, saveWorkHours, dateString]);
   
   // Recalculate hours when times change
   useEffect(() => {

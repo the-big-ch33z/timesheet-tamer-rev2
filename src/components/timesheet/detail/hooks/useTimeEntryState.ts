@@ -1,5 +1,4 @@
-
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
@@ -34,6 +33,10 @@ export const useTimeEntryState = ({
   onCreateEntry,
   userId = ''
 }: UseTimeEntryStateProps) => {
+  // Ref to track date changes
+  const previousDateRef = useRef<string | null>(null);
+  const currentDateString = date ? format(date, 'yyyy-MM-dd') : '';
+  
   // Track when interactive flag changes
   useEffect(() => {
     console.debug(`[useTimeEntryState] Interactive flag changed to: ${interactive}`);
@@ -120,6 +123,17 @@ export const useTimeEntryState = ({
     userId,
     workSchedule // Pass the workSchedule to useWorkHours
   });
+
+  // Track date changes to detect when user changes dates
+  useEffect(() => {
+    // Check if the date has changed
+    if (previousDateRef.current && previousDateRef.current !== currentDateString) {
+      console.debug(`[useTimeEntryState] Date changed from ${previousDateRef.current} to ${currentDateString}`);
+    }
+    
+    // Update the ref for next comparison
+    previousDateRef.current = currentDateString;
+  }, [currentDateString]);
 
   // Handle form state (showing/hiding, adding/removing forms)
   const {
