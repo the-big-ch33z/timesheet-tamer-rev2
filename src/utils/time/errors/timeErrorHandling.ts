@@ -17,8 +17,68 @@ export class TimeError extends Error {
   }
 }
 
+// Specialized error for time calculations
+export class TimeCalculationError extends TimeError {
+  constructor(message: string, context: string = 'Time Calculation') {
+    super(message, context);
+    this.name = 'TimeCalculationError';
+  }
+}
+
+// Specialized error for time validation
+export class TimeValidationError extends TimeError {
+  constructor(message: string, context: string = 'Time Validation') {
+    super(message, context);
+    this.name = 'TimeValidationError';
+  }
+}
+
 // Create a specific logger for error handling
 const errorLogger = createTimeLogger('TimeErrorHandler', { minLevel: 'error' });
+
+/**
+ * Validates a time string has the correct format (HH:MM)
+ * @param timeString Time string to validate
+ * @param fieldName Name of the field for error reporting
+ * @throws TimeValidationError if the format is invalid
+ */
+export function validateTimeString(timeString: string, fieldName: string = 'Time'): void {
+  if (!timeString) {
+    throw new TimeValidationError(`${fieldName} is required`);
+  }
+
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (!timeRegex.test(timeString)) {
+    throw new TimeValidationError(
+      `${fieldName} must be in 24-hour format (HH:MM) with leading zeros`
+    );
+  }
+}
+
+/**
+ * Validates a number is within the specified range
+ * @param value Number to validate
+ * @param fieldName Name of the field for error reporting
+ * @param min Minimum allowed value (inclusive)
+ * @param max Maximum allowed value (inclusive)
+ * @throws TimeValidationError if the value is outside the range
+ */
+export function validateNumberInRange(
+  value: number, 
+  fieldName: string, 
+  min: number, 
+  max: number
+): void {
+  if (isNaN(value)) {
+    throw new TimeValidationError(`${fieldName} must be a number`);
+  }
+
+  if (value < min || value > max) {
+    throw new TimeValidationError(
+      `${fieldName} must be between ${min} and ${max}, got ${value}`
+    );
+  }
+}
 
 /**
  * Safely executes a time-related operation with error handling
@@ -39,6 +99,9 @@ export function safeTimeOperation<T>(
     return fallbackValue;
   }
 }
+
+// Renamed version of safeTimeOperation for consistency with imports
+export const safeCalculation = safeTimeOperation;
 
 /**
  * Format a time-related error for display
@@ -65,3 +128,7 @@ export function formatTimeError(
     ? `An unknown error occurred. Please try again.`
     : String(error);
 }
+
+// Re-export createTimeLogger to maintain compatibility with existing imports
+export { createTimeLogger } from './timeLogger';
+
