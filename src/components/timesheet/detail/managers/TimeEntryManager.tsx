@@ -1,4 +1,3 @@
-
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
@@ -8,6 +7,10 @@ import { DraftProvider } from "@/contexts/timesheet/draft-context/DraftContext";
 import DraftEntryCard from "../components/DraftEntryCard";
 import NewEntryLauncher from "../components/NewEntryLauncher";
 import { useEntriesContext } from "@/contexts/timesheet";
+import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('TimeEntryManager');
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
@@ -24,12 +27,12 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  // We need a userId for the DraftProvider and work hours persistence
-  // Default to current user ID or use a default if no entries exist
   const currentUserId = window.localStorage.getItem('currentUserId') || 'default-user';
   const userId = entries.length > 0 ? entries[0].userId : currentUserId;
   
-  console.log(`[TimeEntryManager] Using userId: ${userId} for date: ${date}`);
+  logger.debug(`Using userId: ${userId} for date: ${date}`);
+  
+  const workHoursContext = useWorkHoursContext();
   
   const {
     startTime,
@@ -46,52 +49,50 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     workSchedule,
     interactive,
     onCreateEntry,
-    userId // Make sure this is passed down
+    userId
   });
   
-  // Get the entries context for direct access to create/delete methods
   const entriesContext = useEntriesContext();
   
-  // Handler for creating a new entry from the wizard
   const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
-    console.debug("[TimeEntryManager] Creating entry from wizard", entry);
-    console.debug("[TimeEntryManager] Current work hours BEFORE entry creation:", { startTime, endTime });
+    logger.debug("Creating entry from wizard", entry);
+    logger.debug("Current work hours BEFORE entry creation:", { startTime, endTime });
     
-    // Store the current times to preserve after entry creation
     const currentStartTime = startTime;
     const currentEndTime = endTime;
     
-    // Do NOT set default time values - only use what's provided or already set
     const completeEntry = {
       ...entry,
-      userId: entry.userId || userId, // Ensure we have a userId
+      userId: entry.userId || userId,
       date: date,
-      // Only use startTime/endTime if they exist, don't set defaults
       startTime: entry.startTime || currentStartTime,
       endTime: entry.endTime || currentEndTime
     };
     
-    console.debug("[TimeEntryManager] Complete entry data:", completeEntry);
+    logger.debug("Complete entry data:", completeEntry);
     
     if (onCreateEntry && entry.hours && typeof entry.hours === 'number') {
-      // Use the provided callback if available
       onCreateEntry(
         completeEntry.startTime,
         completeEntry.endTime,
         entry.hours
       );
     } else if (entry.hours && typeof entry.hours === 'number') {
-      // Otherwise use the context method directly
-      console.debug("[TimeEntryManager] Creating entry using context method", completeEntry);
+      logger.debug("Creating entry using context method", completeEntry);
       entriesContext.createEntry(completeEntry);
     } else {
-      console.error("[TimeEntryManager] Cannot create entry - missing hours value");
+      logger.error("Cannot create entry - missing hours value");
     }
     
-    // Log work hours after entry creation
-    setTimeout(() => {
-      console.debug("[TimeEntryManager] Work hours AFTER entry creation:", { startTime, endTime });
-    }, 100);
+    if (currentStartTime && currentEndTime) {
+      setTimeout(() => {
+        workHoursContext.saveWorkHours(date, userId, currentStartTime, currentEndTime);
+        logger.debug("Work hours preserved AFTER entry creation:", { 
+          startTime: currentStartTime, 
+          endTime: currentEndTime 
+        });
+      }, 100);
+    }
   };
   
   return (
@@ -118,7 +119,6 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
         
         {interactive && (
           <div className="mt-4">
-            {/* Show draft card if there's a draft */}
             <DraftEntryCard 
               date={date}
               userId={userId}
@@ -129,7 +129,6 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
               }}
             />
             
-            {/* Button to create a new entry */}
             <NewEntryLauncher 
               date={date}
               userId={userId}

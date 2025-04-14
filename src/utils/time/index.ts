@@ -2,13 +2,28 @@
 /**
  * Time utilities index
  * Central export point for all time-related utility functions
+ * 
+ * This module serves as the single source of truth for all time-related operations,
+ * ensuring consistency across the application.
  */
 
+// Export all calculation utilities
 export * from './calculations';
-export * from './errors/timeErrorHandling';
-export * from './scheduleUtils';
-export * from './validation';
+
+// Export error handling utilities
+export * from './errors';
+
+// Export formatting utilities
 export * from './formatting';
 
-// Explicitly re-export problematic functions to resolve ambiguity
+// Export schedule utilities
+export * from './scheduleUtils';
+
+// Export validation utilities
+export * from './validation';
+
+// Explicitly re-export key functions to resolve any ambiguity
 export { formatDateForComparison } from './validation/dateValidation';
+export { calculateHoursFromTimes, calculateMonthlyTargetHours } from './calculations/hoursCalculations';
+export { calculateHoursVariance, isUndertime } from './calculations/varianceCalculations';
+export { formatTimeForDisplay, formatHours, formatDate } from './formatting/timeFormatting';
