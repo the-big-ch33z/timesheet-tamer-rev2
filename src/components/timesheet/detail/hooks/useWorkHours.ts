@@ -40,6 +40,9 @@ export const useWorkHours = ({
   // This prevents the useEffect from overriding our manual changes
   const manualChangeRef = useRef(false);
   
+  // Track if we've already initialized the times for this date/user
+  const initializedRef = useRef(false);
+  
   // Memoized date string for dependency comparison
   const dateString = date ? date.toISOString().split('T')[0] : '';
   
@@ -51,6 +54,13 @@ export const useWorkHours = ({
     // Skip this effect if we're currently making a manual change
     if (manualChangeRef.current) {
       console.log("[useWorkHours] Manual change in progress, skipping automatic update");
+      return;
+    }
+    
+    // Skip this effect if we've already initialized for this date/user
+    // This prevents the values from being reset when other state changes
+    if (initializedRef.current && userId && date) {
+      console.log("[useWorkHours] Already initialized for this date/user, skipping");
       return;
     }
     
@@ -92,7 +102,15 @@ export const useWorkHours = ({
       setEndTime(DEFAULT_WORK_HOURS.END_TIME);
     }
     
-  }, [dateString, userId, initialStartTime, initialEndTime, getWorkHours, hasCustomWorkHours, workSchedule]);
+    // Mark as initialized for this date/user combination
+    initializedRef.current = true;
+    
+  }, [dateString, userId, workSchedule, getWorkHours, hasCustomWorkHours]);
+  
+  // Reset the initialized flag when date or userId changes
+  useEffect(() => {
+    initializedRef.current = false;
+  }, [date, userId]);
   
   // Handle time input changes with better validation
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
@@ -147,7 +165,7 @@ export const useWorkHours = ({
       // before any other effects that might try to reload the values
       setTimeout(() => {
         manualChangeRef.current = false;
-      }, 100);
+      }, 300);
     } catch (error) {
       console.error("[useWorkHours] Error updating time:", error);
       toast({
