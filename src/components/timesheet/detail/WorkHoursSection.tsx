@@ -1,7 +1,7 @@
 
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 import TimeEntryManager from "./managers/TimeEntryManager";
 
 interface WorkHoursSectionProps {
