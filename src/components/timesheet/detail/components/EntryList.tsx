@@ -8,9 +8,14 @@ import { useEntriesContext } from "@/contexts/timesheet";
 interface EntryListProps {
   entries: TimeEntry[];
   interactive?: boolean;
+  onDelete?: (entryId: string) => boolean;
 }
 
-const EntryList: React.FC<EntryListProps> = ({ entries, interactive = true }) => {
+const EntryList: React.FC<EntryListProps> = ({ 
+  entries, 
+  interactive = true,
+  onDelete
+}) => {
   const { deleteEntry } = useEntriesContext();
   const { toast } = useToast();
   
@@ -18,13 +23,16 @@ const EntryList: React.FC<EntryListProps> = ({ entries, interactive = true }) =>
   const handleDeleteEntry = (entryId: string) => {
     console.log("EntryList: Deleting entry:", entryId);
     
-    deleteEntry(entryId);
+    // Use the passed onDelete function if provided, otherwise use the context function
+    const result = onDelete ? onDelete(entryId) : deleteEntry(entryId);
     
     // Provide feedback to user
-    toast({
-      title: "Entry deleted",
-      description: "The timesheet entry has been removed successfully",
-    });
+    if (result !== false) {
+      toast({
+        title: "Entry deleted",
+        description: "The timesheet entry has been removed successfully",
+      });
+    }
   };
   
   if (entries.length === 0) {
