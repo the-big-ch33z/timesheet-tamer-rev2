@@ -17,6 +17,11 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
     const numValue = parseFloat(value) || 0;
     onFieldChange('hours', numValue);
   };
+  
+  // Helper to ensure string values
+  const ensureString = (value: any): string => {
+    return value !== undefined && value !== null ? String(value) : '';
+  };
 
   return (
     <div className="space-y-4">
@@ -40,7 +45,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
           <EntryField
             id="jobNumber"
             name="Job Number"
-            value={values.jobNumber || ''}
+            value={ensureString(values.jobNumber)}
             onChange={(value) => onFieldChange('jobNumber', value)}
             placeholder="Enter job number"
             showLabel={true}
@@ -53,7 +58,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
           <EntryField
             id="rego"
             name="Rego"
-            value={values.rego || ''}
+            value={ensureString(values.rego)}
             onChange={(value) => onFieldChange('rego', value)}
             placeholder="Enter rego"
             showLabel={true}
@@ -64,7 +69,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
           <EntryField
             id="taskNumber"
             name="Task Number"
-            value={values.taskNumber || ''}
+            value={ensureString(values.taskNumber)}
             onChange={(value) => onFieldChange('taskNumber', value)}
             placeholder="Enter task number"
             showLabel={true}
@@ -76,7 +81,7 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
         <EntryField
           id="description"
           name="Description"
-          value={values.description || ''}
+          value={ensureString(values.description)}
           onChange={(value) => onFieldChange('description', value)}
           placeholder="Enter description"
           type="textarea"

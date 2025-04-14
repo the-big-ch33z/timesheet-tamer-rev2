@@ -59,10 +59,22 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
       return;
     }
     
+    // Log all fields to verify they're being passed correctly
+    console.debug('[EntriesContext] Entry data to be added:', {
+      id: 'will be generated',
+      userId: entryData.userId || userId || '',
+      date: validDate,
+      hours: entryData.hours,
+      description: entryData.description,
+      jobNumber: entryData.jobNumber,
+      rego: entryData.rego,
+      taskNumber: entryData.taskNumber
+    });
+    
     const newEntry: TimeEntry = {
       ...entryData,
       id: uuidv4(),
-      userId: userId || '',
+      userId: entryData.userId || userId || '',
       date: validDate
     };
     

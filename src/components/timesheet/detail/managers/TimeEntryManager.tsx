@@ -47,6 +47,12 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
     console.debug("[TimeEntryManager] Creating entry from wizard", entry);
     
+    // Make sure date is properly set
+    const entryWithDate = {
+      ...entry,
+      date: date
+    };
+    
     if (onCreateEntry && entry.hours && typeof entry.hours === 'number') {
       // Use the provided callback if available
       onCreateEntry(
@@ -56,11 +62,10 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       );
     } else if (entry.hours && typeof entry.hours === 'number') {
       // Otherwise use the context method directly
-      entriesContext.createEntry({
-        ...entry,
-        date: date,
-        userId: entry.userId || ''
-      });
+      console.debug("[TimeEntryManager] Creating entry using context method", entryWithDate);
+      entriesContext.createEntry(entryWithDate);
+    } else {
+      console.error("[TimeEntryManager] Cannot create entry - missing hours value");
     }
   };
   

@@ -58,11 +58,6 @@ const EntryField: React.FC<EntryFieldProps> = ({
     required: required,
   });
 
-  // Log when value changes from props
-  useEffect(() => {
-    console.debug(`[EntryField] Value updated for '${name}' (id: ${id}):`, value);
-  }, [value, id, name]);
-
   // Enhanced change handler with more detailed logging
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -145,11 +140,11 @@ const EntryField: React.FC<EntryFieldProps> = ({
           aria-invalid={hasError}
         />
       )}
-      
+
       {hasError && (
-        <div className={`text-xs text-red-500 ${inline ? 'ml-2' : 'mt-1'}`}>
+        <p className="text-red-500 text-xs mt-1">
           {name} is required
-        </div>
+        </p>
       )}
     </div>
   );

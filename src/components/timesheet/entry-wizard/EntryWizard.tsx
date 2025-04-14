@@ -38,6 +38,7 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   const { toast } = useToast();
 
   const handleFieldChange = (field: string, value: string | number) => {
+    console.debug(`[EntryWizard] Field change: ${field}=${value}`);
     setFormValues(prev => ({
       ...prev,
       [field]: value
@@ -55,6 +56,8 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
       return;
     }
     
+    // Log all form values before going to review step
+    console.debug("[EntryWizard] Moving to review step with values:", formValues);
     setCurrentStep('review');
   };
 
@@ -64,6 +67,10 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
 
   const handleSaveDraft = () => {
     saveDraft(formValues);
+    toast({
+      title: "Draft saved",
+      description: "Your entry draft has been saved."
+    });
   };
 
   const handleSubmit = () => {
@@ -78,8 +85,25 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
 
     setIsSubmitting(true);
     
+    // Log submission values for debugging
+    console.debug("[EntryWizard] Submitting entry with values:", formValues);
+    
     try {
-      onSubmit(formValues as Omit<TimeEntry, 'id'>);
+      // Ensure we have all required fields
+      const entryToSubmit: Omit<TimeEntry, 'id'> = {
+        date: formValues.date || date,
+        hours: formValues.hours || 0,
+        description: formValues.description || '',
+        jobNumber: formValues.jobNumber || '',
+        rego: formValues.rego || '',
+        taskNumber: formValues.taskNumber || '',
+        userId: formValues.userId || userId,
+        startTime: formValues.startTime || '',
+        endTime: formValues.endTime || '',
+        project: formValues.project || 'General'
+      };
+      
+      onSubmit(entryToSubmit);
       clearDraft(); // Clear draft after successful submission
       toast({
         title: "Entry submitted",
