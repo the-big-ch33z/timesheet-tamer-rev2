@@ -111,7 +111,7 @@ export const useWorkHours = ({
     initializedRef.current = false;
   }, [date, userId]);
   
-  // Handle time input changes with better validation
+  // Handle time input changes with better validation and saving logic
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     console.log(`[useWorkHours] Time change: ${type} = ${value}, interactive=${interactive}`);
     
@@ -139,6 +139,10 @@ export const useWorkHours = ({
             description: validation.message || "Please check your time inputs",
             variant: "destructive"
           });
+          // Cancel the manual change flag after a short delay
+          setTimeout(() => {
+            manualChangeRef.current = false;
+          }, 300);
           return;
         }
       }
@@ -152,18 +156,21 @@ export const useWorkHours = ({
         setEndTime(value);
       }
       
-      // Save the updated times - only if both times are provided
-      if (userId && date && (
-        (type === 'start' && value && endTime) || 
-        (type === 'end' && value && startTime)
-      )) {
+      // Save the updated times - only if userId and date are provided
+      // This is the key fix - ensure we're checking for userId and date
+      if (userId && date) {
         console.log(`[useWorkHours] Saving work hours for ${userId} on ${dateString}`);
-        saveWorkHours(
-          date,
-          userId,
-          type === 'start' ? value : startTime,
-          type === 'end' ? value : endTime
-        );
+        
+        // If one of the times is empty, save what we have
+        const timeToSave = {
+          startTime: type === 'start' ? value : startTime,
+          endTime: type === 'end' ? value : endTime
+        };
+        
+        console.log(`[useWorkHours] Saving times: ${timeToSave.startTime} - ${timeToSave.endTime}`);
+        saveWorkHours(date, userId, timeToSave.startTime, timeToSave.endTime);
+      } else {
+        console.warn(`[useWorkHours] Cannot save work hours - missing userId (${userId}) or date (${date})`);
       }
       
       // Clear the manual change flag after a short delay to ensure the save completes

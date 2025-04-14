@@ -19,8 +19,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  // Get userId from entries if available
-  const userId = entries.length > 0 ? entries[0].userId : undefined;
+  // Get userId from entries if available or from localStorage
+  const currentUserId = window.localStorage.getItem('currentUserId') || 'default-user';
+  const userId = entries.length > 0 ? entries[0].userId : currentUserId;
+  
+  console.log(`[WorkHoursSection] Rendering for date: ${date}, with ${entries.length} entries, userId: ${userId}`);
   
   return (
     <TimeEntryProvider selectedDate={date} userId={userId}>

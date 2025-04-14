@@ -25,7 +25,11 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   onCreateEntry
 }) => {
   // We need a userId for the DraftProvider and work hours persistence
-  const userId = entries.length > 0 ? entries[0].userId : '';
+  // Default to current user ID or use a default if no entries exist
+  const currentUserId = window.localStorage.getItem('currentUserId') || 'default-user';
+  const userId = entries.length > 0 ? entries[0].userId : currentUserId;
+  
+  console.log(`[TimeEntryManager] Using userId: ${userId} for date: ${date}`);
   
   const {
     startTime,
@@ -42,7 +46,7 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     workSchedule,
     interactive,
     onCreateEntry,
-    userId
+    userId // Make sure this is passed down
   });
   
   // Get the entries context for direct access to create/delete methods
@@ -55,6 +59,7 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     // Ensure entry has all fields populated with at least default values
     const completeEntry = {
       ...entry,
+      userId: entry.userId || userId, // Ensure we have a userId
       date: date,
       startTime: entry.startTime || startTime,
       endTime: entry.endTime || endTime

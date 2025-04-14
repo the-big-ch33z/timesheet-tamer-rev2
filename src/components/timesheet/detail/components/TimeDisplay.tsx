@@ -27,6 +27,11 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
     console.debug(`[TimeDisplay] Interactive flag changed to: ${interactive}`);
   }, [interactive]);
 
+  // Log when times change for debugging
+  useEffect(() => {
+    console.debug(`[TimeDisplay] Times updated - start: ${startTime}, end: ${endTime}`);
+  }, [startTime, endTime]);
+
   // Handle time changes from child components with improved error handling
   const handleTimeChange = useCallback((type: 'start' | 'end') => (value: string) => {
     console.debug(`[TimeDisplay] Time changed: ${type} = ${value}, interactive=${interactive}`);
