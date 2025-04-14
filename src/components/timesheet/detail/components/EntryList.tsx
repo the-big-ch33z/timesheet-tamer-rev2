@@ -19,7 +19,6 @@ const EntryList: React.FC<EntryListProps> = ({
   const { deleteEntry } = useEntriesContext();
   const { toast } = useToast();
   
-  // Handle entry deletion
   const handleDeleteEntry = async (entryId: string) => {
     console.log("EntryList: Deleting entry:", entryId);
     
@@ -27,7 +26,7 @@ const EntryList: React.FC<EntryListProps> = ({
       // Use the passed onDelete function if provided, otherwise use the context function
       const result = onDelete ? onDelete(entryId) : deleteEntry(entryId);
       
-      if (result === false) {
+      if (!result) {
         toast({
           title: "Error",
           description: "Could not delete the timesheet entry",
@@ -40,6 +39,9 @@ const EntryList: React.FC<EntryListProps> = ({
         title: "Entry deleted",
         description: "The timesheet entry has been removed successfully",
       });
+      
+      // Force storage sync after successful deletion
+      window.dispatchEvent(new Event('timesheet:entry-deleted'));
     } catch (error) {
       console.error("Error deleting entry:", error);
       toast({

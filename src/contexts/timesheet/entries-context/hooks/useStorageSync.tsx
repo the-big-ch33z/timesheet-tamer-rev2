@@ -3,9 +3,6 @@ import { useCallback, useRef, useEffect } from 'react';
 import { TimeEntry } from "@/types";
 import { STORAGE_KEY } from '../timeEntryStorage';
 
-/**
- * Hook that handles synchronization with localStorage
- */
 export const useStorageSync = (
   entries: TimeEntry[],
   isInitialized: boolean,
@@ -29,13 +26,12 @@ export const useStorageSync = (
       } catch (error) {
         console.error("[TimeEntryProvider] Error saving to localStorage:", error);
       }
-    }, 500);
+    }, 100);
   }, []);
 
   // Save entries when they change
   useEffect(() => {
-    if (!isInitialized || isLoading) return; // Don't save during initial load
-    
+    if (!isInitialized || isLoading) return;
     saveEntriesToStorageDebounced(entries);
     
     return () => {
@@ -45,39 +41,21 @@ export const useStorageSync = (
     };
   }, [entries, isInitialized, isLoading, saveEntriesToStorageDebounced]);
 
-  // Save on unmount
+  // Listen for delete events to force immediate sync
   useEffect(() => {
-    return () => {
-      if (isInitialized && !isLoading) {
-        console.debug("[TimeEntryProvider] Saving entries on unmount");
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-        } catch (error) {
-          console.error("[TimeEntryProvider] Error saving on unmount:", error);
-        }
+    const handleDeleteEvent = () => {
+      console.debug("[TimeEntryProvider] Entry deletion detected, forcing immediate sync");
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     };
-  }, [entries, isInitialized, isLoading]);
-  
-  // Handle window unload events
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (isInitialized && !isLoading) {
-        console.debug("[TimeEntryProvider] Saving entries before page unload");
-        // Use synchronous localStorage save for beforeunload
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-        } catch (error) {
-          console.error("[TimeEntryProvider] Error saving on unload:", error);
-        }
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    window.addEventListener('timesheet:entry-deleted', handleDeleteEvent);
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('timesheet:entry-deleted', handleDeleteEvent);
     };
-  }, [entries, isInitialized, isLoading]);
+  }, [entries]);
 
   return {
     saveEntriesToStorageDebounced

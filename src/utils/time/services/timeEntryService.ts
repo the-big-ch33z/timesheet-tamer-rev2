@@ -215,31 +215,29 @@ export const createTimeEntryService = (): TimeEntryService => {
     }
     
     try {
-      // Get all entries
-      const allEntries = getAllEntries();
+      // Get all entries directly from storage
+      const savedEntries = localStorage.getItem(STORAGE_KEY);
+      const allEntries = savedEntries ? JSON.parse(savedEntries) : [];
       
-      // Find the entry to delete
-      const entryToDelete = allEntries.find(entry => entry.id === entryId);
-      if (!entryToDelete) {
+      // Find and remove the entry
+      const entryIndex = allEntries.findIndex((entry: TimeEntry) => entry.id === entryId);
+      if (entryIndex === -1) {
         logger.warn(`Entry with ID ${entryId} not found for deletion`);
         return false;
       }
       
-      // Filter out the entry to delete
-      const filteredEntries = allEntries.filter(entry => entry.id !== entryId);
+      // Remove the entry
+      allEntries.splice(entryIndex, 1);
       
-      // Save back to storage
-      const saved = saveEntries(filteredEntries);
+      // Immediately save back to storage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allEntries));
       
-      if (saved) {
-        logger.debug(`Successfully deleted entry ${entryId}`);
-        // Trigger storage event for cross-tab sync
-        window.dispatchEvent(new Event('timesheet:entry-deleted'));
-        return true;
-      }
+      logger.debug(`Successfully deleted entry ${entryId}`);
       
-      logger.error(`Failed to save after deletion of entry ${entryId}`);
-      return false;
+      // Trigger storage event for cross-tab sync
+      window.dispatchEvent(new Event('timesheet:entry-deleted'));
+      
+      return true;
     } catch (error) {
       logger.error(`Error deleting entry ${entryId}:`, error);
       return false;
