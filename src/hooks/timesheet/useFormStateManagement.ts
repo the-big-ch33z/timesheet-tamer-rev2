@@ -6,9 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 
 // Local storage key for saved form drafts
 const FORM_DRAFT_STORAGE_KEY = 'timesheet-form-drafts';
+// Debounce delay for form draft saving (ms)
+const DRAFT_SAVE_DELAY = 1000;
 
 /**
- * Hook to manage form state and field changes
+ * Hook to manage form state and field changes with improved handling
  */
 export const useFormStateManagement = ({ 
   initialData = {}, 
@@ -18,6 +20,8 @@ export const useFormStateManagement = ({
 }: Pick<UseTimeEntryFormProps, 'initialData' | 'formKey' | 'disabled' | 'autoCalculateHours'>) => {
   const { toast } = useToast();
   const formId = useRef<string>(formKey?.toString() || `form-${Date.now()}`);
+  const batchedChangesRef = useRef<Record<string, string>>({});
+  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track when disabled flag changes
   useEffect(() => {
@@ -104,6 +108,13 @@ export const useFormStateManagement = ({
         console.error("[useFormStateManagement] Error clearing form draft:", error);
       }
     }
+    
+    // Clear any batched changes
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
+      batchTimeoutRef.current = null;
+    }
+    batchedChangesRef.current = {};
   }, [initialData, formKey]);
 
   // Save form draft when edited
@@ -144,7 +155,7 @@ export const useFormStateManagement = ({
       } catch (error) {
         console.error("[useFormStateManagement] Error saving form draft:", error);
       }
-    }, 500);
+    }, DRAFT_SAVE_DELAY);
     
     return () => {
       if (saveDraftTimeoutRef.current) {
@@ -153,7 +164,61 @@ export const useFormStateManagement = ({
     };
   }, [hours, description, jobNumber, rego, taskNumber, startTime, endTime, formEdited, disabled]);
 
-  // Handle field changes
+  // Process batched field changes
+  const processBatchedChanges = useCallback(() => {
+    console.debug("[useFormStateManagement] Processing batched changes", batchedChangesRef.current);
+    
+    const changes = batchedChangesRef.current;
+    batchedChangesRef.current = {};
+    
+    // Apply all batched changes
+    Object.entries(changes).forEach(([field, value]) => {
+      try {
+        switch (field) {
+          case 'hours':
+            console.debug(`[useFormStateManagement] Setting hours to ${value}`);
+            setHours(value);
+            break;
+          case 'description':
+            console.debug(`[useFormStateManagement] Setting description to ${value}`);
+            setDescription(value);
+            break;
+          case 'jobNumber':
+            console.debug(`[useFormStateManagement] Setting jobNumber to ${value}`);
+            setJobNumber(value);
+            break;
+          case 'rego':
+            console.debug(`[useFormStateManagement] Setting rego to ${value}`);
+            setRego(value);
+            break;
+          case 'taskNumber':
+            console.debug(`[useFormStateManagement] Setting taskNumber to ${value}`);
+            setTaskNumber(value);
+            break;
+          case 'startTime':
+            console.debug(`[useFormStateManagement] Setting startTime to ${value}`);
+            setStartTime(value);
+            break;
+          case 'endTime':
+            console.debug(`[useFormStateManagement] Setting endTime to ${value}`);
+            setEndTime(value);
+            break;
+          default:
+            console.warn(`[useFormStateManagement] Unknown field in batch: ${field}`);
+            break;
+        }
+      } catch (error) {
+        console.error(`[useFormStateManagement] Error processing batched change for ${field}:`, error);
+      }
+    });
+    
+    // Mark form as edited if we have changes
+    if (Object.keys(changes).length > 0) {
+      setFormEdited(true);
+    }
+  }, []);
+
+  // Handle field changes with batching
   const handleFieldChange = useCallback((field: string, value: string) => {
     console.debug(`[useFormStateManagement] Field changed: ${field} = ${value}, disabled=${disabled}`);
     
@@ -162,53 +227,31 @@ export const useFormStateManagement = ({
       return;
     }
     
-    // Always mark form as edited when a field changes
-    setFormEdited(true);
-    
     try {
-      switch (field) {
-        case 'hours':
-          console.debug(`[useFormStateManagement] Setting hours to ${value}`);
-          setHours(value);
-          break;
-        case 'description':
-          console.debug(`[useFormStateManagement] Setting description to ${value}`);
-          setDescription(value);
-          break;
-        case 'jobNumber':
-          console.debug(`[useFormStateManagement] Setting jobNumber to ${value}`);
-          setJobNumber(value);
-          break;
-        case 'rego':
-          console.debug(`[useFormStateManagement] Setting rego to ${value}`);
-          setRego(value);
-          break;
-        case 'taskNumber':
-          console.debug(`[useFormStateManagement] Setting taskNumber to ${value}`);
-          setTaskNumber(value);
-          break;
-        case 'startTime':
-          console.debug(`[useFormStateManagement] Setting startTime to ${value}`);
-          setStartTime(value);
-          if (autoCalculateHours) {
-            const calculatedHours = calculateHoursFromTimes(value, endTime);
-            console.debug(`[useFormStateManagement] Auto-calculated hours: ${calculatedHours}`);
-            setHours(calculatedHours.toFixed(1));
-          }
-          break;
-        case 'endTime':
-          console.debug(`[useFormStateManagement] Setting endTime to ${value}`);
-          setEndTime(value);
-          if (autoCalculateHours) {
-            const calculatedHours = calculateHoursFromTimes(startTime, value);
-            console.debug(`[useFormStateManagement] Auto-calculated hours: ${calculatedHours}`);
-            setHours(calculatedHours.toFixed(1));
-          }
-          break;
-        default:
-          console.warn(`[useFormStateManagement] Unknown field: ${field}`);
-          break;
+      // Add to batched changes
+      batchedChangesRef.current[field] = value;
+      
+      // Handle special cases for time fields with auto-calculation
+      if (autoCalculateHours && (field === 'startTime' || field === 'endTime')) {
+        const newStartTime = field === 'startTime' ? value : startTime;
+        const newEndTime = field === 'endTime' ? value : endTime;
+        
+        const calculatedHours = calculateHoursFromTimes(newStartTime, newEndTime);
+        console.debug(`[useFormStateManagement] Auto-calculated hours: ${calculatedHours}`);
+        batchedChangesRef.current['hours'] = calculatedHours.toFixed(1);
       }
+      
+      // Clear any existing batch timeout
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+      }
+      
+      // Schedule processing of batched changes
+      batchTimeoutRef.current = setTimeout(() => {
+        processBatchedChanges();
+        batchTimeoutRef.current = null;
+      }, 50);
+      
     } catch (error) {
       console.error("[useFormStateManagement] Error handling field change:", error);
       toast({
@@ -217,26 +260,43 @@ export const useFormStateManagement = ({
         variant: "destructive"
       });
     }
-  }, [disabled, autoCalculateHours, startTime, endTime, toast]);
+  }, [disabled, autoCalculateHours, startTime, endTime, processBatchedChanges, toast]);
 
   // Update time values
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
     console.debug(`[useFormStateManagement] Updating times: ${newStartTime} to ${newEndTime}`);
-    setStartTime(newStartTime);
-    setEndTime(newEndTime);
-    // Mark form as edited when times are updated
-    setFormEdited(true);
-  }, []);
+    
+    // Add to batched changes
+    batchedChangesRef.current['startTime'] = newStartTime;
+    batchedChangesRef.current['endTime'] = newEndTime;
+    
+    // Clear any existing batch timeout
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
+    }
+    
+    // Process immediately
+    processBatchedChanges();
+  }, [processBatchedChanges]);
 
   // Calculate hours from times
   const setHoursFromTimes = useCallback(() => {
     const calculatedHours = calculateHoursFromTimes(startTime, endTime);
     console.debug(`[useFormStateManagement] Setting hours from times: ${startTime} to ${endTime} = ${calculatedHours}`);
-    setHours(calculatedHours.toFixed(1));
-    // Mark form as edited when hours are calculated
-    setFormEdited(true);
+    
+    // Add to batched changes
+    batchedChangesRef.current['hours'] = calculatedHours.toFixed(1);
+    
+    // Clear any existing batch timeout
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
+    }
+    
+    // Process immediately
+    processBatchedChanges();
+    
     return calculatedHours;
-  }, [startTime, endTime]);
+  }, [startTime, endTime, processBatchedChanges]);
 
   // Reset form fields
   const resetForm = useCallback(() => {
@@ -247,6 +307,13 @@ export const useFormStateManagement = ({
     setRego("");
     setTaskNumber("");
     setFormEdited(false);
+    
+    // Clear any batched changes
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
+      batchTimeoutRef.current = null;
+    }
+    batchedChangesRef.current = {};
     
     // Clear any saved draft for this form
     if (formId.current) {
@@ -271,6 +338,9 @@ export const useFormStateManagement = ({
     return () => {
       if (saveDraftTimeoutRef.current) {
         clearTimeout(saveDraftTimeoutRef.current);
+      }
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
       }
     };
   }, []);

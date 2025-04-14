@@ -1,18 +1,16 @@
 
-import React, { useEffect, useCallback } from "react";
+import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
-import TimeHeaderSection from "../components/TimeHeaderSection";
-import EntriesDisplaySection from "../components/EntriesDisplaySection";
-import WorkHoursAlerts from "../components/WorkHoursAlerts";
+import TimeHeader from "../components/TimeHeader";
+import ExistingEntriesList from "../components/ExistingEntriesList";
 import TimeEntryFormManager from "./TimeEntryFormManager";
-import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
   date: Date;
   workSchedule?: WorkSchedule;
-  interactive: boolean;
+  interactive?: boolean;
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
@@ -20,12 +18,9 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   entries,
   date,
   workSchedule,
-  interactive,
+  interactive = true,
   onCreateEntry
 }) => {
-  // Add console log to track interactive state
-  console.debug(`[TimeEntryManager] Rendering with interactive=${interactive}, entries=${entries.length}, date=${date.toISOString()}`);
-
   const {
     startTime,
     endTime,
@@ -44,103 +39,48 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     addEntryForm,
     removeEntryForm,
     saveAllPendingChanges
-  } = useTimeEntryState({ 
-    entries, 
-    date, 
-    workSchedule, 
+  } = useTimeEntryState({
+    entries,
+    date,
+    workSchedule,
     interactive,
     onCreateEntry
   });
-
-  // Register global event listener for saving pending changes
-  useEffect(() => {
-    console.debug(`[TimeEntryManager] Setting up global save event listener, interactive=${interactive}`);
-    
-    if (!interactive) return;
-
-    const handleSavePendingChanges = () => {
-      console.log("[TimeEntryManager] Global save event received");
-      saveAllPendingChanges();
-    };
-
-    window.addEventListener('timesheet:save-pending-changes', handleSavePendingChanges);
-    return () => {
-      window.removeEventListener('timesheet:save-pending-changes', handleSavePendingChanges);
-    };
-  }, [saveAllPendingChanges, interactive]);
   
-  // Auto-save on date change
-  useEffect(() => {
-    return () => {
-      if (interactive) {
-        // Save pending changes when component unmounts (which happens on date change)
-        console.debug("[TimeEntryManager] Component unmounting, triggering auto-save");
-        saveAllPendingChanges();
-      }
-    };
-  }, [interactive, saveAllPendingChanges]);
-
-  // Auto-save on window beforeunload
-  useEffect(() => {
-    if (!interactive) return;
-    
-    const handleBeforeUnload = () => {
-      console.debug("[TimeEntryManager] Window unloading, saving pending changes");
-      triggerGlobalSave();
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [interactive]);
-
-  console.debug(`[TimeEntryManager] showEntryForms=${showEntryForms.length}, formHandlers=${formHandlers.length}`);
-
   return (
-    <div key={`entry-manager-${key}`} className="space-y-4">
-      {/* Header section with time display */}
-      <TimeHeaderSection
-        hasEntries={hasEntries}
+    <div>
+      <TimeHeader 
+        date={date}
         startTime={startTime}
         endTime={endTime}
         calculatedHours={calculatedHours}
         totalHours={totalHours}
-        interactive={interactive}
-        onTimeChange={handleTimeChange}
-      />
-      
-      {/* Alerts for overtime/undertime */}
-      <WorkHoursAlerts
         hasEntries={hasEntries}
         hoursVariance={hoursVariance}
         isUndertime={isUndertime}
+        onTimeChange={handleTimeChange}
         interactive={interactive}
-        showEntryForms={showEntryForms.length > 0}
       />
       
-      {/* Time entry form manager */}
-      {interactive && (
-        <TimeEntryFormManager
-          formHandlers={formHandlers}
-          interactive={interactive}
-          onCreateEntry={onCreateEntry || (() => {})}
-          startTime={startTime}
-          endTime={endTime}
-          calculatedHours={calculatedHours}
-          showEntryForms={showEntryForms}
-          addEntryForm={addEntryForm}
-          removeEntryForm={removeEntryForm}
-          handleSaveEntry={handleSaveEntry}
-          key={key}
-        />
-      )}
-      
-      {/* Display existing entries */}
-      <EntriesDisplaySection
+      <ExistingEntriesList 
         entries={entries}
-        hasEntries={hasEntries}
-        formsListKey={key}
+        date={date}
+        interactive={interactive}
+      />
+      
+      <TimeEntryFormManager
+        formHandlers={formHandlers}
+        interactive={interactive}
+        onCreateEntry={onCreateEntry!}
+        startTime={startTime}
+        endTime={endTime}
+        calculatedHours={calculatedHours}
+        showEntryForms={showEntryForms}
+        addEntryForm={addEntryForm}
+        removeEntryForm={removeEntryForm}
+        handleSaveEntry={handleSaveEntry}
+        saveAllPendingChanges={saveAllPendingChanges}
+        key={key}
       />
     </div>
   );

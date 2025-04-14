@@ -1,9 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormsList from "../components/EntryFormsList";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 
 interface TimeEntryFormManagerProps {
   formHandlers: UseTimeEntryFormReturn[];
@@ -16,6 +16,7 @@ interface TimeEntryFormManagerProps {
   addEntryForm: () => void;
   removeEntryForm: (index: number) => void;
   handleSaveEntry: (index: number) => void;
+  saveAllPendingChanges: () => boolean;
   key: number;
 }
 
@@ -26,21 +27,57 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   addEntryForm,
   removeEntryForm,
   handleSaveEntry,
+  saveAllPendingChanges,
   key
 }) => {
+  const [isSaving, setIsSaving] = useState(false);
+
   if (!interactive) return null;
+  
+  // Handle save all entries
+  const handleSaveAll = () => {
+    setIsSaving(true);
+    try {
+      saveAllPendingChanges();
+    } finally {
+      // Reset saving state after a short delay to show feedback
+      setTimeout(() => setIsSaving(false), 500);
+    }
+  };
+
+  // Check if any forms have been edited
+  const hasEditedForms = showEntryForms.some(
+    index => index < formHandlers.length && formHandlers[index].formState.formEdited
+  );
 
   return (
     <div className="mt-4">
       {/* Entry Forms */}
       {showEntryForms.length > 0 && (
-        <EntryFormsList
-          showEntryForms={showEntryForms}
-          formHandlers={formHandlers}
-          handleSaveEntry={handleSaveEntry}
-          removeEntryForm={removeEntryForm}
-          key={`forms-list-${key}`}
-        />
+        <div className="mb-4">
+          <EntryFormsList
+            showEntryForms={showEntryForms}
+            formHandlers={formHandlers}
+            handleSaveEntry={handleSaveEntry}
+            removeEntryForm={removeEntryForm}
+            key={`forms-list-${key}`}
+          />
+          
+          {/* Save All Button - Only show when forms are open and edited */}
+          {hasEditedForms && (
+            <div className="flex justify-end mt-2">
+              <Button 
+                onClick={handleSaveAll}
+                size="sm"
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={isSaving}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                {isSaving ? "Saving..." : "Save All Changes"}
+              </Button>
+            </div>
+          )}
+        </div>
       )}
       
       {/* Add Entry Button */}

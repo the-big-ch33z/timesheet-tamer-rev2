@@ -62,7 +62,7 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
   };
 
   return (
-    <div className={`flex items-center gap-2 bg-white border rounded-md p-2 ${disabled ? 'opacity-75' : ''}`}
+    <div className={`flex flex-wrap items-center gap-2 bg-white border rounded-md p-2 ${disabled ? 'opacity-75' : ''}`}
          data-entry-id={entryId || 'new'}
          data-disabled={disabled ? 'true' : 'false'}>
       <CustomFields

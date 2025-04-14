@@ -29,7 +29,7 @@ export const useTimeEntryFormHandling = ({
   calculatedHours,
   refreshForms,
 }: UseTimeEntryFormHandlingProps) => {
-  const toast = useToast();
+  const { toast } = useToast();
   const lastSaveTime = useRef<number>(0);
   
   // Setup event listener for global save events
@@ -60,6 +60,17 @@ export const useTimeEntryFormHandling = ({
     // Check if interactive mode is disabled
     if (!interactive) {
       console.debug("[useTimeEntryFormHandling] Interactive mode disabled, aborting submission");
+      return;
+    }
+    
+    // Don't submit empty entries (except hours)
+    if (!entry.hours && !entry.description && !entry.jobNumber && !entry.rego && !entry.taskNumber) {
+      console.debug("[useTimeEntryFormHandling] Skipping empty entry submission");
+      toast.toast({
+        title: "Cannot save empty entry",
+        description: "Please add some details to your entry before saving",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -111,6 +122,21 @@ export const useTimeEntryFormHandling = ({
       console.debug("[useTimeEntryFormHandling] Preventing duplicate save operation");
       return;
     }
+
+    // Check if the form has content before saving
+    const formState = formHandlers[index].formState;
+    const hasContent = !!(formState.hours || formState.description || formState.jobNumber || 
+                         formState.rego || formState.taskNumber);
+                         
+    if (!hasContent) {
+      console.debug("[useTimeEntryFormHandling] Preventing save of empty form");
+      toast.toast({
+        title: "Cannot save empty entry",
+        description: "Please add some details to your entry before saving",
+        variant: "warning"
+      });
+      return;
+    }
     
     formHandlers[index].handleSave();
     lastSaveTime.current = now;
@@ -143,11 +169,20 @@ export const useTimeEntryFormHandling = ({
           return;
         }
         
-        const saved = formHandlers[index].saveIfEdited();
-        changesSaved = changesSaved || saved;
+        // Only save forms that have content and have been edited
+        const formState = formHandlers[index].formState;
+        const hasContent = !!(formState.hours || formState.description || formState.jobNumber || 
+                            formState.rego || formState.taskNumber);
         
-        if (saved) {
-          console.debug(`[useTimeEntryFormHandling] Saved changes for form ${index}`);
+        if (hasContent && formState.formEdited) {
+          const saved = formHandlers[index].saveIfEdited();
+          changesSaved = changesSaved || saved;
+          
+          if (saved) {
+            console.debug(`[useTimeEntryFormHandling] Saved changes for form ${index}`);
+          }
+        } else {
+          console.debug(`[useTimeEntryFormHandling] Skipping save for form ${index} (no content or not edited)`);
         }
       });
       

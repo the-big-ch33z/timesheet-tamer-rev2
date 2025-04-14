@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import InlineEntryForm from "../../entry-dialog/form/InlineEntryForm";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
@@ -21,6 +21,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   entryId,
   disabled = false
 }) => {
+  const [isSaving, setIsSaving] = useState(false);
+  
   // Enhanced logging for component rendering
   console.debug(`[EntryFormItem] Rendering form item for entryId=${entryId}`, {
     disabled,
@@ -59,7 +61,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     console.debug(`[EntryFormItem] Field change handler executed for ${entryId}`);
   };
   
-  // Enhanced save handler
+  // Enhanced save handler with loading state
   const onSave = () => {
     console.debug(`[EntryFormItem] Save clicked for entry ${entryId}`, {
       disabled, 
@@ -76,7 +78,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
       return;
     }
     
+    setIsSaving(true);
     handleSave();
+    
+    // Reset saving state after a short delay to show feedback
+    setTimeout(() => setIsSaving(false), 500);
   };
   
   // Enhanced delete handler
@@ -90,6 +96,17 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     
     onDelete();
   };
+
+  // Check if form has content to determine save button state
+  const hasContent = !!(
+    formState.hours || 
+    formState.description || 
+    formState.jobNumber || 
+    formState.rego || 
+    formState.taskNumber
+  );
+  
+  const canSave = !disabled && formState.formEdited && hasContent;
 
   return (
     <div className="bg-white rounded-md shadow p-3 border border-gray-200" 
@@ -113,11 +130,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
         <Button 
           size="sm" 
           onClick={onSave}
-          className="bg-green-500 hover:bg-green-600 text-white"
-          disabled={disabled || !formState.formEdited}
+          className={`${canSave ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
+          disabled={disabled || !formState.formEdited || !hasContent || isSaving}
           data-testid={`save-button-${entryId}`}
         >
-          Save Entry{disabled ? ' (Disabled)' : ''}
+          {isSaving ? 'Saving...' : 'Save Entry'}
         </Button>
       </div>
     </div>
