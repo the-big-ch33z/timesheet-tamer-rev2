@@ -31,3 +31,4 @@ export { calculateHoursFromTimes, calculateMonthlyTargetHours } from './calculat
 export { calculateHoursVariance, isUndertime } from './calculations/varianceCalculations';
 export { formatTimeForDisplay, formatHours, formatDate } from './formatting/timeFormatting';
 export { timeEntryService } from './services/timeEntryService';
+export { createTimeLogger } from './errors/timeLogger';
