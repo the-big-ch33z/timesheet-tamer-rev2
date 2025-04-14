@@ -8,12 +8,15 @@ interface WorkHoursData {
   endTime: string;
   date: string; // ISO date string
   userId: string;
+  isCustom: boolean; // Flag to indicate this is a custom override
 }
 
 interface WorkHoursContextType {
-  getWorkHours: (date: Date, userId: string) => { startTime: string; endTime: string };
+  getWorkHours: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom: boolean };
   saveWorkHours: (date: Date, userId: string, startTime: string, endTime: string) => void;
   clearWorkHours: (userId: string) => void;
+  hasCustomWorkHours: (date: Date, userId: string) => boolean;
+  resetDayWorkHours: (date: Date, userId: string) => void;
 }
 
 // Create the context
@@ -50,6 +53,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         parsedData.forEach(item => {
           // Create a compound key: userId-date
           const key = `${item.userId}-${item.date}`;
+          // Ensure the isCustom flag is set (for backward compatibility)
+          item.isCustom = item.isCustom !== undefined ? item.isCustom : true;
           newMap.set(key, item);
         });
         
@@ -75,8 +80,15 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     }
   }, [workHoursMap]);
   
+  // Check if there are custom hours saved for a specific date
+  const hasCustomWorkHours = (date: Date, userId: string): boolean => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const key = `${userId}-${dateString}`;
+    return workHoursMap.has(key) && workHoursMap.get(key)?.isCustom === true;
+  };
+  
   // Get work hours for a specific date and user
-  const getWorkHours = (date: Date, userId: string): { startTime: string; endTime: string } => {
+  const getWorkHours = (date: Date, userId: string): { startTime: string; endTime: string; isCustom: boolean } => {
     // Format date to YYYY-MM-DD for consistent lookup
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
@@ -87,7 +99,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       console.debug(`[WorkHoursContext] Found saved hours for ${dateString}:`, savedHours);
       return {
         startTime: savedHours.startTime,
-        endTime: savedHours.endTime
+        endTime: savedHours.endTime,
+        isCustom: savedHours.isCustom
       };
     }
     
@@ -95,7 +108,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     console.debug(`[WorkHoursContext] No saved hours for ${dateString}, using defaults`);
     return {
       startTime: '09:00',
-      endTime: '17:00'
+      endTime: '17:00',
+      isCustom: false
     };
   };
   
@@ -105,7 +119,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
     
-    console.debug(`[WorkHoursContext] Saving hours for ${dateString}:`, { startTime, endTime });
+    console.debug(`[WorkHoursContext] Saving custom hours for ${dateString}:`, { startTime, endTime });
     
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);
@@ -113,8 +127,25 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         date: dateString,
         userId,
         startTime,
-        endTime
+        endTime,
+        isCustom: true // Always mark user-saved hours as custom
       });
+      return newMap;
+    });
+  };
+  
+  // Reset work hours for a specific day to default/schedule
+  const resetDayWorkHours = (date: Date, userId: string): void => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const key = `${userId}-${dateString}`;
+    
+    console.debug(`[WorkHoursContext] Resetting hours for ${dateString} for user ${userId}`);
+    
+    setWorkHoursMap(prev => {
+      const newMap = new Map(prev);
+      if (newMap.has(key)) {
+        newMap.delete(key);
+      }
       return newMap;
     });
   };
@@ -138,7 +169,9 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   const value: WorkHoursContextType = {
     getWorkHours,
     saveWorkHours,
-    clearWorkHours
+    clearWorkHours,
+    hasCustomWorkHours,
+    resetDayWorkHours
   };
   
   return (

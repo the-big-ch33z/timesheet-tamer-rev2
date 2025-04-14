@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import { validateTimeOrder } from "@/utils/time/validation";
 import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
+import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
+import { WorkSchedule } from "@/types";
 
 interface UseWorkHoursProps {
   initialStartTime?: string;
@@ -13,6 +15,7 @@ interface UseWorkHoursProps {
   interactive: boolean;
   date: Date;
   userId: string;
+  workSchedule?: WorkSchedule;
 }
 
 export const useWorkHours = ({
@@ -21,40 +24,61 @@ export const useWorkHours = ({
   formHandlers,
   interactive,
   date,
-  userId
+  userId,
+  workSchedule
 }: UseWorkHoursProps) => {
   const { toast } = useToast();
-  const { getWorkHours, saveWorkHours } = useWorkHoursContext();
+  const { getWorkHours, saveWorkHours, hasCustomWorkHours } = useWorkHoursContext();
   
   // State for times
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
   const [calculatedHours, setCalculatedHours] = useState(8.0);
   
-  // Load saved work hours for this date and user
+  // Get times with proper precedence:
+  // 1. Custom saved times from localStorage (user overrides)
+  // 2. Schedule-based times
+  // 3. Default times (fallback)
   useEffect(() => {
-    if (userId && date) {
-      console.log(`[useWorkHours] Loading work hours for ${userId} on ${date.toISOString().split('T')[0]}`);
+    if (!userId || !date) {
+      console.log("[useWorkHours] No userId or date, using initial values");
+      setStartTime(initialStartTime);
+      setEndTime(initialEndTime);
+      return;
+    }
+
+    // Check if we have custom saved hours for this day
+    if (hasCustomWorkHours(date, userId)) {
+      console.log(`[useWorkHours] Using custom saved hours for ${userId} on ${date.toISOString().split('T')[0]}`);
       const savedHours = getWorkHours(date, userId);
       
-      // Only use saved hours if they exist and differ from initial values
-      if (savedHours) {
-        console.log(`[useWorkHours] Found saved work hours: ${savedHours.startTime} - ${savedHours.endTime}`);
-        setStartTime(savedHours.startTime);
-        setEndTime(savedHours.endTime);
-        const hours = calculateHoursFromTimes(savedHours.startTime, savedHours.endTime);
-        setCalculatedHours(hours);
-        return;
+      setStartTime(savedHours.startTime);
+      setEndTime(savedHours.endTime);
+    } 
+    // If no custom hours, check the work schedule
+    else if (workSchedule) {
+      console.log(`[useWorkHours] No custom hours, checking work schedule for ${date.toISOString().split('T')[0]}`);
+      const scheduleInfo = getDayScheduleInfo(date, workSchedule);
+      
+      if (scheduleInfo?.hours) {
+        console.log(`[useWorkHours] Using schedule hours: ${scheduleInfo.hours.startTime} - ${scheduleInfo.hours.endTime}`);
+        setStartTime(scheduleInfo.hours.startTime);
+        setEndTime(scheduleInfo.hours.endTime);
+      } else {
+        // Fall back to defaults if schedule doesn't have hours for this day
+        console.log(`[useWorkHours] No schedule hours for this day, using defaults`);
+        setStartTime(initialStartTime);
+        setEndTime(initialEndTime);
       }
+    } 
+    // No custom hours or schedule - use defaults
+    else {
+      console.log(`[useWorkHours] Using default hours: ${initialStartTime} - ${initialEndTime}`);
+      setStartTime(initialStartTime);
+      setEndTime(initialEndTime);
     }
     
-    // Fall back to initial values if no saved hours found
-    console.log(`[useWorkHours] Using initial times: ${initialStartTime} - ${initialEndTime}`);
-    setStartTime(initialStartTime);
-    setEndTime(initialEndTime);
-    const hours = calculateHoursFromTimes(initialStartTime, initialEndTime);
-    setCalculatedHours(hours);
-  }, [date, userId, initialStartTime, initialEndTime, getWorkHours]);
+  }, [date, userId, initialStartTime, initialEndTime, getWorkHours, hasCustomWorkHours, workSchedule]);
   
   // Handle time input changes with better validation
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {

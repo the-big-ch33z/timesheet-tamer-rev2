@@ -117,7 +117,8 @@ export const useTimeEntryState = ({
     formHandlers,
     interactive,
     date,
-    userId
+    userId,
+    workSchedule // Pass the workSchedule to useWorkHours
   });
 
   // Handle form state (showing/hiding, adding/removing forms)
