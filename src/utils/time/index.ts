@@ -22,8 +22,12 @@ export * from './scheduleUtils';
 // Export validation utilities
 export * from './validation';
 
+// Export services
+export * from './services';
+
 // Explicitly re-export key functions to resolve any ambiguity
 export { formatDateForComparison } from './validation/dateValidation';
 export { calculateHoursFromTimes, calculateMonthlyTargetHours } from './calculations/hoursCalculations';
 export { calculateHoursVariance, isUndertime } from './calculations/varianceCalculations';
 export { formatTimeForDisplay, formatHours, formatDate } from './formatting/timeFormatting';
+export { timeEntryService } from './services/timeEntryService';

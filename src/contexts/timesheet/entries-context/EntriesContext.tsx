@@ -1,11 +1,13 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { useTimesheetEntries } from '@/hooks/timesheet/useTimesheetEntries';
 import { TimeEntry } from '@/types';
 import { EntriesContextType } from '../types';
-import { v4 as uuidv4 } from 'uuid';
-import { ensureDate, isValidDate } from '@/utils/time/validation';
+import { timeEntryService } from '@/utils/time/services/timeEntryService';
 import { useToast } from '@/hooks/use-toast';
+import { createTimeLogger } from '@/utils/time/errors';
+
+// Create a logger for the context
+const logger = createTimeLogger('EntriesContext');
 
 const EntriesContext = createContext<EntriesContextType | undefined>(undefined);
 
@@ -23,75 +25,122 @@ interface EntriesProviderProps {
 }
 
 export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, userId }) => {
-  const {
-    entries,
-    getUserEntries,
-    getDayEntries,
-    addEntry,
-    deleteEntry
-  } = useTimesheetEntries(userId);
-  
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
   const { toast } = useToast();
   
-  // Allow creating entries with validation
-  const createEntry = (entryData: Omit<TimeEntry, "id">) => {
-    console.debug('[EntriesContext] Creating new entry:', entryData);
+  // Load initial entries
+  useEffect(() => {
+    if (!userId) return;
     
-    // Validate date
-    if (!entryData.date || !isValidDate(entryData.date)) {
-      console.error('[EntriesContext] Invalid date in entry data:', entryData.date);
-      toast({
-        title: "Error creating entry",
-        description: "The entry has an invalid date.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const validDate = ensureDate(entryData.date);
-    if (!validDate) {
-      console.error('[EntriesContext] Failed to convert date:', entryData.date);
-      toast({
-        title: "Error creating entry",
-        description: "The entry has an invalid date.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Log all fields to verify they're being passed correctly
-    console.debug('[EntriesContext] Entry data to be added:', {
-      id: 'will be generated',
-      userId: entryData.userId || userId || '',
-      date: validDate,
-      hours: entryData.hours,
-      description: entryData.description,
-      jobNumber: entryData.jobNumber,
-      rego: entryData.rego,
-      taskNumber: entryData.taskNumber,
-      startTime: entryData.startTime,
-      endTime: entryData.endTime,
-      project: entryData.project
-    });
-    
-    // Create a complete entry with all fields preserved
-    const newEntry: TimeEntry = {
-      ...entryData,
-      id: uuidv4(),
-      userId: entryData.userId || userId || '',
-      date: validDate
+    logger.debug(`Loading entries for user: ${userId}`);
+    const userEntries = timeEntryService.getUserEntries(userId);
+    setEntries(userEntries);
+  }, [userId]);
+  
+  // Setup storage event listener for multi-tab support
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'timeEntries' && userId) {
+        logger.debug('Storage change detected, reloading entries');
+        const userEntries = timeEntryService.getUserEntries(userId);
+        setEntries(userEntries);
+      }
     };
     
-    console.debug('[EntriesContext] Adding validated entry:', newEntry);
-    addEntry(newEntry);
+    window.addEventListener('storage', handleStorageChange);
     
-    return newEntry.id;
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [userId]);
+  
+  // Get entries for a specific user
+  const getUserEntries = (userIdToFilter?: string): TimeEntry[] => {
+    const targetUserId = userIdToFilter || userId;
+    if (!targetUserId) {
+      logger.warn('No user ID provided for filtering entries');
+      return [];
+    }
+    
+    return timeEntryService.getUserEntries(targetUserId);
   };
   
-  // Add debugging for entries changes
-  useEffect(() => {
-    console.debug('[EntriesContext] Entries updated, count:', entries.length);
-  }, [entries]);
+  // Get entries for a specific day
+  const getDayEntries = (date: Date, userIdToFilter?: string): TimeEntry[] => {
+    const targetUserId = userIdToFilter || userId;
+    if (!targetUserId) {
+      logger.warn('No user ID provided for filtering day entries');
+      return [];
+    }
+    
+    return timeEntryService.getDayEntries(date, targetUserId);
+  };
+  
+  // Create a new entry
+  const createEntry = (entryData: Omit<TimeEntry, "id">): string | null => {
+    logger.debug('Creating new entry:', entryData);
+    
+    // Ensure userId is set
+    const completeEntryData = {
+      ...entryData,
+      userId: entryData.userId || userId || ''
+    };
+    
+    const result = timeEntryService.createEntry(completeEntryData);
+    
+    if (result) {
+      // Refresh entries
+      if (userId) {
+        const userEntries = timeEntryService.getUserEntries(userId);
+        setEntries(userEntries);
+      }
+      
+      toast({
+        title: 'Entry added',
+        description: `Added ${entryData.hours} hours to your timesheet`
+      });
+      
+      return result;
+    } else {
+      toast({
+        title: 'Error adding entry',
+        description: 'Could not add entry to your timesheet',
+        variant: 'destructive'
+      });
+      
+      return null;
+    }
+  };
+  
+  // Delete an entry
+  const deleteEntry = (entryId: string): boolean => {
+    logger.debug('Deleting entry:', entryId);
+    
+    const result = timeEntryService.deleteEntry(entryId);
+    
+    if (result) {
+      // Refresh entries
+      if (userId) {
+        const userEntries = timeEntryService.getUserEntries(userId);
+        setEntries(userEntries);
+      }
+      
+      toast({
+        title: 'Entry deleted',
+        description: 'Time entry has been removed from your timesheet'
+      });
+      
+      return true;
+    } else {
+      toast({
+        title: 'Error deleting entry',
+        description: 'Could not delete your time entry',
+        variant: 'destructive'
+      });
+      
+      return false;
+    }
+  };
   
   const value: EntriesContextType = {
     entries,
