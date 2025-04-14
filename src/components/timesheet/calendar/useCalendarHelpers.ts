@@ -1,98 +1,54 @@
 
-import { WeekDay, WorkSchedule, Holiday } from "@/types";
-import { format } from "date-fns";
-import { startOfYear } from "date-fns";
+import { useMemo } from "react";
+import { WorkSchedule } from "@/types";
+import { isWeekend, isToday } from "date-fns";
+import { isWorkingDay } from "@/utils/time/scheduleUtils";
 import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 
-export interface DayStatus {
-  isWeekend: boolean;
-  dayHoliday: boolean;
-  holidayName: string | null;
-  isRDO: boolean;
-  workHours: any;
-  isWorkDay: boolean;
-}
+/**
+ * Helper hook for calendar functionality
+ */
+export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
+  /**
+   * Check if a date is a working day
+   */
+  const checkIsWorkingDay = useMemo(() => 
+    (day: Date) => !isWeekend(day) || (workSchedule ? isWorkingDay(day, workSchedule) : false),
+    [workSchedule]
+  );
 
-export const useCalendarHelpers = () => {
-  // Helper function to convert JS day number to WeekDay type
-  const getWeekDayFromDate = (date: Date): WeekDay => {
-    const dayMap: Record<number, WeekDay> = {
-      0: 'sunday',
-      1: 'monday',
-      2: 'tuesday',
-      3: 'wednesday',
-      4: 'thursday',
-      5: 'friday',
-      6: 'saturday'
-    };
-    return dayMap[date.getDay()];
-  };
+  /**
+   * Get various calendar state information for a day
+   */
+  const getDayState = useMemo(() => 
+    (day: Date, selectedDay: Date | null, monthStart: Date) => {
+      const _isToday = isToday(day);
+      const _isSelected = selectedDay ? day.toDateString() === selectedDay.toDateString() : false;
+      const _isCurrentMonth = day.getMonth() === monthStart.getMonth();
+      const _isWeekend = isWeekend(day);
+      const _isWorkingDay = checkIsWorkingDay(day);
 
-  // Check if a day is a working day according to the schedule
-  const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean => {
-    if (!workSchedule) return true; // Default to working day if no schedule
+      let weekday = null;
+      let fortnightWeek = null;
 
-    const weekDay = getWeekDayFromDate(day);
-    const weekNum = getFortnightWeek(day);
-    
-    // Check if it's an RDO
-    if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
-      return false;
-    }
-    
-    // Check if there are work hours defined for this day
-    const hoursForDay = workSchedule.weeks[weekNum][weekDay];
-    return hoursForDay !== null;
-  };
+      // Only calculate these if we have a work schedule
+      if (workSchedule) {
+        weekday = getWeekDay(day);
+        fortnightWeek = getFortnightWeek(day);
+      }
 
-  // Get work hours for a specific day
-  const getWorkHoursForDay = (day: Date, workSchedule?: WorkSchedule) => {
-    if (!workSchedule) return null;
-    
-    const weekDay = getWeekDayFromDate(day);
-    const weekNum = getFortnightWeek(day);
-    
-    return workSchedule.weeks[weekNum][weekDay];
-  };
+      return {
+        isToday: _isToday,
+        isSelected: _isSelected,
+        isCurrentMonth: _isCurrentMonth,
+        isWeekend: _isWeekend,
+        isWorkingDay: _isWorkingDay,
+        weekday,
+        fortnightWeek
+      };
+    },
+    [workSchedule, checkIsWorkingDay]
+  );
 
-  // Check if a date is a holiday
-  const checkIsHoliday = (day: Date, holidays: Holiday[]): boolean => {
-    return holidays.some(holiday => format(day, "yyyy-MM-dd") === holiday.date);
-  };
-
-  // Get the name of a holiday for a specific date
-  const getHolidayName = (day: Date, holidays: Holiday[]): string | null => {
-    const holiday = holidays.find(h => format(day, "yyyy-MM-dd") === h.date);
-    return holiday ? holiday.name : null;
-  };
-
-  // Calculate day status for styling and tooltip information
-  const getDayStatus = (day: Date, workSchedule?: WorkSchedule, holidays: Holiday[] = []): DayStatus => {
-    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-    const dayHoliday = checkIsHoliday(day, holidays);
-    const holidayName = getHolidayName(day, holidays);
-    const isRDO = workSchedule ? 
-      workSchedule.rdoDays[getFortnightWeek(day)].includes(getWeekDayFromDate(day)) : 
-      false;
-    const workHours = getWorkHoursForDay(day, workSchedule);
-    const isWorkDay = isWorkingDay(day, workSchedule);
-    
-    return {
-      isWeekend,
-      dayHoliday,
-      holidayName,
-      isRDO,
-      workHours,
-      isWorkDay
-    };
-  };
-
-  return {
-    getWeekDayFromDate,
-    isWorkingDay,
-    getWorkHoursForDay,
-    checkIsHoliday,
-    getHolidayName,
-    getDayStatus
-  };
+  return { getDayState, checkIsWorkingDay };
 };

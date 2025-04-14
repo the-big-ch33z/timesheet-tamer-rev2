@@ -33,4 +33,6 @@ export interface EntriesContextType {
 export interface TimesheetUIContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  showHelpPanel: boolean;
+  setShowHelpPanel: (show: boolean) => void;
 }

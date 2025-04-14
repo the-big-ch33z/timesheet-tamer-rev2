@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Clock, CalendarOff } from "lucide-react";
 import { WorkSchedule } from "@/types";
-import { getDayScheduleInfo } from "../utils/scheduleUtils";
+import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
 
 interface ScheduleInfoCardProps {
   date: Date;

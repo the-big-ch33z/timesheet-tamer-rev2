@@ -8,13 +8,20 @@ interface UseTimeEntryStatsProps {
   calculatedHours: number;
 }
 
+export interface TimeEntryStats {
+  totalHours: number;
+  hoursVariance: number;
+  hasEntries: boolean;
+  isUndertime: boolean;
+}
+
 /**
  * Hook for calculating time entry statistics and metrics
  */
 export const useTimeEntryStats = ({
   entries,
   calculatedHours
-}: UseTimeEntryStatsProps) => {
+}: UseTimeEntryStatsProps): TimeEntryStats => {
   // Calculate total hours from entries
   const totalHours = useMemo(() => 
     entries.reduce((sum, entry) => sum + (entry.hours || 0), 0),

@@ -10,37 +10,40 @@ interface UseTimeEntryInitialValuesProps {
 }
 
 /**
- * Hook to determine initial time values for new entries
+ * Hook to get initial time values from entries or schedule
  */
 export const useTimeEntryInitialValues = ({
   entries,
   date,
   workSchedule
 }: UseTimeEntryInitialValuesProps) => {
-  // Get initial time values from entries or schedule
+  // Find initial times from entries or schedule
   const { initialStartTime, initialEndTime } = useMemo(() => {
-    let startTime = "";
-    let endTime = "";
-
+    // If we have entries, get start/end times from the first entry
     if (entries.length > 0) {
-      // Use times from existing entries if available
-      startTime = entries[0].startTime || startTime;
-      endTime = entries[0].endTime || endTime;
-    } else if (workSchedule) {
-      // Check schedule but only use if it's a work day
-      const scheduleInfo = getDayScheduleInfo(date, workSchedule);
-      
-      if (scheduleInfo?.hours && scheduleInfo.isWorkingDay) {
-        startTime = scheduleInfo.hours.startTime || startTime;
-        endTime = scheduleInfo.hours.endTime || endTime;
+      const firstEntry = entries[0];
+      if (firstEntry.startTime && firstEntry.endTime) {
+        return {
+          initialStartTime: firstEntry.startTime,
+          initialEndTime: firstEntry.endTime
+        };
       }
     }
-    
-    return { initialStartTime: startTime, initialEndTime: endTime };
+
+    // If there are no entries but there's a schedule, get times from there
+    if (workSchedule) {
+      const scheduleInfo = getDayScheduleInfo(date, workSchedule);
+      if (scheduleInfo?.hours) {
+        return {
+          initialStartTime: scheduleInfo.hours.startTime,
+          initialEndTime: scheduleInfo.hours.endTime
+        };
+      }
+    }
+
+    // Default to empty
+    return { initialStartTime: "", initialEndTime: "" };
   }, [entries, date, workSchedule]);
 
-  return {
-    initialStartTime,
-    initialEndTime
-  };
+  return { initialStartTime, initialEndTime };
 };

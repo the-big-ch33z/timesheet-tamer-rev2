@@ -1,10 +1,12 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { TimesheetUIContextType } from '../types';
 
+// Create the context
 const TimesheetUIContext = createContext<TimesheetUIContextType | undefined>(undefined);
 
-export const useTimesheetUIContext = (): TimesheetUIContextType => {
+// Custom hook to use the context
+export const useTimesheetUIContext = () => {
   const context = useContext(TimesheetUIContext);
   if (!context) {
     throw new Error('useTimesheetUIContext must be used within a TimesheetUIProvider');
@@ -12,20 +14,17 @@ export const useTimesheetUIContext = (): TimesheetUIContextType => {
   return context;
 };
 
-interface TimesheetUIProviderProps {
-  children: ReactNode;
-}
+export const TimesheetUIProvider: React.FC<{children: ReactNode}> = ({ children }) => {
+  const [activeTab, setActiveTab] = useState('calendar');
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
 
-export const TimesheetUIProvider: React.FC<TimesheetUIProviderProps> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<string>("timesheet");
-  
-  const value: TimesheetUIContextType = {
-    activeTab,
-    setActiveTab
-  };
-  
   return (
-    <TimesheetUIContext.Provider value={value}>
+    <TimesheetUIContext.Provider value={{ 
+      activeTab, 
+      setActiveTab,
+      showHelpPanel,
+      setShowHelpPanel 
+    }}>
       {children}
     </TimesheetUIContext.Provider>
   );

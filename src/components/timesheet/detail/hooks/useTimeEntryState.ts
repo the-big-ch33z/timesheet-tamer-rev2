@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
@@ -6,7 +7,6 @@ import { useEntryForms } from "./useEntryForms";
 import { format } from "date-fns";
 import { useTimeEntryStats } from "./useTimeEntryStats";
 import { useTimeEntryFormHandling } from "./useTimeEntryFormHandling";
-import { useTimeEntryInitialValues } from "./useTimeEntryInitialValues";
 import { v4 as uuidv4 } from 'uuid';
 
 interface UseTimeEntryStateProps {
@@ -41,13 +41,6 @@ export const useTimeEntryState = ({
   useEffect(() => {
     console.debug(`[useTimeEntryState] Interactive flag changed to: ${interactive}`);
   }, [interactive]);
-  
-  // Get initial time values from entries or schedule
-  const { initialStartTime, initialEndTime } = useTimeEntryInitialValues({
-    entries,
-    date,
-    workSchedule
-  });
   
   // Helper function to create a mock entry with ID for type compatibility
   const createMockEntry = useCallback((entry: Omit<TimeEntry, "id">): TimeEntry => {
@@ -115,13 +108,10 @@ export const useTimeEntryState = ({
     calculatedHours,
     handleTimeChange
   } = useWorkHours({
-    initialStartTime,
-    initialEndTime,
     formHandlers,
     interactive,
     date,
-    userId,
-    workSchedule // Pass the workSchedule to useWorkHours
+    userId
   });
 
   // Track date changes to detect when user changes dates

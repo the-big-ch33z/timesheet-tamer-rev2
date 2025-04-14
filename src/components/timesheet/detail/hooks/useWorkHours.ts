@@ -4,53 +4,43 @@ import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import { validateTimeOrder } from "@/utils/time/validation";
 import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
-import { getDayScheduleInfo } from "@/utils/time/scheduleUtils";
-import { WorkSchedule } from "@/types";
 
 interface UseWorkHoursProps {
-  initialStartTime?: string;
-  initialEndTime?: string;
   formHandlers: UseTimeEntryFormReturn[];
   interactive: boolean;
   date: Date;
   userId: string;
-  workSchedule?: WorkSchedule;
 }
 
 export const useWorkHours = ({
-  initialStartTime,
-  initialEndTime,
   formHandlers,
   interactive,
   date,
-  userId,
-  workSchedule
+  userId
 }: UseWorkHoursProps) => {
   const { toast } = useToast();
   const { getWorkHours, saveWorkHours, hasCustomWorkHours } = useWorkHoursContext();
   
   // State for times
-  const [startTime, setStartTime] = useState(initialStartTime || "");
-  const [endTime, setEndTime] = useState(initialEndTime || "");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [calculatedHours, setCalculatedHours] = useState(0);
   
   // Flag to track if we're currently making a manual time change
-  // This prevents the useEffect from overriding our manual changes
   const manualChangeRef = useRef(false);
   
   // Track if we've already initialized the times for this date/user
   const initializedRef = useRef(false);
   
   // Keep a reference to the last applied times for this date
-  // This helps prevent losing times during component re-renders
   const lastAppliedTimesRef = useRef<{[key: string]: {startTime: string, endTime: string}}>({});
   
   // Memoized date string for dependency comparison
   const dateString = date ? date.toISOString().split('T')[0] : '';
   
   // Get times with proper precedence:
-  // 1. Custom saved times from localStorage (user overrides)
-  // 2. Empty values (new approach - always empty by default)
+  // 1. Custom saved times from localStorage
+  // 2. Empty values
   useEffect(() => {
     // Skip this effect if we're currently making a manual change
     if (manualChangeRef.current) {
@@ -182,7 +172,6 @@ export const useWorkHours = ({
       }
       
       // Clear the manual change flag after a short delay to ensure the save completes
-      // before any other effects that might try to reload the values
       setTimeout(() => {
         manualChangeRef.current = false;
       }, 300);
