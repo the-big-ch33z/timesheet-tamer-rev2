@@ -42,11 +42,12 @@ export const useEntryQueries = (entries: TimeEntry[], userId?: string) => {
   }, [entries, userId]);
 
   // Calculate total hours for a set of entries
-  const calculateTotalHours = useCallback((entriesList: TimeEntry[]) => {
-    const total = entriesList.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+  const calculateTotalHours = useCallback((entriesList?: TimeEntry[]) => {
+    const entriesToCalculate = entriesList || entries;
+    const total = entriesToCalculate.reduce((sum, entry) => sum + (entry.hours || 0), 0);
     console.debug("[TimeEntryProvider] Calculated total hours:", total);
     return total;
-  }, []);
+  }, [entries]);
 
   return {
     getDayEntries,
