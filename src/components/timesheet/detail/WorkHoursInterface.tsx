@@ -7,6 +7,9 @@ import { calculateHoursFromTimes } from '@/utils/time/calculations';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('WorkHoursInterface');
 
 interface WorkHoursInterfaceProps {
   date: Date;
@@ -21,7 +24,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   interactive = true,
   onHoursChange
 }) => {
-  const { getWorkHoursForDate, saveWorkHoursForDate, resetWorkHours, hasCustomHours } = useWorkHours();
+  const { getWorkHoursForDate, saveWorkHoursForDate, resetWorkHours, hasCustomHours, calculateAutoHours } = useWorkHours();
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [calculatedHours, setCalculatedHours] = useState(0);
@@ -30,6 +33,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   
   // Load initial hours
   useEffect(() => {
+    logger.debug(`Loading work hours for date: ${date.toDateString()}, userId: ${userId}`);
     const { startTime: loadedStart, endTime: loadedEnd, isCustom: loadedIsCustom } = 
       getWorkHoursForDate(date, userId);
     
@@ -39,14 +43,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     
     // Calculate hours if both times are present
     if (loadedStart && loadedEnd) {
-      const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
+      const hours = calculateAutoHours(loadedStart, loadedEnd);
       setCalculatedHours(hours);
       onHoursChange?.(hours);
     } else {
       setCalculatedHours(0);
       onHoursChange?.(0);
     }
-  }, [date, userId, getWorkHoursForDate, onHoursChange]);
+  }, [date, userId, getWorkHoursForDate, onHoursChange, calculateAutoHours]);
 
   // Handle time change
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
@@ -74,11 +78,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     // Recalculate hours if both times are present
     if (newStartTime && newEndTime) {
       try {
-        const hours = calculateHoursFromTimes(newStartTime, newEndTime);
+        const hours = calculateAutoHours(newStartTime, newEndTime);
         setCalculatedHours(hours);
         onHoursChange?.(hours);
       } catch (error) {
         console.error("Error calculating hours:", error);
+        logger.error("Failed to calculate hours:", error);
       }
     } else {
       setCalculatedHours(0);

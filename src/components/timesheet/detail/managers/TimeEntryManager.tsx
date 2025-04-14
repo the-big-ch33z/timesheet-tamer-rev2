@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
 import TimeHeader from "../components/TimeHeader";
@@ -7,8 +8,10 @@ import { DraftProvider } from "@/contexts/timesheet/draft-context/DraftContext";
 import DraftEntryCard from "../components/DraftEntryCard";
 import NewEntryLauncher from "../components/NewEntryLauncher";
 import { useEntriesContext } from "@/contexts/timesheet";
-import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
+import { useWorkHours } from "@/hooks/timesheet/useWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
+import { timeEntryService } from "@/utils/time/services/timeEntryService";
+import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 
 const logger = createTimeLogger('TimeEntryManager');
 
@@ -32,7 +35,9 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   
   logger.debug(`Using userId: ${userId} for date: ${date}`);
   
-  const workHoursContext = useWorkHoursContext();
+  // Use our centralized hooks for better coordination
+  const workHours = useWorkHours(userId);
+  const entriesContext = useEntriesContext();
   
   const {
     startTime,
@@ -52,45 +57,65 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     userId
   });
   
-  const entriesContext = useEntriesContext();
+  // Setup auto-save on page navigation/unload
+  useEffect(() => {
+    // Ensure we save any work hour changes on component unmount
+    return () => {
+      logger.debug("TimeEntryManager unmounting - ensuring work hours are saved");
+      if (startTime && endTime) {
+        workHours.saveWorkHoursForDate(date, startTime, endTime, userId);
+      }
+    };
+  }, [date, userId, startTime, endTime, workHours]);
   
   const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
     logger.debug("Creating entry from wizard", entry);
-    logger.debug("Current work hours BEFORE entry creation:", { startTime, endTime });
     
+    // Preserve current work hours state
     const currentStartTime = startTime;
     const currentEndTime = endTime;
     
+    // Prepare complete entry with fallbacks to work hour times if not specified
     const completeEntry = {
       ...entry,
       userId: entry.userId || userId,
       date: date,
       startTime: entry.startTime || currentStartTime,
-      endTime: entry.endTime || currentEndTime
+      endTime: entry.endTime || currentEndTime,
+      // Auto-calculate hours if missing but have start and end times
+      hours: entry.hours || (entry.startTime && entry.endTime ? 
+        timeEntryService.autoCalculateHours(entry.startTime, entry.endTime) : 
+        (currentStartTime && currentEndTime ? calculatedHours : 0))
     };
     
     logger.debug("Complete entry data:", completeEntry);
     
-    if (onCreateEntry && entry.hours && typeof entry.hours === 'number') {
+    // Use the provided callback if available, otherwise use context method
+    if (onCreateEntry && completeEntry.hours && typeof completeEntry.hours === 'number') {
       onCreateEntry(
         completeEntry.startTime,
         completeEntry.endTime,
-        entry.hours
+        completeEntry.hours
       );
-    } else if (entry.hours && typeof entry.hours === 'number') {
+    } else if (completeEntry.hours && typeof completeEntry.hours === 'number') {
       logger.debug("Creating entry using context method", completeEntry);
       entriesContext.createEntry(completeEntry);
     } else {
       logger.error("Cannot create entry - missing hours value");
+      return;
     }
     
+    // Ensure work hours remain consistent after entry creation
     if (currentStartTime && currentEndTime) {
       setTimeout(() => {
-        workHoursContext.saveWorkHours(date, userId, currentStartTime, currentEndTime);
-        logger.debug("Work hours preserved AFTER entry creation:", { 
+        workHours.saveWorkHoursForDate(date, currentStartTime, currentEndTime, userId);
+        logger.debug("Work hours preserved after entry creation:", { 
           startTime: currentStartTime, 
           endTime: currentEndTime 
         });
+        
+        // Trigger global save to ensure all changes persist
+        triggerGlobalSave();
       }, 100);
     }
   };
