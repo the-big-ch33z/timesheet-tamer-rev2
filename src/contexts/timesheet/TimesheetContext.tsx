@@ -4,6 +4,7 @@ import { CalendarProvider, useCalendarContext } from './calendar-context/Calenda
 import { UserTimesheetProvider, useUserTimesheetContext } from './user-context/UserTimesheetContext';
 import { EntriesProvider, useEntriesContext } from './entries-context/EntriesContext';
 import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/TimesheetUIContext';
+import { WorkHoursProvider } from './work-hours-context/WorkHoursContext';
 import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTimesheetContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,6 +13,7 @@ export { useCalendarContext } from './calendar-context/CalendarContext';
 export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
 export { useEntriesContext } from './entries-context/EntriesContext';
 export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
+export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 
 // Custom event to trigger auto-save across components
 // Enhanced with debounce protection
@@ -87,11 +89,13 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
   return (
     <TimesheetUIProvider>
       <UserTimesheetProvider>
-        <CalendarProvider onBeforeDateChange={handleBeforeDateChange}>
-          <EntriesProvider userId={targetUserId}>
-            {children}
-          </EntriesProvider>
-        </CalendarProvider>
+        <WorkHoursProvider>
+          <CalendarProvider onBeforeDateChange={handleBeforeDateChange}>
+            <EntriesProvider userId={targetUserId}>
+              {children}
+            </EntriesProvider>
+          </CalendarProvider>
+        </WorkHoursProvider>
       </UserTimesheetProvider>
     </TimesheetUIProvider>
   );

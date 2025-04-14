@@ -1,3 +1,4 @@
+
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
@@ -23,6 +24,9 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
+  // We need a userId for the DraftProvider and work hours persistence
+  const userId = entries.length > 0 ? entries[0].userId : '';
+  
   const {
     startTime,
     endTime,
@@ -37,7 +41,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     date,
     workSchedule,
     interactive,
-    onCreateEntry
+    onCreateEntry,
+    userId
   });
   
   // Get the entries context for direct access to create/delete methods
@@ -72,9 +77,6 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       console.error("[TimeEntryManager] Cannot create entry - missing hours value");
     }
   };
-  
-  // We need a userId for the DraftProvider
-  const userId = entries.length > 0 ? entries[0].userId : '';
   
   return (
     <DraftProvider selectedDate={date} userId={userId}>

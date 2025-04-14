@@ -5,4 +5,5 @@ export * from './calendar-context';
 export * from './user-context';
 export * from './entries-context';
 export * from './ui-context';
+export * from './work-hours-context/WorkHoursContext';
 export * from './types';

@@ -16,6 +16,7 @@ interface UseTimeEntryStateProps {
   workSchedule?: WorkSchedule;
   interactive: boolean;
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
+  userId?: string;
 }
 
 // Maximum number of form handlers to pre-initialize
@@ -30,7 +31,8 @@ export const useTimeEntryState = ({
   date,
   workSchedule,
   interactive,
-  onCreateEntry
+  onCreateEntry,
+  userId = ''
 }: UseTimeEntryStateProps) => {
   // Track when interactive flag changes
   useEffect(() => {
@@ -113,7 +115,9 @@ export const useTimeEntryState = ({
     initialStartTime,
     initialEndTime,
     formHandlers,
-    interactive
+    interactive,
+    date,
+    userId
   });
 
   // Handle form state (showing/hiding, adding/removing forms)
