@@ -1,6 +1,6 @@
 
 import { useCallback, useRef, useEffect } from "react";
-import { UseTimeEntryFormReturn } from "@/hooks/timesheet/useTimeEntryForm";
+import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -66,7 +66,7 @@ export const useTimeEntryFormHandling = ({
     // Don't submit empty entries (except hours)
     if (!entry.hours && !entry.description && !entry.jobNumber && !entry.rego && !entry.taskNumber) {
       console.debug("[useTimeEntryFormHandling] Skipping empty entry submission");
-      toast.toast({
+      toast({
         title: "Cannot save empty entry",
         description: "Please add some details to your entry before saving",
         variant: "destructive"
@@ -81,7 +81,7 @@ export const useTimeEntryFormHandling = ({
       onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, entry.hours);
       
       // Toast notification for user feedback
-      toast.toast({
+      toast({
         title: "Entry created",
         description: `Added ${entry.hours} hours to your timesheet`,
       });
@@ -108,7 +108,7 @@ export const useTimeEntryFormHandling = ({
     
     if (index < 0 || index >= formHandlers.length) {
       console.error(`[useTimeEntryFormHandling] Invalid index: ${index}`);
-      toast.toast({
+      toast({
         title: "Error",
         description: "Could not save entry due to an invalid form reference",
         variant: "destructive"
@@ -130,7 +130,7 @@ export const useTimeEntryFormHandling = ({
                          
     if (!hasContent) {
       console.debug("[useTimeEntryFormHandling] Preventing save of empty form");
-      toast.toast({
+      toast({
         title: "Cannot save empty entry",
         description: "Please add some details to your entry before saving",
         variant: "warning"
@@ -195,7 +195,7 @@ export const useTimeEntryFormHandling = ({
       return changesSaved;
     } catch (error) {
       console.error("[useTimeEntryFormHandling] Error saving changes:", error);
-      toast.toast({
+      toast({
         title: "Error saving changes",
         description: "Some changes could not be saved. Please try again.",
         variant: "destructive"
