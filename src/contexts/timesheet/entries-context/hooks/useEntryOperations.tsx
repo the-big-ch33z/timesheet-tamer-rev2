@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
@@ -9,7 +9,6 @@ import { ensureDate } from "@/utils/time/validation";
  * Hook that provides operations for manipulating time entries
  */
 export const useEntryOperations = (
-  entries: TimeEntry[],
   setEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>
 ) => {
   const { toast } = useToast();
@@ -111,11 +110,35 @@ export const useEntryOperations = (
       
       return filteredEntries;
     });
+    
+    return true;
   }, [setEntries, toast]);
+
+  // Create a new entry with validation
+  const createEntry = useCallback((entryData: Omit<TimeEntry, "id">): string | null => {
+    console.debug("[TimeEntryProvider] Creating new entry with data:", entryData);
+    
+    // Validate the entry data
+    if (!entryData.userId) {
+      console.error("[TimeEntryProvider] Missing userId in entry data:", entryData);
+      toast({
+        title: "Error creating entry",
+        description: "Missing user information for the entry",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
+    // Add the entry
+    const newId = uuidv4();
+    addEntry({ ...entryData, id: newId });
+    return newId;
+  }, [addEntry, toast]);
 
   return {
     addEntry,
     updateEntry,
-    deleteEntry
+    deleteEntry,
+    createEntry
   };
 };

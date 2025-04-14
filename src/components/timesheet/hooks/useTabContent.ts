@@ -1,44 +1,65 @@
 
 import { useMemo } from 'react';
-import { TimeEntry, WorkSchedule, User } from "@/types";
-import { isSameMonth, parseISO } from 'date-fns';
-import { ensureDate, formatDateForComparison } from '@/utils/time/validation';
+import { TimeEntry, User, WorkSchedule } from '@/types';
+import { isAfter } from 'date-fns';
+import { calculateAdjustedFortnightHours } from '@/utils/time/calculations';
 
-export interface TabContentProps {
+interface UseTabContentProps {
   entries: TimeEntry[];
   currentMonth: Date;
-  user?: User;
   workSchedule?: WorkSchedule;
+  user?: User;
 }
 
-export const useTabContent = ({ entries, currentMonth }: TabContentProps) => {
-  // Memoize sorted entries to prevent unnecessary sorting on each render
-  const sortedEntries = useMemo(() => 
-    [...entries].sort((a, b) => {
-      const dateA = ensureDate(a.date) || new Date();
-      const dateB = ensureDate(b.date) || new Date();
-      return dateB.getTime() - dateA.getTime();
-    })
-  , [entries]);
-  
-  // Filter entries for the current month with improved date handling
-  const currentMonthEntries = useMemo(() => 
-    entries.filter(entry => {
-      const entryDate = ensureDate(entry.date);
-      if (!entryDate) {
-        console.warn(`[useTabContent] Invalid date found in entry, skipping:`, entry);
-        return false;
-      }
+export const useTabContent = ({
+  entries,
+  currentMonth,
+  workSchedule,
+  user
+}: UseTabContentProps) => {
+  // Sort entries for the Recent tab - most recent first
+  const sortedEntries = useMemo(() => {
+    const entriesToSort = [...entries];
+    
+    // Sort by date, most recent first
+    return entriesToSort.sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+      const dateB = b.date instanceof Date ? b.date : new Date(b.date);
       
-      return isSameMonth(entryDate, currentMonth);
-    })
-  , [entries, currentMonth]);
+      // Most recent first
+      return isAfter(dateA, dateB) ? -1 : 1;
+    });
+  }, [entries]);
   
-  // Log entries count for debugging
-  console.debug(`[useTabContent] Filtered ${currentMonthEntries.length} entries for ${formatDateForComparison(currentMonth)}`);
+  // Calculate monthly hours - this is just for reference, not being modified
+  const monthlyHours = useMemo(() => {
+    // Filter entries for the current month
+    const monthEntries = entries.filter(entry => {
+      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+      return entryDate.getMonth() === currentMonth.getMonth() && 
+             entryDate.getFullYear() === currentMonth.getFullYear();
+    });
+    
+    // Calculate total hours
+    const totalHours = monthEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+    
+    // Calculate target hours if we have the necessary data
+    let targetHours = 0;
+    if (user && workSchedule) {
+      const fte = user.fte || 1;
+      const fortnightHours = user.fortnightHours || calculateAdjustedFortnightHours(workSchedule, fte);
+      targetHours = (fortnightHours * 2.17); // Approximation for month
+    }
+    
+    return {
+      total: totalHours,
+      target: targetHours,
+      variance: totalHours - targetHours
+    };
+  }, [entries, currentMonth, user, workSchedule]);
   
   return {
     sortedEntries,
-    currentMonthEntries
+    monthlyHours
   };
 };
