@@ -55,6 +55,11 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   // Handler for creating a new entry from the wizard
   const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
     console.debug("[TimeEntryManager] Creating entry from wizard", entry);
+    console.debug("[TimeEntryManager] Current work hours BEFORE entry creation:", { startTime, endTime });
+    
+    // Store the current times to preserve after entry creation
+    const currentStartTime = startTime;
+    const currentEndTime = endTime;
     
     // Do NOT set default time values - only use what's provided or already set
     const completeEntry = {
@@ -62,8 +67,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       userId: entry.userId || userId, // Ensure we have a userId
       date: date,
       // Only use startTime/endTime if they exist, don't set defaults
-      startTime: entry.startTime || startTime,
-      endTime: entry.endTime || endTime
+      startTime: entry.startTime || currentStartTime,
+      endTime: entry.endTime || currentEndTime
     };
     
     console.debug("[TimeEntryManager] Complete entry data:", completeEntry);
@@ -82,6 +87,11 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     } else {
       console.error("[TimeEntryManager] Cannot create entry - missing hours value");
     }
+    
+    // Log work hours after entry creation
+    setTimeout(() => {
+      console.debug("[TimeEntryManager] Work hours AFTER entry creation:", { startTime, endTime });
+    }, 100);
   };
   
   return (

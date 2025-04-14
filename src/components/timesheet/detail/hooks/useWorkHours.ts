@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +41,10 @@ export const useWorkHours = ({
   // Track if we've already initialized the times for this date/user
   const initializedRef = useRef(false);
   
+  // Keep a reference to the last applied times for this date
+  // This helps prevent losing times during component re-renders
+  const lastAppliedTimesRef = useRef<{[key: string]: {startTime: string, endTime: string}}>({});
+  
   // Memoized date string for dependency comparison
   const dateString = date ? date.toISOString().split('T')[0] : '';
   
@@ -56,12 +59,16 @@ export const useWorkHours = ({
     }
     
     // Skip this effect if we've already initialized for this date/user
-    // This prevents the values from being reset when other state changes
-    if (initializedRef.current && userId && date) {
-      console.log("[useWorkHours] Already initialized for this date/user, skipping");
+    // and we have times in the lastAppliedTimesRef
+    const cacheKey = `${userId}-${dateString}`;
+    if (initializedRef.current && userId && date && lastAppliedTimesRef.current[cacheKey]) {
+      console.log("[useWorkHours] Already initialized for this date/user, using cached times:", lastAppliedTimesRef.current[cacheKey]);
+      const cachedTimes = lastAppliedTimesRef.current[cacheKey];
+      setStartTime(cachedTimes.startTime);
+      setEndTime(cachedTimes.endTime);
       return;
     }
-    
+
     if (!userId || !date) {
       console.log("[useWorkHours] No userId or date, using empty values");
       setStartTime("");
@@ -76,12 +83,24 @@ export const useWorkHours = ({
       
       setStartTime(savedHours.startTime || "");
       setEndTime(savedHours.endTime || "");
+      
+      // Cache the times we just applied
+      lastAppliedTimesRef.current[cacheKey] = {
+        startTime: savedHours.startTime || "",
+        endTime: savedHours.endTime || ""
+      };
     } 
     // No custom hours - always use empty values
     else {
       console.log(`[useWorkHours] No custom hours found, using empty values by default`);
       setStartTime("");
       setEndTime("");
+      
+      // Cache the empty times
+      lastAppliedTimesRef.current[cacheKey] = {
+        startTime: "",
+        endTime: ""
+      };
     }
     
     // Mark as initialized for this date/user combination
@@ -140,7 +159,6 @@ export const useWorkHours = ({
       }
       
       // Save the updated times - only if userId and date are provided
-      // This is the key fix - ensure we're checking for userId and date
       if (userId && date) {
         console.log(`[useWorkHours] Saving work hours for ${userId} on ${dateString}`);
         
@@ -152,6 +170,13 @@ export const useWorkHours = ({
         
         console.log(`[useWorkHours] Saving times: ${timeToSave.startTime} - ${timeToSave.endTime}`);
         saveWorkHours(date, userId, timeToSave.startTime, timeToSave.endTime);
+        
+        // Update our cache so we can restore these values if needed
+        const cacheKey = `${userId}-${dateString}`;
+        lastAppliedTimesRef.current[cacheKey] = {
+          startTime: timeToSave.startTime,
+          endTime: timeToSave.endTime
+        };
       } else {
         console.warn(`[useWorkHours] Cannot save work hours - missing userId (${userId}) or date (${date})`);
       }
@@ -190,11 +215,20 @@ export const useWorkHours = ({
           }
         });
       }
+      
+      // Update our cache with the latest times
+      if (userId && date) {
+        const cacheKey = `${userId}-${dateString}`;
+        lastAppliedTimesRef.current[cacheKey] = {
+          startTime,
+          endTime
+        };
+      }
     } else {
       // If either time is not set, calculated hours is 0
       setCalculatedHours(0);
     }
-  }, [startTime, endTime, formHandlers, interactive]);
+  }, [startTime, endTime, formHandlers, interactive, userId, date, dateString]);
 
   return {
     startTime,

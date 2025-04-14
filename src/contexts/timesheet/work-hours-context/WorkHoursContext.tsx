@@ -84,7 +84,9 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   const hasCustomWorkHours = useCallback((date: Date, userId: string): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
-    return workHoursMap.has(key) && workHoursMap.get(key)?.isCustom === true;
+    const hasHours = workHoursMap.has(key) && workHoursMap.get(key)?.isCustom === true;
+    console.debug(`[WorkHoursContext] Checking for custom hours for ${dateString}, userId: ${userId}, result: ${hasHours}`);
+    return hasHours;
   }, [workHoursMap]);
   
   // Get work hours for a specific date and user
@@ -147,6 +149,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       });
       return newMap;
     });
+    
+    console.debug(`[WorkHoursContext] Successfully saved work hours for ${dateString}`);
   }, []);
   
   // Reset work hours for a specific day to default/schedule
