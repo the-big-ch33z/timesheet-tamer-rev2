@@ -1,7 +1,7 @@
 
-import { TimeEntry, WorkSchedule, User } from "@/types";
+import { TimeEntry, User, WorkSchedule } from "@/types";
 
-// Calendar Context Types
+// Calendar context types
 export interface CalendarContextType {
   currentMonth: Date;
   selectedDay: Date | null;
@@ -11,26 +11,28 @@ export interface CalendarContextType {
   setSelectedDay: (day: Date | null) => void;
 }
 
-// User Timesheet Context Types
+// User timesheet context types
 export interface UserTimesheetContextType {
   viewedUser: User | null;
-  workSchedule?: WorkSchedule;
-  isViewingOtherUser: boolean;
   canViewTimesheet: boolean;
   canEditTimesheet: boolean;
+  isViewingOtherUser: boolean;
+  workSchedule: WorkSchedule | undefined;
 }
 
-// Entries Context Types
+// Entries context types
 export interface EntriesContextType {
   entries: TimeEntry[];
   getUserEntries: (userId?: string) => TimeEntry[];
-  getDayEntries: (day: Date, userId?: string) => TimeEntry[];
-  createEntry: (entryData: Omit<TimeEntry, "id">) => void;
-  deleteEntry: (entryId: string) => void;
+  getDayEntries: (date: Date, userId?: string) => TimeEntry[];
+  createEntry: (entryData: Omit<TimeEntry, "id">) => string | null;
+  deleteEntry: (entryId: string) => boolean;
 }
 
-// Timesheet UI Context Types
+// UI context types
 export interface TimesheetUIContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  showHelpPanel: boolean;
+  setShowHelpPanel: (show: boolean) => void;
 }

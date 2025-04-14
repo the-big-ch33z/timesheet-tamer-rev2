@@ -1,70 +1,44 @@
+
 import { useEffect, useRef } from 'react';
 
 /**
- * Hook to handle auto-saving functionality with debounce
+ * Hook to automatically save form data after changes
  */
 export const useAutoSave = (
   autoSave: boolean,
   formEdited: boolean,
-  hasContent: boolean,
+  isValid: boolean,
   disabled: boolean,
   isSubmitting: boolean,
-  handleSave: () => void
+  handleSave: () => void,
+  delay: number = 3000
 ) => {
-  // Keep track of the timeout
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Track whether field is currently being edited to delay auto-save
-  const lastEditTimeRef = useRef<number>(0);
-  
-  // Auto-save effect for inline forms
   useEffect(() => {
-    // Only proceed if auto-save is enabled and we have edits with content
-    if (autoSave && formEdited && hasContent && !disabled && !isSubmitting) {
-      console.debug("[useAutoSave] Form has edits and content, setting up auto-save timer");
-      
-      // Clear any existing timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      // Calculate appropriate delay based on last edit time
-      const now = Date.now();
-      const timeSinceLastEdit = now - lastEditTimeRef.current;
-      const delay = Math.min(Math.max(2000 - timeSinceLastEdit, 800), 2000);
-      lastEditTimeRef.current = now;
-      
-      // Set new timeout with appropriate delay
-      timeoutRef.current = setTimeout(() => {
-        console.debug("[useAutoSave] Auto-save timer triggered, saving form");
-        handleSave();
-      }, delay);
-      
-      return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-      };
-    } else {
-      console.debug("[useAutoSave] Auto-save conditions not met, no timer set", {
-        autoSave, formEdited, hasContent, disabled, isSubmitting
-      });
+    // Clear any existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
     }
-  }, [autoSave, formEdited, hasContent, disabled, isSubmitting, handleSave]);
-  
-  // Update last edit time whenever formEdited changes to true
-  useEffect(() => {
-    if (formEdited) {
-      lastEditTimeRef.current = Date.now();
-    }
-  }, [formEdited]);
-  
-  // Cleanup on unmount
-  useEffect(() => {
+    
+    // If auto-save is not enabled, conditions aren't met, or we're currently submitting, do nothing
+    if (!autoSave || !formEdited || !isValid || disabled || isSubmitting) return;
+    
+    console.debug("[useAutoSave] Setting up auto-save timer");
+    
+    // Set up new timer
+    autoSaveTimerRef.current = setTimeout(() => {
+      console.debug("[useAutoSave] Auto-saving form data");
+      handleSave();
+    }, delay);
+    
+    // Clean up timer on unmount
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (autoSaveTimerRef.current) {
+        console.debug("[useAutoSave] Clearing auto-save timer on cleanup");
+        clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, []);
+  }, [autoSave, formEdited, isValid, disabled, isSubmitting, handleSave, delay]);
 };

@@ -1,9 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormsList from "../components/EntryFormsList";
 import { Button } from "@/components/ui/button";
 import { Plus, Save } from "lucide-react";
+import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface TimeEntryFormManagerProps {
   formHandlers: UseTimeEntryFormReturn[];
@@ -31,6 +33,30 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   key
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  // Listen for global save events (when changing dates or navigating away)
+  useEffect(() => {
+    if (!interactive) return;
+    
+    const handleBeforeUnload = () => {
+      console.debug("[TimeEntryFormManager] Page navigation detected, auto-saving");
+      saveAllPendingChanges();
+    };
+    
+    const handleGlobalSaveEvent = () => {
+      console.debug("[TimeEntryFormManager] Global save event received");
+      saveAllPendingChanges();
+    };
+    
+    window.addEventListener('timesheet:save-pending-changes', handleGlobalSaveEvent);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('timesheet:save-pending-changes', handleGlobalSaveEvent);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [interactive, saveAllPendingChanges]);
 
   if (!interactive) return null;
   
@@ -40,6 +66,12 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
     setIsSaving(true);
     try {
       const saved = saveAllPendingChanges();
+      if (saved) {
+        toast({
+          title: "Changes saved",
+          description: "All time entries have been saved"
+        });
+      }
       console.debug("[TimeEntryFormManager] Save All completed, entries saved:", saved);
     } finally {
       // Reset saving state after a short delay to show feedback
