@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useTimeEntryStats } from "./useTimeEntryStats";
 import { useTimeEntryFormHandling } from "./useTimeEntryFormHandling";
 import { useTimeEntryInitialValues } from "./useTimeEntryInitialValues";
+import { v4 as uuidv4 } from 'uuid';
 
 interface UseTimeEntryStateProps {
   entries: TimeEntry[];
@@ -43,11 +44,19 @@ export const useTimeEntryState = ({
     workSchedule
   });
   
+  // Helper function to create a mock entry with ID for type compatibility
+  const createMockEntry = useCallback((entry: Omit<TimeEntry, "id">): TimeEntry => {
+    return {
+      ...entry,
+      id: `temp-${uuidv4()}` // Create a temporary ID
+    };
+  }, []);
+  
   // Pre-initialize a fixed number of form handlers upfront
   // This avoids calling hooks dynamically or conditionally
   const formHandler1 = useTimeEntryForm({
     selectedDate: date,
-    onSave: (entry) => handleEntrySubmission(entry, 0),
+    onSave: (entry) => handleEntrySubmission(createMockEntry(entry), 0),
     autoSave: false,
     autoCalculateHours: true,
     disabled: !interactive
@@ -55,7 +64,7 @@ export const useTimeEntryState = ({
   
   const formHandler2 = useTimeEntryForm({
     selectedDate: date,
-    onSave: (entry) => handleEntrySubmission(entry, 1),
+    onSave: (entry) => handleEntrySubmission(createMockEntry(entry), 1),
     autoSave: false,
     autoCalculateHours: true,
     disabled: !interactive
@@ -63,7 +72,7 @@ export const useTimeEntryState = ({
   
   const formHandler3 = useTimeEntryForm({
     selectedDate: date,
-    onSave: (entry) => handleEntrySubmission(entry, 2),
+    onSave: (entry) => handleEntrySubmission(createMockEntry(entry), 2),
     autoSave: false,
     autoCalculateHours: true,
     disabled: !interactive
@@ -71,7 +80,7 @@ export const useTimeEntryState = ({
   
   const formHandler4 = useTimeEntryForm({
     selectedDate: date,
-    onSave: (entry) => handleEntrySubmission(entry, 3),
+    onSave: (entry) => handleEntrySubmission(createMockEntry(entry), 3),
     autoSave: false,
     autoCalculateHours: true,
     disabled: !interactive
@@ -79,7 +88,7 @@ export const useTimeEntryState = ({
   
   const formHandler5 = useTimeEntryForm({
     selectedDate: date,
-    onSave: (entry) => handleEntrySubmission(entry, 4),
+    onSave: (entry) => handleEntrySubmission(createMockEntry(entry), 4),
     autoSave: false,
     autoCalculateHours: true,
     disabled: !interactive
