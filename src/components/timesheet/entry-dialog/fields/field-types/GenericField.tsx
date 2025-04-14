@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import EntryField from "../EntryField";
 import { EntryFieldType } from "../EntryField";
 
@@ -30,15 +30,31 @@ const GenericField: React.FC<GenericFieldProps> = ({
   showLabel = true,
   className = "",
 }) => {
-  // Add console log to track disabled state
-  console.debug(`[GenericField] Rendering field '${name}' with disabled=${disabled}`);
+  // Enhanced logging to track field lifecycle and props
+  console.debug(`[GenericField] Rendering field '${name}' (id: ${id}):`, {
+    value,
+    disabled,
+    type,
+  });
   
+  // Monitor value changes
+  useEffect(() => {
+    console.debug(`[GenericField] Value updated for '${name}':`, value);
+  }, [value, name]);
+  
+  // Enhanced onChange handler with detailed logging
+  const handleChange = (newValue: string) => {
+    console.debug(`[GenericField] '${name}' onChange triggered with value: '${newValue}'`);
+    onChange(newValue);
+    console.debug(`[GenericField] '${name}' onChange callback completed`);
+  };
+
   return (
     <EntryField
       id={id}
       name={name}
       value={value}
-      onChange={onChange}
+      onChange={handleChange}
       placeholder={placeholder}
       required={required}
       inline={inline}

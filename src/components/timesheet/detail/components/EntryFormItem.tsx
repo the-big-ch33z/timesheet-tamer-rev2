@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import InlineEntryForm from "../../entry-dialog/form/InlineEntryForm";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
@@ -21,17 +21,80 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   entryId,
   disabled = false
 }) => {
-  // Add console log to track disabled state and form state
-  console.debug(`[EntryFormItem] Rendering with disabled=${disabled}, entryId=${entryId}`);
-  console.debug(`[EntryFormItem] Form state:`, formState);
+  // Enhanced logging for component rendering
+  console.debug(`[EntryFormItem] Rendering form item for entryId=${entryId}`, {
+    disabled,
+    formEdited: formState.formEdited,
+    hours: formState.hours,
+    description: formState.description ? 
+      `${formState.description.substring(0, 20)}${formState.description.length > 20 ? '...' : ''}` : '',
+    jobNumber: formState.jobNumber,
+    rego: formState.rego,
+    taskNumber: formState.taskNumber
+  });
+  
+  // Track when disabled prop changes
+  useEffect(() => {
+    console.debug(`[EntryFormItem] Disabled state changed for entry ${entryId}: ${disabled}`);
+  }, [disabled, entryId]);
+  
+  // Track when form edited state changes
+  useEffect(() => {
+    console.debug(`[EntryFormItem] Form edited state changed for entry ${entryId}: ${formState.formEdited}`);
+  }, [formState.formEdited, entryId]);
 
+  // Enhanced field change handler with detailed logging
   const onFieldChange = (field: string, value: string) => {
-    console.debug(`[EntryFormItem] Field change: ${field} = ${value}`);
+    console.debug(`[EntryFormItem] Field change for entry ${entryId}: ${field}=${value}`, {
+      disabled,
+      currentValue: (formState as any)[field]
+    });
+    
+    if (disabled) {
+      console.warn(`[EntryFormItem] Ignoring field change because form is disabled: ${entryId}`);
+      return;
+    }
+    
     handleFieldChange(field, value);
+    console.debug(`[EntryFormItem] Field change handler executed for ${entryId}`);
+  };
+  
+  // Enhanced save handler
+  const onSave = () => {
+    console.debug(`[EntryFormItem] Save clicked for entry ${entryId}`, {
+      disabled, 
+      canSave: !disabled && formState.formEdited
+    });
+    
+    if (disabled) {
+      console.warn(`[EntryFormItem] Save prevented - form is disabled: ${entryId}`);
+      return;
+    }
+    
+    if (!formState.formEdited) {
+      console.warn(`[EntryFormItem] Save skipped - no changes: ${entryId}`);
+      return;
+    }
+    
+    handleSave();
+  };
+  
+  // Enhanced delete handler
+  const handleDelete = () => {
+    console.debug(`[EntryFormItem] Delete clicked for entry ${entryId}`, { disabled });
+    
+    if (disabled) {
+      console.warn(`[EntryFormItem] Delete prevented - form is disabled: ${entryId}`);
+      return;
+    }
+    
+    onDelete();
   };
 
   return (
-    <div className="bg-white rounded-md shadow p-3 border border-gray-200">
+    <div className="bg-white rounded-md shadow p-3 border border-gray-200" 
+         data-entry-id={entryId}
+         data-disabled={disabled ? 'true' : 'false'}>
       <InlineEntryForm 
         visibleFields={[
           { id: "job", name: "Job Number", type: "text", required: false, visible: true },
@@ -42,18 +105,19 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
         ]}
         formValues={formState}
         onFieldChange={onFieldChange}
-        onDelete={onDelete}
+        onDelete={handleDelete}
         entryId={entryId}
         disabled={disabled}
       />
       <div className="flex justify-end mt-2">
         <Button 
           size="sm" 
-          onClick={handleSave}
+          onClick={onSave}
           className="bg-green-500 hover:bg-green-600 text-white"
-          disabled={disabled || !formState.formEdited} // Only enable save when form has been edited
+          disabled={disabled || !formState.formEdited}
+          data-testid={`save-button-${entryId}`}
         >
-          Save Entry {disabled ? '(Disabled)' : ''}
+          Save Entry{disabled ? ' (Disabled)' : ''}
         </Button>
       </div>
     </div>

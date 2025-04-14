@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -42,12 +42,37 @@ const EntryField: React.FC<EntryFieldProps> = ({
   disabled = false,
   showLabel = true,
 }) => {
-  // Add console log to track disabled state
-  console.debug(`[EntryField] Rendering field '${name}' (id: ${id}) with disabled=${disabled}, value='${value}'`);
+  // Enhanced logging when component renders
+  console.debug(`[EntryField] Rendering field '${name}' (id: ${id}):`, {
+    value: value,
+    disabled: disabled,
+    type: type,
+  });
 
+  // Log when value changes from props
+  useEffect(() => {
+    console.debug(`[EntryField] Value updated for '${name}' (id: ${id}):`, value);
+  }, [value, id, name]);
+
+  // Enhanced change handler with more detailed logging
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    console.debug(`[EntryField] '${name}' value changed to: '${e.target.value}'`);
-    onChange(e.target.value);
+    const newValue = e.target.value;
+    console.debug(`[EntryField] '${name}' value changing from '${value}' to '${newValue}'`);
+    
+    // Call the provided onChange function
+    onChange(newValue);
+    
+    // Verify the event was processed
+    console.debug(`[EntryField] '${name}' onChange event dispatched`);
+  };
+
+  // Enhanced blur handler with logging
+  const handleBlur = () => {
+    console.debug(`[EntryField] '${name}' blur event - final value: '${value}'`);
+    if (onBlur) {
+      onBlur();
+      console.debug(`[EntryField] '${name}' onBlur callback executed`);
+    }
   };
 
   return (
@@ -69,11 +94,13 @@ const EntryField: React.FC<EntryFieldProps> = ({
           id={id}
           value={value}
           onChange={handleChange}
-          onBlur={onBlur}
+          onBlur={handleBlur}
           placeholder={placeholder}
           className={className}
           disabled={disabled}
           required={required}
+          data-field-name={name}
+          data-testid={`textarea-${id}`}
         />
       ) : (
         <Input
@@ -81,7 +108,7 @@ const EntryField: React.FC<EntryFieldProps> = ({
           type={type}
           value={value}
           onChange={handleChange}
-          onBlur={onBlur}
+          onBlur={handleBlur}
           placeholder={placeholder}
           className={className}
           min={min}
@@ -89,6 +116,8 @@ const EntryField: React.FC<EntryFieldProps> = ({
           step={step}
           disabled={disabled}
           required={required}
+          data-field-name={name}
+          data-testid={`input-${id}`}
         />
       )}
     </div>

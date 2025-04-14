@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { EntryFieldConfig } from "@/types";
 import CustomFields from "../fields/CustomFields";
 import { Button } from "@/components/ui/button";
@@ -28,18 +28,43 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
   entryId,
   disabled = false
 }) => {
-  // Add console log to track disabled state
-  console.debug(`[InlineEntryForm] Rendering form with disabled=${disabled}, entryId=${entryId || 'new'}`);
-  console.debug(`[InlineEntryForm] Form values:`, formValues);
+  // Enhanced logging with full form values
+  console.debug(`[InlineEntryForm] Rendering form with ID: ${entryId || 'new'}`, {
+    disabled,
+    formValues,
+    fieldsCount: visibleFields.length
+  });
+  
+  // Track form values changes
+  useEffect(() => {
+    console.debug(`[InlineEntryForm] Form values updated for ID: ${entryId || 'new'}`, {
+      hours: formValues.hours,
+      description: formValues.description ? 
+        `${formValues.description.substring(0, 20)}${formValues.description.length > 20 ? '...' : ''}` : '',
+      jobNumber: formValues.jobNumber,
+      rego: formValues.rego,
+      taskNumber: formValues.taskNumber
+    });
+  }, [formValues, entryId]);
 
-  // Function to handle each field change
+  // Function to handle each field change with enhanced logging
   const handleChange = (field: string, value: string) => {
-    console.debug(`[InlineEntryForm] Field changed: ${field} = ${value}`);
+    console.debug(`[InlineEntryForm] Field '${field}' changing for ID: ${entryId || 'new'}`, {
+      from: (formValues as any)[field],
+      to: value
+    });
+    
+    // Call the provided change handler
     onFieldChange(field, value);
+    
+    // Log after handler called
+    console.debug(`[InlineEntryForm] Field '${field}' onChange handler called`);
   };
 
   return (
-    <div className={`flex items-center gap-2 bg-white border rounded-md p-2 ${disabled ? 'opacity-75' : ''}`}>
+    <div className={`flex items-center gap-2 bg-white border rounded-md p-2 ${disabled ? 'opacity-75' : ''}`}
+         data-entry-id={entryId || 'new'}
+         data-disabled={disabled ? 'true' : 'false'}>
       <CustomFields
         visibleFields={visibleFields}
         jobNumber={formValues.jobNumber}
@@ -61,7 +86,10 @@ const InlineEntryForm: React.FC<InlineEntryFormProps> = ({
           type="button" 
           variant="ghost" 
           size="icon"
-          onClick={onDelete}
+          onClick={() => {
+            console.debug(`[InlineEntryForm] Delete button clicked for ID: ${entryId}`);
+            onDelete();
+          }}
           className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
           disabled={disabled}
         >

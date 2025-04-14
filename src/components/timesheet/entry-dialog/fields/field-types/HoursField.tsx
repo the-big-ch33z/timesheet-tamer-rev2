@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import EntryField from "../EntryField";
 
 interface HoursFieldProps {
@@ -23,12 +23,41 @@ const HoursField: React.FC<HoursFieldProps> = ({
   showLabel = true,
   className = "",
 }) => {
+  // Add specific logging for HoursField
+  console.debug(`[HoursField] Rendering hours field (id: ${id}):`, {
+    value,
+    disabled,
+    required
+  });
+  
+  // Track value changes
+  useEffect(() => {
+    console.debug(`[HoursField] Hours value updated:`, value);
+  }, [value]);
+  
+  // Enhanced onChange handler with validation
+  const handleChange = (newValue: string) => {
+    console.debug(`[HoursField] Hours changing to: '${newValue}'`);
+    
+    // Basic validation for hours
+    const numValue = parseFloat(newValue);
+    if (newValue && !isNaN(numValue)) {
+      if (numValue < 0) {
+        console.warn(`[HoursField] Invalid negative hours value: ${numValue}`);
+      } else if (numValue > 24) {
+        console.warn(`[HoursField] Hours value exceeds maximum (24): ${numValue}`);
+      }
+    }
+    
+    onChange(newValue);
+  };
+
   return (
     <EntryField
       id={id}
       name="Hours"
       value={value}
-      onChange={onChange}
+      onChange={handleChange}
       placeholder="Hrs"
       required={required}
       inline={inline}
