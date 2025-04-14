@@ -1,18 +1,19 @@
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { format } from "date-fns";
+import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import TimeEntryFormManager from "./TimeEntryFormManager";
-import { useTimeEntryStats } from "../hooks/useTimeEntryStats";
-import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
-import { useEntryForms } from "../hooks/useEntryForms";
-import { useTimeEntryFormHandling } from "../hooks/useTimeEntryFormHandling";
-import { useWorkHours } from "../hooks/useWorkHours";
-import HoursStats from "../components/HoursStats";
-import TimeRangeDisplay from "../components/TimeRangeDisplay";
-import DateDisplay from "../components/DateDisplay";
+import TimeHeader from "../components/TimeHeader";
+import ExistingEntriesList from "../components/ExistingEntriesList";
+import { DraftProvider } from "@/contexts/timesheet/draft-context/DraftContext";
+import DraftEntryCard from "../components/DraftEntryCard";
+import NewEntryLauncher from "../components/NewEntryLauncher";
+import { createTimeLogger } from "@/utils/time/errors";
+import { useTimeEntries } from "@/hooks/timesheet/useTimeEntries";
+import { useWorkHours } from "@/hooks/timesheet/useWorkHours";
+import { useTimeCalculations } from "@/hooks/timesheet/useTimeCalculations";
+import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
+import { useTimeEntryState } from "../hooks/useTimeEntryState";
 
-const MAX_FORM_HANDLERS = 5; // Maximum number of form handlers to create
+const logger = createTimeLogger('TimeEntryManager');
 
 interface TimeEntryManagerProps {
   entries: TimeEntry[];
@@ -22,11 +23,6 @@ interface TimeEntryManagerProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
-// Create placeholder for userId if not available
-const getCurrentUserId = () => {
-  return window.localStorage.getItem("currentUserId") || "default-user";
-};
-
 const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   entries,
   date,
@@ -34,120 +30,143 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  const userId = useMemo(() => 
-    entries.length > 0 ? entries[0].userId : getCurrentUserId(), 
-    [entries]
-  );
+  const currentUserId = window.localStorage.getItem('currentUserId') || 'default-user';
+  const userId = entries.length > 0 ? entries[0].userId : currentUserId;
   
-  // Get work hours
-  const { 
+  logger.debug(`Using userId: ${userId} for date: ${date}`);
+  
+  // Use our standardized hooks
+  const workHours = useWorkHours(userId);
+  const { calculateHours } = useTimeCalculations();
+  const timeEntries = useTimeEntries(userId, date);
+  
+  const {
     startTime,
     endTime,
     calculatedHours,
-    updateWorkHours 
-  } = useWorkHours({ 
-    entries, 
-    date, 
-    workSchedule 
-  });
-
-  // Initialize form handlers array
-  const formHandlers = useMemo(() => {
-    console.debug("[TimeEntryManager] Initializing form handlers array");
-    return Array(MAX_FORM_HANDLERS).fill(null).map((_, index) => {
-      return useTimeEntryForm({
-        formKey: `new-entry-${index}`,
-        selectedDate: date,
-        userId: userId,
-        onSave: (data) => {
-          if (onCreateEntry) {
-            console.debug(`[TimeEntryManager] Saving form ${index} with data:`, data);
-            onCreateEntry(
-              data.startTime || startTime, 
-              data.endTime || endTime, 
-              parseFloat(data.hours.toString()) || calculatedHours
-            );
-          }
-        },
-        autoSave: false,
-        disabled: !interactive
-      });
-    });
-  }, [date, userId, onCreateEntry, startTime, endTime, calculatedHours, interactive]);
-
-  // Entry form visibility management
-  const {
-    showEntryForms,
-    addEntryForm,
-    removeEntryForm,
-    key: formKey,
-    refreshForms
-  } = useEntryForms({
-    formHandlers,
-    maxForms: MAX_FORM_HANDLERS
-  });
-
-  // Time entry form handling
-  const {
-    handleSaveEntry,
-    saveAllPendingChanges
-  } = useTimeEntryFormHandling({
-    formHandlers,
-    showEntryForms,
+    totalHours,
+    hasEntries,
+    hoursVariance,
+    isUndertime,
+    handleTimeChange,
+  } = useTimeEntryState({
+    entries,
+    date,
+    workSchedule,
     interactive,
     onCreateEntry,
-    startTime,
-    endTime,
-    calculatedHours,
-    refreshForms
-  });
-
-  // Stats for daily entries
-  const { totalHours, remainingHours, overHours } = useTimeEntryStats({
-    entries,
-    calculatedHours,
-    workSchedule
+    userId
   });
   
-  // Format date for display
-  const formattedDate = useMemo(() => format(date, "EEEE, MMMM d, yyyy"), [date]);
-
-  return (
-    <div className="bg-gray-50 p-6 rounded-lg">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-        <DateDisplay date={formattedDate} />
+  // Setup auto-save on component unmount
+  useEffect(() => {
+    return () => {
+      logger.debug("TimeEntryManager unmounting - ensuring work hours are saved");
+      if (startTime && endTime) {
+        workHours.saveWorkHoursForDate(date, startTime, endTime, userId);
+      }
+    };
+  }, [date, userId, startTime, endTime, workHours]);
+  
+  const handleCreateEntryFromWizard = (entry: Omit<TimeEntry, "id">) => {
+    logger.debug("Creating entry from wizard", entry);
+    
+    // Preserve current work hours state
+    const currentStartTime = startTime;
+    const currentEndTime = endTime;
+    
+    // Prepare complete entry with fallbacks to work hour times if not specified
+    const completeEntry = {
+      ...entry,
+      userId: entry.userId || userId,
+      date: date,
+      startTime: entry.startTime || currentStartTime,
+      endTime: entry.endTime || currentEndTime,
+      // Auto-calculate hours if missing but have start and end times
+      hours: entry.hours || (entry.startTime && entry.endTime ? 
+        calculateHours(entry.startTime, entry.endTime) : 
+        (currentStartTime && currentEndTime ? calculatedHours : 0))
+    };
+    
+    logger.debug("Complete entry data:", completeEntry);
+    
+    // Use the provided callback if available, otherwise use our hook method
+    if (onCreateEntry && completeEntry.hours && typeof completeEntry.hours === 'number') {
+      onCreateEntry(
+        completeEntry.startTime,
+        completeEntry.endTime,
+        completeEntry.hours
+      );
+    } else if (completeEntry.hours && typeof completeEntry.hours === 'number') {
+      logger.debug("Creating entry using hook method", completeEntry);
+      timeEntries.createEntry(completeEntry);
+    } else {
+      logger.error("Cannot create entry - missing hours value");
+      return;
+    }
+    
+    // Ensure work hours remain consistent after entry creation
+    if (currentStartTime && currentEndTime) {
+      setTimeout(() => {
+        workHours.saveWorkHoursForDate(date, currentStartTime, currentEndTime, userId);
+        logger.debug("Work hours preserved after entry creation:", { 
+          startTime: currentStartTime, 
+          endTime: currentEndTime 
+        });
         
-        <TimeRangeDisplay
+        // Trigger global save to ensure all changes persist
+        triggerGlobalSave();
+      }, 100);
+    }
+  };
+  
+  return (
+    <DraftProvider selectedDate={date} userId={userId}>
+      <div>
+        <TimeHeader 
+          date={date}
           startTime={startTime}
           endTime={endTime}
           calculatedHours={calculatedHours}
-          updateWorkHours={updateWorkHours}
+          totalHours={totalHours}
+          hasEntries={hasEntries}
+          hoursVariance={hoursVariance}
+          isUndertime={isUndertime}
+          onTimeChange={handleTimeChange}
           interactive={interactive}
         />
+        
+        <ExistingEntriesList 
+          entries={entries}
+          date={date}
+          interactive={interactive}
+        />
+        
+        {interactive && (
+          <div className="mt-4">
+            <DraftEntryCard 
+              date={date}
+              userId={userId}
+              onSubmitEntry={handleCreateEntryFromWizard}
+              initialValues={{
+                startTime,
+                endTime
+              }}
+            />
+            
+            <NewEntryLauncher 
+              date={date}
+              userId={userId}
+              onSubmit={handleCreateEntryFromWizard}
+              initialValues={{
+                startTime,
+                endTime
+              }}
+            />
+          </div>
+        )}
       </div>
-      
-      <HoursStats
-        totalHours={totalHours}
-        remainingHours={remainingHours}
-        overHours={overHours}
-      />
-
-      {/* Form manager component that handles entry forms */}
-      <TimeEntryFormManager
-        formHandlers={formHandlers}
-        interactive={interactive}
-        onCreateEntry={onCreateEntry || (() => {})}
-        startTime={startTime}
-        endTime={endTime}
-        calculatedHours={calculatedHours}
-        showEntryForms={showEntryForms}
-        addEntryForm={addEntryForm}
-        removeEntryForm={removeEntryForm}
-        handleSaveEntry={handleSaveEntry}
-        saveAllPendingChanges={saveAllPendingChanges}
-        key={formKey}
-      />
-    </div>
+    </DraftProvider>
   );
 };
 

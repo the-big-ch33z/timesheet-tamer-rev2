@@ -1,47 +1,38 @@
 
 import { TimeEntry } from "@/types";
 
-/**
- * State for the time entry form
- */
-export interface TimeEntryFormState {
-  hours: string;
-  description: string;
-  jobNumber: string;
-  rego: string;
-  taskNumber: string;
-  startTime: string;
-  endTime: string;
-  project: string;
-  formEdited: boolean;
-}
-
-/**
- * Props for the time entry form hook
- */
 export interface UseTimeEntryFormProps {
   initialData?: Partial<TimeEntry>;
-  formKey?: string;
-  onSave?: (formData: Omit<TimeEntry, "id">) => void;
-  selectedDate?: Date | null;
+  formKey?: string | number;
+  onSave?: (entry: Omit<TimeEntry, "id">) => void;
+  selectedDate: Date;
   userId?: string;
   autoSave?: boolean;
   disabled?: boolean;
   autoCalculateHours?: boolean;
 }
 
-/**
- * Return type of the time entry form hook
- */
+export interface TimeEntryFormState {
+  hours: string;
+  description: string;
+  jobNumber: string;
+  rego: string;
+  taskNumber: string;
+  userId?: string;
+  startTime: string;
+  endTime: string;
+  formEdited: boolean;
+}
+
 export interface UseTimeEntryFormReturn {
   formState: TimeEntryFormState;
-  handleFieldChange: (field: string, value: string | number) => void;
+  handleFieldChange: (field: string, value: string) => void;
   handleSave: () => void;
-  saveIfEdited: () => boolean;
+  saveIfEdited: () => boolean; // New method to check and save if needed
   getFormData: () => Omit<TimeEntry, "id">;
   resetFormEdited: () => void;
   resetForm: () => void;
   updateTimes: (startTime: string, endTime: string) => void;
-  setHoursFromTimes: () => void;
+  setHoursFromTimes: () => number;
   isSubmitting: boolean;
 }

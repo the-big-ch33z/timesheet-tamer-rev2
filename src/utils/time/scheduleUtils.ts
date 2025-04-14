@@ -1,89 +1,135 @@
 
-import { WorkSchedule } from "@/types";
-import { isSameDay, isSunday, isSaturday, format } from "date-fns";
-import { createTimeLogger } from "./errors";
-
-const logger = createTimeLogger('scheduleUtils');
-
 /**
- * Get the status of a day (workday, weekend, holiday)
+ * Schedule utility functions
+ * Functions for working with work schedules and calendar data
  */
-export const getDayStatus = (
-  day: Date, 
-  workSchedule?: WorkSchedule
-): 'workday' | 'weekend' | 'holiday' => {
-  // Check if it's a weekend
-  if (isSaturday(day) || isSunday(day)) {
-    return 'weekend';
-  }
-  
-  // Check if we have a work schedule
-  if (!workSchedule || !workSchedule.holidays) {
-    return 'workday';
-  }
-  
-  // Check if it's a holiday
-  const isHoliday = workSchedule.holidays.some(holiday => {
-    const holidayDate = new Date(holiday.date);
-    return isSameDay(day, holidayDate);
-  });
-  
-  return isHoliday ? 'holiday' : 'workday';
+import { WeekDay, WorkSchedule } from "@/types";
+import { getDaysInMonth, isWeekend } from "date-fns";
+
+// Helper function to get weekday from date
+export const getWeekDay = (date: Date): WeekDay => {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return days[date.getDay()] as WeekDay;
+};
+
+// Helper function to determine fortnight week (1 or 2)
+export const getFortnightWeek = (date: Date): 1 | 2 => {
+  const yearStart = new Date(date.getFullYear(), 0, 1);
+  const weeksSinceYearStart = Math.floor(
+    (date.getTime() - yearStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
+  );
+  return ((weeksSinceYearStart % 2) + 1) as 1 | 2;
 };
 
 /**
- * Gets the number of workdays in a month
- * Workdays are days that are not weekends or holidays
+ * Gets the number of workdays (Monday-Friday) in the given month
  */
-export const getWorkdaysInMonth = (month: Date): number => {
-  const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
-  const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+export function getWorkdaysInMonth(date: Date): number {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const daysInMonth = getDaysInMonth(new Date(year, month));
   
   let workdays = 0;
-  let currentDate = monthStart;
   
-  while (currentDate <= monthEnd) {
-    if (!isSaturday(currentDate) && !isSunday(currentDate)) {
+  for (let day = 1; day <= daysInMonth; day++) {
+    const currentDate = new Date(year, month, day);
+    // Count days that are not weekends
+    if (!isWeekend(currentDate)) {
       workdays++;
     }
-    currentDate.setDate(currentDate.getDate() + 1);
   }
   
   return workdays;
+}
+
+/**
+ * Get schedule information for the selected day
+ * @param date The date to check
+ * @param workSchedule Work schedule to check against
+ * @returns Schedule information for the day
+ */
+export const getDayScheduleInfo = (date: Date, workSchedule?: WorkSchedule) => {
+  if (!workSchedule) return null;
+  
+  const weekDay = getWeekDay(date);
+  const weekNum = getFortnightWeek(date);
+  
+  // Check if it's an RDO
+  const isRDO = workSchedule.rdoDays[weekNum].includes(weekDay);
+  
+  if (isRDO) {
+    return { 
+      isWorkingDay: false, 
+      isRDO: true, 
+      hours: null 
+    };
+  }
+  
+  // Get scheduled work hours for this day
+  const scheduledHours = workSchedule.weeks[weekNum][weekDay];
+  
+  return {
+    isWorkingDay: !!scheduledHours,
+    isRDO: false,
+    hours: scheduledHours
+  };
 };
 
 /**
- * Get the target hours for a workday based on work schedule
+ * Check if a day is a working day according to the schedule
+ * @param day The day to check
+ * @param workSchedule The work schedule
+ * @returns True if it's a working day
  */
-export const getWorkdayTargetHours = (
-  workSchedule: WorkSchedule
-): number => {
-  // Default values
-  if (!workSchedule) {
-    logger.debug("No work schedule provided, using default target hours");
-    return 7.6; // Default daily hours (approximation of 38 hours per week / 5 days)
+export const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean => {
+  if (!workSchedule) return true; // Default to working day if no schedule
+
+  const weekDay = getWeekDay(day);
+  const weekNum = getFortnightWeek(day);
+  
+  // Check if it's an RDO
+  if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
+    return false;
   }
   
-  // Try to get from standard hours in schedule
-  if (workSchedule.standardHours && workSchedule.standardHours.dailyHours) {
-    logger.debug(`Using standard daily hours from schedule: ${workSchedule.standardHours.dailyHours}`);
-    return workSchedule.standardHours.dailyHours;
-  }
+  // Check if there are work hours defined for this day
+  const hoursForDay = workSchedule.weeks[weekNum][weekDay];
+  return hoursForDay !== null;
+};
+
+/**
+ * Calculate total hours for a fortnight based on the work schedule
+ * @param workSchedule The work schedule
+ * @returns Total hours in the fortnight
+ */
+export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule): number => {
+  let totalHours = 0;
   
-  // Calculate from weekly or fortnightly
-  if (workSchedule.standardHours && workSchedule.standardHours.weeklyHours) {
-    const dailyFromWeekly = workSchedule.standardHours.weeklyHours / 5;
-    logger.debug(`Calculated daily hours from weekly: ${dailyFromWeekly}`);
-    return dailyFromWeekly;
-  }
+  // Process both weeks in the fortnight
+  [1, 2].forEach(weekNum => {
+    const weekNumKey = weekNum as 1 | 2;
+    const weekDays: WeekDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    // Calculate hours for each day of the week
+    weekDays.forEach(day => {
+      const daySchedule = workSchedule.weeks[weekNumKey][day];
+      
+      // Skip if no hours scheduled for this day or if it's an RDO
+      if (!daySchedule || workSchedule.rdoDays[weekNumKey].includes(day)) return;
+      
+      // Calculate hours based on start and end time
+      const startHour = parseInt(daySchedule.startTime.split(':')[0]);
+      const startMinute = parseInt(daySchedule.startTime.split(':')[1]);
+      
+      const endHour = parseInt(daySchedule.endTime.split(':')[0]);
+      const endMinute = parseInt(daySchedule.endTime.split(':')[1]);
+      
+      // Calculate total hours including partial hours
+      const hours = endHour - startHour + (endMinute - startMinute) / 60;
+      totalHours += hours;
+    });
+  });
   
-  if (workSchedule.standardHours && workSchedule.standardHours.fortnightlyHours) {
-    const dailyFromFortnightly = workSchedule.standardHours.fortnightlyHours / 10;
-    logger.debug(`Calculated daily hours from fortnightly: ${dailyFromFortnightly}`);
-    return dailyFromFortnightly;
-  }
-  
-  // If nothing else, return default
-  logger.debug("Could not determine target hours from schedule, using default");
-  return 7.6;
+  // Round to nearest 0.5
+  return Math.round(totalHours * 2) / 2;
 };

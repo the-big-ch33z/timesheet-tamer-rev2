@@ -1,14 +1,12 @@
 
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Save, Trash2 } from "lucide-react";
-import { TimeEntryFormState } from "@/hooks/timesheet/types/timeEntryTypes";
-import EntryField from "../../entry-dialog/fields/EntryField";
+import InlineEntryForm from "../../entry-dialog/form/InlineEntryForm";
+import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
 
 interface EntryFormItemProps {
   formState: TimeEntryFormState;
-  handleFieldChange: (field: string, value: string | number) => void;
+  handleFieldChange: (field: string, value: string) => void;
   handleSave: () => void;
   onDelete: () => void;
   entryId: string;
@@ -23,106 +21,150 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   entryId,
   disabled = false
 }) => {
-  // Helper function for type conversion
-  const handleNumberChange = (field: string, value: string) => {
-    const numberValue = value === '' ? '' : parseFloat(value) || 0;
-    handleFieldChange(field, numberValue);
+  const [isSaving, setIsSaving] = useState(false);
+  const [localFormState, setLocalFormState] = useState(formState);
+  
+  // Enhanced logging for component rendering
+  console.debug(`[EntryFormItem] Rendering form item for entryId=${entryId}`, {
+    disabled,
+    formEdited: formState.formEdited,
+    hours: formState.hours,
+    description: formState.description ? 
+      `${formState.description.substring(0, 20)}${formState.description.length > 20 ? '...' : ''}` : '',
+    jobNumber: formState.jobNumber,
+    rego: formState.rego,
+    taskNumber: formState.taskNumber
+  });
+  
+  // Update local state when formState changes
+  useEffect(() => {
+    setLocalFormState(formState);
+  }, [formState]);
+  
+  // Track when disabled prop changes
+  useEffect(() => {
+    console.debug(`[EntryFormItem] Disabled state changed for entry ${entryId}: ${disabled}`);
+  }, [disabled, entryId]);
+  
+  // Track when form edited state changes
+  useEffect(() => {
+    console.debug(`[EntryFormItem] Form edited state changed for entry ${entryId}: ${formState.formEdited}`);
+  }, [formState.formEdited, entryId]);
+
+  // Enhanced field change handler with detailed logging and local state management
+  const onFieldChange = (field: string, value: string) => {
+    console.debug(`[EntryFormItem] Field change for entry ${entryId}: ${field}=${value}`, {
+      disabled,
+      currentValue: (localFormState as any)[field]
+    });
+    
+    if (disabled) {
+      console.warn(`[EntryFormItem] Ignoring field change because form is disabled: ${entryId}`);
+      return;
+    }
+    
+    // Update local state first for immediate UI feedback
+    setLocalFormState(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Map field names to match expected state properties
+    let stateField = field;
+    
+    // Normalize field names to match state property names
+    if (field.toLowerCase() === 'job number' || field.toLowerCase() === 'job') {
+      stateField = 'jobNumber';
+    } else if (field.toLowerCase() === 'task number' || field.toLowerCase() === 'task') {
+      stateField = 'taskNumber';
+    } else if (field.toLowerCase() === 'notes') {
+      stateField = 'description';
+    }
+    
+    console.debug(`[EntryFormItem] Mapped field "${field}" to state property "${stateField}"`);
+    
+    // Then update parent state
+    handleFieldChange(stateField, value);
+    console.debug(`[EntryFormItem] Field change handler executed for ${entryId}`);
+  };
+  
+  // Enhanced save handler with loading state
+  const onSave = () => {
+    console.debug(`[EntryFormItem] Save clicked for entry ${entryId}`, {
+      disabled, 
+      canSave: !disabled && formState.formEdited
+    });
+    
+    if (disabled) {
+      console.warn(`[EntryFormItem] Save prevented - form is disabled: ${entryId}`);
+      return;
+    }
+    
+    if (!formState.formEdited) {
+      console.warn(`[EntryFormItem] Save skipped - no changes: ${entryId}`);
+      return;
+    }
+    
+    setIsSaving(true);
+    handleSave();
+    
+    // Reset saving state after a short delay to show feedback
+    setTimeout(() => setIsSaving(false), 500);
+  };
+  
+  // Enhanced delete handler
+  const handleDelete = () => {
+    console.debug(`[EntryFormItem] Delete clicked for entry ${entryId}`, { disabled });
+    
+    if (disabled) {
+      console.warn(`[EntryFormItem] Delete prevented - form is disabled: ${entryId}`);
+      return;
+    }
+    
+    onDelete();
   };
 
-  return (
-    <Card className={`border ${formState.formEdited ? 'border-blue-300' : ''}`} id={`entry-form-${entryId}`}>
-      <CardContent className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <EntryField
-              id={`hours-${entryId}`}
-              name="Hours"
-              value={formState.hours.toString()}
-              onChange={(value) => handleNumberChange('hours', value)}
-              placeholder="Enter hours"
-              type="number"
-              min="0"
-              step="0.1"
-              required={true}
-              disabled={disabled}
-              showLabel={true}
-            />
-          </div>
-          <div>
-            <EntryField
-              id={`jobNumber-${entryId}`}
-              name="Job Number"
-              value={formState.jobNumber}
-              onChange={(value) => handleFieldChange('jobNumber', value)}
-              placeholder="Enter job number"
-              disabled={disabled}
-              showLabel={true}
-            />
-          </div>
-        </div>
+  // Check if form has content to determine save button state
+  const hasContent = !!(
+    localFormState.hours || 
+    localFormState.description || 
+    localFormState.jobNumber || 
+    localFormState.rego || 
+    localFormState.taskNumber
+  );
+  
+  const canSave = !disabled && formState.formEdited && hasContent;
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-          <div>
-            <EntryField
-              id={`rego-${entryId}`}
-              name="Rego"
-              value={formState.rego}
-              onChange={(value) => handleFieldChange('rego', value)}
-              placeholder="Enter rego"
-              disabled={disabled}
-              showLabel={true}
-            />
-          </div>
-          <div>
-            <EntryField
-              id={`taskNumber-${entryId}`}
-              name="Task Number"
-              value={formState.taskNumber}
-              onChange={(value) => handleFieldChange('taskNumber', value)}
-              placeholder="Enter task number"
-              disabled={disabled}
-              showLabel={true}
-            />
-          </div>
-        </div>
-        
-        <div className="mt-3">
-          <EntryField
-            id={`description-${entryId}`}
-            name="Description"
-            value={formState.description}
-            onChange={(value) => handleFieldChange('description', value)}
-            placeholder="Enter description"
-            type="textarea"
-            disabled={disabled}
-            showLabel={true}
-          />
-        </div>
-        
-        <div className="flex justify-between mt-4">
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onDelete}
-            disabled={disabled}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Remove
-          </Button>
-          
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSave}
-            disabled={disabled || !formState.hours || !formState.formEdited}
-            className={formState.formEdited ? "animate-pulse bg-green-600 hover:bg-green-700" : ""}
-          >
-            <Save className="h-4 w-4 mr-1" />
-            Save
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+  return (
+    <div className="bg-white rounded-md shadow p-3 border border-gray-200" 
+         data-entry-id={entryId}
+         data-disabled={disabled ? 'true' : 'false'}>
+      <InlineEntryForm 
+        visibleFields={[
+          { id: "job", name: "Job Number", type: "text", required: false, visible: true },
+          { id: "rego", name: "Rego", type: "text", required: false, visible: true },
+          { id: "task", name: "Task Number", type: "text", required: false, visible: true },
+          { id: "notes", name: "Notes", type: "text", required: false, visible: true },
+          { id: "hours", name: "Hours", type: "number", required: true, visible: true }
+        ]}
+        formValues={localFormState}
+        onFieldChange={onFieldChange}
+        onDelete={handleDelete}
+        entryId={entryId}
+        disabled={disabled}
+      />
+      <div className="flex justify-end mt-2">
+        <Button 
+          size="sm" 
+          onClick={onSave}
+          className={`${canSave ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
+          disabled={disabled || !formState.formEdited || !hasContent || isSaving}
+          data-testid={`save-button-${entryId}`}
+        >
+          {isSaving ? 'Saving...' : 'Save Entry'}
+        </Button>
+      </div>
+    </div>
   );
 };
 
