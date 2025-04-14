@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { TimeEntryFormState, UseTimeEntryFormProps } from './types/timeEntryTypes';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
@@ -28,7 +29,7 @@ export const useFormStateManagement = ({
 
   // Reset form when initialData or formKey changes
   useEffect(() => {
-    console.log("Resetting form with initialData:", initialData);
+    console.debug("[useFormStateManagement] Resetting form with initialData:", initialData, "formKey:", formKey);
     setHours(initialData.hours?.toString() || "");
     setDescription(initialData.description || "");
     setJobNumber(initialData.jobNumber || "");
@@ -37,14 +38,15 @@ export const useFormStateManagement = ({
     setStartTime(initialData.startTime || "09:00");
     setEndTime(initialData.endTime || "17:00");
     setFormEdited(false);
+    console.debug("[useFormStateManagement] Form reset complete");
   }, [initialData, formKey]);
 
   // Handle field changes
   const handleFieldChange = useCallback((field: string, value: string) => {
-    console.log(`Field changed in useFormStateManagement: ${field} = ${value}, disabled=${disabled}`);
+    console.debug(`[useFormStateManagement] Field changed: ${field} = ${value}, disabled=${disabled}`);
     
     if (disabled) {
-      console.log("Form is disabled, ignoring field change");
+      console.debug("[useFormStateManagement] Form is disabled, ignoring field change");
       return;
     }
     
@@ -54,40 +56,49 @@ export const useFormStateManagement = ({
     try {
       switch (field) {
         case 'hours':
+          console.debug(`[useFormStateManagement] Setting hours to ${value}`);
           setHours(value);
           break;
         case 'description':
+          console.debug(`[useFormStateManagement] Setting description to ${value}`);
           setDescription(value);
           break;
         case 'jobNumber':
+          console.debug(`[useFormStateManagement] Setting jobNumber to ${value}`);
           setJobNumber(value);
           break;
         case 'rego':
+          console.debug(`[useFormStateManagement] Setting rego to ${value}`);
           setRego(value);
           break;
         case 'taskNumber':
+          console.debug(`[useFormStateManagement] Setting taskNumber to ${value}`);
           setTaskNumber(value);
           break;
         case 'startTime':
+          console.debug(`[useFormStateManagement] Setting startTime to ${value}`);
           setStartTime(value);
           if (autoCalculateHours) {
             const calculatedHours = calculateHoursFromTimes(value, endTime);
+            console.debug(`[useFormStateManagement] Auto-calculated hours: ${calculatedHours}`);
             setHours(calculatedHours.toFixed(1));
           }
           break;
         case 'endTime':
+          console.debug(`[useFormStateManagement] Setting endTime to ${value}`);
           setEndTime(value);
           if (autoCalculateHours) {
             const calculatedHours = calculateHoursFromTimes(startTime, value);
+            console.debug(`[useFormStateManagement] Auto-calculated hours: ${calculatedHours}`);
             setHours(calculatedHours.toFixed(1));
           }
           break;
         default:
-          console.warn(`Unknown field: ${field}`);
+          console.warn(`[useFormStateManagement] Unknown field: ${field}`);
           break;
       }
     } catch (error) {
-      console.error("Error handling field change:", error);
+      console.error("[useFormStateManagement] Error handling field change:", error);
       toast({
         title: "Error updating field",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -98,7 +109,7 @@ export const useFormStateManagement = ({
 
   // Update time values
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
-    console.log(`Updating times in form state management: ${newStartTime} to ${newEndTime}`);
+    console.debug(`[useFormStateManagement] Updating times: ${newStartTime} to ${newEndTime}`);
     setStartTime(newStartTime);
     setEndTime(newEndTime);
     // Mark form as edited when times are updated
@@ -108,7 +119,7 @@ export const useFormStateManagement = ({
   // Calculate hours from times
   const setHoursFromTimes = useCallback(() => {
     const calculatedHours = calculateHoursFromTimes(startTime, endTime);
-    console.log(`Setting hours from times: ${startTime} to ${endTime} = ${calculatedHours}`);
+    console.debug(`[useFormStateManagement] Setting hours from times: ${startTime} to ${endTime} = ${calculatedHours}`);
     setHours(calculatedHours.toFixed(1));
     // Mark form as edited when hours are calculated
     setFormEdited(true);
@@ -117,7 +128,7 @@ export const useFormStateManagement = ({
 
   // Reset form fields
   const resetForm = useCallback(() => {
-    console.log("Resetting form fields");
+    console.debug("[useFormStateManagement] Resetting form fields to empty values");
     setHours("");
     setDescription("");
     setJobNumber("");
@@ -142,7 +153,10 @@ export const useFormStateManagement = ({
   return {
     formState,
     handleFieldChange,
-    resetFormEdited: () => setFormEdited(false),
+    resetFormEdited: () => {
+      console.debug("[useFormStateManagement] Resetting formEdited flag to false");
+      setFormEdited(false);
+    },
     resetForm,
     updateTimes,
     setHoursFromTimes

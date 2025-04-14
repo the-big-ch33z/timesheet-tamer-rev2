@@ -26,18 +26,23 @@ export const useFormSubmission = ({
     taskNumber: string;
     startTime: string;
     endTime: string;
-  }) => ({
-    date: selectedDate,
-    hours: parseFloat(formState.hours) || 0,
-    description: formState.description,
-    jobNumber: formState.jobNumber,
-    rego: formState.rego,
-    taskNumber: formState.taskNumber,
-    project: initialData.project || "General",
-    userId: initialData.userId || userId || "",
-    startTime: formState.startTime,
-    endTime: formState.endTime,
-  }), [selectedDate, initialData, userId]);
+  }) => {
+    const formData = {
+      date: selectedDate,
+      hours: parseFloat(formState.hours) || 0,
+      description: formState.description,
+      jobNumber: formState.jobNumber,
+      rego: formState.rego,
+      taskNumber: formState.taskNumber,
+      project: initialData.project || "General",
+      userId: initialData.userId || userId || "",
+      startTime: formState.startTime,
+      endTime: formState.endTime,
+    };
+    
+    console.debug("[useFormSubmission] Prepared form data:", formData);
+    return formData;
+  }, [selectedDate, initialData, userId]);
 
   // Handle form submission
   const handleSave = useCallback((formState: {
@@ -50,25 +55,44 @@ export const useFormSubmission = ({
     endTime: string;
     formEdited: boolean;
   }, resetFormEdited: () => void) => {
-    if (disabled || isSubmitting) return;
+    console.debug("[useFormSubmission] handleSave called with formState:", formState);
+    console.debug("[useFormSubmission] disabled:", disabled, "isSubmitting:", isSubmitting);
+    
+    if (disabled) {
+      console.debug("[useFormSubmission] Form is disabled, aborting save");
+      return;
+    }
+    
+    if (isSubmitting) {
+      console.debug("[useFormSubmission] Already submitting, aborting duplicate save");
+      return;
+    }
     
     try {
       setIsSubmitting(true);
-      const formData = getFormData(formState);
+      console.debug("[useFormSubmission] Starting submission");
       
-      console.log("Saving form with data:", formData);
+      const formData = getFormData(formState);
+      console.debug("[useFormSubmission] Form data prepared:", formData);
       
       if (onSave) {
+        console.debug("[useFormSubmission] Calling onSave function");
         onSave(formData);
+        console.debug("[useFormSubmission] onSave function executed");
+      } else {
+        console.warn("[useFormSubmission] No onSave function provided");
       }
       
+      console.debug("[useFormSubmission] Resetting formEdited flag");
       resetFormEdited();
       
       // Allow the form to be submitted again after a short delay
       setTimeout(() => {
+        console.debug("[useFormSubmission] Submission cooldown complete");
         setIsSubmitting(false);
       }, 300);
     } catch (error) {
+      console.error("[useFormSubmission] Error saving entry:", error);
       toast({
         title: "Error saving entry",
         description: error instanceof Error ? error.message : "An unknown error occurred",

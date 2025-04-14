@@ -44,6 +44,7 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
   useEffect(() => {
     const loadEntries = () => {
       try {
+        console.debug("[TimeEntryContext] Loading entries from localStorage");
         const savedEntries = localStorage.getItem('timeEntries');
         if (savedEntries) {
           const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
@@ -51,10 +52,13 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
             date: new Date(entry.date)
           }));
           setEntries(parsedEntries);
-          console.log("Loaded entries from localStorage:", parsedEntries.length);
+          console.debug("[TimeEntryContext] Loaded entries from localStorage:", parsedEntries.length);
+          console.debug("[TimeEntryContext] First few entries:", parsedEntries.slice(0, 3));
+        } else {
+          console.debug("[TimeEntryContext] No entries found in localStorage");
         }
       } catch (error) {
-        console.error("Error loading entries:", error);
+        console.error("[TimeEntryContext] Error loading entries:", error);
         toast({
           title: "Error loading entries",
           description: "Your entries could not be loaded. Please try refreshing the page.",
@@ -71,31 +75,59 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
   // Save entries when they change
   useEffect(() => {
     if (!isLoading) { // Don't save during initial load
-      localStorage.setItem('timeEntries', JSON.stringify(entries));
-      console.log("Saved entries to localStorage:", entries.length);
+      try {
+        console.debug("[TimeEntryContext] Saving entries to localStorage:", entries.length);
+        localStorage.setItem('timeEntries', JSON.stringify(entries));
+        console.debug("[TimeEntryContext] Saved entries to localStorage successfully");
+      } catch (error) {
+        console.error("[TimeEntryContext] Error saving entries to localStorage:", error);
+      }
     }
   }, [entries, isLoading]);
 
   // Filter entries for the selected day
   const dayEntries = useCallback(() => {
-    if (!selectedDate || !userId) return [];
+    if (!selectedDate || !userId) {
+      console.debug("[TimeEntryContext] No selectedDate or userId, returning empty dayEntries");
+      return [];
+    }
     
     const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-    return entries.filter(entry => {
+    console.debug("[TimeEntryContext] Filtering entries for date:", selectedDateStr, "userId:", userId);
+    
+    const filtered = entries.filter(entry => {
       const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
       const entryDateStr = format(entryDate, "yyyy-MM-dd");
-      return entryDateStr === selectedDateStr && entry.userId === userId;
+      const matches = entryDateStr === selectedDateStr && entry.userId === userId;
+      
+      if (matches) {
+        console.debug("[TimeEntryContext] Matched entry:", entry.id, "hours:", entry.hours);
+      }
+      
+      return matches;
     });
+    
+    console.debug("[TimeEntryContext] Found", filtered.length, "entries for date", selectedDateStr);
+    return filtered;
   }, [entries, selectedDate, userId]);
 
   // Add a new entry
   const addEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
+    console.debug("[TimeEntryContext] Adding new entry:", entryData);
+    
     const newEntry: TimeEntry = {
       ...entryData,
       id: uuidv4(),
     };
 
-    setEntries(prev => [...prev, newEntry]);
+    console.debug("[TimeEntryContext] Created entry with ID:", newEntry.id);
+    
+    setEntries(prev => {
+      const newEntries = [...prev, newEntry];
+      console.debug("[TimeEntryContext] Updated entries array, new length:", newEntries.length);
+      return newEntries;
+    });
+    
     toast({
       title: "Entry added",
       description: `Added ${entryData.hours} hours to your timesheet`,
@@ -104,13 +136,22 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
 
   // Update an existing entry
   const updateEntry = useCallback((entryId: string, updates: Partial<TimeEntry>) => {
-    setEntries(prev => 
-      prev.map(entry => 
-        entry.id === entryId 
-          ? { ...entry, ...updates } 
-          : entry
-      )
-    );
+    console.debug("[TimeEntryContext] Updating entry:", entryId, "with updates:", updates);
+    
+    setEntries(prev => {
+      const entryIndex = prev.findIndex(entry => entry.id === entryId);
+      
+      if (entryIndex === -1) {
+        console.warn("[TimeEntryContext] Entry not found for update:", entryId);
+        return prev;
+      }
+      
+      const updatedEntries = [...prev];
+      updatedEntries[entryIndex] = { ...updatedEntries[entryIndex], ...updates };
+      
+      console.debug("[TimeEntryContext] Entry updated successfully");
+      return updatedEntries;
+    });
     
     toast({
       title: "Entry updated",
@@ -120,11 +161,17 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
 
   // Delete an entry
   const deleteEntry = useCallback((entryId: string) => {
+    console.debug("[TimeEntryContext] Attempting to delete entry:", entryId);
+    
     setEntries(prev => {
       const entryToDelete = prev.find(entry => entry.id === entryId);
-      if (!entryToDelete) return prev;
+      if (!entryToDelete) {
+        console.warn("[TimeEntryContext] Entry not found for deletion:", entryId);
+        return prev;
+      }
       
       const filteredEntries = prev.filter(entry => entry.id !== entryId);
+      console.debug("[TimeEntryContext] Entry deleted, remaining entries:", filteredEntries.length);
       
       toast({
         title: "Entry deleted",
@@ -137,7 +184,9 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
 
   // Calculate total hours for the current day
   const calculateTotalHours = useCallback(() => {
-    return dayEntries().reduce((sum, entry) => sum + (entry.hours || 0), 0);
+    const total = dayEntries().reduce((sum, entry) => sum + (entry.hours || 0), 0);
+    console.debug("[TimeEntryContext] Calculated total hours:", total);
+    return total;
   }, [dayEntries]);
 
   const value: TimeEntryContextValue = {
