@@ -3,12 +3,13 @@ import React from "react";
 import { TimeEntry } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import { useEntriesContext } from "@/contexts/timesheet";
+import { formatDateForDisplay } from "@/utils/time/formatting";
+import { ensureDate } from "@/utils/time/validation";
 
 interface EntryListItemProps {
   entry: TimeEntry;
-  onDelete?: () => void;  // Making this prop optional with a ? and explicitly defining it
+  onDelete?: () => void;
 }
 
 const EntryListItem: React.FC<EntryListItemProps> = ({ entry, onDelete }) => {
@@ -25,8 +26,9 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry, onDelete }) => {
     }
   };
   
-  // Ensure entry.date is a Date object for formatting
-  const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+  // Ensure entry.date is a valid Date object for formatting
+  const entryDate = ensureDate(entry.date) || new Date();
+  const formattedDate = formatDateForDisplay(entryDate);
   
   return (
     <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md bg-white mb-2">
@@ -36,7 +38,7 @@ const EntryListItem: React.FC<EntryListItemProps> = ({ entry, onDelete }) => {
           <span className="text-sm text-gray-500">
             {entry.startTime && entry.endTime ? 
               `${entry.startTime} - ${entry.endTime}` : 
-              format(entryDate, "MMM d, yyyy")}
+              formattedDate}
           </span>
         </div>
         

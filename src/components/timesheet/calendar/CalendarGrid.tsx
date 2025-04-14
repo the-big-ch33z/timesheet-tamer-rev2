@@ -1,10 +1,10 @@
 
 import React from "react";
-import { format } from "date-fns";
 import { TimeEntry, WorkSchedule } from "@/types";
 import CalendarDay from "./CalendarDay";
 import { useCalendarHelpers } from "./useCalendarHelpers";
 import { Holiday } from "@/lib/holidays";
+import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
 
 interface CalendarGridProps {
   daysInMonth: Date[];
@@ -29,17 +29,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const today = new Date();
 
   const getDayEntries = (day: Date) => {
-    return entries.filter(
-      (entry) => format(entry.date, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
-    );
+    return entries.filter(entry => {
+      // Ensure entry.date is a Date object
+      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+      return formatDateForComparison(entryDate) === formatDateForComparison(day);
+    });
   };
 
   const isDateSelected = (day: Date) => {
-    return selectedDate && format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+    return selectedDate && areSameDates(day, selectedDate);
   };
 
   const isToday = (day: Date) => {
-    return format(day, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+    return areSameDates(day, today);
   };
 
   return (

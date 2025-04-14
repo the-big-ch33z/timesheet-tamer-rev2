@@ -1,10 +1,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { format } from "date-fns";
 import { TimeEntry } from "@/types";
 import { useLogger } from "../useLogger";
 import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
+import { areSameDates, formatDateForComparison, ensureDate, isValidDate } from "@/utils/time/validation";
 
 /**
  * Simplified hook for managing timesheet entries
@@ -25,10 +25,18 @@ export const useTimesheetEntries = (userId?: string) => {
       logger.debug("Loading entries from localStorage");
       const savedEntries = localStorage.getItem('timeEntries');
       if (savedEntries) {
-        const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
-          ...entry,
-          date: new Date(entry.date)
-        }));
+        const parsedEntries = JSON.parse(savedEntries).map((entry: any) => {
+          // Ensure entry.date is a valid Date object
+          const entryDate = ensureDate(entry.date);
+          if (!entryDate) {
+            logger.warn('Invalid date in entry:', entry);
+          }
+          
+          return {
+            ...entry,
+            date: entryDate || new Date()
+          };
+        });
         setEntries(parsedEntries);
         logger.debug("Loaded entries from localStorage", { count: parsedEntries.length });
       } else {
@@ -77,11 +85,23 @@ export const useTimesheetEntries = (userId?: string) => {
   const addEntry = useCallback((entry: TimeEntry) => {
     logger.debug("Adding entry", { entry });
     
-    // Ensure date is a Date object
+    // Validate date before adding
+    const entryDate = ensureDate(entry.date);
+    if (!entryDate) {
+      logger.error("Invalid date in new entry:", entry);
+      toast({ 
+        title: "Error adding entry", 
+        description: "The entry has an invalid date.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Ensure entry has an ID and valid date
     const entryWithDate = {
       ...entry,
-      id: entry.id || uuidv4(), // Ensure entry has an ID
-      date: entry.date instanceof Date ? entry.date : new Date(entry.date)
+      id: entry.id || uuidv4(),
+      date: entryDate
     };
     
     // Add entry to state
@@ -147,8 +167,14 @@ export const useTimesheetEntries = (userId?: string) => {
 
   // Get entries for a specific day and user
   const getDayEntries = useCallback((day: Date, userIdToFilter?: string) => {
+    // Validate date
+    if (!day || !isValidDate(day)) {
+      logger.warn("Invalid date provided to getDayEntries", { day });
+      return [];
+    }
+    
     const userEntries = getUserEntries(userIdToFilter);
-    const dayFormatted = format(day, "yyyy-MM-dd");
+    const dayFormatted = formatDateForComparison(day);
     
     logger.debug(`Getting entries for date: ${dayFormatted}`, {
       totalUserEntries: userEntries.length
@@ -158,11 +184,14 @@ export const useTimesheetEntries = (userId?: string) => {
       // Ensure entry.date is a Date object
       const entryDate = entry.date instanceof Date 
         ? entry.date 
-        : new Date(entry.date);
+        : ensureDate(entry.date);
       
-      const entryDateFormatted = format(entryDate, "yyyy-MM-dd");
+      if (!entryDate) {
+        logger.warn("Invalid date in entry during day filtering:", entry);
+        return false;
+      }
       
-      return entryDateFormatted === dayFormatted;
+      return areSameDates(entryDate, day);
     });
     
     logger.debug("Retrieved entries for day", { 
@@ -175,9 +204,22 @@ export const useTimesheetEntries = (userId?: string) => {
 
   // Create a new entry with a UUID
   const createEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
+    // Validate date
+    const entryDate = ensureDate(entryData.date);
+    if (!entryDate) {
+      logger.error("Invalid date in new entry data:", entryData);
+      toast({
+        title: "Error creating entry",
+        description: "The entry has an invalid date.",
+        variant: "destructive"
+      });
+      return "";
+    }
+    
     const newEntry: TimeEntry = {
       ...entryData,
-      id: uuidv4()
+      id: uuidv4(),
+      date: entryDate
     };
     
     logger.debug("Creating new entry", { entry: newEntry });

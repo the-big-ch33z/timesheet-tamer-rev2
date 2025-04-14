@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
-import { format } from 'date-fns';
+import { areSameDates, formatDateForComparison, isValidDate, ensureDate } from '@/utils/time/validation';
 
 interface TimeEntryContextProps {
   children: React.ReactNode;
@@ -41,6 +41,15 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
+  // Validate the selectedDate
+  const safeSelectedDate = useCallback(() => {
+    if (!selectedDate || !isValidDate(selectedDate)) {
+      console.warn('[TimeEntryContext] Invalid selectedDate, defaulting to today:', selectedDate);
+      return new Date();
+    }
+    return selectedDate;
+  }, [selectedDate]);
+
   // Load entries on mount - only once
   useEffect(() => {
     if (isInitialized) return;
@@ -50,10 +59,18 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
         console.debug("[TimeEntryContext] Loading entries from localStorage");
         const savedEntries = localStorage.getItem('timeEntries');
         if (savedEntries) {
-          const parsedEntries = JSON.parse(savedEntries).map((entry: any) => ({
-            ...entry,
-            date: new Date(entry.date)
-          }));
+          const parsedEntries = JSON.parse(savedEntries).map((entry: any) => {
+            // Ensure entry.date is a valid Date object
+            const entryDate = ensureDate(entry.date);
+            if (!entryDate) {
+              console.warn('[TimeEntryContext] Invalid date in entry:', entry);
+            }
+            
+            return {
+              ...entry,
+              date: entryDate || new Date()
+            };
+          });
           setEntries(parsedEntries);
           console.debug("[TimeEntryContext] Loaded entries from localStorage:", parsedEntries.length);
           console.debug("[TimeEntryContext] First few entries:", parsedEntries.slice(0, 3));
@@ -93,18 +110,25 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
 
   // Filter entries for the selected day
   const dayEntries = useCallback(() => {
-    if (!selectedDate || !userId) {
-      console.debug("[TimeEntryContext] No selectedDate or userId, returning empty dayEntries");
+    if (!userId) {
+      console.debug("[TimeEntryContext] No userId, returning empty dayEntries");
       return [];
     }
     
-    const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-    console.debug("[TimeEntryContext] Filtering entries for date:", selectedDateStr, "userId:", userId);
+    const validSelectedDate = safeSelectedDate();
+    console.debug("[TimeEntryContext] Filtering entries for date:", 
+      formatDateForComparison(validSelectedDate), 
+      "userId:", userId);
     
     const filtered = entries.filter(entry => {
-      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-      const entryDateStr = format(entryDate, "yyyy-MM-dd");
-      const matches = entryDateStr === selectedDateStr && entry.userId === userId;
+      // Ensure entry.date is a valid Date
+      const entryDate = entry.date instanceof Date ? entry.date : ensureDate(entry.date);
+      if (!entryDate) {
+        console.warn('[TimeEntryContext] Invalid date in entry during filtering:', entry);
+        return false;
+      }
+      
+      const matches = areSameDates(entryDate, validSelectedDate) && entry.userId === userId;
       
       if (matches) {
         console.debug("[TimeEntryContext] Matched entry:", entry.id, "hours:", entry.hours);
@@ -113,17 +137,31 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
       return matches;
     });
     
-    console.debug("[TimeEntryContext] Found", filtered.length, "entries for date", selectedDateStr);
+    console.debug("[TimeEntryContext] Found", filtered.length, "entries for date", 
+      formatDateForComparison(validSelectedDate));
     return filtered;
-  }, [entries, selectedDate, userId]);
+  }, [entries, safeSelectedDate, userId]);
 
   // Add a new entry
   const addEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
     console.debug("[TimeEntryContext] Adding new entry:", entryData);
     
+    // Validate date before adding
+    const entryDate = ensureDate(entryData.date);
+    if (!entryDate) {
+      console.error("[TimeEntryContext] Invalid date in new entry:", entryData);
+      toast({
+        title: "Error adding entry",
+        description: "The entry has an invalid date.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const newEntry: TimeEntry = {
       ...entryData,
       id: uuidv4(),
+      date: entryDate
     };
 
     console.debug("[TimeEntryContext] Created entry with ID:", newEntry.id);
@@ -143,6 +181,21 @@ export const TimeEntryProvider: React.FC<TimeEntryContextProps> = ({
   // Update an existing entry
   const updateEntry = useCallback((entryId: string, updates: Partial<TimeEntry>) => {
     console.debug("[TimeEntryContext] Updating entry:", entryId, "with updates:", updates);
+    
+    // Validate date if it's being updated
+    if (updates.date) {
+      const validDate = ensureDate(updates.date);
+      if (!validDate) {
+        console.error("[TimeEntryContext] Invalid date in update:", updates);
+        toast({
+          title: "Error updating entry",
+          description: "The entry has an invalid date.",
+          variant: "destructive"
+        });
+        return;
+      }
+      updates.date = validDate;
+    }
     
     setEntries(prev => {
       const entryIndex = prev.findIndex(entry => entry.id === entryId);
