@@ -1,7 +1,8 @@
 
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/useTimeEntryForm";
 import { TimeEntry } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface UseTimeEntryFormHandlingProps {
   formHandlers: UseTimeEntryFormReturn[];
@@ -16,6 +17,7 @@ interface UseTimeEntryFormHandlingProps {
 
 /**
  * Hook to handle form submissions and entry creation
+ * Enhanced with improved save event handling
  */
 export const useTimeEntryFormHandling = ({
   formHandlers,
@@ -27,8 +29,31 @@ export const useTimeEntryFormHandling = ({
   calculatedHours,
   refreshForms,
 }: UseTimeEntryFormHandlingProps) => {
+  const toast = useToast();
+  const lastSaveTime = useRef<number>(0);
+  
+  // Setup event listener for global save events
+  useEffect(() => {
+    if (!interactive) {
+      console.debug("[useTimeEntryFormHandling] Not interactive, skipping event listener setup");
+      return;
+    }
+    
+    const handleGlobalSaveEvent = () => {
+      console.debug("[useTimeEntryFormHandling] Received global save event");
+      saveAllPendingChanges();
+    };
+    
+    console.debug("[useTimeEntryFormHandling] Setting up global save event listener");
+    window.addEventListener('timesheet:save-pending-changes', handleGlobalSaveEvent);
+    
+    return () => {
+      console.debug("[useTimeEntryFormHandling] Removing global save event listener");
+      window.removeEventListener('timesheet:save-pending-changes', handleGlobalSaveEvent);
+    };
+  }, [interactive]);
 
-  // Handle entry submission
+  // Handle entry submission with better logging and feedback
   const handleEntrySubmission = useCallback((entry: TimeEntry, index: number) => {
     console.debug(`[useTimeEntryFormHandling] Entry submission for index ${index}, interactive=${interactive}`, entry);
     
@@ -41,8 +66,14 @@ export const useTimeEntryFormHandling = ({
     // Create entry if onCreateEntry is provided
     if (onCreateEntry) {
       console.debug("[useTimeEntryFormHandling] Creating entry with onCreateEntry:", entry);
-      // We use the saved entry data to create a new entry in the context
+      // We use the saved entry data to create a new entry
       onCreateEntry(entry.startTime || startTime, entry.endTime || endTime, entry.hours);
+      
+      // Toast notification for user feedback
+      toast.toast({
+        title: "Entry created",
+        description: `Added ${entry.hours} hours to your timesheet`,
+      });
     } else {
       console.debug("[useTimeEntryFormHandling] No onCreateEntry function provided");
     }
@@ -50,9 +81,12 @@ export const useTimeEntryFormHandling = ({
     // Reset the form and refresh the form list
     formHandlers[index].resetForm();
     refreshForms();
-  }, [interactive, onCreateEntry, startTime, endTime, formHandlers, refreshForms]);
+    
+    // Update last save time
+    lastSaveTime.current = Date.now();
+  }, [interactive, onCreateEntry, startTime, endTime, formHandlers, refreshForms, toast]);
 
-  // Handle save entry (wrapper for form handler)
+  // Handle save entry with improved feedback
   const handleSaveEntry = useCallback((index: number) => {
     console.debug(`[useTimeEntryFormHandling] handleSaveEntry called for index ${index}, interactive=${interactive}`);
     
@@ -63,13 +97,27 @@ export const useTimeEntryFormHandling = ({
     
     if (index < 0 || index >= formHandlers.length) {
       console.error(`[useTimeEntryFormHandling] Invalid index: ${index}`);
+      toast.toast({
+        title: "Error",
+        description: "Could not save entry due to an invalid form reference",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check for duplicate save
+    const now = Date.now();
+    if (now - lastSaveTime.current < 300) {
+      console.debug("[useTimeEntryFormHandling] Preventing duplicate save operation");
       return;
     }
     
     formHandlers[index].handleSave();
-  }, [interactive, formHandlers]);
+    lastSaveTime.current = now;
+    
+  }, [interactive, formHandlers, toast]);
 
-  // Save all pending changes
+  // Save all pending changes with enhanced error handling
   const saveAllPendingChanges = useCallback(() => {
     console.debug(`[useTimeEntryFormHandling] saveAllPendingChanges called, interactive=${interactive}, forms shown=${showEntryForms.length}`);
     
@@ -78,29 +126,48 @@ export const useTimeEntryFormHandling = ({
       return false;
     }
     
-    let changesSaved = false;
-    
-    // Save any pending changes in visible forms
-    showEntryForms.forEach(index => {
-      if (index < 0 || index >= formHandlers.length) {
-        console.error(`[useTimeEntryFormHandling] Invalid form index: ${index}`);
-        return;
-      }
-      
-      const saved = formHandlers[index].saveIfEdited();
-      changesSaved = changesSaved || saved;
-      
-      if (saved) {
-        console.debug(`[useTimeEntryFormHandling] Saved changes for form ${index}`);
-      }
-    });
-    
-    if (!changesSaved) {
-      console.debug("[useTimeEntryFormHandling] No changes needed saving");
+    // Check for duplicate save operation
+    const now = Date.now();
+    if (now - lastSaveTime.current < 300) {
+      console.debug("[useTimeEntryFormHandling] Preventing duplicate saveAll operation");
+      return false;
     }
     
-    return changesSaved;
-  }, [interactive, showEntryForms, formHandlers]);
+    try {
+      let changesSaved = false;
+      
+      // Save any pending changes in visible forms
+      showEntryForms.forEach(index => {
+        if (index < 0 || index >= formHandlers.length) {
+          console.error(`[useTimeEntryFormHandling] Invalid form index: ${index}`);
+          return;
+        }
+        
+        const saved = formHandlers[index].saveIfEdited();
+        changesSaved = changesSaved || saved;
+        
+        if (saved) {
+          console.debug(`[useTimeEntryFormHandling] Saved changes for form ${index}`);
+        }
+      });
+      
+      if (!changesSaved) {
+        console.debug("[useTimeEntryFormHandling] No changes needed saving");
+      }
+      
+      // Update last save time
+      lastSaveTime.current = now;
+      return changesSaved;
+    } catch (error) {
+      console.error("[useTimeEntryFormHandling] Error saving changes:", error);
+      toast.toast({
+        title: "Error saving changes",
+        description: "Some changes could not be saved. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [interactive, showEntryForms, formHandlers, toast]);
 
   return {
     handleEntrySubmission,

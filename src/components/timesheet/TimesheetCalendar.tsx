@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { TimeEntry, WorkSchedule } from "@/types";
@@ -9,6 +9,7 @@ import CalendarLegend from "./calendar/CalendarLegend";
 import CalendarWeekdayHeader from "./calendar/CalendarWeekdayHeader";
 import CalendarGrid from "./calendar/CalendarGrid";
 import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface TimesheetCalendarProps {
   currentMonth: Date;
@@ -29,6 +30,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
 }) => {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
     // Load holidays
@@ -40,21 +42,44 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const monthStartDay = getDay(monthStart);
 
-  // Wrap month navigation to trigger saving
-  const handlePrevMonth = () => {
-    triggerGlobalSave();
+  // Enhanced month navigation to trigger saving
+  const handlePrevMonth = useCallback(() => {
+    console.debug("[TimesheetCalendar] Moving to previous month, saving pending changes");
+    const saved = triggerGlobalSave();
     onPrevMonth();
-  };
+    
+    if (saved) {
+      toast({
+        title: "Changes saved",
+        description: "Your timesheet changes were saved before navigation",
+      });
+    }
+  }, [onPrevMonth, toast]);
   
-  const handleNextMonth = () => {
-    triggerGlobalSave();
+  const handleNextMonth = useCallback(() => {
+    console.debug("[TimesheetCalendar] Moving to next month, saving pending changes");
+    const saved = triggerGlobalSave();
     onNextMonth();
-  };
+    
+    if (saved) {
+      toast({
+        title: "Changes saved",
+        description: "Your timesheet changes were saved before navigation",
+      });
+    }
+  }, [onNextMonth, toast]);
 
-  const handleDayClick = (day: Date) => {
+  // Enhanced day click handler with explicit selected date state
+  const handleDayClick = useCallback((day: Date) => {
+    console.debug("[TimesheetCalendar] Day clicked:", format(day, "yyyy-MM-dd"));
+    if (selectedDate?.getTime() !== day.getTime()) {
+      console.debug("[TimesheetCalendar] Date changing, triggering global save");
+      triggerGlobalSave();
+    }
+    
     setSelectedDate(day);
     onDayClick(day);
-  };
+  }, [selectedDate, onDayClick]);
 
   return (
     <Card className="shadow-sm">

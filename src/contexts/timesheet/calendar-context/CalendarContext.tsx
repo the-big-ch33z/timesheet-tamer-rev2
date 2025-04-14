@@ -2,6 +2,7 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useCalendarState } from '@/hooks/timesheet/useCalendarState';
 import { CalendarContextType } from '../types';
+import { triggerGlobalSave } from '../TimesheetContext';
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
@@ -15,7 +16,7 @@ export const useCalendarContext = (): CalendarContextType => {
 
 interface CalendarProviderProps {
   children: ReactNode;
-  onBeforeDateChange?: () => void; // New callback for before date changes
+  onBeforeDateChange?: () => void; // Callback for before date changes
 }
 
 export const CalendarProvider: React.FC<CalendarProviderProps> = ({ 
@@ -31,21 +32,28 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
   } = useCalendarState();
   
   // Create a wrapped version of handleDayClick that calls onBeforeDateChange first
+  // and explicitly triggers the global save event
   const handleDayClick = (day: Date) => {
     // If we have a callback and we're changing the date
-    if (onBeforeDateChange && 
-       (!selectedDay || selectedDay.getTime() !== day.getTime())) {
-      onBeforeDateChange();
+    if (selectedDay && day && selectedDay.getTime() !== day.getTime()) {
+      console.debug("[CalendarContext] Date changing, triggering save event");
+      // Explicitly trigger the global save
+      triggerGlobalSave();
+      
+      // Then call the callback if provided
+      if (onBeforeDateChange) {
+        onBeforeDateChange();
+      }
     }
     
     // Then update the selected day
     setSelectedDay(day);
   };
   
-  // Watch for direct setSelectedDay calls from outside this component
+  // Watch for direct setSelectedDay calls
   useEffect(() => {
-    // We don't do anything here, this is just to expose the current 
-    // selectedDay value to consumers of the context
+    // This effect runs when selectedDay changes
+    console.debug("[CalendarContext] Selected day changed:", selectedDay);
   }, [selectedDay]);
 
   const value: CalendarContextType = {

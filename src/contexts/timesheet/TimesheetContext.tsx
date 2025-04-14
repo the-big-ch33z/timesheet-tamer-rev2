@@ -14,9 +14,22 @@ export { useEntriesContext } from './entries-context/EntriesContext';
 export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 
 // Custom event to trigger auto-save across components
+// Enhanced with debounce protection
+let lastTriggerTime = 0;
+
 export const triggerGlobalSave = () => {
+  // Prevent multiple triggers in quick succession
+  const now = Date.now();
+  if (now - lastTriggerTime < 300) {
+    console.debug("[TimesheetContext] Skipping duplicate save event trigger");
+    return false;
+  }
+  
+  console.debug("[TimesheetContext] Dispatching global save event");
   const event = new CustomEvent('timesheet:save-pending-changes');
   window.dispatchEvent(event);
+  
+  lastTriggerTime = now;
   return true;
 };
 
@@ -47,9 +60,28 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
   
   // This function will be called before the date changes
   const handleBeforeDateChange = useCallback(() => {
-    console.log("Date is about to change - triggering save event");
+    console.log("[TimesheetProvider] Date is about to change - triggering save event");
     // Dispatch our custom event to notify components
     triggerGlobalSave();
+  }, []);
+  
+  // Setup window navigation event listener
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      console.debug("[TimesheetProvider] Page unload detected, triggering save");
+      triggerGlobalSave();
+      
+      // Standard approach to show confirmation dialog
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
   
   return (
