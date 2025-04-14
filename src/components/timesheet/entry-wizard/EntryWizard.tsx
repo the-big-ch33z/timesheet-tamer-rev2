@@ -37,9 +37,23 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   const { saveDraft, clearDraft } = useDraftContext();
   const { toast } = useToast();
   
+  // Log initial values when component mounts
+  useEffect(() => {
+    console.debug('[EntryWizard] Component mounted with initialValues:', initialValues);
+    console.debug('[EntryWizard] Initial form values set to:', formValues);
+  }, []);
+  
   // Log values whenever they change for debugging
   useEffect(() => {
     console.debug('[EntryWizard] Form values updated:', formValues);
+    
+    // Specifically log time values for debugging
+    if ('startTime' in formValues || 'endTime' in formValues) {
+      console.debug('[EntryWizard] Time values updated:', {
+        startTime: formValues.startTime || 'not set',
+        endTime: formValues.endTime || 'not set'
+      });
+    }
   }, [formValues]);
 
   const handleFieldChange = (field: string, value: string | number) => {
@@ -71,6 +85,7 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   };
 
   const handleSaveDraft = () => {
+    console.debug("[EntryWizard] Saving draft with values:", formValues);
     saveDraft(formValues);
     toast({
       title: "Draft saved",

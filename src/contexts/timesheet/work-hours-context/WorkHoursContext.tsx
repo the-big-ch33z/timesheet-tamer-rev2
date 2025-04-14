@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { DEFAULT_WORK_HOURS } from '@/constants/defaults';
 
 // Define the data structure for storing work hours
 interface WorkHoursData {

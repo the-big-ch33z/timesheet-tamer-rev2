@@ -47,8 +47,7 @@ export const useWorkHours = ({
   
   // Get times with proper precedence:
   // 1. Custom saved times from localStorage (user overrides)
-  // 2. Schedule-based times (only if we have schedule and it's a workday)
-  // 3. Empty values (new approach - no defaults)
+  // 2. Empty values (new approach - always empty by default)
   useEffect(() => {
     // Skip this effect if we're currently making a manual change
     if (manualChangeRef.current) {
@@ -78,25 +77,9 @@ export const useWorkHours = ({
       setStartTime(savedHours.startTime || "");
       setEndTime(savedHours.endTime || "");
     } 
-    // If no custom hours, check the work schedule
-    else if (workSchedule) {
-      console.log(`[useWorkHours] No custom hours, checking work schedule for ${dateString}`);
-      const scheduleInfo = getDayScheduleInfo(date, workSchedule);
-      
-      if (scheduleInfo?.hours && scheduleInfo.isWorkingDay) {
-        console.log(`[useWorkHours] Using schedule hours: ${scheduleInfo.hours.startTime} - ${scheduleInfo.hours.endTime}`);
-        setStartTime(scheduleInfo.hours.startTime || "");
-        setEndTime(scheduleInfo.hours.endTime || "");
-      } else {
-        // Use empty values if schedule doesn't have hours for this day or it's not a workday
-        console.log(`[useWorkHours] Not a scheduled work day, using empty values`);
-        setStartTime("");
-        setEndTime("");
-      }
-    } 
-    // No custom hours or schedule - use empty values
+    // No custom hours - always use empty values
     else {
-      console.log(`[useWorkHours] Using empty values as no saved times or schedule exists`);
+      console.log(`[useWorkHours] No custom hours found, using empty values by default`);
       setStartTime("");
       setEndTime("");
     }
@@ -104,7 +87,7 @@ export const useWorkHours = ({
     // Mark as initialized for this date/user combination
     initializedRef.current = true;
     
-  }, [dateString, userId, workSchedule, getWorkHours, hasCustomWorkHours]);
+  }, [dateString, userId, getWorkHours, hasCustomWorkHours]);
   
   // Reset the initialized flag when date or userId changes
   useEffect(() => {

@@ -47,6 +47,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
 
   // Determine if we should show a message about entering times
   const showEnterTimesMessage = !startTime || !endTime;
+  const hasNoCalculatedHours = !calculatedHours || calculatedHours === 0;
 
   return (
     <>
@@ -75,7 +76,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
             {showEnterTimesMessage && interactive ? (
               <span className="text-sm text-gray-500">Enter start/end times</span>
             ) : (
-              <span className={`text-lg ${!hasEntries && !calculatedHours && 'text-gray-400'}`}>
+              <span className={`text-lg ${!hasEntries && hasNoCalculatedHours && 'text-gray-400'}`}>
                 {hasEntries ? formatDisplayHours(totalHours) : formatDisplayHours(calculatedHours)}
               </span>
             )}

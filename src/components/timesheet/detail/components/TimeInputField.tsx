@@ -47,6 +47,9 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
     return () => clearTimeout(timer);
   };
   
+  // Determine if the input is empty to apply placeholder styling
+  const isEmpty = !localValue || localValue === "";
+  
   return (
     <div>
       <Label htmlFor={label.toLowerCase()}>{label}</Label>
@@ -57,7 +60,7 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
           value={localValue}
           onChange={handleChange}
           disabled={!interactive}
-          className={`pr-10 ${!localValue ? 'text-gray-400' : ''}`}
+          className={`pr-10 ${isEmpty ? 'text-gray-400 placeholder-shown' : ''}`}
           data-testid={testId}
           placeholder={placeholder}
         />
