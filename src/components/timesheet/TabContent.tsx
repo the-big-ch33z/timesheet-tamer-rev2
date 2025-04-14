@@ -8,6 +8,7 @@ import {
   useEntriesContext 
 } from "@/contexts/timesheet";
 import { format } from "date-fns";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 
 // Lazy load components
 const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
@@ -102,7 +103,7 @@ const TabContent: React.FC = () => {
               />
             </Suspense>
             
-            {selectedDay && (
+            {selectedDay && viewedUser && (
               <div className="mt-6">
                 <Suspense fallback={<LoadingComponent />}>
                   <WorkHoursSection 

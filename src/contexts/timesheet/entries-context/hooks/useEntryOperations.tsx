@@ -9,6 +9,7 @@ import { ensureDate } from "@/utils/time/validation";
  * Hook that provides operations for manipulating time entries
  */
 export const useEntryOperations = (
+  entries: TimeEntry[],
   setEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>
 ) => {
   const { toast } = useToast();
@@ -131,7 +132,12 @@ export const useEntryOperations = (
     
     // Add the entry
     const newId = uuidv4();
-    addEntry({ ...entryData, id: newId });
+    const entryWithId = { 
+      ...entryData,
+      id: newId
+    } as TimeEntry;
+    
+    addEntry(entryData);
     return newId;
   }, [addEntry, toast]);
 

@@ -4,11 +4,11 @@ import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErro
 import { 
   useUserTimesheetContext,
   useTimesheetUIContext,
-  useEntriesContext,
   useCalendarContext
 } from "@/contexts/timesheet";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 
 // Lazy-loaded components
 const UserInfo = lazy(() => import("@/components/timesheet/UserInfo"));
@@ -31,11 +31,7 @@ const TimesheetContent = () => {
   } = useUserTimesheetContext();
   
   const { selectedDay } = useCalendarContext();
-  const { getDayEntries } = useEntriesContext();
   
-  // Get entries for the selected day
-  const dayEntries = selectedDay ? getDayEntries(selectedDay) : [];
-
   // Check for permission or if user exists
   if (!viewedUser || !canViewTimesheet) {
     return (
@@ -47,21 +43,23 @@ const TimesheetContent = () => {
   }
 
   return (
-    <div className="container py-6 max-w-7xl">
-      {/* Back button when viewing other user's timesheet */}
-      <TimesheetBackNavigation 
-        user={viewedUser}
-        isViewingOtherUser={isViewingOtherUser}
-      />
+    <TimeEntryProvider selectedDate={selectedDay} userId={viewedUser.id}>
+      <div className="container py-6 max-w-7xl">
+        {/* Back button when viewing other user's timesheet */}
+        <TimesheetBackNavigation 
+          user={viewedUser}
+          isViewingOtherUser={isViewingOtherUser}
+        />
 
-      <Suspense fallback={<LoadingComponent />}>
-        <UserInfo user={viewedUser} />
-      </Suspense>
+        <Suspense fallback={<LoadingComponent />}>
+          <UserInfo user={viewedUser} />
+        </Suspense>
 
-      <Suspense fallback={<LoadingComponent />}>
-        <TimesheetTabs />
-      </Suspense>
-    </div>
+        <Suspense fallback={<LoadingComponent />}>
+          <TimesheetTabs />
+        </Suspense>
+      </div>
+    </TimeEntryProvider>
   );
 };
 

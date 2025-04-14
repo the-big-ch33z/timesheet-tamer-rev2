@@ -2,7 +2,7 @@
 import React, { ReactNode, useState, useCallback } from 'react';
 import { CalendarProvider, useCalendarContext } from './calendar-context/CalendarContext';
 import { UserTimesheetProvider, useUserTimesheetContext } from './user-context/UserTimesheetContext';
-import { EntriesProvider, useEntriesContext } from './entries-context/EntriesContext';
+import { TimeEntryProvider } from './entries-context/TimeEntryProvider';
 import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 import { WorkHoursProvider } from './work-hours-context/WorkHoursContext';
 import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTimesheetContext';
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 // Re-export individual context hooks for easier access from components
 export { useCalendarContext } from './calendar-context/CalendarContext';
 export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
-export { useEntriesContext } from './entries-context/EntriesContext';
+export { useTimeEntryContext as useEntriesContext } from './entries-context/useTimeEntryContext';
 export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 
@@ -39,14 +39,12 @@ export const triggerGlobalSave = () => {
 export const useTimesheetContext = () => {
   const calendar = useCalendarContext();
   const user = useUserTimesheetContext();
-  const entries = useEntriesContext();
   const ui = useTimesheetUIContext();
   
   // Combine all context values into one object for backward compatibility
   return {
     ...calendar,
     ...user,
-    ...entries,
     ...ui
   };
 };
@@ -91,9 +89,7 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
       <UserTimesheetProvider>
         <WorkHoursProvider>
           <CalendarProvider onBeforeDateChange={handleBeforeDateChange}>
-            <EntriesProvider userId={targetUserId}>
-              {children}
-            </EntriesProvider>
+            {children}
           </CalendarProvider>
         </WorkHoursProvider>
       </UserTimesheetProvider>

@@ -2,7 +2,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
-import { useEntriesContext } from "@/contexts/timesheet";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import EntryList from "./detail/components/EntryList";
 
 interface RecentEntriesProps {
