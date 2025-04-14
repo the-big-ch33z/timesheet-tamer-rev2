@@ -1,3 +1,4 @@
+
 import React from "react";
 import { EntryFieldConfig } from "@/types";
 import JobNumberField from "../field-types/JobNumberField";
@@ -42,9 +43,15 @@ export const renderEntryField = ({
   showLabel = true,
 }: RenderEntryFieldProps) => {
   const fieldId = field.id;
+  const fieldNameLower = field.name.toLowerCase().trim();
   
-  switch (field.name.toLowerCase()) {
+  // Add debug logging to help identify field name matching issues
+  console.debug(`[renderEntryField] Rendering field: ${field.name} (normalized: ${fieldNameLower})`);
+  
+  switch (fieldNameLower) {
     case 'job number':
+    case 'job':
+    case 'jobnumber':
       return (
         <JobNumberField
           id={fieldId}
@@ -69,6 +76,8 @@ export const renderEntryField = ({
         />
       );
     case 'task number':
+    case 'task':
+    case 'tasknumber':
       return (
         <TaskNumberField
           id={fieldId}
@@ -81,6 +90,7 @@ export const renderEntryField = ({
         />
       );
     case 'notes':
+    case 'description':
       return (
         <NotesField
           id={fieldId}
@@ -93,6 +103,7 @@ export const renderEntryField = ({
         />
       );
     case 'hours':
+    case 'hour':
       return (
         <HoursField
           id={fieldId}
@@ -105,14 +116,42 @@ export const renderEntryField = ({
         />
       );
     default:
+      console.warn(`[renderEntryField] Unrecognized field type: "${field.name}" (normalized: "${fieldNameLower}"). Falling back to generic field.`);
+      
       if (!field.name) return null;
+      
+      // Attempt to infer field type based on name if not matching the above cases
+      let inferredHandler = () => {};
+      let inferredValue = "";
+      
+      if (fieldNameLower.includes('job')) {
+        inferredHandler = setJobNumber;
+        inferredValue = jobNumber;
+        console.debug(`[renderEntryField] Inferred job number field from name: ${field.name}`);
+      } else if (fieldNameLower.includes('rego')) {
+        inferredHandler = setRego;
+        inferredValue = rego;
+        console.debug(`[renderEntryField] Inferred rego field from name: ${field.name}`);
+      } else if (fieldNameLower.includes('task')) {
+        inferredHandler = setTaskNumber;
+        inferredValue = taskNumber;
+        console.debug(`[renderEntryField] Inferred task number field from name: ${field.name}`);
+      } else if (fieldNameLower.includes('note') || fieldNameLower.includes('desc')) {
+        inferredHandler = setDescription;
+        inferredValue = description;
+        console.debug(`[renderEntryField] Inferred description field from name: ${field.name}`);
+      } else if (fieldNameLower.includes('hour')) {
+        inferredHandler = setHours;
+        inferredValue = hours;
+        console.debug(`[renderEntryField] Inferred hours field from name: ${field.name}`);
+      }
       
       return (
         <GenericField
           id={fieldId}
           name={field.name}
-          value=""
-          onChange={() => {}}
+          value={inferredValue}
+          onChange={inferredHandler}
           placeholder={field.placeholder || ""}
           required={field.required}
           inline={inline}
@@ -123,3 +162,4 @@ export const renderEntryField = ({
       );
   }
 };
+

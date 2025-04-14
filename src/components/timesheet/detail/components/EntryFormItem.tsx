@@ -69,8 +69,22 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
       [field]: value
     }));
     
+    // Map field names to match expected state properties
+    let stateField = field;
+    
+    // Normalize field names to match state property names
+    if (field.toLowerCase() === 'job number' || field.toLowerCase() === 'job') {
+      stateField = 'jobNumber';
+    } else if (field.toLowerCase() === 'task number' || field.toLowerCase() === 'task') {
+      stateField = 'taskNumber';
+    } else if (field.toLowerCase() === 'notes') {
+      stateField = 'description';
+    }
+    
+    console.debug(`[EntryFormItem] Mapped field "${field}" to state property "${stateField}"`);
+    
     // Then update parent state
-    handleFieldChange(field, value);
+    handleFieldChange(stateField, value);
     console.debug(`[EntryFormItem] Field change handler executed for ${entryId}`);
   };
   
