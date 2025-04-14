@@ -84,30 +84,6 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <EntryField
-            id="startTime"
-            name="Start Time"
-            value={ensureString(values.startTime)}
-            onChange={(value) => handleFieldChange('startTime', value)}
-            placeholder="e.g. 09:00"
-            showLabel={true}
-          />
-        </div>
-        
-        <div>
-          <EntryField
-            id="endTime"
-            name="End Time"
-            value={ensureString(values.endTime)}
-            onChange={(value) => handleFieldChange('endTime', value)}
-            placeholder="e.g. 17:00"
-            showLabel={true}
-          />
-        </div>
-      </div>
-      
       <div>
         <EntryField
           id="description"

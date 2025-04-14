@@ -1,50 +1,59 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import EntryWizard from '../../entry-wizard/EntryWizard';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { TimeEntry } from "@/types";
+import EntryWizard from "../../entry-wizard/EntryWizard";
 
 interface NewEntryLauncherProps {
   date: Date;
   userId: string;
-  onSubmit: (entry: any) => void;
+  onSubmit: (entry: Omit<TimeEntry, "id">) => void;
+  initialValues?: Partial<TimeEntry>;
 }
 
 const NewEntryLauncher: React.FC<NewEntryLauncherProps> = ({
   date,
   userId,
-  onSubmit
+  onSubmit,
+  initialValues = {}
 }) => {
-  const [isCreating, setIsCreating] = useState(false);
-  
-  const handleStartNewEntry = () => {
-    setIsCreating(true);
-  };
-  
-  const handleSubmit = (entry: any) => {
-    onSubmit(entry);
-    setIsCreating(false);
-  };
-  
-  const handleCancel = () => {
-    setIsCreating(false);
+  const [showWizard, setShowWizard] = useState(false);
+
+  const handleLaunchWizard = () => {
+    setShowWizard(true);
   };
 
-  return isCreating ? (
-    <EntryWizard
-      onSubmit={handleSubmit}
-      date={date}
-      userId={userId}
-      onCancel={handleCancel}
-    />
-  ) : (
-    <Button 
-      onClick={handleStartNewEntry} 
-      size="sm"
-      className="bg-green-500 hover:bg-green-600 text-white"
-    >
-      <Plus className="h-4 w-4 mr-1" /> Add Entry
-    </Button>
+  const handleWizardCancel = () => {
+    setShowWizard(false);
+  };
+
+  const handleWizardSubmit = (entry: Omit<TimeEntry, "id">) => {
+    onSubmit(entry);
+    setShowWizard(false);
+  };
+
+  return (
+    <div>
+      {!showWizard ? (
+        <Button 
+          variant="outline" 
+          className="w-full border-dashed border-2 bg-white hover:bg-gray-50 mt-2"
+          onClick={handleLaunchWizard}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Entry
+        </Button>
+      ) : (
+        <EntryWizard
+          date={date}
+          userId={userId}
+          onSubmit={handleWizardSubmit}
+          onCancel={handleWizardCancel}
+          initialValues={initialValues}
+        />
+      )}
+    </div>
   );
 };
 

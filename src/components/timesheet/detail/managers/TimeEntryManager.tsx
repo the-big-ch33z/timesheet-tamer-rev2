@@ -112,6 +112,10 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
               date={date}
               userId={userId}
               onSubmitEntry={handleCreateEntryFromWizard}
+              initialValues={{
+                startTime,
+                endTime
+              }}
             />
             
             {/* Button to create a new entry */}
@@ -119,6 +123,10 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
               date={date}
               userId={userId}
               onSubmit={handleCreateEntryFromWizard}
+              initialValues={{
+                startTime,
+                endTime
+              }}
             />
           </div>
         )}

@@ -31,9 +31,6 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
     ...initialValues,
     date,
     userId,
-    // Ensure we have default values for core fields
-    startTime: initialValues.startTime || '09:00',
-    endTime: initialValues.endTime || '17:00',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -106,8 +103,8 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
         rego: formValues.rego || '',
         taskNumber: formValues.taskNumber || '',
         userId: formValues.userId || userId,
-        startTime: formValues.startTime || '',
-        endTime: formValues.endTime || '',
+        startTime: initialValues.startTime || '',
+        endTime: initialValues.endTime || '',
         project: formValues.project || 'General'
       };
       

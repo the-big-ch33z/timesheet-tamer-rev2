@@ -1,94 +1,100 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useDraftContext } from '@/contexts/timesheet/draft-context/DraftContext';
-import { FileText, Edit2, X } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import EntryWizard from '../../entry-wizard/EntryWizard';
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2 } from "lucide-react";
+import { useDraftContext } from "@/contexts/timesheet/draft-context/DraftContext";
+import { TimeEntry } from "@/types";
+import EntryWizard from "../../entry-wizard/EntryWizard";
 
 interface DraftEntryCardProps {
   date: Date;
   userId: string;
-  onSubmitEntry: (entry: any) => void;
+  onSubmitEntry: (entry: Omit<TimeEntry, "id">) => void;
+  initialValues?: Partial<TimeEntry>;
 }
 
-const DraftEntryCard: React.FC<DraftEntryCardProps> = ({
-  date,
-  userId,
-  onSubmitEntry
+const DraftEntryCard: React.FC<DraftEntryCardProps> = ({ 
+  date, 
+  userId, 
+  onSubmitEntry,
+  initialValues = {}
 }) => {
+  const { draft, hasDraft, clearDraft } = useDraftContext();
   const [isEditing, setIsEditing] = useState(false);
-  const { draftEntry, hasDraft, clearDraft, isDraftValid } = useDraftContext();
-  const { toast } = useToast();
-  
-  if (!hasDraft) return null;
-  
-  const handleContinueEditing = () => {
+
+  // If there's no draft, don't render anything
+  if (!hasDraft) {
+    return null;
+  }
+
+  const handleEdit = () => {
     setIsEditing(true);
   };
-  
-  const handleDiscardDraft = () => {
-    clearDraft();
-    toast({
-      title: "Draft discarded",
-      description: "Your draft entry has been discarded."
-    });
-  };
-  
-  const handleSubmit = (entry: any) => {
-    onSubmitEntry(entry);
-    setIsEditing(false);
-  };
-  
-  const handleCancel = () => {
+
+  const handleCancelEdit = () => {
     setIsEditing(false);
   };
 
+  const handleDelete = () => {
+    clearDraft();
+  };
+
+  const handleSubmit = (entry: Omit<TimeEntry, "id">) => {
+    onSubmitEntry(entry);
+    clearDraft();
+    setIsEditing(false);
+  };
+
+  // If editing, show the wizard
   if (isEditing) {
     return (
       <EntryWizard
-        onSubmit={handleSubmit}
         date={date}
         userId={userId}
-        initialValues={draftEntry || {}}
-        onCancel={handleCancel}
+        onSubmit={handleSubmit}
+        onCancel={handleCancelEdit}
+        initialValues={{
+          ...(draft || {}),
+          ...initialValues
+        }}
       />
     );
   }
 
+  // Show draft summary card
   return (
-    <Card className="mb-4 border-2 border-yellow-400 bg-yellow-50">
-      <CardContent className="pt-6">
-        <div className="flex items-start">
-          <div className="mr-3 mt-1">
-            <FileText className="h-5 w-5 text-yellow-600" />
-          </div>
-          <div>
-            <h3 className="text-md font-medium">You have a draft entry</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              You can continue editing your draft or discard it
-            </p>
-          </div>
+    <Card className="mb-4">
+      <CardHeader className="bg-amber-50 pb-2">
+        <CardTitle className="text-sm font-medium text-amber-700">Draft Entry</CardTitle>
+      </CardHeader>
+      
+      <CardContent className="pt-4 pb-2">
+        <div className="space-y-1">
+          {draft?.hours && (
+            <p className="text-sm"><span className="font-medium">Hours:</span> {draft.hours}</p>
+          )}
+          
+          {draft?.jobNumber && (
+            <p className="text-sm"><span className="font-medium">Job:</span> {draft.jobNumber}</p>
+          )}
+          
+          {draft?.description && (
+            <p className="text-sm"><span className="font-medium">Description:</span> {draft.description.substring(0, 50)}{draft.description.length > 50 ? '...' : ''}</p>
+          )}
         </div>
       </CardContent>
-      <CardFooter>
-        <div className="flex gap-2 justify-end w-full">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleDiscardDraft}
-          >
-            <X className="h-4 w-4 mr-1" /> Discard
-          </Button>
-          <Button 
-            size="sm"
-            className="bg-blue-500 hover:bg-blue-600"
-            onClick={handleContinueEditing}
-          >
-            <Edit2 className="h-4 w-4 mr-1" /> Continue Editing
-          </Button>
-        </div>
+      
+      <CardFooter className="flex justify-end space-x-2 pt-0">
+        <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:bg-red-50">
+          <Trash2 className="h-4 w-4 mr-1" />
+          Delete
+        </Button>
+        
+        <Button variant="outline" size="sm" onClick={handleEdit}>
+          <Edit className="h-4 w-4 mr-1" />
+          Edit
+        </Button>
       </CardFooter>
     </Card>
   );
