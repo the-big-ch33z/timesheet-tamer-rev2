@@ -1,9 +1,10 @@
 
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { useTimesheetWorkHours } from './useTimesheetWorkHours';
+import { useTimeCalculations } from './useTimeCalculations';
 import { timeEntryService } from '@/utils/time/services/timeEntryService';
 
 const logger = createTimeLogger('useWorkHours');
@@ -14,8 +15,11 @@ const logger = createTimeLogger('useWorkHours');
  * but maintains the original API for backward compatibility
  */
 export const useWorkHours = (userId?: string) => {
-  // Use the enhanced implementation
+  // Use the enhanced implementation for core functionality
   const enhancedHook = useTimesheetWorkHours(userId);
+  
+  // Use our centralized calculation hook
+  const { calculateHours } = useTimeCalculations();
   
   logger.debug('useWorkHours initialized (compatibility wrapper)');
   
@@ -24,12 +28,12 @@ export const useWorkHours = (userId?: string) => {
     if (!startTime || !endTime) return 0;
     
     try {
-      return timeEntryService.autoCalculateHours(startTime, endTime);
+      return calculateHours(startTime, endTime);
     } catch (error) {
       logger.error(`Error calculating hours: ${error}`);
       return 0;
     }
-  }, []);
+  }, [calculateHours]);
   
   return {
     ...enhancedHook,

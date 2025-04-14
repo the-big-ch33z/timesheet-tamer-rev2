@@ -11,4 +11,6 @@ export * from './use-toast';
 export * from './timesheet/useWorkHours';
 export * from './timesheet/useTimesheetWorkHours';
 export * from './timesheet/useTimesheetEntries';
+export * from './timesheet/useTimeEntries';
+export * from './timesheet/useTimeCalculations';
 // Add other hooks as needed

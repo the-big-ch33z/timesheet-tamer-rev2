@@ -1,17 +1,17 @@
 
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { useTimeEntryState } from "../hooks/useTimeEntryState";
 import TimeHeader from "../components/TimeHeader";
 import ExistingEntriesList from "../components/ExistingEntriesList";
 import { DraftProvider } from "@/contexts/timesheet/draft-context/DraftContext";
 import DraftEntryCard from "../components/DraftEntryCard";
 import NewEntryLauncher from "../components/NewEntryLauncher";
-import { useEntriesContext } from "@/contexts/timesheet";
-import { useWorkHours } from "@/hooks/timesheet/useWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
-import { timeEntryService } from "@/utils/time/services/timeEntryService";
+import { useTimeEntries } from "@/hooks/timesheet/useTimeEntries";
+import { useWorkHours } from "@/hooks/timesheet/useWorkHours";
+import { useTimeCalculations } from "@/hooks/timesheet/useTimeCalculations";
 import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
+import { useTimeEntryState } from "../hooks/useTimeEntryState";
 
 const logger = createTimeLogger('TimeEntryManager');
 
@@ -35,9 +35,10 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
   
   logger.debug(`Using userId: ${userId} for date: ${date}`);
   
-  // Use our centralized hooks for better coordination
+  // Use our standardized hooks
   const workHours = useWorkHours(userId);
-  const entriesContext = useEntriesContext();
+  const { calculateHours } = useTimeCalculations();
+  const timeEntries = useTimeEntries(userId, date);
   
   const {
     startTime,
@@ -57,9 +58,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
     userId
   });
   
-  // Setup auto-save on page navigation/unload
+  // Setup auto-save on component unmount
   useEffect(() => {
-    // Ensure we save any work hour changes on component unmount
     return () => {
       logger.debug("TimeEntryManager unmounting - ensuring work hours are saved");
       if (startTime && endTime) {
@@ -84,13 +84,13 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
       endTime: entry.endTime || currentEndTime,
       // Auto-calculate hours if missing but have start and end times
       hours: entry.hours || (entry.startTime && entry.endTime ? 
-        timeEntryService.autoCalculateHours(entry.startTime, entry.endTime) : 
+        calculateHours(entry.startTime, entry.endTime) : 
         (currentStartTime && currentEndTime ? calculatedHours : 0))
     };
     
     logger.debug("Complete entry data:", completeEntry);
     
-    // Use the provided callback if available, otherwise use context method
+    // Use the provided callback if available, otherwise use our hook method
     if (onCreateEntry && completeEntry.hours && typeof completeEntry.hours === 'number') {
       onCreateEntry(
         completeEntry.startTime,
@@ -98,8 +98,8 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
         completeEntry.hours
       );
     } else if (completeEntry.hours && typeof completeEntry.hours === 'number') {
-      logger.debug("Creating entry using context method", completeEntry);
-      entriesContext.createEntry(completeEntry);
+      logger.debug("Creating entry using hook method", completeEntry);
+      timeEntries.createEntry(completeEntry);
     } else {
       logger.error("Cannot create entry - missing hours value");
       return;
