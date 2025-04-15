@@ -16,7 +16,12 @@ jest.mock('@/contexts/user-metrics', () => ({
 }));
 
 describe('MonthlyHours Component', () => {
-  const mockUser = { id: 'user1', name: 'Test User' };
+  const mockUser = { 
+    id: 'user1', 
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'team-member'
+  };
   const mockDate = new Date('2025-04-15');
   
   beforeEach(() => {

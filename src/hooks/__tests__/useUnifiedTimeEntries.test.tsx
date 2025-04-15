@@ -2,7 +2,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useUnifiedTimeEntries } from '../useUnifiedTimeEntries';
 import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
-import { createMockEntryInput } from '@/utils/testing/mockUtils';
+import { createTestEntryInput } from '@/utils/testing/mockUtils';
 
 // Mock the localStorage
 const mockLocalStorage: { [key: string]: string } = {};
@@ -41,7 +41,7 @@ describe('useUnifiedTimeEntries Hook', () => {
   it('creates a new entry', () => {
     const { result } = renderHook(() => useUnifiedTimeEntries({ userId: 'user1' }));
 
-    const newEntry = createMockEntryInput({ userId: 'user1' });
+    const newEntry = createTestEntryInput({ userId: 'user1' });
     
     act(() => {
       const entryId = result.current.createEntry(newEntry);
@@ -57,7 +57,7 @@ describe('useUnifiedTimeEntries Hook', () => {
     
     act(() => {
       // First create an entry
-      const newEntry = createMockEntryInput({ userId: 'user1' });
+      const newEntry = createTestEntryInput({ userId: 'user1' });
       entryId = result.current.createEntry(newEntry);
     });
 
@@ -77,7 +77,7 @@ describe('useUnifiedTimeEntries Hook', () => {
     let entryId: string | null = null;
     
     act(() => {
-      const newEntry = createMockEntryInput({ userId: 'user1' });
+      const newEntry = createTestEntryInput({ userId: 'user1' });
       entryId = result.current.createEntry(newEntry);
     });
 
@@ -99,12 +99,12 @@ describe('useUnifiedTimeEntries Hook', () => {
 
     act(() => {
       // Create entries for different dates
-      result.current.createEntry(createMockEntryInput({ 
+      result.current.createEntry(createTestEntryInput({ 
         userId: 'user1',
         date: new Date('2025-04-15')
       }));
       
-      result.current.createEntry(createMockEntryInput({
+      result.current.createEntry(createTestEntryInput({
         userId: 'user1',
         date: new Date('2025-04-16')
       }));
@@ -141,7 +141,7 @@ describe('useUnifiedTimeEntries Hook', () => {
     let entryId: string | null = null;
     
     act(() => {
-      const newEntry = createMockEntryInput({ userId: 'user1' });
+      const newEntry = createTestEntryInput({ userId: 'user1' });
       entryId = result.current.createEntry(newEntry);
     });
 
@@ -153,7 +153,7 @@ describe('useUnifiedTimeEntries Hook', () => {
 
       // Create a new entry with same data
       act(() => {
-        const newEntry = createMockEntryInput({ userId: 'user1' });
+        const newEntry = createTestEntryInput({ userId: 'user1' });
         result.current.createEntry(newEntry);
       });
 
