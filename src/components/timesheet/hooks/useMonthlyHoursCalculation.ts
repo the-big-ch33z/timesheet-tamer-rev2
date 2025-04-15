@@ -5,8 +5,6 @@ import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalc
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
 import { calculateFortnightHoursFromSchedule } from '@/utils/time/calculations/scheduleUtils';
-import { unifiedTimeEntryService } from "@/utils/time/services/unifiedTimeEntryService";
-import { useUnifiedTimeEntries } from "@/hooks/useUnifiedTimeEntries";
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],
@@ -22,24 +20,22 @@ export const useMonthlyHoursCalculation = (
     user ? getUserMetrics(user.id) : null
   ), [user, getUserMetrics]);
 
-  // Use our unified data access to get month entries
-  const { getMonthEntries } = useUnifiedTimeEntries({ 
-    userId: user?.id, 
-    showToasts: false 
-  });
-
-  // Calculate total hours for the current month
+  // Calculate total hours from passed entries for the current month
   const hours = useMemo(() => {
     if (!user?.id) return 0;
     
-    // Get entries for the current month using the unified service
-    const monthEntries = getMonthEntries(currentMonth);
+    // Filter entries for the current month only
+    const monthEntries = entries.filter(entry => {
+      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+      return entryDate.getMonth() === currentMonth.getMonth() && 
+             entryDate.getFullYear() === currentMonth.getFullYear();
+    });
+    
     logger.debug(`Calculating total hours for ${monthEntries.length} entries in month ${currentMonth.toISOString().slice(0, 7)}`);
     
     // Sum up the hours
-    const totalHours = unifiedTimeEntryService.calculateTotalHours(monthEntries);
-    return totalHours;
-  }, [getMonthEntries, currentMonth, user, logger]);
+    return monthEntries.reduce((total, entry) => total + (entry.hours || 0), 0);
+  }, [entries, currentMonth, user, logger]);
 
   // Calculate fortnight hours and target hours
   const { fortnightHours, targetHours } = useMemo(() => {
