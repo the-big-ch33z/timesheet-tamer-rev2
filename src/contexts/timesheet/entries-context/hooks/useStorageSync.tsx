@@ -1,7 +1,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import { TimeEntry } from "@/types";
-import { STORAGE_KEY } from '../timeEntryStorage';
+import { STORAGE_KEY, saveEntriesToStorage, deleteEntryFromStorage, getDeletedEntryIds } from '../timeEntryStorage';
 
 export const useStorageSync = (
   entries: TimeEntry[],
@@ -21,13 +21,22 @@ export const useStorageSync = (
     saveTimeoutRef.current = setTimeout(() => {
       try {
         console.debug("[TimeEntryProvider] Saving entries to localStorage:", entriesToSave.length);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesToSave));
+        // Filter out any entries that might be in the deleted list
+        const deletedIds = getDeletedEntryIds();
+        const filteredEntries = entriesToSave.filter(entry => !deletedIds.includes(entry.id));
+        
+        if (filteredEntries.length !== entriesToSave.length) {
+          console.debug("[TimeEntryProvider] Filtered out deleted entries during save:", 
+            entriesToSave.length - filteredEntries.length);
+        }
+        
+        saveEntriesToStorage(filteredEntries, isInitialized);
         console.debug("[TimeEntryProvider] Save complete");
       } catch (error) {
         console.error("[TimeEntryProvider] Error saving to localStorage:", error);
       }
     }, 100);
-  }, []);
+  }, [isInitialized]);
 
   // Save entries when they change
   useEffect(() => {
@@ -43,19 +52,40 @@ export const useStorageSync = (
 
   // Listen for delete events to force immediate sync
   useEffect(() => {
-    const handleDeleteEvent = () => {
-      console.debug("[TimeEntryProvider] Entry deletion detected, forcing immediate sync");
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+    const handleDeleteEvent = (event: CustomEvent<{ entryId: string }>) => {
+      const entryId = event.detail?.entryId;
+      console.debug("[TimeEntryProvider] Entry deletion event detected:", entryId);
+      
+      // If we have an entry ID in the event, filter it out immediately
+      if (entryId) {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        
+        // Use the direct deletion function to ensure the entry is truly gone
+        deleteEntryFromStorage(entryId);
+      } else {
+        // Legacy event without ID - do a full sync
+        console.debug("[TimeEntryProvider] Legacy deletion event detected, forcing immediate sync");
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        
+        // Filter out any entries that might be deleted
+        const deletedIds = getDeletedEntryIds();
+        const filteredEntries = entries.filter(entry => !deletedIds.includes(entry.id));
+        
+        saveEntriesToStorage(filteredEntries, isInitialized);
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     };
 
-    window.addEventListener('timesheet:entry-deleted', handleDeleteEvent);
+    // Listen for both types of events
+    window.addEventListener('timesheet:entry-deleted', handleDeleteEvent as EventListener);
+    
     return () => {
-      window.removeEventListener('timesheet:entry-deleted', handleDeleteEvent);
+      window.removeEventListener('timesheet:entry-deleted', handleDeleteEvent as EventListener);
     };
-  }, [entries]);
+  }, [entries, isInitialized]);
 
   return {
     saveEntriesToStorageDebounced

@@ -1,3 +1,4 @@
+
 /**
  * Time Entry Service
  * Provides a consistent interface for all timesheet entry operations
@@ -7,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createTimeLogger } from '../errors/timeErrorHandling';
 import { ensureDate, isValidDate } from '../validation/dateValidation';
 import { calculateHoursFromTimes } from '../calculations/hoursCalculations';
+import { addToDeletedEntries, getDeletedEntryIds } from '@/contexts/timesheet/entries-context/timeEntryStorage';
 
 // Create a dedicated logger for this service
 const logger = createTimeLogger('TimeEntryService');
@@ -45,27 +47,32 @@ export const createTimeEntryService = (): TimeEntryService => {
     try {
       logger.debug("Loading all entries from storage");
       const savedEntries = localStorage.getItem(STORAGE_KEY);
+      const deletedIds = getDeletedEntryIds();
       
       if (!savedEntries) {
         logger.debug("No entries found in storage");
         return [];
       }
       
-      const parsedEntries = JSON.parse(savedEntries).map((entry: any) => {
-        // Ensure date is a valid Date object
-        const entryDate = ensureDate(entry.date);
-        if (!entryDate) {
-          logger.warn("Invalid date in entry:", entry);
-        }
-        
-        return {
-          ...entry,
-          date: entryDate || new Date()
-        };
-      });
+      // Parse entries and filter out deleted ones
+      const allEntries = JSON.parse(savedEntries);
+      const filteredEntries = allEntries
+        .filter((entry: any) => !deletedIds.includes(entry.id))
+        .map((entry: any) => {
+          // Ensure date is a valid Date object
+          const entryDate = ensureDate(entry.date);
+          if (!entryDate) {
+            logger.warn("Invalid date in entry:", entry);
+          }
+          
+          return {
+            ...entry,
+            date: entryDate || new Date()
+          };
+        });
       
-      logger.debug(`Loaded ${parsedEntries.length} entries from storage`);
-      return parsedEntries;
+      logger.debug(`Loaded ${filteredEntries.length} entries from storage (filtered from ${allEntries.length})`);
+      return filteredEntries;
     } catch (error) {
       logger.error("Error loading entries from storage:", error);
       return [];
@@ -75,8 +82,12 @@ export const createTimeEntryService = (): TimeEntryService => {
   // Save all entries to storage
   const saveEntries = (entries: TimeEntry[]): boolean => {
     try {
-      logger.debug(`Saving ${entries.length} entries to storage`);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      // Filter out any entries that are in the deleted list
+      const deletedIds = getDeletedEntryIds();
+      const filteredEntries = entries.filter(entry => !deletedIds.includes(entry.id));
+      
+      logger.debug(`Saving ${filteredEntries.length} entries to storage (filtered from ${entries.length})`);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredEntries));
       return true;
     } catch (error) {
       logger.error("Error saving entries to storage:", error);
@@ -215,6 +226,9 @@ export const createTimeEntryService = (): TimeEntryService => {
     }
     
     try {
+      // First add to the deleted entries tracker to ensure it stays deleted
+      addToDeletedEntries(entryId);
+      
       // Get all entries directly from storage
       const savedEntries = localStorage.getItem(STORAGE_KEY);
       const allEntries = savedEntries ? JSON.parse(savedEntries) : [];
@@ -235,7 +249,9 @@ export const createTimeEntryService = (): TimeEntryService => {
       logger.debug(`Successfully deleted entry ${entryId}`);
       
       // Trigger storage event for cross-tab sync
-      window.dispatchEvent(new Event('timesheet:entry-deleted'));
+      window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
+        detail: { entryId }
+      }));
       
       return true;
     } catch (error) {

@@ -4,6 +4,7 @@ import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
 import { useEntriesContext } from "@/contexts/timesheet";
+import { addToDeletedEntries } from "@/contexts/timesheet/entries-context/timeEntryStorage";
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -21,6 +22,9 @@ const EntryList: React.FC<EntryListProps> = ({
   
   const handleDeleteEntry = async (entryId: string) => {
     console.log("EntryList: Deleting entry:", entryId);
+    
+    // First, add to the deleted entries tracker to ensure it stays deleted
+    addToDeletedEntries(entryId);
     
     try {
       // Use the passed onDelete function if provided, otherwise use the context function
@@ -40,8 +44,10 @@ const EntryList: React.FC<EntryListProps> = ({
         description: "The timesheet entry has been removed successfully",
       });
       
-      // Force storage sync after successful deletion
-      window.dispatchEvent(new Event('timesheet:entry-deleted'));
+      // Force storage sync and notify other tabs about the deletion
+      window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
+        detail: { entryId }
+      }));
     } catch (error) {
       console.error("Error deleting entry:", error);
       toast({
