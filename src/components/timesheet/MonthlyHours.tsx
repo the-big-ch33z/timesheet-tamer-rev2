@@ -17,16 +17,19 @@ interface MonthlyHoursProps {
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth, workSchedule }) => {
   const { getUserMetrics } = useUserMetrics();
   
-  // Use useMemo for performance optimization
+  // Call hook at the top level
+  const calculation = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);
+  
+  // Memoize derived values
   const {
     hours,
     targetHours,
     percentage,
     hoursRemaining,
     progressColor
-  } = useMemo(() => useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule), 
-    [entries, currentMonth, user, workSchedule]
-  );
+  } = useMemo(() => ({
+    ...calculation
+  }), [calculation]);
 
   // Get user metrics for FTE information
   const userMetrics = user ? getUserMetrics(user.id) : null;
