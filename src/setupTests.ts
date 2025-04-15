@@ -97,20 +97,22 @@ console.log = (...args) => {
 // Add method to mock date in tests globally
 const mockDate = (date: Date | string | number) => {
   const originalDate = global.Date;
-  const mockDate = new originalDate(new originalDate(date).getTime());
+  const mockDateInstance = new originalDate(new originalDate(date).getTime());
   
+  // Fix: Properly define the Date constructor to return a Date instance
   global.Date = class extends originalDate {
     constructor(date?: Date | string | number) {
       if (date) {
-        return super(date);
+        super(date);
+        return;
       }
-      return mockDate;
+      super(mockDateInstance);
     }
     
     static now() {
-      return mockDate.getTime();
+      return mockDateInstance.getTime();
     }
-  } as DateConstructor;
+  } as unknown as DateConstructor;
   
   return () => {
     global.Date = originalDate;
