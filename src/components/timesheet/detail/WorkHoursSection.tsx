@@ -4,6 +4,8 @@ import { TimeEntry, WorkSchedule } from "@/types";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 import TimeEntryController from "../entry-control/TimeEntryController";
 import { createTimeLogger } from "@/utils/time/errors";
+import WorkHoursInterface from "./components/WorkHoursInterface";
+import { Card } from "@/components/ui/card";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -29,11 +31,23 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   return (
     <TimeEntryProvider selectedDate={date} userId={userId}>
-      <TimeEntryController
-        date={date}
-        userId={userId}
-        interactive={interactive}
-      />
+      <div className="space-y-6">
+        <Card className="p-4">
+          <WorkHoursInterface 
+            date={date}
+            userId={userId}
+            interactive={interactive}
+            entries={entries}
+            workSchedule={workSchedule}
+          />
+        </Card>
+        
+        <TimeEntryController
+          date={date}
+          userId={userId}
+          interactive={interactive}
+        />
+      </div>
     </TimeEntryProvider>
   );
 };
