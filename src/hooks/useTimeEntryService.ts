@@ -1,4 +1,3 @@
-
 /**
  * Hook for accessing the TimeEntryService
  * Provides a React-friendly way to use the time entry service
@@ -7,8 +6,18 @@ import { useState, useEffect, useCallback } from "react";
 import { TimeEntry } from "@/types";
 import { timeEntryService } from "@/utils/time/services/timeEntryService";
 import { useToast } from "./use-toast";
+import { deprecationWarning } from '@/utils/deprecation/deprecationWarnings';
 
+/**
+ * @deprecated Use useTimesheetData from '@/hooks/timesheet/useTimesheetData' instead.
+ * This hook will be removed in a future version.
+ */
 export const useTimeEntryService = (userId?: string) => {
+  deprecationWarning(
+    'useTimeEntryService',
+    'This hook is deprecated. Please use useTimesheetData from @/hooks/timesheet/useTimesheetData instead.'
+  );
+
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();

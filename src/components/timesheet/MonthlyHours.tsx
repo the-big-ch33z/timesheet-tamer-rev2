@@ -2,20 +2,21 @@
 import React, { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { TimeEntry, User, WorkSchedule } from "@/types";
+import { User, WorkSchedule } from "@/types";
 import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
 import { useUserMetrics } from "@/contexts/user-metrics";
+import { useTimesheetData } from "@/hooks/timesheet/useTimesheetData";
 
 interface MonthlyHoursProps {
-  entries: TimeEntry[];
   user?: User;
   currentMonth: Date;
   workSchedule?: WorkSchedule;
 }
 
-const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth, workSchedule }) => {
+const MonthlyHours: React.FC<MonthlyHoursProps> = ({ user, currentMonth, workSchedule }) => {
   const { getUserMetrics } = useUserMetrics();
+  const { entries } = useTimesheetData(user?.id);
   
   // Call hook at the top level
   const calculation = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);

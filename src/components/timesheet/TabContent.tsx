@@ -1,14 +1,13 @@
-
 import React, { useMemo, Suspense, lazy, useEffect, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { useTabContent } from "./hooks/useTabContent";
 import { 
   useCalendarContext,
   useUserTimesheetContext,
-  useEntriesContext 
+  useTimeEntryContext 
 } from "@/contexts/timesheet";
 import { format } from "date-fns";
-import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
+import { useTimesheetData } from "@/hooks/timesheet/useTimesheetData";
 
 // Lazy load components
 const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
@@ -28,7 +27,8 @@ const LoadingComponent = () => (
 const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
-  const { entries, createEntry, getDayEntries } = useEntriesContext();
+  const { createEntry } = useTimeEntryContext();
+  const { entries, getDayEntries } = useTimesheetData(viewedUser?.id);
   
   const [refreshKey, setRefreshKey] = useState(Date.now());
 

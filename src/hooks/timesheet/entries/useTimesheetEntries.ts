@@ -1,14 +1,19 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TimeEntry } from "@/types";
 import { useLogger } from "../../useLogger";
 import { timeEntryService } from "@/utils/time/services/timeEntryService";
+import { deprecationWarning } from '@/utils/deprecation/deprecationWarnings';
 
 /**
- * Simplified hook for managing timesheet entries
- * Handles loading, viewing, and managing entries using the central TimeEntryService
+ * @deprecated Use useTimesheetData from '@/hooks/timesheet/useTimesheetData' instead.
+ * This hook will be removed in a future version.
  */
 export const useTimesheetEntries = (userId?: string) => {
+  deprecationWarning(
+    'useTimesheetEntries',
+    'This hook is deprecated. Please use useTimesheetData from @/hooks/timesheet/useTimesheetData instead.'
+  );
+  
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isInitializedRef = useRef(false);
