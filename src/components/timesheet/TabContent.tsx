@@ -1,3 +1,4 @@
+
 import React, { useMemo, Suspense, lazy, useEffect, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { useTabContent } from "./hooks/useTabContent";
@@ -122,7 +123,6 @@ const TabContent: React.FC = () => {
           <div className="space-y-6">
             <Suspense fallback={<LoadingComponent />}>
               <MonthlyHours 
-                entries={entries} 
                 user={viewedUser} 
                 currentMonth={currentMonth} 
                 workSchedule={workSchedule}
