@@ -5,6 +5,7 @@ import { WorkSchedule } from '@/types';
 export const defaultWorkSchedule: WorkSchedule = {
   id: 'default',
   name: 'Default Schedule',
+  userId: 'system', // Add missing userId property
   weeks: {
     1: {
       monday: { startTime: '09:00', endTime: '17:00' },

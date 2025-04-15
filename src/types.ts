@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -113,9 +112,10 @@ export interface TimeEntryService {
 export interface EntryFieldConfig {
   id: string;
   name: string;
-  type: 'text' | 'number' | 'date' | 'time' | 'select';
+  type: 'text' | 'number' | 'date' | 'time' | 'select' | 'textarea';
   required?: boolean;
   placeholder?: string;
+  visible?: boolean;
   options?: string[];
   defaultValue?: string | number;
   validation?: {
@@ -123,6 +123,22 @@ export interface EntryFieldConfig {
     max?: number;
     pattern?: string;
   };
+  size?: 'small' | 'medium' | 'large';
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  createdAt?: Date;
+  ownerId: string;
+}
+
+export interface TeamMembership {
+  id: string;
+  userId: string;
+  teamId: string;
+  joinedAt: Date;
+  role?: string;
 }
 
 export interface AuditLog {
@@ -140,4 +156,3 @@ export interface SyncStatus {
   status: 'success' | 'failed' | 'in_progress';
   recordsProcessed?: number;
 }
-

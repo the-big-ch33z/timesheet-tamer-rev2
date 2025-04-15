@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { WeekDay, WorkSchedule } from "@/types";
@@ -48,6 +47,7 @@ export const useScheduleState = () => {
     const newSchedule: WorkSchedule = {
       id: `schedule-${Date.now()}`,
       name,
+      userId: 'default-user',
       weeks: {
         1: {
           monday: { startTime: '09:00', endTime: '17:00' },

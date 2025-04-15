@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TimeEntryManager from '../managers/TimeEntryManager';
@@ -90,14 +89,16 @@ describe('TimeEntryManager Component', () => {
         userId: 'user1', 
         date: new Date(),
         hours: 4, 
-        description: 'Morning work'
+        description: 'Morning work',
+        project: 'Default Project'
       },
       { 
         id: 'entry2', 
         userId: 'user1', 
         date: new Date(),
         hours: 4, 
-        description: 'Afternoon work'
+        description: 'Afternoon work',
+        project: 'Default Project'
       }
     ];
     

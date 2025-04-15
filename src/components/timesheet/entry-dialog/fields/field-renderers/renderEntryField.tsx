@@ -1,4 +1,3 @@
-
 import React from "react";
 import { EntryFieldConfig } from "@/types";
 import JobNumberField from "../field-types/JobNumberField";
@@ -156,6 +155,13 @@ export const renderEntryField = ({
         console.debug(`[renderEntryField] Inferred hours field from name: ${field.name}`);
       }
       
+      let fieldType: EntryFieldType = "text";
+      if (field.type === "textarea") {
+        fieldType = "textarea";
+      } else {
+        fieldType = field.type as EntryFieldType;
+      }
+      
       return (
         <GenericField
           id={fieldId}
@@ -167,7 +173,7 @@ export const renderEntryField = ({
           inline={inline}
           disabled={disabled}
           showLabel={showLabel}
-          type={field.type === 'textarea' ? "textarea" : "text"}
+          type={fieldType}
         />
       );
   }
