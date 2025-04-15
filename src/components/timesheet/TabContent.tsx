@@ -42,8 +42,6 @@ const TabContent: React.FC = () => {
 
   const handleCreateEntry = (startTime: string, endTime: string, hours: number) => {
     if (selectedDay && viewedUser) {
-      console.log("Creating new entry:", { startTime, endTime, hours, date: selectedDay, userId: viewedUser.id });
-      
       createEntry({
         date: selectedDay,
         hours: hours,
@@ -57,36 +55,18 @@ const TabContent: React.FC = () => {
         project: 'General',
       });
       
-      setTimeout(() => {
-        console.log("Forcing refresh after entry creation");
-        setRefreshKey(Date.now());
-      }, 100);
+      setTimeout(() => setRefreshKey(Date.now()), 100);
     }
   };
 
   const dayEntries = useMemo(() => {
     if (!selectedDay) return [];
-    
-    const dayEntriesList = getDayEntries(selectedDay);
-    console.log("TabContent: Got day entries for", format(selectedDay, "yyyy-MM-dd"), 
-      "count:", dayEntriesList.length);
-    
-    return dayEntriesList;
+    return getDayEntries(selectedDay);
   }, [selectedDay, getDayEntries, entries, refreshKey]);
 
   const workHoursSectionKey = useMemo(() => 
     selectedDay ? `work-hours-${selectedDay.toISOString()}-${dayEntries.length}-${refreshKey}` : 'no-day'
   , [selectedDay, dayEntries.length, refreshKey]);
-
-  useEffect(() => {
-    if (selectedDay) {
-      console.log("Selected day changed to:", format(selectedDay, "yyyy-MM-dd"));
-    }
-  }, [selectedDay]);
-
-  useEffect(() => {
-    setRefreshKey(Date.now());
-  }, [entries.length]);
 
   return (
     <>
