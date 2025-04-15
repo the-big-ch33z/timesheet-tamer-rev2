@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import MonthlyHours from '../MonthlyHours';
 import { useTimesheetData } from '@/hooks/timesheet/useTimesheetData';
 import { useUserMetrics } from '@/contexts/user-metrics';
 import { createTestEntry } from '@/utils/testing/mockUtils';
+import { User } from '@/types';
 
 // Mock the hooks
 jest.mock('@/hooks/timesheet/useTimesheetData', () => ({
@@ -16,11 +16,12 @@ jest.mock('@/contexts/user-metrics', () => ({
 }));
 
 describe('MonthlyHours Component', () => {
-  const mockUser = { 
+  const mockUser: User = { 
     id: 'user1', 
     name: 'Test User',
     email: 'test@example.com',
-    role: 'team-member'
+    role: 'team-member',
+    fte: 1
   };
   const mockDate = new Date('2025-04-15');
   
