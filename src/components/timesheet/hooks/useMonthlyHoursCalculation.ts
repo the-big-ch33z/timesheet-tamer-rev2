@@ -1,10 +1,12 @@
+
 import { useMemo } from 'react';
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
 import { calculateFortnightHoursFromSchedule } from '@/utils/time/calculations/scheduleUtils';
-import { timeEntryService } from "@/utils/time/services/timeEntryService";
+import { unifiedTimeEntryService } from "@/utils/time/services/unifiedTimeEntryService";
+import { useUnifiedTimeEntries } from "@/hooks/useUnifiedTimeEntries";
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],
@@ -14,22 +16,30 @@ export const useMonthlyHoursCalculation = (
 ) => {
   const { getUserMetrics } = useUserMetrics();
   const logger = useLogger("MonthlyHoursCalculation");
-
+  
   // Get user metrics
   const userMetrics = useMemo(() => (
     user ? getUserMetrics(user.id) : null
   ), [user, getUserMetrics]);
 
-  // Filter entries for current month and calculate total hours
+  // Use our unified data access to get month entries
+  const { getMonthEntries } = useUnifiedTimeEntries({ 
+    userId: user?.id, 
+    showToasts: false 
+  });
+
+  // Calculate total hours for the current month
   const hours = useMemo(() => {
     if (!user?.id) return 0;
     
-    // Get entries for the current month only
-    const monthEntries = timeEntryService.getMonthEntries(currentMonth, user.id);
+    // Get entries for the current month using the unified service
+    const monthEntries = getMonthEntries(currentMonth);
     logger.debug(`Calculating total hours for ${monthEntries.length} entries in month ${currentMonth.toISOString().slice(0, 7)}`);
     
-    return monthEntries.reduce((total, entry) => total + entry.hours, 0);
-  }, [entries, currentMonth, user, logger]);
+    // Sum up the hours
+    const totalHours = unifiedTimeEntryService.calculateTotalHours(monthEntries);
+    return totalHours;
+  }, [getMonthEntries, currentMonth, user, logger]);
 
   // Calculate fortnight hours and target hours
   const { fortnightHours, targetHours } = useMemo(() => {
