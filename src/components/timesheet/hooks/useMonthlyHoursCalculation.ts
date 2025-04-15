@@ -1,10 +1,9 @@
-
 import { useMemo } from 'react';
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
-import { calculateAdjustedFortnightHours } from "@/utils/time/calculations/hoursCalculations";
+import { calculateAdjustedFortnightHours, timeEntryService } from "@/utils/time/services/timeEntryService";
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],
@@ -14,23 +13,23 @@ export const useMonthlyHoursCalculation = (
 ) => {
   const { getUserMetrics } = useUserMetrics();
   const logger = useLogger("MonthlyHoursCalculation");
-  
-  // Use useMemo to optimize calculations
+
+  // Get user metrics
   const userMetrics = useMemo(() => (
     user ? getUserMetrics(user.id) : null
   ), [user, getUserMetrics]);
-  
-  logger.debug("User metrics retrieved:", { 
-    userId: user?.id, 
-    metrics: userMetrics 
-  });
-  
-  // Memoize total hours calculation
-  const hours = useMemo(() => 
-    entries.reduce((total, entry) => total + entry.hours, 0), 
-    [entries]
-  );
-  
+
+  // Filter entries for current month and calculate total hours
+  const hours = useMemo(() => {
+    if (!user?.id) return 0;
+    
+    // Get entries for the current month only
+    const monthEntries = timeEntryService.getMonthEntries(currentMonth, user.id);
+    logger.debug(`Calculating total hours for ${monthEntries.length} entries in month ${currentMonth.toISOString().slice(0, 7)}`);
+    
+    return monthEntries.reduce((total, entry) => total + entry.hours, 0);
+  }, [entries, currentMonth, user, logger]);
+
   // Calculate fortnight hours and target hours
   const { fortnightHours, targetHours } = useMemo(() => {
     // If we have a work schedule, calculate fortnight hours from it
@@ -61,18 +60,18 @@ export const useMonthlyHoursCalculation = (
     
     return { fortnightHours, targetHours };
   }, [workSchedule, userMetrics, currentMonth, logger, user]);
-  
+
   // Calculate completion percentage and remaining hours
   const percentage = useMemo(() => 
     Math.min(Math.round((hours / targetHours) * 100), 100),
     [hours, targetHours]
   );
-  
+
   const hoursRemaining = useMemo(() =>
     targetHours - hours > 0 ? (targetHours - hours).toFixed(1) : "0",
     [targetHours, hours]
   );
-  
+
   // Determine color based on percentage
   const progressColor = useMemo(() => {
     if (percentage >= 100) return "success";

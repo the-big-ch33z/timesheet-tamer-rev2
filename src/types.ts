@@ -1,148 +1,96 @@
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl?: string;
+}
+
 export interface TimeEntry {
   id: string;
   date: Date;
   hours: number;
-  description?: string;
-  jobNumber?: string;
-  rego?: string;
-  taskNumber?: string; // Added task number field
+  description: string;
+  userId: string;
   startTime?: string;
   endTime?: string;
-  project?: string;
-  userId: string;
+  jobNumber?: string;
+  taskNumber?: string;
+  rego?: string;
+  project: string;
 }
 
-export interface EntryFieldConfig {
+export interface Client {
   id: string;
   name: string;
-  type: 'text' | 'select' | 'time' | 'number' | 'textarea';
-  required: boolean;
-  options?: string[];
-  icon?: string;
-  visible: boolean;
-  placeholder?: string;
-  size?: 'small' | 'medium' | 'large';
+  contactName: string;
+  contactEmail: string;
+  phone: string;
 }
 
-export interface Holiday {
+export interface Project {
   id: string;
   name: string;
-  date: string; // YYYY-MM-DD format
-  region: string;
+  clientId: string;
+  description: string;
+  startDate: Date;
+  endDate?: Date;
 }
 
-export type UserRole = 'admin' | 'manager' | 'team-member';
+export interface Task {
+  id: string;
+  name: string;
+  projectId: string;
+  description: string;
+  estimatedHours: number;
+}
 
-export type ActionType = 'create' | 'read' | 'update' | 'delete';
-export type ResourceType = 'user' | 'team' | 'project' | 'timesheet' | 'report' | 'holiday' | 'setting';
-
-export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
-export type WeekNumber = 1 | 2;
-
-export interface WorkHours {
-  startTime: string; // Format: "HH:MM" in 24h format
-  endTime: string; // Format: "HH:MM" in 24h format
+export interface Invoice {
+  id: string;
+  projectId: string;
+  invoiceNumber: string;
+  date: Date;
+  amount: number;
+  status: 'draft' | 'sent' | 'paid';
 }
 
 export interface WorkSchedule {
   id: string;
   name: string;
+  userId: string;
   weeks: {
-    1: Record<WeekDay, WorkHours | null>; // Week 1
-    2: Record<WeekDay, WorkHours | null>; // Week 2
+    [weekNumber: number]: {
+      monday?: { startTime: string; endTime: string };
+      tuesday?: { startTime: string; endTime: string };
+      wednesday?: { startTime: string; endTime: string };
+      thursday?: { startTime: string; endTime: string };
+      friday?: { startTime: string; endTime: string };
+      saturday?: { startTime: string; endTime: string };
+      sunday?: { startTime: string; endTime: string };
+    };
   };
   rdoDays: {
-    1: WeekDay[]; // Week 1 RDOs
-    2: WeekDay[]; // Week 2 RDOs
+    [rdoNumber: number]: string[];
   };
-  isDefault?: boolean;
 }
 
-export interface LegacyWorkSchedule {
+export interface UserMetrics {
   id: string;
-  name: string;
-  workDays: Record<WeekDay, WorkHours | null>; // null means day off
-  rdoDays: WeekDay[]; // Rostered Day Off
-  isDefault?: boolean;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  organizationId: string;
-  teamIds?: string[]; // For team members and managers
-  workScheduleId?: string; // Reference to a work schedule
-  useDefaultSchedule?: boolean; // If true, use the organization's default schedule
-  fte?: number; // Full-Time Equivalent (1.0 = full-time, 0.5 = half-time)
-  fortnightHours?: number; // Required hours per fortnight
-  createdAt?: string;
-  updatedAt?: string;
-  lastLogin?: string;
-  status?: 'active' | 'inactive' | 'pending' | 'archived';
-}
-
-export interface Organization {
-  id: string;
-  name: string;
-  adminId: string; // The user ID of the admin who created this organization
-  createdAt?: string;
-  settings?: OrganizationSettings;
-}
-
-export interface OrganizationSettings {
-  workingDays: string[]; // e.g., ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-  workingHoursPerDay: number;
-  timeFormat: '12h' | '24h';
-  dateFormat: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  organizationId: string;
-  managerId: string; // The user ID of the manager for this team
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface TeamMembership {
-  id: string;
-  teamId: string;
-  userId: string; // The team member's user ID
-  managerId: string; // The ID of the manager who oversees this team member
-  joinedAt?: string;
-}
-
-export interface AuditLog {
-  id: string;
-  timestamp: string;
   userId: string;
-  action: string; // e.g., 'login', 'logout', 'create_user', 'update_role', etc.
-  targetResource: string; // e.g., 'user/123', 'team/456', etc.
-  details: string;
-  ipAddress?: string;
+  fte: number;
+  fortnightHours: number;
 }
 
-export interface SyncStatus {
-  lastSyncedAt: string;
-  entityType: string; // e.g., 'users', 'teams', 'timesheets', etc.
-  status: 'success' | 'failed' | 'in_progress';
-  recordsProcessed?: number;
-}
-
-export interface PermissionMatrix {
-  [role: string]: {
-    [resource: string]: {
-      [action: string]: boolean;
-    }
-  }
-}
-
-export interface TeamHierarchy {
-  team: Team;
-  manager: User;
-  members: User[];
-  subteams?: TeamHierarchy[];
+export interface TimeEntryService {
+  getAllEntries: () => TimeEntry[];
+  getUserEntries: (userId: string) => TimeEntry[];
+  getDayEntries: (date: Date, userId: string) => TimeEntry[];
+  createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
+  updateEntry: (entryId: string, updates: Partial<TimeEntry>) => boolean;
+  deleteEntry: (entryId: string) => boolean;
+  saveEntries: (entries: TimeEntry[]) => boolean;
+  calculateTotalHours: (entries: TimeEntry[]) => number;
+  validateEntry: (entry: Partial<TimeEntry>) => { valid: boolean; message?: string };
+  autoCalculateHours: (startTime: string, endTime: string) => number;
+  getMonthEntries: (date: Date, userId: string) => TimeEntry[];
 }

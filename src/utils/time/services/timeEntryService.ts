@@ -1,4 +1,3 @@
-
 /**
  * Time Entry Service
  * Provides a consistent interface for all timesheet entry operations
@@ -22,6 +21,7 @@ export interface TimeEntryService {
   getAllEntries: () => TimeEntry[];
   getUserEntries: (userId: string) => TimeEntry[];
   getDayEntries: (date: Date, userId: string) => TimeEntry[];
+  getMonthEntries: (date: Date, userId: string) => TimeEntry[];
   
   // Write operations
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
@@ -130,6 +130,29 @@ export const createTimeEntryService = (): TimeEntryService => {
     
     logger.debug(`Found ${dayEntries.length} entries for user ${userId} on ${date.toDateString()}`);
     return dayEntries;
+  };
+  
+  // Get entries for a specific month
+  const getMonthEntries = (date: Date, userId: string): TimeEntry[] => {
+    if (!isValidDate(date)) {
+      logger.warn("Invalid date provided to getMonthEntries:", date);
+      return [];
+    }
+    
+    const userEntries = getUserEntries(userId);
+    
+    const monthEntries = userEntries.filter(entry => {
+      const entryDate = entry.date instanceof Date ? entry.date : ensureDate(entry.date);
+      if (!entryDate) return false;
+      
+      return (
+        entryDate.getFullYear() === date.getFullYear() &&
+        entryDate.getMonth() === date.getMonth()
+      );
+    });
+    
+    logger.debug(`Found ${monthEntries.length} entries for month ${date.toISOString().slice(0, 7)}`);
+    return monthEntries;
   };
   
   // Create a new entry
@@ -319,7 +342,8 @@ export const createTimeEntryService = (): TimeEntryService => {
     saveEntries,
     calculateTotalHours,
     validateEntry,
-    autoCalculateHours
+    autoCalculateHours,
+    getMonthEntries
   };
 };
 
