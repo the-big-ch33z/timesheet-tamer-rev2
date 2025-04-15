@@ -29,6 +29,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     hasEntries,
     hoursVariance,
     isUndertime,
+    isComplete,
     handleTimeChange
   } = useTimeEntryState({
     entries,
@@ -50,6 +51,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         hasEntries={hasEntries}
         interactive={interactive}
         onTimeChange={handleTimeChange}
+        isComplete={isComplete}
       />
       
       <WorkHoursAlerts
@@ -58,6 +60,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         hoursVariance={hoursVariance}
         interactive={interactive}
         date={date}
+        isComplete={isComplete}
       />
     </div>
   );

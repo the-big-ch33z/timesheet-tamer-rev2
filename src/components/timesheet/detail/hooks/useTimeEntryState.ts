@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
@@ -8,6 +7,7 @@ import { format } from "date-fns";
 import { useTimeEntryStats } from "./useTimeEntryStats";
 import { useTimeEntryFormHandling } from "./useTimeEntryFormHandling";
 import { v4 as uuidv4 } from 'uuid';
+import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 
 interface UseTimeEntryStateProps {
   entries: TimeEntry[];
@@ -148,6 +148,13 @@ export const useTimeEntryState = ({
     calculatedHours
   });
 
+  const {
+    targetHours,
+    totalHours: totalEntryHours,
+    isComplete,
+    hoursRemaining
+  } = useTimeCompletion(entries, startTime, endTime);
+
   // Handle form submissions and entry creation
   const {
     handleEntrySubmission,
@@ -178,8 +185,8 @@ export const useTimeEntryState = ({
   return {
     startTime,
     endTime,
-    calculatedHours,
-    totalHours,
+    calculatedHours: targetHours,
+    totalHours: totalHours,
     hasEntries,
     hoursVariance,
     
@@ -194,6 +201,8 @@ export const useTimeEntryState = ({
     saveAllPendingChanges,
     
     interactive,
-    isUndertime
+    isUndertime,
+    isComplete,
+    hoursRemaining
   };
 };
