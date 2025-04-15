@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TimeEntry, User, WorkSchedule } from "@/types";
@@ -16,15 +16,19 @@ interface MonthlyHoursProps {
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth, workSchedule }) => {
   const { getUserMetrics } = useUserMetrics();
+  
+  // Use useMemo for performance optimization
   const {
     hours,
     targetHours,
     percentage,
     hoursRemaining,
     progressColor
-  } = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);
+  } = useMemo(() => useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule), 
+    [entries, currentMonth, user, workSchedule]
+  );
 
-  // Get user metrics to display FTE information
+  // Get user metrics for FTE information
   const userMetrics = user ? getUserMetrics(user.id) : null;
 
   return (
@@ -61,4 +65,4 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ entries, user, currentMonth
   );
 };
 
-export default MonthlyHours;
+export default React.memo(MonthlyHours);

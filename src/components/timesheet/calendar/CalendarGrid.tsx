@@ -1,10 +1,10 @@
-
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import CalendarDay from "./CalendarDay";
 import { useCalendarHelpers } from "./useCalendarHelpers";
 import { Holiday } from "@/lib/holidays";
 import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
+import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 
 interface CalendarGridProps {
   daysInMonth: Date[];
@@ -40,7 +40,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const getDayEntries = (day: Date) => {
     return entries.filter(entry => {
-      // Ensure entry.date is a Date object
       const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
       return formatDateForComparison(entryDate) === formatDateForComparison(day);
     });
@@ -54,7 +53,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return areSameDates(day, today);
   };
 
-  // Convert from getDayState output to DayStatusInfo format
   const getDayStatus = (day: Date): DayStatusInfo => {
     // Get the base state from useCalendarHelpers
     const baseState = getDayState(day, selectedDate, new Date(day.getFullYear(), day.getMonth(), 1));
@@ -96,17 +94,34 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     };
   };
 
+  const getDayCompletion = (day: Date, dayEntries: TimeEntry[]) => {
+    if (!workSchedule) return false;
+
+    const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
+    const week = 1;
+    const scheduleHours = workSchedule.weeks[week][weekdayName as keyof typeof workSchedule.weeks[typeof week]];
+
+    if (!scheduleHours) return false;
+
+    const { isComplete } = useTimeCompletion(
+      dayEntries,
+      scheduleHours.startTime,
+      scheduleHours.endTime
+    );
+
+    return isComplete;
+  };
+
   return (
     <div className="grid grid-cols-7 gap-2">
-      {/* Empty cells for days before the start of the month */}
       {Array.from({ length: monthStartDay }).map((_, i) => (
         <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-100 border border-gray-200 rounded" />
       ))}
 
-      {/* Days of the month */}
       {daysInMonth.map((day) => {
         const dayEntries = getDayEntries(day);
         const status = getDayStatus(day);
+        const isComplete = getDayCompletion(day, dayEntries);
         
         return (
           <CalendarDay
@@ -117,6 +132,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             isToday={isToday(day)}
             status={status}
             onDayClick={onDayClick}
+            isComplete={isComplete}
           />
         );
       })}
