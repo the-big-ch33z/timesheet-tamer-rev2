@@ -1,5 +1,6 @@
 import { createTimeEntryService, STORAGE_KEY } from '../timeEntryService';
 import { createTestEntry, createTestEntryInput } from '@/utils/testing/mockUtils';
+import { TimeEntry } from '@/types';
 
 // Mock localStorage
 const mockLocalStorage = (() => {
@@ -69,11 +70,11 @@ describe('Time Entry Service', () => {
     });
     
     it('deletes entries correctly', () => {
-      const entryId = service.createEntry({
+      const entryId = service.createEntry(createTestEntryInput({
         userId: 'user123',
         date: today,
         hours: 8
-      });
+      }));
       
       expect(service.getAllEntries().length).toBe(1);
       
@@ -86,23 +87,23 @@ describe('Time Entry Service', () => {
   
   describe('Query Operations', () => {
     it('filters entries by user ID', () => {
-      service.createEntry({
+      service.createEntry(createTestEntryInput({
         userId: 'user1',
         date: today,
         hours: 8
-      });
+      }));
       
-      service.createEntry({
+      service.createEntry(createTestEntryInput({
         userId: 'user2',
         date: today,
         hours: 4
-      });
+      }));
       
-      service.createEntry({
+      service.createEntry(createTestEntryInput({
         userId: 'user1',
         date: yesterday,
         hours: 6
-      });
+      }));
       
       const user1Entries = service.getUserEntries('user1');
       expect(user1Entries.length).toBe(2);
@@ -114,17 +115,17 @@ describe('Time Entry Service', () => {
     });
     
     it('filters entries by date and user', () => {
-      service.createEntry({
+      service.createEntry(createTestEntryInput({
         userId: 'user1',
         date: today,
         hours: 8
-      });
+      }));
       
-      service.createEntry({
+      service.createEntry(createTestEntryInput({
         userId: 'user1',
         date: yesterday,
         hours: 6
-      });
+      }));
       
       const todayEntries = service.getDayEntries(today, 'user1');
       expect(todayEntries.length).toBe(1);
@@ -139,9 +140,9 @@ describe('Time Entry Service', () => {
   describe('Calculation Operations', () => {
     it('calculates total hours correctly', () => {
       const entries: TimeEntry[] = [
-        { id: '1', userId: 'user1', date: today, hours: 3.5 },
-        { id: '2', userId: 'user1', date: today, hours: 2.5 },
-        { id: '3', userId: 'user1', date: today, hours: 1 }
+        createTestEntry({ id: '1', userId: 'user1', date: today, hours: 3.5 }),
+        createTestEntry({ id: '2', userId: 'user1', date: today, hours: 2.5 }),
+        createTestEntry({ id: '3', userId: 'user1', date: today, hours: 1 })
       ];
       
       const total = service.calculateTotalHours(entries);
@@ -160,30 +161,34 @@ describe('Time Entry Service', () => {
   
   describe('Validation', () => {
     it('validates entries correctly', () => {
-      const validEntry = {
+      const validEntry = createTestEntryInput({
         userId: 'user1',
         date: new Date(),
         hours: 8
-      };
+      });
       expect(service.validateEntry(validEntry).valid).toBe(true);
       
       const noUserEntry = {
         date: new Date(),
-        hours: 8
+        hours: 8,
+        description: 'Test entry',
+        project: 'Test Project'
       };
       expect(service.validateEntry(noUserEntry).valid).toBe(false);
       
       const noDateEntry = {
         userId: 'user1',
-        hours: 8
+        hours: 8,
+        description: 'Test entry',
+        project: 'Test Project'
       };
       expect(service.validateEntry(noDateEntry).valid).toBe(false);
       
-      const negativeHoursEntry = {
+      const negativeHoursEntry = createTestEntryInput({
         userId: 'user1',
         date: new Date(),
         hours: -2
-      };
+      });
       expect(service.validateEntry(negativeHoursEntry).valid).toBe(false);
     });
   });
@@ -194,11 +199,11 @@ describe('Time Entry Service', () => {
         throw new Error('Storage full');
       });
       
-      const result = service.createEntry({
+      const result = service.createEntry(createTestEntryInput({
         userId: 'user1',
         date: today,
         hours: 8
-      });
+      }));
       
       expect(result).toBe(null);
     });

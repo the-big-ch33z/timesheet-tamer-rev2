@@ -1,3 +1,4 @@
+
 import { 
   calculateHoursFromTimes, 
   calculateMonthlyTargetHours,
@@ -5,6 +6,7 @@ import {
 } from '../calculations';
 import { TimeCalculationError } from '../errors/timeErrorHandling';
 import { createTestWorkSchedule } from '@/utils/testing/mockUtils';
+import { WorkSchedule } from '@/types';  // Added WorkSchedule import
 
 describe('Time Calculations', () => {
   describe('calculateHoursFromTimes', () => {

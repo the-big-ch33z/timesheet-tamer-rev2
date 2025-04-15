@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -153,6 +152,7 @@ export interface AuditLog {
   action: string;
   targetResource: string;
   details: string;
+  ipAddress?: string;
 }
 
 export interface SyncStatus {

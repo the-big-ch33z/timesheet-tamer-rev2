@@ -8,11 +8,11 @@ import { v4 as uuidv4 } from 'uuid';
 export const createTestEntry = (overrides: Partial<TimeEntry> = {}): TimeEntry => {
   return {
     id: overrides.id || `test-entry-${uuidv4()}`,
-    userId: 'test-user',
-    date: new Date(),
-    hours: 8,
-    description: 'Test entry description',
-    project: 'Test Project',
+    userId: overrides.userId || 'test-user',
+    date: overrides.date || new Date(),
+    hours: overrides.hours !== undefined ? overrides.hours : 8,
+    description: overrides.description || 'Test entry description',
+    project: overrides.project || 'Test Project',
     ...overrides
   };
 };
@@ -22,11 +22,11 @@ export const createTestEntry = (overrides: Partial<TimeEntry> = {}): TimeEntry =
  */
 export const createTestEntryInput = (overrides: Partial<Omit<TimeEntry, 'id'>> = {}): Omit<TimeEntry, 'id'> => {
   return {
-    userId: 'test-user',
-    date: new Date(),
-    hours: 8,
-    description: 'Test entry description',
-    project: 'Test Project',
+    userId: overrides.userId || 'test-user',
+    date: overrides.date || new Date(),
+    hours: overrides.hours !== undefined ? overrides.hours : 8,
+    description: overrides.description || 'Test entry description',
+    project: overrides.project || 'Test Project',
     ...overrides
   };
 };
@@ -38,8 +38,8 @@ export const createTestWorkSchedule = (overrides: Partial<WorkSchedule> = {}): W
   return {
     id: overrides.id || `test-schedule-${uuidv4()}`,
     userId: overrides.userId || 'test-user',
-    name: 'Test Schedule',
-    weeks: {
+    name: overrides.name || 'Test Schedule',
+    weeks: overrides.weeks || {
       1: {
         monday: { startTime: '09:00', endTime: '17:00' },
         tuesday: { startTime: '09:00', endTime: '17:00' },
@@ -55,7 +55,7 @@ export const createTestWorkSchedule = (overrides: Partial<WorkSchedule> = {}): W
         friday: { startTime: '09:00', endTime: '17:00' }
       }
     },
-    rdoDays: {
+    rdoDays: overrides.rdoDays || {
       1: [],
       2: []
     },
@@ -69,12 +69,12 @@ export const createTestWorkSchedule = (overrides: Partial<WorkSchedule> = {}): W
 export const createTestAuditLog = (overrides: Partial<AuditLog> = {}): AuditLog => {
   return {
     id: overrides.id || `audit-${uuidv4()}`,
-    userId: 'test-user',
-    action: 'test-action',
-    targetResource: 'test-resource',
-    details: 'test details',
-    timestamp: new Date(),
+    userId: overrides.userId || 'test-user',
+    action: overrides.action || 'test-action',
+    targetResource: overrides.targetResource || 'test-resource',
+    details: overrides.details || 'test details',
+    timestamp: overrides.timestamp || new Date(),
+    ipAddress: overrides.ipAddress || '127.0.0.1',
     ...overrides
   };
 };
-
