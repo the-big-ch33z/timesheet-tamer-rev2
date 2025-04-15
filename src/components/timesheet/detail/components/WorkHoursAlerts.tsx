@@ -1,6 +1,6 @@
 
 import React from "react";
-import { AlertTriangle, Calendar } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface WorkHoursAlertsProps {
@@ -10,6 +10,7 @@ interface WorkHoursAlertsProps {
   interactive: boolean;
   showEntryForms?: boolean;
   date?: Date; // Make date optional
+  isComplete?: boolean; // Add the isComplete prop
 }
 
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
@@ -18,11 +19,21 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   hoursVariance,
   interactive,
   showEntryForms = false,
-  date // Accept date prop
+  date,
+  isComplete = false // Default to false
 }) => {
   return (
     <>
-      {hasEntries && isUndertime && (
+      {hasEntries && isComplete && (
+        <Alert className="mt-3 bg-green-50 border-green-200 text-green-800">
+          <CheckCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Your hours are complete for this day
+          </AlertDescription>
+        </Alert>
+      )}
+    
+      {hasEntries && isUndertime && !isComplete && (
         <Alert variant="destructive" className="mt-3 bg-red-50 border-red-200 text-red-800">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>

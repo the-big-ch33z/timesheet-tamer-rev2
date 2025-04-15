@@ -68,7 +68,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             </div>
 
             {status.dayHoliday && (
-              <Badge variant="warning" className="mt-1 text-xs">
+              <Badge variant="secondary" className="mt-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-200">
                 {status.holidayName}
               </Badge>
             )}
