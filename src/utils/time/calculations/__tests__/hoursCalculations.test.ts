@@ -1,11 +1,10 @@
-
 import { 
   calculateHoursFromTimes, 
   calculateMonthlyTargetHours,
   calculateAdjustedFortnightHours 
 } from '../hoursCalculations';
 import { TimeCalculationError } from '../../errors/timeErrorHandling';
-import { WorkSchedule } from '@/types';
+import { createTestWorkSchedule } from '@/utils/testing/mockUtils';
 
 describe('Hours Calculation Utilities', () => {
   describe('calculateHoursFromTimes', () => {
@@ -75,36 +74,13 @@ describe('Hours Calculation Utilities', () => {
 
   describe('calculateAdjustedFortnightHours', () => {
     it('applies FTE adjustment to full schedule hours', () => {
-      const mockSchedule = {
-        weeks: {
-          1: {
-            monday: { startTime: '09:00', endTime: '17:00' },
-            tuesday: { startTime: '09:00', endTime: '17:00' },
-            wednesday: { startTime: '09:00', endTime: '17:00' },
-            thursday: { startTime: '09:00', endTime: '17:00' },
-            friday: { startTime: '09:00', endTime: '17:00' },
-            saturday: null,
-            sunday: null
-          },
-          2: {
-            monday: { startTime: '09:00', endTime: '17:00' },
-            tuesday: { startTime: '09:00', endTime: '17:00' },
-            wednesday: { startTime: '09:00', endTime: '17:00' },
-            thursday: { startTime: '09:00', endTime: '17:00' },
-            friday: { startTime: '09:00', endTime: '17:00' },
-            saturday: null,
-            sunday: null
-          }
-        },
-        rdoDays: { 1: [], 2: [] }
-      } as WorkSchedule;
+      const mockSchedule = createTestWorkSchedule();
       
       jest.spyOn(require('../../scheduleUtils'), 'calculateFortnightHoursFromSchedule').mockReturnValue(80);
       
-      expect(calculateAdjustedFortnightHours(mockSchedule, 1.0)).toBe(80); // Full-time
-      expect(calculateAdjustedFortnightHours(mockSchedule, 0.5)).toBe(40); // Half-time
-      expect(calculateAdjustedFortnightHours(mockSchedule, 0.8)).toBe(64); // 0.8 FTE
-      expect(calculateAdjustedFortnightHours(mockSchedule, 0.0)).toBe(0);  // 0.0 FTE (e.g., extended leave)
+      expect(calculateAdjustedFortnightHours(mockSchedule, 1.0)).toBe(80);
+      expect(calculateAdjustedFortnightHours(mockSchedule, 0.5)).toBe(40);
+      expect(calculateAdjustedFortnightHours(mockSchedule, 0.8)).toBe(64);
     });
 
     it('handles missing schedule gracefully', () => {

@@ -1,12 +1,13 @@
 
-import { TimeEntry, WorkSchedule } from "@/types";
+import { TimeEntry, WorkSchedule, Organization, TeamMembership, AuditLog } from "@/types";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Helper to create mock test entries with required fields
  */
 export const createTestEntry = (overrides: Partial<TimeEntry> = {}): TimeEntry => {
   return {
-    id: 'test-entry-' + Math.random().toString(36).substr(2, 9),
+    id: overrides.id || `test-entry-${uuidv4()}`,
     userId: 'test-user',
     date: new Date(),
     hours: 8,
@@ -35,9 +36,9 @@ export const createTestEntryInput = (overrides: Partial<Omit<TimeEntry, 'id'>> =
  */
 export const createTestWorkSchedule = (overrides: Partial<WorkSchedule> = {}): WorkSchedule => {
   return {
-    id: 'test-schedule',
+    id: overrides.id || `test-schedule-${uuidv4()}`,
+    userId: overrides.userId || 'test-user',
     name: 'Test Schedule',
-    userId: 'test-user',
     weeks: {
       1: {
         monday: { startTime: '09:00', endTime: '17:00' },
@@ -61,3 +62,19 @@ export const createTestWorkSchedule = (overrides: Partial<WorkSchedule> = {}): W
     ...overrides
   };
 };
+
+/**
+ * Helper to create mock audit log entries
+ */
+export const createTestAuditLog = (overrides: Partial<AuditLog> = {}): AuditLog => {
+  return {
+    id: overrides.id || `audit-${uuidv4()}`,
+    userId: 'test-user',
+    action: 'test-action',
+    targetResource: 'test-resource',
+    details: 'test details',
+    timestamp: new Date(),
+    ...overrides
+  };
+};
+

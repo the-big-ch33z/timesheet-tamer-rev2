@@ -1,11 +1,10 @@
-
 import { 
   calculateHoursFromTimes, 
   calculateMonthlyTargetHours,
   calculateAdjustedFortnightHours 
 } from '../calculations';
 import { TimeCalculationError } from '../errors/timeErrorHandling';
-import { WorkSchedule } from '@/types';
+import { createTestWorkSchedule } from '@/utils/testing/mockUtils';
 
 describe('Time Calculations', () => {
   describe('calculateHoursFromTimes', () => {
@@ -51,29 +50,7 @@ describe('Time Calculations', () => {
 
   describe('calculateAdjustedFortnightHours', () => {
     it('applies FTE to schedule hours', () => {
-      const mockSchedule = {
-        weeks: {
-          1: {
-            monday: { startTime: '09:00', endTime: '17:00' },
-            tuesday: { startTime: '09:00', endTime: '17:00' },
-            wednesday: { startTime: '09:00', endTime: '17:00' },
-            thursday: { startTime: '09:00', endTime: '17:00' },
-            friday: { startTime: '09:00', endTime: '17:00' },
-            saturday: null,
-            sunday: null
-          },
-          2: {
-            monday: { startTime: '09:00', endTime: '17:00' },
-            tuesday: { startTime: '09:00', endTime: '17:00' },
-            wednesday: { startTime: '09:00', endTime: '17:00' },
-            thursday: { startTime: '09:00', endTime: '17:00' },
-            friday: { startTime: '09:00', endTime: '17:00' },
-            saturday: null,
-            sunday: null
-          }
-        },
-        rdoDays: { 1: [], 2: [] }
-      } as WorkSchedule;
+      const mockSchedule = createTestWorkSchedule();
       
       jest.spyOn(require('../../time/scheduleUtils'), 'calculateFortnightHoursFromSchedule').mockReturnValue(80);
       
