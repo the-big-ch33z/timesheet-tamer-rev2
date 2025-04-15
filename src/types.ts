@@ -1,10 +1,19 @@
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
+  teamIds?: string[];
+  organizationId?: string;
+  workScheduleId?: string;
+  fte?: number;
+  fortnightHours?: number;
+  status?: 'active' | 'archived';
   avatarUrl?: string;
 }
+
+export type UserRole = 'admin' | 'manager' | 'team-member';
 
 export interface TimeEntry {
   id: string;
@@ -45,6 +54,15 @@ export interface Task {
   estimatedHours: number;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  organizationId: string;
+  managerId: string;
+  createdAt?: Date;
+  description?: string;
+}
+
 export interface Invoice {
   id: string;
   projectId: string;
@@ -54,19 +72,16 @@ export interface Invoice {
   status: 'draft' | 'sent' | 'paid';
 }
 
+export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
 export interface WorkSchedule {
   id: string;
   name: string;
   userId: string;
+  isDefault?: boolean;
   weeks: {
     [weekNumber: number]: {
-      monday?: { startTime: string; endTime: string };
-      tuesday?: { startTime: string; endTime: string };
-      wednesday?: { startTime: string; endTime: string };
-      thursday?: { startTime: string; endTime: string };
-      friday?: { startTime: string; endTime: string };
-      saturday?: { startTime: string; endTime: string };
-      sunday?: { startTime: string; endTime: string };
+      [key in WeekDay]?: { startTime: string; endTime: string };
     };
   };
   rdoDays: {
@@ -94,3 +109,35 @@ export interface TimeEntryService {
   autoCalculateHours: (startTime: string, endTime: string) => number;
   getMonthEntries: (date: Date, userId: string) => TimeEntry[];
 }
+
+export interface EntryFieldConfig {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'date' | 'time' | 'select';
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  defaultValue?: string | number;
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+  };
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: Date;
+  userId: string;
+  action: string;
+  targetResource: string;
+  details: string;
+}
+
+export interface SyncStatus {
+  entityType: string;
+  lastSyncedAt: Date;
+  status: 'success' | 'failed' | 'in_progress';
+  recordsProcessed?: number;
+}
+

@@ -3,7 +3,8 @@ import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
-import { calculateAdjustedFortnightHours, timeEntryService } from "@/utils/time/services/timeEntryService";
+import { calculateFortnightHoursFromSchedule } from '@/utils/time/calculations/scheduleUtils';
+import { timeEntryService } from "@/utils/time/services/timeEntryService";
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],
@@ -38,7 +39,7 @@ export const useMonthlyHoursCalculation = (
     
     if (workSchedule) {
       // Calculate adjusted fortnight hours based on schedule and FTE
-      fortnightHours = calculateAdjustedFortnightHours(workSchedule, userFte);
+      fortnightHours = calculateFortnightHoursFromSchedule(workSchedule);
       logger.debug(`Using calculated fortnight hours from schedule: ${fortnightHours}`);
     } else if (userMetrics) {
       // If no schedule but we have user metrics with fortnightHours
