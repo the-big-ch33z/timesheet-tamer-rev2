@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -10,6 +11,8 @@ export interface User {
   fortnightHours?: number;
   status?: 'active' | 'archived';
   avatarUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type UserRole = 'admin' | 'manager' | 'team-member';
@@ -58,7 +61,7 @@ export interface Team {
   name: string;
   organizationId: string;
   managerId: string;
-  createdAt?: Date;
+  createdAt?: Date | string;
   description?: string;
 }
 
@@ -80,7 +83,7 @@ export interface WorkSchedule {
   isDefault?: boolean;
   weeks: {
     [weekNumber: number]: {
-      [key in WeekDay]?: { startTime: string; endTime: string };
+      [key in WeekDay]?: { startTime: string; endTime: string } | null;
     };
   };
   rdoDays: {
@@ -129,21 +132,23 @@ export interface EntryFieldConfig {
 export interface Organization {
   id: string;
   name: string;
-  createdAt?: Date;
+  createdAt?: Date | string;
   ownerId: string;
+  adminId?: string;
 }
 
 export interface TeamMembership {
   id: string;
   userId: string;
   teamId: string;
-  joinedAt: Date;
+  joinedAt: Date | string;
   role?: string;
+  managerId?: string;
 }
 
 export interface AuditLog {
   id: string;
-  timestamp: Date;
+  timestamp: Date | string;
   userId: string;
   action: string;
   targetResource: string;
@@ -152,7 +157,7 @@ export interface AuditLog {
 
 export interface SyncStatus {
   entityType: string;
-  lastSyncedAt: Date;
+  lastSyncedAt: Date | string;
   status: 'success' | 'failed' | 'in_progress';
   recordsProcessed?: number;
 }

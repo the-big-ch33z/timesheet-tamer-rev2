@@ -1,3 +1,4 @@
+
 import React from "react";
 import { EntryFieldConfig } from "@/types";
 import JobNumberField from "../field-types/JobNumberField";
@@ -6,6 +7,7 @@ import TaskNumberField from "../field-types/TaskNumberField";
 import NotesField from "../field-types/NotesField";
 import HoursField from "../field-types/HoursField";
 import GenericField from "../field-types/GenericField";
+import { EntryFieldType } from "../EntryField"; // Import the EntryFieldType
 
 // Define a consistent type for field handlers
 type FieldHandler = (value: string) => void;
@@ -155,6 +157,7 @@ export const renderEntryField = ({
         console.debug(`[renderEntryField] Inferred hours field from name: ${field.name}`);
       }
       
+      // Use the imported EntryFieldType
       let fieldType: EntryFieldType = "text";
       if (field.type === "textarea") {
         fieldType = "textarea";

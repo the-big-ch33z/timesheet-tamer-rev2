@@ -4,6 +4,7 @@ import { syncService } from '@/services/syncService';
 import { AuthStateType } from '../AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { Organization, User } from '@/types';
 
 export const createAuthenticationOperations = (
   state: AuthStateType, 
@@ -75,20 +76,19 @@ export const createAuthenticationOperations = (
       const newOrgId = `org-${Date.now()}`;
       const newUserId = `user-${Date.now()}`;
       
-      const newOrg = {
+      const newOrg: Organization = {
         id: newOrgId,
         name: organizationName,
-        adminId: newUserId,
+        ownerId: newUserId,
         createdAt: new Date().toISOString()
       };
       
-      const newUser = {
+      const newUser: User = {
         id: newUserId,
         email,
         name,
         role: 'admin' as const,
         organizationId: newOrgId,
-        createdAt: new Date().toISOString(),
         status: 'active' as const
       };
       
