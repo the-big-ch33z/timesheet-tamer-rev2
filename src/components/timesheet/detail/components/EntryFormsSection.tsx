@@ -6,7 +6,7 @@ import EntryFormsList from "./EntryFormsList";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 
 interface EntryFormsSectionProps {
-  showEntryForms: number[];
+  showEntryForms: boolean[];
   formHandlers: UseTimeEntryFormReturn[];
   handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;
@@ -27,7 +27,7 @@ const EntryFormsSection: React.FC<EntryFormsSectionProps> = ({
   return (
     <>
       {/* Entry Forms List */}
-      {showEntryForms.length > 0 && (
+      {showEntryForms.filter(Boolean).length > 0 && (
         <EntryFormsList
           showEntryForms={showEntryForms}
           formHandlers={formHandlers}

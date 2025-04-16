@@ -127,8 +127,8 @@ export const useTimeEntryFormHandling = ({
       }
     }
     
-    // Submit the form
-    formHandler.handleSubmit();
+    // Use handleSave instead of handleSubmit
+    formHandler.handleSave();
   }, [formHandlers, interactive, startTime, endTime, calculatedHours, toast]);
   
   // Save all pending changes across all visible form handlers
@@ -151,9 +151,9 @@ export const useTimeEntryFormHandling = ({
           handler.setHoursFromTimes();
         }
         
-        // Submit if we have hours
+        // Use handleSave instead of handleSubmit
         if (handler.formState.hours) {
-          handler.handleSubmit();
+          handler.handleSave();
           savedCount++;
         }
       }
