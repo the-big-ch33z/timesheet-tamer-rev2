@@ -1,10 +1,14 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./WorkHoursHeader";
 import WorkHoursDisplay from "./WorkHoursDisplay";
 import WorkHoursAlerts from "./WorkHoursAlerts";
 import { useTimeEntryState } from "../hooks/useTimeEntryState";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('WorkHoursInterface');
 
 interface WorkHoursInterfaceProps {
   date: Date;
@@ -21,6 +25,10 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   interactive = true,
   workSchedule
 }) => {
+  // Use the unified timesheet work hours hook
+  const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
+  
+  // Use the time entry state management hook
   const {
     startTime,
     endTime,
@@ -38,6 +46,11 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     interactive,
     userId
   });
+
+  // When entries change, ensure we're in sync
+  useEffect(() => {
+    logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
+  }, [entries, date]);
 
   return (
     <div>

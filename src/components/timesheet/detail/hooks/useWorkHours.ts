@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { useToast } from "@/hooks/use-toast";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import { validateTimeOrder } from "@/utils/time/validation";
-import { useWorkHoursContext } from "@/contexts/timesheet/work-hours-context/WorkHoursContext";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 
 interface UseWorkHoursProps {
   formHandlers: UseTimeEntryFormReturn[];
@@ -19,89 +20,37 @@ export const useWorkHours = ({
   userId
 }: UseWorkHoursProps) => {
   const { toast } = useToast();
-  const { getWorkHours, saveWorkHours, hasCustomWorkHours } = useWorkHoursContext();
+  const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours();
   
   // State for times
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [calculatedHours, setCalculatedHours] = useState(0);
   
-  // Flag to track if we're currently making a manual time change
-  const manualChangeRef = useRef(false);
-  
-  // Track if we've already initialized the times for this date/user
-  const initializedRef = useRef(false);
-  
-  // Keep a reference to the last applied times for this date
-  const lastAppliedTimesRef = useRef<{[key: string]: {startTime: string, endTime: string}}>({});
-  
-  // Memoized date string for dependency comparison
-  const dateString = date ? date.toISOString().split('T')[0] : '';
-  
-  // Get times with proper precedence:
-  // 1. Custom saved times from localStorage
-  // 2. Empty values
+  // Load work hours when date or userId changes
   useEffect(() => {
-    // Skip this effect if we're currently making a manual change
-    if (manualChangeRef.current) {
-      console.log("[useWorkHours] Manual change in progress, skipping automatic update");
-      return;
-    }
+    if (!date || !userId) return;
     
-    // Skip this effect if we've already initialized for this date/user
-    // and we have times in the lastAppliedTimesRef
-    const cacheKey = `${userId}-${dateString}`;
-    if (initializedRef.current && userId && date && lastAppliedTimesRef.current[cacheKey]) {
-      console.log("[useWorkHours] Already initialized for this date/user, using cached times:", lastAppliedTimesRef.current[cacheKey]);
-      const cachedTimes = lastAppliedTimesRef.current[cacheKey];
-      setStartTime(cachedTimes.startTime);
-      setEndTime(cachedTimes.endTime);
-      return;
-    }
-
-    if (!userId || !date) {
-      console.log("[useWorkHours] No userId or date, using empty values");
-      setStartTime("");
-      setEndTime("");
-      return;
-    }
-
-    // Check if we have custom saved hours for this day
-    if (hasCustomWorkHours(date, userId)) {
-      console.log(`[useWorkHours] Using custom saved hours for ${userId} on ${dateString}`);
-      const savedHours = getWorkHours(date, userId);
-      
-      setStartTime(savedHours.startTime || "");
-      setEndTime(savedHours.endTime || "");
-      
-      // Cache the times we just applied
-      lastAppliedTimesRef.current[cacheKey] = {
-        startTime: savedHours.startTime || "",
-        endTime: savedHours.endTime || ""
-      };
-    } 
-    // No custom hours - always use empty values
-    else {
-      console.log(`[useWorkHours] No custom hours found, using empty values by default`);
-      setStartTime("");
-      setEndTime("");
-      
-      // Cache the empty times
-      lastAppliedTimesRef.current[cacheKey] = {
-        startTime: "",
-        endTime: ""
-      };
-    }
+    console.log(`[useWorkHours] Loading work hours for date: ${date.toDateString()}, userId: ${userId}`);
+    const { startTime: loadedStart, endTime: loadedEnd } = getWorkHoursForDate(date, userId);
     
-    // Mark as initialized for this date/user combination
-    initializedRef.current = true;
+    setStartTime(loadedStart || "");
+    setEndTime(loadedEnd || "");
     
-  }, [dateString, userId, getWorkHours, hasCustomWorkHours]);
-  
-  // Reset the initialized flag when date or userId changes
-  useEffect(() => {
-    initializedRef.current = false;
-  }, [date, userId]);
+    // Calculate hours if both times are present
+    if (loadedStart && loadedEnd) {
+      try {
+        const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
+        setCalculatedHours(hours);
+        console.log(`[useWorkHours] Calculated ${hours} hours from ${loadedStart} to ${loadedEnd}`);
+      } catch (error) {
+        console.error("[useWorkHours] Error calculating hours:", error);
+        setCalculatedHours(0);
+      }
+    } else {
+      setCalculatedHours(0);
+    }
+  }, [date, userId, getWorkHoursForDate]);
   
   // Handle time input changes with better validation and saving logic
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
@@ -113,9 +62,6 @@ export const useWorkHours = ({
     }
     
     try {
-      // Set the manual change flag to prevent the useEffect from overriding this change
-      manualChangeRef.current = true;
-      
       // Make sure we have valid values to work with
       const currentStartTime = type === 'start' ? value : startTime;
       const currentEndTime = type === 'end' ? value : endTime;
@@ -131,10 +77,6 @@ export const useWorkHours = ({
             description: validation.message || "Please check your time inputs",
             variant: "destructive"
           });
-          // Cancel the manual change flag after a short delay
-          setTimeout(() => {
-            manualChangeRef.current = false;
-          }, 300);
           return;
         }
       }
@@ -150,7 +92,7 @@ export const useWorkHours = ({
       
       // Save the updated times - only if userId and date are provided
       if (userId && date) {
-        console.log(`[useWorkHours] Saving work hours for ${userId} on ${dateString}`);
+        console.log(`[useWorkHours] Saving work hours for ${userId} on ${date.toDateString()}`);
         
         // If one of the times is empty, save what we have
         const timeToSave = {
@@ -159,22 +101,10 @@ export const useWorkHours = ({
         };
         
         console.log(`[useWorkHours] Saving times: ${timeToSave.startTime} - ${timeToSave.endTime}`);
-        saveWorkHours(date, userId, timeToSave.startTime, timeToSave.endTime);
-        
-        // Update our cache so we can restore these values if needed
-        const cacheKey = `${userId}-${dateString}`;
-        lastAppliedTimesRef.current[cacheKey] = {
-          startTime: timeToSave.startTime,
-          endTime: timeToSave.endTime
-        };
+        saveWorkHoursForDate(date, timeToSave.startTime, timeToSave.endTime, userId);
       } else {
         console.warn(`[useWorkHours] Cannot save work hours - missing userId (${userId}) or date (${date})`);
       }
-      
-      // Clear the manual change flag after a short delay to ensure the save completes
-      setTimeout(() => {
-        manualChangeRef.current = false;
-      }, 300);
     } catch (error) {
       console.error("[useWorkHours] Error updating time:", error);
       toast({
@@ -182,42 +112,36 @@ export const useWorkHours = ({
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
-      // Ensure we reset the manual change flag even if there's an error
-      manualChangeRef.current = false;
     }
-  }, [startTime, endTime, interactive, toast, date, userId, saveWorkHours, dateString]);
+  }, [startTime, endTime, interactive, toast, date, userId, saveWorkHoursForDate]);
   
   // Recalculate hours when times change
   useEffect(() => {
     // Only calculate if both times are set
     if (startTime && endTime) {
       console.log(`[useWorkHours] Time change detected: ${startTime} to ${endTime}`);
-      const hours = calculateHoursFromTimes(startTime, endTime);
-      setCalculatedHours(hours);
-      
-      // Update any existing form handlers with the new times
-      if (interactive) {
-        formHandlers.forEach(handler => {
-          if (handler) {
-            handler.updateTimes(startTime, endTime);
-            handler.setHoursFromTimes();
-          }
-        });
-      }
-      
-      // Update our cache with the latest times
-      if (userId && date) {
-        const cacheKey = `${userId}-${dateString}`;
-        lastAppliedTimesRef.current[cacheKey] = {
-          startTime,
-          endTime
-        };
+      try {
+        const hours = calculateHoursFromTimes(startTime, endTime);
+        setCalculatedHours(hours);
+        
+        // Update any existing form handlers with the new times
+        if (interactive) {
+          formHandlers.forEach(handler => {
+            if (handler) {
+              handler.updateTimes(startTime, endTime);
+              handler.setHoursFromTimes();
+            }
+          });
+        }
+      } catch (error) {
+        console.error("[useWorkHours] Error calculating hours:", error);
+        setCalculatedHours(0);
       }
     } else {
       // If either time is not set, calculated hours is 0
       setCalculatedHours(0);
     }
-  }, [startTime, endTime, formHandlers, interactive, userId, date, dateString]);
+  }, [startTime, endTime, formHandlers, interactive]);
 
   return {
     startTime,

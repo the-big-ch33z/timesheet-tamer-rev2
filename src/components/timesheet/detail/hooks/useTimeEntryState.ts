@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useWorkHours } from "./useWorkHours";
 import { useTimeEntryForm } from "@/hooks/timesheet/useTimeEntryForm";
@@ -8,6 +8,8 @@ import { useTimeEntryStats } from "./useTimeEntryStats";
 import { useTimeEntryFormHandling } from "./useTimeEntryFormHandling";
 import { v4 as uuidv4 } from 'uuid';
 import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import { calculateHoursFromTimes } from "@/utils/time/calculations";
 
 interface UseTimeEntryStateProps {
   entries: TimeEntry[];
@@ -33,6 +35,9 @@ export const useTimeEntryState = ({
   onCreateEntry,
   userId = ''
 }: UseTimeEntryStateProps) => {
+  // Use the unified timesheet work hours hook
+  const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
+  
   // Ref to track date changes
   const previousDateRef = useRef<string | null>(null);
   const currentDateString = date ? format(date, 'yyyy-MM-dd') : '';
@@ -41,6 +46,32 @@ export const useTimeEntryState = ({
   useEffect(() => {
     console.debug(`[useTimeEntryState] Interactive flag changed to: ${interactive}`);
   }, [interactive]);
+  
+  // State for times
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [calculatedHours, setCalculatedHours] = useState(0);
+  
+  // Load work hours when date or entries change
+  useEffect(() => {
+    if (!date || !userId) return;
+    
+    console.debug(`[useTimeEntryState] Loading work hours for ${format(date, 'yyyy-MM-dd')}`);
+    const { startTime: storedStart, endTime: storedEnd } = getWorkHoursForDate(date, userId);
+    
+    setStartTime(storedStart);
+    setEndTime(storedEnd);
+    
+    if (storedStart && storedEnd) {
+      try {
+        const hours = calculateHoursFromTimes(storedStart, storedEnd);
+        setCalculatedHours(hours);
+      } catch (error) {
+        console.error("[useTimeEntryState] Error calculating hours:", error);
+        setCalculatedHours(0);
+      }
+    }
+  }, [date, userId, getWorkHoursForDate, entries.length]);
   
   // Helper function to create a mock entry with ID for type compatibility
   const createMockEntry = useCallback((entry: Omit<TimeEntry, "id">): TimeEntry => {
@@ -101,18 +132,46 @@ export const useTimeEntryState = ({
     formHandler5
   ], [formHandler1, formHandler2, formHandler3, formHandler4, formHandler5]);
 
-  // Handle time calculations and time input changes
-  const {
-    startTime,
-    endTime,
-    calculatedHours,
-    handleTimeChange
-  } = useWorkHours({
-    formHandlers,
-    interactive,
-    date,
-    userId
-  });
+  // Handle time input changes
+  const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
+    console.debug(`[useTimeEntryState] Time change: ${type} = ${value}`);
+    
+    if (!interactive || !userId || !date) return;
+    
+    // Update local state
+    if (type === 'start') {
+      setStartTime(value);
+    } else {
+      setEndTime(value);
+    }
+    
+    // Prepare new values
+    const newStartTime = type === 'start' ? value : startTime;
+    const newEndTime = type === 'end' ? value : endTime;
+    
+    // Save to context
+    saveWorkHoursForDate(date, newStartTime, newEndTime, userId);
+    
+    // Update calculated hours
+    if (newStartTime && newEndTime) {
+      try {
+        const hours = calculateHoursFromTimes(newStartTime, newEndTime);
+        setCalculatedHours(hours);
+        
+        // Update form handlers with new times
+        formHandlers.forEach(handler => {
+          if (handler) {
+            handler.updateTimes(newStartTime, newEndTime);
+            handler.setHoursFromTimes();
+          }
+        });
+      } catch (error) {
+        console.error("[useTimeEntryState] Error calculating hours:", error);
+      }
+    } else {
+      setCalculatedHours(0);
+    }
+  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate, formHandlers]);
 
   // Track date changes to detect when user changes dates
   useEffect(() => {
@@ -171,15 +230,9 @@ export const useTimeEntryState = ({
     refreshForms
   });
 
-  // Log entries for debugging
+  // When entries change, refresh our state
   useEffect(() => {
-    console.log("Entries updated in TimeEntryState:", entries.length);
-    if (entries.length > 0) {
-      entries.forEach(entry => {
-        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-        console.log("Entry date:", format(entryDate, "yyyy-MM-dd"), "Entry id:", entry.id);
-      });
-    }
+    console.debug(`[useTimeEntryState] Entries changed: ${entries.length} entries`);
   }, [entries]);
 
   return {

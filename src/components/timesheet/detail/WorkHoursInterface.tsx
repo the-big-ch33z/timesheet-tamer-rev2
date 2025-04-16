@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import TimeInputField from './components/TimeInputField';
-import { useWorkHours } from '@/hooks/timesheet/useWorkHours';
+import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
-import { useTimeCalculations } from '@/hooks/timesheet/useTimeCalculations';
+import { calculateHoursFromTimes } from '@/utils/time/calculations';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -24,8 +24,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   interactive = true,
   onHoursChange
 }) => {
-  const { getWorkHoursForDate, saveWorkHoursForDate, resetWorkHours, hasCustomHours } = useWorkHours(userId);
-  const { calculateHours } = useTimeCalculations();
+  const { 
+    getWorkHoursForDate, 
+    saveWorkHoursForDate, 
+    resetWorkHours, 
+    hasCustomHours 
+  } = useTimesheetWorkHours(userId);
+  
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [calculatedHours, setCalculatedHours] = useState(0);
@@ -34,6 +39,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   
   // Load initial hours
   useEffect(() => {
+    if (!date || !userId) return;
+    
     logger.debug(`Loading work hours for date: ${date.toDateString()}, userId: ${userId}`);
     const { startTime: loadedStart, endTime: loadedEnd, isCustom: loadedIsCustom } = 
       getWorkHoursForDate(date, userId);
@@ -44,18 +51,25 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     
     // Calculate hours if both times are present
     if (loadedStart && loadedEnd) {
-      const hours = calculateHours(loadedStart, loadedEnd);
-      setCalculatedHours(hours);
-      onHoursChange?.(hours);
+      try {
+        const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
+        setCalculatedHours(hours);
+        onHoursChange?.(hours);
+        logger.debug(`Calculated ${hours} hours from ${loadedStart} to ${loadedEnd}`);
+      } catch (error) {
+        logger.error("Failed to calculate hours:", error);
+        setCalculatedHours(0);
+        onHoursChange?.(0);
+      }
     } else {
       setCalculatedHours(0);
       onHoursChange?.(0);
     }
-  }, [date, userId, getWorkHoursForDate, onHoursChange, calculateHours]);
+  }, [date, userId, getWorkHoursForDate, onHoursChange]);
 
   // Handle time change
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    if (!interactive) return;
+    if (!interactive || !date || !userId) return;
     
     const newStartTime = type === 'start' ? value : startTime;
     const newEndTime = type === 'end' ? value : endTime;
@@ -79,7 +93,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     // Recalculate hours if both times are present
     if (newStartTime && newEndTime) {
       try {
-        const hours = calculateHours(newStartTime, newEndTime);
+        const hours = calculateHoursFromTimes(newStartTime, newEndTime);
         setCalculatedHours(hours);
         onHoursChange?.(hours);
       } catch (error) {
@@ -97,7 +111,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 
   // Reset to default hours
   const handleReset = () => {
-    if (!interactive) return;
+    if (!interactive || !date || !userId) return;
     
     resetWorkHours(date, userId);
     
@@ -113,6 +127,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       description: "Work hours have been reset to default schedule"
     });
   };
+
+  // Check for custom hours changes
+  useEffect(() => {
+    if (date && userId) {
+      const isCustomHours = hasCustomHours(date, userId);
+      setIsCustom(isCustomHours);
+    }
+  }, [date, userId, hasCustomHours]);
 
   return (
     <Card className={isCustom ? "border-blue-300" : ""}>
