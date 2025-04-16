@@ -10,6 +10,7 @@ export interface TimeEntryFormState {
   startTime: string;
   endTime: string;
   formEdited: boolean;
+  userId?: string; // Added userId as an optional property
 }
 
 export interface UseTimeEntryFormProps {
@@ -26,7 +27,7 @@ export interface UseTimeEntryFormProps {
 export interface UseTimeEntryFormReturn {
   formState: TimeEntryFormState;
   handleFieldChange: (field: string, value: string) => void;
-  handleSave: () => void; // Added this method to fix the TypeScript error
+  handleSave: () => void;
   saveIfEdited: () => boolean;
   getFormData: () => any;
   resetFormEdited: () => void;

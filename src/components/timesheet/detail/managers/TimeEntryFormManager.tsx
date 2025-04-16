@@ -12,7 +12,7 @@ interface TimeEntryFormManagerProps {
   startTime: string;
   endTime: string;
   calculatedHours: number;
-  showEntryForms: number[];
+  showEntryForms: boolean[]; // Changed from number[] to boolean[]
   addEntryForm: () => void;
   removeEntryForm: (index: number) => void;
   handleSaveEntry: (index: number) => void;
@@ -49,16 +49,16 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
 
   // Check if any forms have been edited
   const hasEditedForms = showEntryForms.some(
-    index => index < formHandlers.length && formHandlers[index].formState.formEdited
+    (isVisible, index) => isVisible && index < formHandlers.length && formHandlers[index].formState.formEdited
   );
 
   // Check if there are any current forms
-  const hasOpenForms = showEntryForms.length > 0;
+  const hasOpenForms = showEntryForms.filter(Boolean).length > 0;
 
   return (
     <div className="mt-4">
       {/* Entry Forms */}
-      {showEntryForms.length > 0 && (
+      {showEntryForms.filter(Boolean).length > 0 && (
         <div className="mb-4">
           <EntryFormsList
             showEntryForms={showEntryForms}
