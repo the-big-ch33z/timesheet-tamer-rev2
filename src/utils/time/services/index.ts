@@ -5,14 +5,18 @@
  */
 
 // Export the singleton instance as the default export
-export { unifiedTimeEntryService as default } from './core';
+export { unifiedTimeEntryService as default } from './api-wrapper';
 
-// Export all types and components for convenience
+// Export all from core for backward compatibility
 export * from './core';
+
+// Export component modules for direct access
 export * from './cache-management';
 export * from './event-handling';
 export * from './storage-operations';
 export * from './entry-validation';
+export * from './query-operations';
+export * from './api-wrapper';
 
 // Export common constants for backward compatibility
 export { 
