@@ -29,7 +29,7 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
         <EntryList 
           entries={entries}
           interactive={interactive}
-          onDelete={(entryId) => onDeleteEntry(entryId)}
+          onDelete={onDeleteEntry}
         />
       </CardContent>
     </Card>

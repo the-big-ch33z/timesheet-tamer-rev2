@@ -11,16 +11,21 @@ interface EntryListItemProps {
   entry: TimeEntry;
   onDelete?: () => void;
   interactive?: boolean;
+  isDeleting?: boolean;
 }
 
 const EntryListItem: React.FC<EntryListItemProps> = ({ 
   entry, 
   onDelete,
-  interactive = true 
+  interactive = true,
+  isDeleting = false
 }) => {
   const { deleteEntry } = useEntriesContext();
   
   const handleDelete = () => {
+    // Skip if already deleting
+    if (isDeleting) return;
+    
     console.log("Deleting entry:", entry.id);
     
     // Use the provided onDelete if available, otherwise use the context method
@@ -80,9 +85,14 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
           size="icon"
           className="flex-none text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
           onClick={handleDelete}
+          disabled={isDeleting}
           aria-label="Delete entry"
         >
-          <Trash2 size={18} />
+          {isDeleting ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <Trash2 size={18} />
+          )}
         </Button>
       )}
     </div>

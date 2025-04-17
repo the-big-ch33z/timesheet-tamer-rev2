@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
@@ -21,14 +22,28 @@ const EntryList: React.FC<EntryListProps> = ({
 }) => {
   const { deleteEntry } = useTimeEntryContext();
   const { toast } = useToast();
+  const [deletingEntryIds, setDeletingEntryIds] = useState<Set<string>>(new Set());
   
   const handleDeleteEntry = async (entryId: string) => {
     console.log("EntryList: Deleting entry:", entryId);
     
-    // First, add to the deleted entries tracker to ensure it stays deleted
-    unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+    // Prevent multiple delete operations for the same entry
+    if (deletingEntryIds.has(entryId)) {
+      console.log("Already deleting this entry, skipping duplicate request");
+      return;
+    }
     
     try {
+      // Mark entry as being deleted
+      setDeletingEntryIds(prev => {
+        const updated = new Set(prev);
+        updated.add(entryId);
+        return updated;
+      });
+      
+      // First, add to the deleted entries tracker to ensure it stays deleted
+      unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+      
       // Use the passed onDelete function if provided, otherwise use the context function
       const result = onDelete ? onDelete(entryId) : deleteEntry(entryId);
       
@@ -38,24 +53,30 @@ const EntryList: React.FC<EntryListProps> = ({
           description: "Could not delete the timesheet entry",
           variant: "destructive"
         });
-        return;
+      } else {
+        toast({
+          title: "Entry deleted",
+          description: "The timesheet entry has been removed successfully",
+        });
+        
+        // Force storage sync and notify other tabs about the deletion
+        window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
+          detail: { entryId }
+        }));
       }
-      
-      toast({
-        title: "Entry deleted",
-        description: "The timesheet entry has been removed successfully",
-      });
-      
-      // Force storage sync and notify other tabs about the deletion
-      window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
-        detail: { entryId }
-      }));
     } catch (error) {
       console.error("Error deleting entry:", error);
       toast({
         title: "Error",
         description: "Failed to delete the timesheet entry",
         variant: "destructive"
+      });
+    } finally {
+      // Remove from deleting set even if there was an error
+      setDeletingEntryIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(entryId);
+        return updated;
       });
     }
   };
@@ -78,6 +99,7 @@ const EntryList: React.FC<EntryListProps> = ({
             entry={entry}
             onDelete={() => handleDeleteEntry(entry.id)}
             interactive={interactive}
+            isDeleting={deletingEntryIds.has(entry.id)}
           />
         ))}
       </div>
@@ -133,9 +155,14 @@ const EntryList: React.FC<EntryListProps> = ({
                     size="icon"
                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
                     onClick={() => handleDeleteEntry(entry.id)}
+                    disabled={deletingEntryIds.has(entry.id)}
                     aria-label="Delete entry"
                   >
-                    <Trash2 size={16} />
+                    {deletingEntryIds.has(entry.id) ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
                   </Button>
                 )}
               </TableCell>
