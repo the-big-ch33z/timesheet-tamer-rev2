@@ -66,7 +66,7 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
 
   // Check if any forms have been edited
   const hasEditedForms = showEntryForms.some(
-    (isVisible, index) => isVisible && index < formHandlers.length && formHandlers[index].formState.formEdited
+    (isVisible, index) => isVisible && index < formHandlers.length && formHandlers[index]?.formState.formEdited
   );
 
   // Check if there are any current forms
@@ -113,6 +113,18 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
           <Plus className="h-4 w-4 mr-1" />
           {hasOpenForms ? "Add Another Entry" : "Add Entry"}
         </Button>
+        
+        {/* Create Entry With Hours Button - Show when we have work hours */}
+        {startTime && endTime && calculatedHours > 0 && (
+          <Button 
+            onClick={handleCreateNewEntry}
+            size="sm"
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Create Entry ({calculatedHours}h)
+          </Button>
+        )}
         
         {/* Save All Button - Alternative position when no forms are edited */}
         {hasOpenForms && !hasEditedForms && (

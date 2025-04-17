@@ -24,12 +24,12 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
     <div className="space-y-4 mt-4 mb-4">
       {showEntryForms.map((isVisible, index) => {
         // Only render visible forms that have corresponding handlers
-        if (!isVisible) return null;
+        if (!isVisible || index >= formHandlers.length) return null;
         
         const formHandler = formHandlers[index];
         
         if (!formHandler) {
-          console.log("No form handler for index:", index);
+          console.debug("No form handler for index:", index);
           return null;
         }
         
@@ -40,7 +40,7 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
             handleFieldChange={(field, value) => formHandler.handleFieldChange(field, value)}
             handleSave={() => handleSaveEntry(index)}
             onDelete={() => removeEntryForm(index)}
-            entryId={`new-${index}`}
+            entryId={`entry-${index}`}
           />
         );
       })}
