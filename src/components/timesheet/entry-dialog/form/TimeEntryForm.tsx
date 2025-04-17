@@ -100,12 +100,12 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="">Start Time</label>
-              <Input value={startTime} readOnly className="bg-gray-50" />
+              
+              
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">End Time</label>
-              <Input value={endTime} readOnly className="bg-gray-50" />
+              
+              
             </div>
           </div>
 
