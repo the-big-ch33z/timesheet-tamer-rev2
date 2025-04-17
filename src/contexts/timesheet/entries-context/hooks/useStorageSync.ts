@@ -22,27 +22,7 @@ export const useStorageSync = (
     logger.debug('Syncing entries to storage', { count: entries.length });
     
     // Use the unified service to save entries
-    const saveEntries = async () => {
-      try {
-        // Filter out entries that might be in the deleted entries list
-        const deletedEntryIds = await unifiedTimeEntryService.getDeletedEntryIds();
-        const filteredEntries = entries.filter(entry => !deletedEntryIds.includes(entry.id));
-        
-        if (filteredEntries.length !== entries.length) {
-          logger.debug('Filtered out deleted entries', { 
-            original: entries.length, 
-            filtered: filteredEntries.length 
-          });
-        }
-        
-        // Save the filtered entries
-        unifiedTimeEntryService.saveEntriesToStorage(filteredEntries);
-      } catch (error) {
-        logger.error('Error saving entries to storage', error);
-      }
-    };
-    
-    saveEntries();
+    unifiedTimeEntryService.saveEntriesToStorage(entries);
   }, [entries, isInitialized, isLoading]);
   
   // Set up listener for global save events
@@ -62,4 +42,23 @@ export const useStorageSync = (
       window.removeEventListener('timesheet:save-pending-changes', handleSaveEvent);
     };
   }, [entries, isInitialized]);
+  
+  // Set up listener for delete events
+  useEffect(() => {
+    const handleDeleteEvent = (event: CustomEvent<{ entryId: string }>) => {
+      const entryId = event.detail?.entryId;
+      logger.debug('Entry deletion event detected:', entryId);
+      
+      if (entryId) {
+        // Use the unified service for deletion
+        unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+      }
+    };
+    
+    window.addEventListener('timesheet:entry-deleted', handleDeleteEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('timesheet:entry-deleted', handleDeleteEvent as EventListener);
+    };
+  }, []);
 };
