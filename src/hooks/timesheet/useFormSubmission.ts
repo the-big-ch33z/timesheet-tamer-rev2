@@ -1,7 +1,11 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useFormDataPreparation } from './form-submission/useFormDataPreparation';
+import { useSubmissionState } from './form-submission/useSubmissionState';
+import { useDateTracking } from './form-submission/useDateTracking';
+import { useSubmissionError } from './form-submission/useSubmissionError';
 import { UseTimeEntryFormProps } from './types/timeEntryTypes';
 
 /**
@@ -15,46 +19,10 @@ export const useFormSubmission = ({
   disabled = false
 }: Pick<UseTimeEntryFormProps, 'initialData' | 'selectedDate' | 'userId' | 'onSave' | 'disabled'>) => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Track when disabled flag changes
-  useEffect(() => {
-    console.debug(`[useFormSubmission] Disabled state changed to: ${disabled}`);
-  }, [disabled]);
-
-  // Track when selectedDate changes
-  useEffect(() => {
-    if (selectedDate) {
-      console.debug(`[useFormSubmission] Selected date changed to: ${selectedDate.toISOString()}`);
-    }
-  }, [selectedDate]);
-
-  // Prepare form data for submission
-  const getFormData = useCallback((formState: {
-    hours: string;
-    description: string;
-    jobNumber: string;
-    rego: string;
-    taskNumber: string;
-    startTime: string;
-    endTime: string;
-  }) => {
-    const formData = {
-      date: selectedDate,
-      hours: parseFloat(formState.hours) || 0,
-      description: formState.description,
-      jobNumber: formState.jobNumber,
-      rego: formState.rego,
-      taskNumber: formState.taskNumber,
-      project: initialData.project || "General",
-      userId: initialData.userId || userId || "",
-      startTime: formState.startTime,
-      endTime: formState.endTime,
-    };
-    
-    console.debug("[useFormSubmission] Prepared form data:", formData);
-    return formData;
-  }, [selectedDate, initialData, userId]);
+  const { isSubmitting, startSubmission, endSubmission } = useSubmissionState(disabled);
+  const { getFormData } = useFormDataPreparation({ initialData, selectedDate, userId });
+  const { isDateValid } = useDateTracking(selectedDate);
+  const { handleError } = useSubmissionError();
 
   // Handle form submission
   const handleSave = useCallback((formState: {
@@ -81,8 +49,7 @@ export const useFormSubmission = ({
     }
     
     try {
-      setIsSubmitting(true);
-      console.debug("[useFormSubmission] Starting submission");
+      startSubmission();
       
       const formData = getFormData(formState);
       console.debug("[useFormSubmission] Form data prepared:", formData);
@@ -98,21 +65,17 @@ export const useFormSubmission = ({
       console.debug("[useFormSubmission] Resetting formEdited flag");
       resetFormEdited();
       
-      // Allow the form to be submitted again after a short delay
-      setTimeout(() => {
-        console.debug("[useFormSubmission] Submission cooldown complete");
-        setIsSubmitting(false);
-      }, 300);
-    } catch (error) {
-      console.error("[useFormSubmission] Error saving entry:", error);
       toast({
-        title: "Error saving entry",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive"
+        title: "Entry saved",
+        description: "Your time entry has been saved successfully",
       });
-      setIsSubmitting(false);
+      
+      endSubmission();
+    } catch (error) {
+      handleError(error);
+      endSubmission();
     }
-  }, [disabled, isSubmitting, getFormData, onSave, toast]);
+  }, [disabled, isSubmitting, getFormData, onSave, toast, startSubmission, endSubmission, handleError]);
 
   return {
     handleSave,
