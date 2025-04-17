@@ -1,3 +1,4 @@
+
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -24,7 +25,7 @@ import {
   loadEntriesFromStorage,
   saveEntriesToStorage,
   loadDeletedEntries,
-  addToDeletedEntries as addToDeletedEntriesList
+  addToDeletedEntriesList
 } from "./storage-operations";
 import { validateEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
 import { filterEntriesByUser, filterEntriesByDay, filterEntriesByMonth } from "./query-operations";
@@ -424,7 +425,7 @@ export class UnifiedTimeEntryService {
     logger.debug("Direct deletion of entry:", entryId);
     
     try {
-      addToDeletedEntries(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY)
+      addToDeletedEntriesList(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY)
         .then(updatedIds => {
           this.deletedEntryIds = updatedIds;
           
