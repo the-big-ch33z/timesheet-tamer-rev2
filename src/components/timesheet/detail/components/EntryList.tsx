@@ -4,7 +4,7 @@ import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
 import { useEntriesContext } from "@/contexts/timesheet";
-import { addToDeletedEntries } from "@/contexts/timesheet/entries-context/timeEntryStorage";
+import { unifiedTimeEntryService } from "@/utils/time/services/unifiedTimeEntryService";
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -24,7 +24,7 @@ const EntryList: React.FC<EntryListProps> = ({
     console.log("EntryList: Deleting entry:", entryId);
     
     // First, add to the deleted entries tracker to ensure it stays deleted
-    addToDeletedEntries(entryId);
+    unifiedTimeEntryService.deleteEntryFromStorage(entryId);
     
     try {
       // Use the passed onDelete function if provided, otherwise use the context function
