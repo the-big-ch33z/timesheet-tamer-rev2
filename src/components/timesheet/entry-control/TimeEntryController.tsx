@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEntryContext';
 import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandling';
@@ -27,7 +26,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   
   const [componentKey, setComponentKey] = useState(Date.now());
   
-  // Get work hours from the context
   const { 
     formHandlers,
     showEntryForms,
@@ -45,7 +43,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     interactive
   });
   
-  // Refresh when work hours or entries change
   useEffect(() => {
     const handleHoursUpdated = () => {
       logger.debug('[TimeEntryController] Hours updated event received, refreshing');
@@ -58,7 +55,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
       setComponentKey(Date.now()); // Force re-render
     };
     
-    // Subscribe to events
     const unsubHours = timeEventsService.subscribe('hours-updated', handleHoursUpdated);
     const unsubCreate = timeEventsService.subscribe('entry-created', handleEntryEvent);
     const unsubUpdate = timeEventsService.subscribe('entry-updated', handleEntryEvent);
@@ -72,7 +68,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     };
   }, [refreshWorkHours]);
   
-  // Handle creating a new entry from the form
   const handleCreateNewEntry = useCallback((startTime: string, endTime: string, hours: number) => {
     if (!interactive) return;
     
@@ -95,7 +90,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
           project: 'General'
         });
         
-        // Publish event after creating entry
         timeEventsService.publish('entry-created', {
           startTime,
           endTime,
@@ -105,7 +99,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         });
       }
       
-      // Force refresh after creation
       setTimeout(() => {
         refreshWorkHours();
         setComponentKey(Date.now());
@@ -117,7 +110,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   
   if (!interactive) return null;
   
-  // Build TimeEntryFormManager props
   const managerProps = {
     formHandlers,
     interactive,
