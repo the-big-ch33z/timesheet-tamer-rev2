@@ -1,6 +1,4 @@
-
 import { createTimeLogger } from '../time/errors/timeLogger';
-import { timeEntryService } from '../time/services/timeEntryService';
 import { unifiedTimeEntryService } from '../time/services/unifiedTimeEntryService';
 
 const logger = createTimeLogger('PreDeploymentValidation');
@@ -166,7 +164,7 @@ export class PreDeploymentValidator {
     
     // Legacy service check for backward compatibility
     try {
-      if (typeof timeEntryService.getAllEntries !== 'function') {
+      if (typeof unifiedTimeEntryService.getAllEntries !== 'function') {
         this.addResult({
           valid: false,
           type: 'crossComponentDependencies',
@@ -194,14 +192,21 @@ export class PreDeploymentValidator {
     // This would normally use TypeScript's compiler API to validate types at runtime
     // For now, we'll implement a simpler check
     
-    // Verify that the unified service implements all methods from the legacy service
-    const legacyMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(timeEntryService));
+    // Verify that the unified service implements all expected methods
+    const expectedMethods = [
+      'getAllEntries',
+      'getUserEntries',
+      'getDayEntries',
+      'createEntry',
+      'updateEntry',
+      'deleteEntry'
+    ];
+    
     const unifiedMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(unifiedTimeEntryService));
     
-    const missingMethods = legacyMethods.filter(method => 
+    const missingMethods = expectedMethods.filter(method => 
       !unifiedMethods.includes(method) && 
-      typeof (timeEntryService as any)[method] === 'function' &&
-      method !== 'constructor'
+      typeof (unifiedTimeEntryService as any)[method] !== 'function'
     );
     
     if (missingMethods.length > 0) {
@@ -209,7 +214,7 @@ export class PreDeploymentValidator {
         valid: false,
         type: 'typeChecks',
         component: 'unifiedTimeEntryService',
-        message: `Unified service is missing methods from legacy service: ${missingMethods.join(', ')}`,
+        message: `Unified service is missing expected methods: ${missingMethods.join(', ')}`,
         severity: 'warning',
         details: { missingMethods }
       });
@@ -218,7 +223,7 @@ export class PreDeploymentValidator {
         valid: true,
         type: 'typeChecks',
         component: 'unifiedTimeEntryService',
-        message: 'Unified service implements all legacy service methods',
+        message: 'Unified service implements all expected methods',
         severity: 'info'
       });
     }
@@ -229,11 +234,11 @@ export class PreDeploymentValidator {
    */
   private validateTimeEntrySchemas(): void {
     try {
-      const allEntries = timeEntryService.getAllEntries();
+      const allEntries = unifiedTimeEntryService.getAllEntries();
       
       // Check for invalid entries
       const invalidEntries = allEntries.filter(entry => {
-        const validation = timeEntryService.validateEntry(entry);
+        const validation = unifiedTimeEntryService.validateEntry(entry);
         return !validation.valid;
       });
       

@@ -1,16 +1,13 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { useTimeEntries } from '../useTimeEntries';
-import { timeEntryService } from '@/utils/time/services/timeEntryService';
 import { createMockEntryInput } from '@/utils/testing/mockEntryFactory';
+import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
 
-// Mock the timeEntryService
-jest.mock('@/utils/time/services/timeEntryService', () => {
-  const originalModule = jest.requireActual('@/utils/time/services/timeEntryService');
-  
+// Mock the unifiedTimeEntryService
+jest.mock('@/utils/time/services/unifiedTimeEntryService', () => {
   return {
-    ...originalModule,
-    timeEntryService: {
+    unifiedTimeEntryService: {
       getUserEntries: jest.fn(),
       getDayEntries: jest.fn(),
       createEntry: jest.fn(),
@@ -59,7 +56,7 @@ describe('useTimeEntries Hook', () => {
   });
   
   it('initializes with empty entries and loading state', () => {
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     
@@ -73,7 +70,7 @@ describe('useTimeEntries Hook', () => {
       { id: '2', userId: 'user1', date: new Date(), hours: 4, description: 'Test', project: 'Project B' }
     ];
     
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue(mockEntries);
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue(mockEntries);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     
@@ -86,7 +83,7 @@ describe('useTimeEntries Hook', () => {
       { id: '1', userId: 'user1', date: today, hours: 8, description: 'Test', project: 'Project A' }
     ];
     
-    (timeEntryService.getDayEntries as jest.Mock).mockReturnValue(mockDayEntries);
+    (unifiedTimeEntryService.getDayEntries as jest.Mock).mockReturnValue(mockDayEntries);
     
     const { result } = renderHook(() => useTimeEntries('user1', today));
     
@@ -94,8 +91,8 @@ describe('useTimeEntries Hook', () => {
   });
   
   it('creates a new entry', () => {
-    (timeEntryService.createEntry as jest.Mock).mockReturnValue('new-id-123');
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
+    (unifiedTimeEntryService.createEntry as jest.Mock).mockReturnValue('new-id-123');
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     
@@ -108,8 +105,8 @@ describe('useTimeEntries Hook', () => {
   });
   
   it('updates an existing entry', () => {
-    (timeEntryService.updateEntry as jest.Mock).mockReturnValue(true);
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
+    (unifiedTimeEntryService.updateEntry as jest.Mock).mockReturnValue(true);
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     
@@ -123,8 +120,8 @@ describe('useTimeEntries Hook', () => {
   });
   
   it('deletes an entry', () => {
-    (timeEntryService.deleteEntry as jest.Mock).mockReturnValue(true);
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
+    (unifiedTimeEntryService.deleteEntry as jest.Mock).mockReturnValue(true);
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue([]);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     
@@ -142,8 +139,8 @@ describe('useTimeEntries Hook', () => {
       { id: '2', userId: 'user1', date: new Date(), hours: 5, description: 'Test', project: 'Project B' }
     ];
     
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue(mockEntries);
-    (timeEntryService.calculateTotalHours as jest.Mock).mockReturnValue(8);
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue(mockEntries);
+    (unifiedTimeEntryService.calculateTotalHours as jest.Mock).mockReturnValue(8);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     
@@ -156,7 +153,7 @@ describe('useTimeEntries Hook', () => {
       { id: '1', userId: 'user1', date: new Date(), hours: 4, description: 'Test', project: 'Project A' }
     ];
     
-    (timeEntryService.getUserEntries as jest.Mock).mockReturnValue(mockEntries);
+    (unifiedTimeEntryService.getUserEntries as jest.Mock).mockReturnValue(mockEntries);
     
     const { result } = renderHook(() => useTimeEntries('user1'));
     

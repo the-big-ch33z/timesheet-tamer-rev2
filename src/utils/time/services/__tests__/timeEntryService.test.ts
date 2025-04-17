@@ -1,4 +1,5 @@
-import { createTimeEntryService, STORAGE_KEY } from '../timeEntryService';
+
+import { unifiedTimeEntryService } from '../unifiedTimeEntryService';
 import { createTestEntry, createTestEntryInput } from '@/utils/testing/mockUtils';
 import { TimeEntry } from '@/types';
 
@@ -22,15 +23,16 @@ const mockLocalStorage = (() => {
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
 
 describe('Time Entry Service', () => {
-  // Create a fresh service instance for each test
-  let service: ReturnType<typeof createTimeEntryService>;
+  // Use unified service for all tests
+  const service = unifiedTimeEntryService;
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   
   beforeEach(() => {
     mockLocalStorage.clear();
-    service = createTimeEntryService();
+    // Reset the service state by invalidating cache
+    (service as any).invalidateCache();
   });
   
   describe('CRUD Operations', () => {
@@ -48,7 +50,7 @@ describe('Time Entry Service', () => {
       expect(allEntries[0].hours).toBe(8);
       
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEY, 
+        'timeEntries', 
         expect.any(String)
       );
     });
@@ -209,7 +211,7 @@ describe('Time Entry Service', () => {
     });
     
     it('handles malformed entries in storage', () => {
-      mockLocalStorage.setItem(STORAGE_KEY, 'not valid json');
+      mockLocalStorage.setItem('timeEntries', 'not valid json');
       
       const entries = service.getAllEntries();
       expect(Array.isArray(entries)).toBe(true);
