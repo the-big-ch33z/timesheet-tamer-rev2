@@ -73,6 +73,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         jobNumber: jobNumber || undefined,
         taskNumber: taskNumber || undefined,
         rego: rego || undefined,
+        project: "General" // Add default project value
       };
 
       // Submit the entry

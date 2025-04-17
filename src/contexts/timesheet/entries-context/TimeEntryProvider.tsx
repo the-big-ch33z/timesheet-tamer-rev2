@@ -24,7 +24,7 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
   const { addEntry, updateEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
 
   // Set up query functions
-  const { getDayEntries, calculateTotalHours } = useEntryQueries(entries, userId);
+  const { getDayEntries, getMonthEntries, calculateTotalHours } = useEntryQueries(entries, userId);
 
   // Get entries for the currently selected day
   const dayEntries = selectedDate ? getDayEntries(selectedDate) : [];
@@ -39,7 +39,8 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
     calculateTotalHours,
     isLoading,
     createEntry,
-    getDayEntries
+    getDayEntries,
+    getMonthEntries
   };
 
   return (

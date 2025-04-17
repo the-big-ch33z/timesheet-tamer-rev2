@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { TimeEntry } from '@/types';
 
 // Import newly created hooks
@@ -42,7 +42,13 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
   const { addEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
   
   // Get query functions
-  const { getDayEntries, getUserEntries } = useEntryQueries(entries, userId);
+  const { getDayEntries, getMonthEntries, calculateTotalHours } = useEntryQueries(entries, userId);
+  
+  // Create a getUserEntries function
+  const getUserEntries = useCallback((userId?: string) => {
+    if (!userId) return [];
+    return entries.filter(entry => entry.userId === userId);
+  }, [entries]);
   
   const value = {
     entries,
