@@ -2,18 +2,14 @@
 import React, { useState, useCallback } from "react";
 import HoursField from "../fields/field-types/HoursField";
 import { Button } from "@/components/ui/button";
-import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { TimeEntry } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Clock, X } from "lucide-react";
-import TimeInputField from "../../detail/components/TimeInputField";
 
 interface TimeEntryFormProps {
-  startTime: string;
-  endTime: string;
   onSubmit: (entry: Omit<TimeEntry, "id">) => void;
   onCancel: () => void;
   date: Date;
@@ -21,8 +17,6 @@ interface TimeEntryFormProps {
 }
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
-  startTime,
-  endTime,
   onSubmit,
   onCancel,
   date,
@@ -35,32 +29,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   const [taskNumber, setTaskNumber] = useState<string>("");
   const [rego, setRego] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Track local time values for immediate feedback
-  const [localStartTime, setLocalStartTime] = useState(startTime);
-  const [localEndTime, setLocalEndTime] = useState(endTime);
 
-  // Calculate hours from times on initial render and when times change
-  React.useEffect(() => {
-    if (localStartTime && localEndTime) {
-      try {
-        const calculatedHours = calculateHoursFromTimes(localStartTime, localEndTime);
-        setHours(calculatedHours.toString());
-      } catch (error) {
-        console.error("Error calculating hours:", error);
-      }
-    }
-  }, [localStartTime, localEndTime]);
-  
-  // Handle time changes
-  const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    if (type === 'start') {
-      setLocalStartTime(value);
-    } else {
-      setLocalEndTime(value);
-    }
-  };
-  
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -81,8 +50,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       const entry: Omit<TimeEntry, "id"> = {
         date,
         userId,
-        startTime: localStartTime,
-        endTime: localEndTime,
         hours: hoursNum,
         description: description || "",
         jobNumber: jobNumber || undefined,
@@ -115,30 +82,13 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [hours, description, jobNumber, taskNumber, rego, date, userId, localStartTime, localEndTime, onSubmit, toast]);
+  }, [hours, description, jobNumber, taskNumber, rego, date, userId, onSubmit, toast]);
   
   return (
     <Card className="p-4">
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Time fields */}
-            <div className="flex gap-2 items-center w-full md:w-auto">
-              <TimeInputField 
-                label="Start"
-                value={localStartTime}
-                onChange={(value) => handleTimeChange('start', value)}
-                testId="start-time-input"
-              />
-              <span className="mx-1">-</span>
-              <TimeInputField 
-                label="End"
-                value={localEndTime}
-                onChange={(value) => handleTimeChange('end', value)}
-                testId="end-time-input"
-              />
-            </div>
-            
             {/* Hours field */}
             <div className="w-full md:w-24">
               <HoursField id="hours" value={hours} onChange={setHours} required={true} />
