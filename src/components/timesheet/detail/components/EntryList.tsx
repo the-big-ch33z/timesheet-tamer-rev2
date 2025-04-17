@@ -1,4 +1,3 @@
-
 import React from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
@@ -6,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { unifiedTimeEntryService } from "@/utils/time/services";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 interface EntryListProps {
   entries: TimeEntry[];
