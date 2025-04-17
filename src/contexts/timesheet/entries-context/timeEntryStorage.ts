@@ -5,7 +5,7 @@ import {
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
   storageWriteLock
-} from "@/utils/time/services/unifiedTimeEntryService";
+} from "@/utils/time/services";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 
 // Create a logger

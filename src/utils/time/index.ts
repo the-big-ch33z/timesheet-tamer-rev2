@@ -36,6 +36,6 @@ export {
   isUndertime 
 } from './calculations/varianceCalculations';
 export { formatTimeForDisplay, formatHours, formatDate } from './formatting/timeFormatting';
-// Updated to use the unified service instead of multiple services
-export { unifiedTimeEntryService } from './services/unifiedTimeEntryService';
+// Updated to use the unified service from the new structure
+export { unifiedTimeEntryService } from './services';
 export { createTimeLogger } from './errors/timeLogger';

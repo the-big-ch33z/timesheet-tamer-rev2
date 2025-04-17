@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { TimeEntry } from '@/types';
-import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 import { useLogger } from '@/hooks/useLogger';
 
 /**

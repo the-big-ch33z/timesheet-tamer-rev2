@@ -1,5 +1,5 @@
 
-import { unifiedTimeEntryService } from '../unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 import { createTestEntry, createTestEntryInput } from '@/utils/testing/mockUtils';
 import { TimeEntry } from '@/types';
 
