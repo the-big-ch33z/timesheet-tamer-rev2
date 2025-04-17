@@ -138,9 +138,23 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+// Define the ToastAPI interface
+export interface ToastAPI {
+  (props: {
+    title?: string;
+    description?: React.ReactNode;
+    action?: React.ReactNode;
+    variant?: "default" | "destructive" | "success";
+  }): { 
+    id: string;
+    dismiss: () => void;
+    update: (props: ToasterToast) => void;
+  };
+  dismiss: (toastId?: string) => void;
+}
 
-function toast({ ...props }: Toast) {
+// Fix the toast function to properly implement the ToastAPI interface
+function toast(props: Toast): { id: string; dismiss: () => void; update: (props: ToasterToast) => void; } {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -148,6 +162,7 @@ function toast({ ...props }: Toast) {
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
+    
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({
@@ -163,10 +178,15 @@ function toast({ ...props }: Toast) {
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   }
+}
+
+// Add the dismiss method to the toast function to match ToastAPI
+toast.dismiss = (toastId?: string) => {
+  dispatch({ type: "DISMISS_TOAST", toastId })
 }
 
 function useToast() {
@@ -189,15 +209,6 @@ function useToast() {
   }
 }
 
-// Define the ToastAPI type here for export
-export interface ToastAPI {
-  (props: {
-    title?: string;
-    description?: React.ReactNode;
-    action?: React.ReactNode;
-    variant?: "default" | "destructive" | "success";
-  }): void;
-  dismiss: (toastId?: string) => void;
-}
+type Toast = Omit<ToasterToast, "id">
 
 export { useToast, toast }

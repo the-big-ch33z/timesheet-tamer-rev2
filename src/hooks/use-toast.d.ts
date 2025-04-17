@@ -15,7 +15,11 @@ export interface ToastAPI {
     description?: React.ReactNode;
     action?: React.ReactNode;
     variant?: "default" | "destructive" | "success";
-  }): void;
+  }): {
+    id: string;
+    dismiss: () => void;
+    update: (props: any) => void;
+  };
   dismiss: (toastId?: string) => void;
 }
 
