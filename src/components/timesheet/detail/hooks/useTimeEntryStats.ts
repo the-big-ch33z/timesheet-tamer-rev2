@@ -7,10 +7,10 @@
 import { deprecationWarning } from "@/utils/deprecation/deprecationWarnings";
 import { 
   useTimeEntryStats as UseTimeEntryStatsFromHooks,
-  TimeEntryStats
 } from "@/hooks/timesheet/useTimeEntryStats";
 
-export { TimeEntryStats };
+// Properly re-export the type with 'export type' syntax
+export type { TimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
 
 export const useTimeEntryStats = (...args: Parameters<typeof UseTimeEntryStatsFromHooks>) => {
   deprecationWarning(

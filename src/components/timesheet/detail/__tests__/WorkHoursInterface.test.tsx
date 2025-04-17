@@ -45,9 +45,10 @@ jest.mock('@/utils/time/errors', () => ({
 describe('WorkHoursInterface Component', () => {
   const mockDate = new Date();
   const mockUserId = 'test-user';
+  const mockEntries = []; // Add empty entries array for all tests
   
   it('renders with default props', () => {
-    render(<WorkHoursInterface date={mockDate} userId={mockUserId} />);
+    render(<WorkHoursInterface date={mockDate} userId={mockUserId} entries={mockEntries} />);
     
     expect(screen.getByText('Work Hours')).toBeInTheDocument();
     expect(screen.getByText('Start Time')).toBeInTheDocument();
@@ -70,7 +71,7 @@ describe('WorkHoursInterface Component', () => {
       hasCustomHours: jest.fn(() => true)
     }));
     
-    render(<WorkHoursInterface date={mockDate} userId={mockUserId} />);
+    render(<WorkHoursInterface date={mockDate} userId={mockUserId} entries={mockEntries} />);
     
     // Should show custom indicator
     expect(screen.getByText('Work Hours (Custom)')).toBeInTheDocument();
@@ -93,7 +94,7 @@ describe('WorkHoursInterface Component', () => {
       hasCustomHours: jest.fn(() => true)
     }));
     
-    render(<WorkHoursInterface date={mockDate} userId={mockUserId} />);
+    render(<WorkHoursInterface date={mockDate} userId={mockUserId} entries={mockEntries} />);
     
     // Click the reset button
     fireEvent.click(screen.getByText('Reset'));
@@ -103,7 +104,7 @@ describe('WorkHoursInterface Component', () => {
   });
   
   it('disables interactions in non-interactive mode', () => {
-    render(<WorkHoursInterface date={mockDate} userId={mockUserId} interactive={false} />);
+    render(<WorkHoursInterface date={mockDate} userId={mockUserId} entries={mockEntries} interactive={false} />);
     
     // In non-interactive mode, inputs should be disabled
     const inputs = screen.getAllByRole('textbox');
@@ -121,7 +122,8 @@ describe('WorkHoursInterface Component', () => {
     render(
       <WorkHoursInterface 
         date={mockDate} 
-        userId={mockUserId} 
+        userId={mockUserId}
+        entries={mockEntries}
         onHoursChange={onHoursChange}
       />
     );
