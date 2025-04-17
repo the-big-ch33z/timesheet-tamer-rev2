@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -25,6 +24,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
 }) => {
   const logger = useLogger('EntryInterface');
   const [showForm, setShowForm] = useState(true);
+  const [formKey, setFormKey] = useState(0);
 
   // Get work hours for the day (from the context via component prop)
   const startTime = existingEntries.length > 0 ? existingEntries[0].startTime || '09:00' : '09:00';
@@ -39,8 +39,12 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       
       if (newEntryId) {
         logger.debug("[EntryInterface] Entry created successfully with ID:", newEntryId);
-        // Hide form after successful submission
-        setShowForm(false);
+        
+        // Reset the form by updating the key instead of hiding it
+        setFormKey(prevKey => prevKey + 1);
+        
+        // Keep the form visible to allow adding multiple entries
+        setShowForm(true);
       } else {
         logger.error("[EntryInterface] Failed to create entry");
       }
@@ -65,6 +69,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
 
       {interactive && showForm && (
         <TimeEntryForm 
+          key={formKey}
           startTime={startTime}
           endTime={endTime}
           onSubmit={handleSubmitEntry}

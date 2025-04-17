@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import HoursField from "../fields/field-types/HoursField";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       }
     }
   }, [startTime, endTime]);
+  
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -81,9 +83,12 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       setJobNumber("");
       setTaskNumber("");
       setRego("");
-
-      // Hide form after successful submission
-      onCancel();
+      setHours("");
+      
+      toast({
+        title: "Entry added",
+        description: `Added ${hoursNum} hours to your timesheet`,
+      });
     } catch (error) {
       console.error("Error submitting entry:", error);
       toast({
@@ -94,7 +99,8 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [hours, description, jobNumber, taskNumber, rego, date, userId, startTime, endTime, onSubmit, onCancel, toast]);
+  }, [hours, description, jobNumber, taskNumber, rego, date, userId, startTime, endTime, onSubmit, toast]);
+  
   return <Card className="p-4">
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">

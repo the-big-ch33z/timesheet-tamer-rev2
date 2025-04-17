@@ -67,6 +67,28 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }
   }, [entries, date, stats.totalHours, onHoursChange]);
 
+  // Effect to update work hours when startTime or endTime changes
+  useEffect(() => {
+    if (interactive && startTime && endTime) {
+      logger.debug(`Saving work hours: start=${startTime}, end=${endTime}`);
+      saveWorkHoursForDate(date, startTime, endTime, userId);
+    }
+  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
+
+  const enhancedHandleTimeChange = (type: 'start' | 'end', value: string) => {
+    logger.debug(`Time input changed: ${type}=${value}`);
+    handleTimeChange(type, value);
+    
+    // Save immediately on change for immediate feedback
+    const updatedStartTime = type === 'start' ? value : startTime;
+    const updatedEndTime = type === 'end' ? value : endTime;
+    
+    if (updatedStartTime && updatedEndTime) {
+      logger.debug(`Immediately saving updated work hours: start=${updatedStartTime}, end=${updatedEndTime}`);
+      saveWorkHoursForDate(date, updatedStartTime, updatedEndTime, userId);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -79,7 +101,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           calculatedHours={calculatedHours}
           hasEntries={hasEntries}
           interactive={interactive}
-          onTimeChange={handleTimeChange}
+          onTimeChange={enhancedHandleTimeChange}
           isComplete={isComplete}
         />
         
