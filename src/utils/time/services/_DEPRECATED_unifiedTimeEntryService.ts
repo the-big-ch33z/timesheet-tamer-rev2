@@ -868,7 +868,7 @@ export class UnifiedTimeEntryService {
   /**
    * Clean up old deleted entries (optional, can be called periodically)
    */
-  public cleanupDeletedEntries(maxAgeDays: number = 30): void {
+  public cleanupDeletedEntries(maxAgeDays = 30): void {
     // Implementation for future cleanup of old deleted entry IDs
     // Can be implemented later if needed
     logger.debug(`Cleanup requested for entries older than ${maxAgeDays} days`);

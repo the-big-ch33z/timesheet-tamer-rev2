@@ -1,7 +1,7 @@
 
 import { WorkSchedule } from '@/types';
 
-export const calculateAdjustedFortnightHours = (schedule: WorkSchedule, fte: number = 1.0): number => {
+export const calculateAdjustedFortnightHours = (schedule: WorkSchedule, fte = 1.0): number => {
   const baseHours = calculateFortnightHoursFromSchedule(schedule);
   return Math.round((baseHours * fte) * 2) / 2; // Round to nearest 0.5
 };

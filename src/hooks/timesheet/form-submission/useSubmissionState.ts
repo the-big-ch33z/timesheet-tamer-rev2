@@ -5,7 +5,7 @@ import { useState, useCallback, useRef, useMemo } from 'react';
  * Hook to manage submission state with optimizations
  * to prevent unnecessary re-renders
  */
-export const useSubmissionState = (disabled: boolean = false) => {
+export const useSubmissionState = (disabled = false) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Use a ref to track submission state for immediate access
   const isSubmittingRef = useRef(false);

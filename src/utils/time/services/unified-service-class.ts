@@ -216,7 +216,7 @@ export class UnifiedTimeEntryService {
     }
   }
 
-  public cleanupDeletedEntries(maxAgeDays: number = 30): void {
+  public cleanupDeletedEntries(maxAgeDays = 30): void {
     logger.debug(`Cleanup requested for entries older than ${maxAgeDays} days`);
   }
 }
