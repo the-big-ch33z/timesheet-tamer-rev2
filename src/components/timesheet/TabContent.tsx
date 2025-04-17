@@ -13,7 +13,6 @@ import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntr
 const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
 const WorkHoursSection = lazy(() => import("./detail/WorkHoursSection"));
 const MonthlyHours = lazy(() => import("./MonthlyHours"));
-const ToilSummary = lazy(() => import("./ToilSummary"));
 const RecentEntries = lazy(() => import("./RecentEntries"));
 
 // Loading component
@@ -77,9 +76,7 @@ const TabContent: React.FC = () => {
                 />
               </Suspense>
               
-              <Suspense fallback={<LoadingComponent />}>
-                <ToilSummary />
-              </Suspense>
+              {/* ToilSummary component removed */}
             </div>
           </div>
         </TabsContent>
