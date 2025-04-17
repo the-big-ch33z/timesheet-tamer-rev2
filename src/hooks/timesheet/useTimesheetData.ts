@@ -5,6 +5,10 @@ import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryS
 import { useLogger } from '../useLogger';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
 
+/**
+ * Unified hook for accessing and manipulating timesheet data
+ * Combines functionality from various timesheet hooks
+ */
 export const useTimesheetData = (userId?: string) => {
   const logger = useLogger('TimesheetData');
   const { entries } = useTimeEntryContext();
