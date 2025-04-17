@@ -1,8 +1,7 @@
-
 import { useRef, useCallback } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import { Dispatch, SetStateAction } from 'react';
-import { ToastAPI } from '../../use-toast';
+import { ToastAPI } from '@/hooks/use-toast';
 
 interface UseFieldBatchingProps {
   setHours: Dispatch<SetStateAction<string>>;

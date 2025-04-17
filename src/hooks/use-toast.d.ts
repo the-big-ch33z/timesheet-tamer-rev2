@@ -18,3 +18,5 @@ export interface ToastAPI {
   }): void;
   dismiss: (toastId?: string) => void;
 }
+
+export { useToast, toast } from './use-toast';
