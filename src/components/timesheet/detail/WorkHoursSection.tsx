@@ -4,7 +4,7 @@ import { TimeEntry, WorkSchedule } from "@/types";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 import TimeEntryController from "../entry-control/TimeEntryController";
 import { createTimeLogger } from "@/utils/time/errors";
-import WorkHoursInterface from "./components/WorkHoursInterface";
+import WorkHoursInterface from "./WorkHoursInterface";
 import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 
@@ -31,24 +31,37 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   // Track when entries change for logging purposes
   const [entriesCount, setEntriesCount] = useState(entries.length);
   
+  // Update entry count when entries change
   useEffect(() => {
     if (entries.length !== entriesCount) {
       logger.debug(`[WorkHoursSection] Entries count changed from ${entriesCount} to ${entries.length}`);
       setEntriesCount(entries.length);
+      
+      // Notify other components that entries have changed
+      timeEventsService.publish('hours-updated', { 
+        entriesCount: entries.length,
+        date: date.toISOString(),
+        userId
+      });
     }
-  }, [entries.length, entriesCount]);
+  }, [entries.length, entriesCount, date, userId]);
   
-  // Set up subscription to time events
-  useEffect(() => {
-    // Subscribe to entry creation/update events
-    const unsubscribe = timeEventsService.subscribe('entry-created', (event) => {
-      logger.debug(`[WorkHoursSection] Entry created event received`, event.payload);
-    });
-    
-    return () => unsubscribe();
-  }, []);
-  
-  logger.debug(`[WorkHoursSection] Rendering for date: ${date}, with ${entries.length} entries, userId: ${userId}`);
+  // Handle entry creation
+  const handleCreateEntry = (startTime: string, endTime: string, hours: number) => {
+    if (onCreateEntry) {
+      logger.debug(`[WorkHoursSection] Creating entry: ${startTime}-${endTime}, ${hours} hours`);
+      onCreateEntry(startTime, endTime, hours);
+      
+      // Publish event after creating entry
+      timeEventsService.publish('entry-created', {
+        startTime,
+        endTime,
+        hours,
+        userId,
+        date: date.toISOString()
+      });
+    }
+  };
   
   return (
     <TimeEntryProvider selectedDate={date} userId={userId}>
@@ -60,6 +73,9 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
             interactive={interactive}
             entries={entries}
             workSchedule={workSchedule}
+            onHoursChange={(hours) => {
+              logger.debug(`[WorkHoursSection] Hours changed: ${hours}`);
+            }}
           />
         </Card>
         
@@ -67,6 +83,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
           date={date}
           userId={userId}
           interactive={interactive}
+          onCreateEntry={handleCreateEntry}
         />
       </div>
     </TimeEntryProvider>

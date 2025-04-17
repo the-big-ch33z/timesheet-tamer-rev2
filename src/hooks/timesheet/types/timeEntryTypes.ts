@@ -36,3 +36,22 @@ export interface UseTimeEntryFormReturn {
   setHoursFromTimes: () => void;
   isSubmitting: boolean;
 }
+
+// New interfaces for timesheetWorkHours hook
+export interface WorkHoursData {
+  startTime: string;
+  endTime: string;
+  isCustom: boolean;
+  hasData: boolean;
+  calculatedHours: number;
+}
+
+export interface TimesheetWorkHoursHook {
+  getWorkHoursForDate: (date: Date, specificUserId?: string) => WorkHoursData;
+  saveWorkHoursForDate: (date: Date, startTime: string, endTime: string, specificUserId?: string) => boolean;
+  hasCustomHours: (date: Date, specificUserId?: string) => boolean;
+  resetWorkHours: (date: Date, specificUserId?: string) => void;
+  clearAllWorkHours: (specificUserId?: string) => void;
+  calculateDayHours: (date: Date, specificUserId?: string) => number;
+  refreshWorkHours: () => void;
+}

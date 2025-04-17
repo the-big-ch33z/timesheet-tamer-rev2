@@ -1,126 +1,82 @@
 
-import { createTimeLogger } from '../errors';
+/**
+ * Simple event service for timesheet-related events
+ */
 
-const logger = createTimeLogger('TimeEventsService');
+type TimeEventType = 'entry-created' | 'entry-updated' | 'entry-deleted' | 'hours-updated' | 'hours-reset';
 
-// Event types that can be dispatched throughout the application
-export type TimeEventType = 
-  | 'entry-created' 
-  | 'entry-updated'
-  | 'entry-deleted'
-  | 'work-hours-changed'
-  | 'date-changed'
-  | 'user-changed'
-  | 'timesheet-refresh-needed';
-
-// Event data interface
-export interface TimeEvent {
-  type: TimeEventType;
-  payload?: any;
-  timestamp: number;
+interface TimeEventPayload {
+  [key: string]: any;
 }
 
-// Event handler type
-export type TimeEventHandler = (event: TimeEvent) => void;
+interface TimeEvent {
+  type: TimeEventType;
+  payload: TimeEventPayload;
+}
 
-// Global event system for timesheet events
+type TimeEventListener = (event: TimeEvent) => void;
+
 class TimeEventsService {
-  private handlers: Map<TimeEventType, Set<TimeEventHandler>> = new Map();
-  private globalHandlers: Set<TimeEventHandler> = new Set();
-  
+  private listeners: Map<TimeEventType, Set<TimeEventListener>> = new Map();
+
   /**
    * Subscribe to a specific event type
+   * @param type Event type to listen for
+   * @param callback Function to call when event occurs
+   * @returns Unsubscribe function
    */
-  public subscribe(type: TimeEventType, handler: TimeEventHandler): () => void {
-    if (!this.handlers.has(type)) {
-      this.handlers.set(type, new Set());
+  subscribe(type: TimeEventType, callback: TimeEventListener): () => void {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, new Set());
     }
-    
-    this.handlers.get(type)!.add(handler);
-    logger.debug(`Subscribed handler to ${type} events`);
-    
-    // Return unsubscribe function
+
+    const callbacks = this.listeners.get(type)!;
+    callbacks.add(callback);
+
     return () => {
-      const typeHandlers = this.handlers.get(type);
-      if (typeHandlers) {
-        typeHandlers.delete(handler);
-        logger.debug(`Unsubscribed handler from ${type} events`);
+      callbacks.delete(callback);
+      if (callbacks.size === 0) {
+        this.listeners.delete(type);
       }
     };
   }
-  
+
   /**
-   * Subscribe to all events
+   * Publish an event to all subscribers
+   * @param type Event type
+   * @param payload Event data
    */
-  public subscribeToAll(handler: TimeEventHandler): () => void {
-    this.globalHandlers.add(handler);
-    logger.debug('Subscribed handler to all events');
+  publish(type: TimeEventType, payload: TimeEventPayload = {}): void {
+    console.debug(`[TimeEventsService] Publishing event: ${type}`, payload);
     
-    // Return unsubscribe function
-    return () => {
-      this.globalHandlers.delete(handler);
-      logger.debug('Unsubscribed handler from all events');
-    };
-  }
-  
-  /**
-   * Dispatch an event
-   */
-  public dispatch(type: TimeEventType, payload?: any): void {
-    const event: TimeEvent = {
-      type,
-      payload,
-      timestamp: Date.now()
-    };
-    
-    // Log the event
-    logger.debug(`Dispatching event: ${type}`, payload);
-    
-    // Call type-specific handlers
-    const typeHandlers = this.handlers.get(type);
-    if (typeHandlers) {
-      typeHandlers.forEach(handler => {
-        try {
-          handler(event);
-        } catch (error) {
-          logger.error(`Error in ${type} event handler`, error);
-        }
-      });
-    }
-    
-    // Call global handlers
-    this.globalHandlers.forEach(handler => {
+    const callbacks = this.listeners.get(type);
+    if (!callbacks) return;
+
+    const event: TimeEvent = { type, payload };
+    callbacks.forEach(callback => {
       try {
-        handler(event);
+        callback(event);
       } catch (error) {
-        logger.error(`Error in global event handler for ${type} event`, error);
+        console.error(`[TimeEventsService] Error in event listener for ${type}:`, error);
       }
     });
-  }
-  
-  /**
-   * Clear all handlers (typically used in tests)
-   */
-  public clear(): void {
-    this.handlers.clear();
-    this.globalHandlers.clear();
-    logger.debug('Cleared all event handlers');
+    
+    // Also publish to window event system for cross-component communication
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(`timesheet:${type}`, { 
+        detail: payload 
+      }));
+    }
   }
 }
 
-// Singleton instance
+// Create singleton instance
 export const timeEventsService = new TimeEventsService();
 
-// Helper to create hooks that respond to timesheet events
-export const createTimesheetEventHandler = (
-  eventTypes: TimeEventType[], 
-  handler: TimeEventHandler
-): () => void => {
-  // Create unsubscribe functions for each event type
-  const unsubscribers = eventTypes.map(type => 
-    timeEventsService.subscribe(type, handler)
-  );
-  
-  // Return a function that unsubscribes from all events
-  return () => unsubscribers.forEach(unsubscribe => unsubscribe());
-};
+// Add window event listener for global save events
+if (typeof window !== 'undefined') {
+  window.addEventListener('timesheet:save-pending-changes', () => {
+    console.debug('[TimeEventsService] Global save event detected');
+    timeEventsService.publish('hours-updated', { source: 'global-save' });
+  });
+}

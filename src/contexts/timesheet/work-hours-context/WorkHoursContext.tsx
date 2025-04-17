@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -22,6 +21,7 @@ interface WorkHoursContextType {
   clearWorkHours: (userId: string) => void;
   hasCustomWorkHours: (date: Date, userId: string) => boolean;
   resetDayWorkHours: (date: Date, userId: string) => void;
+  refreshTimesForDate: (date: Date, userId: string) => void;
   synchronizeFromRemote?: (remoteData: WorkHoursData[]) => void; // For future remote sync
 }
 
@@ -49,18 +49,14 @@ interface WorkHoursProviderProps {
 
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
   const [workHoursMap, setWorkHoursMap] = useState<Map<string, WorkHoursData>>(new Map());
-  
-  // Use a ref to track the latest saved work hours to prevent unnecessary re-renders
   const latestWorkHoursRef = useRef<Map<string, WorkHoursData>>(new Map());
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef<boolean>(false);
-  
-  // Cache management functions
+
   const cleanupCache = useCallback(() => {
     const now = Date.now();
     let hasExpiredEntries = false;
     
-    // Create a new map excluding expired entries
     const newMap = new Map<string, WorkHoursData>();
     latestWorkHoursRef.current.forEach((value, key) => {
       if (now - value.lastModified < CACHE_EXPIRATION) {
@@ -71,29 +67,23 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       }
     });
     
-    // Only update if we actually removed something
     if (hasExpiredEntries) {
       latestWorkHoursRef.current = newMap;
       setWorkHoursMap(newMap);
       logger.info('Cache cleanup completed, removed expired entries');
     }
   }, []);
-  
-  // Load saved work hours from localStorage on mount
+
   useEffect(() => {
     try {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsedData: WorkHoursData[] = JSON.parse(savedData);
         
-        // Convert array to Map for efficient lookups
         const newMap = new Map<string, WorkHoursData>();
         parsedData.forEach(item => {
-          // Create a compound key: userId-date
           const key = `${item.userId}-${item.date}`;
-          // Ensure the isCustom flag is set (for backward compatibility)
           item.isCustom = item.isCustom !== undefined ? item.isCustom : true;
-          // Ensure lastModified is set
           item.lastModified = item.lastModified || Date.now();
           newMap.set(key, item);
         });
@@ -103,27 +93,20 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         logger.debug(`Loaded ${parsedData.length} work hours entries from storage`);
       }
       
-      // Mark as initialized
       isInitializedRef.current = true;
       
-      // Set up periodic cache cleanup
-      const cleanupInterval = setInterval(cleanupCache, 60 * 60 * 1000); // Hourly cleanup
-      
+      const cleanupInterval = setInterval(cleanupCache, 60 * 60 * 1000);
       return () => {
         clearInterval(cleanupInterval);
       };
-      
     } catch (error) {
       logger.error('Error loading work hours from storage:', error);
-      // Still mark as initialized even if there was an error
       isInitializedRef.current = true;
     }
   }, [cleanupCache]);
-  
-  // Save work hours to localStorage with debounce
+
   const saveToStorage = useCallback((data: Map<string, WorkHoursData>) => {
     try {
-      // Convert Map to Array for storage
       const dataArray = Array.from(data.values());
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataArray));
       logger.debug(`Saved ${dataArray.length} work hours entries to storage`);
@@ -131,8 +114,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       logger.error('Error saving work hours to storage:', error);
     }
   }, []);
-  
-  // Debounced save to prevent excessive writes
+
   const debouncedSave = useCallback((data: Map<string, WorkHoursData>) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -143,24 +125,43 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       saveTimeoutRef.current = null;
     }, 300);
   }, [saveToStorage]);
-  
-  // Save work hours to localStorage whenever they change
+
   useEffect(() => {
     if (workHoursMap.size > 0 && isInitializedRef.current) {
-      // Update ref for consistent reference
       latestWorkHoursRef.current = workHoursMap;
       debouncedSave(workHoursMap);
     }
     
     return () => {
-      // Clear any pending save on unmount
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
   }, [workHoursMap, debouncedSave]);
-  
-  // Set up cross-tab synchronization
+
+  const refreshTimesForDate = useCallback((date: Date, userId: string) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const key = `${userId}-${dateString}`;
+    
+    if (latestWorkHoursRef.current.has(key)) {
+      logger.debug(`Refreshing work hours for ${dateString}, userId: ${userId}`);
+      
+      setWorkHoursMap(prevMap => {
+        const newMap = new Map(prevMap);
+        const entry = newMap.get(key);
+        
+        if (entry) {
+          newMap.set(key, {
+            ...entry,
+            lastModified: Date.now()
+          });
+        }
+        
+        return newMap;
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY && event.newValue) {
@@ -169,17 +170,13 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
           
           const newData: WorkHoursData[] = JSON.parse(event.newValue);
           
-          // Update our state with the new data
           setWorkHoursMap(prevMap => {
-            // Start with current map
             const updatedMap = new Map(prevMap);
             
-            // Process each new entry
             newData.forEach(item => {
               const key = `${item.userId}-${item.date}`;
               const currentItem = updatedMap.get(key);
               
-              // If we don't have this entry or it's newer, use the new one
               if (!currentItem || (item.lastModified > currentItem.lastModified)) {
                 updatedMap.set(key, item);
               }
@@ -193,22 +190,19 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       }
     };
     
-    // Add listener for storage events
     window.addEventListener('storage', handleStorageChange);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
-  
-  // Set up window unload event handler for final save
+
   useEffect(() => {
     const handleUnload = () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
       
-      // Directly save current data
       try {
         const dataArray = Array.from(latestWorkHoursRef.current.values());
         localStorage.setItem(STORAGE_KEY, JSON.stringify(dataArray));
@@ -224,8 +218,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       window.removeEventListener('beforeunload', handleUnload);
     };
   }, []);
-  
-  // Check if there are custom hours saved for a specific date
+
   const hasCustomWorkHours = useCallback((date: Date, userId: string): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
@@ -235,10 +228,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     logger.debug(`Checking for custom hours for ${dateString}, userId: ${userId}, result: ${hasHours}`);
     return hasHours;
   }, []);
-  
-  // Get work hours for a specific date and user
+
   const getWorkHours = useCallback((date: Date, userId: string): { startTime: string; endTime: string; isCustom: boolean } => {
-    // Format date to YYYY-MM-DD for consistent lookup
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
     
@@ -253,7 +244,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       };
     }
     
-    // Return empty values if not found (no defaults)
     logger.debug(`No saved hours for ${dateString}, returning empty values`);
     return {
       startTime: "",
@@ -261,20 +251,16 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       isCustom: false
     };
   }, []);
-  
-  // Save work hours for a specific date and user
+
   const saveWorkHours = useCallback((date: Date, userId: string, startTime: string, endTime: string): void => {
-    // Format date to YYYY-MM-DD for consistent storage
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
     
     logger.debug(`Saving work hours for ${dateString}:`, { startTime, endTime, userId });
     
-    // Only save if we have actual values
     if (!startTime && !endTime) {
       logger.debug(`Both times are empty, removing entry if exists`);
       
-      // If both values are empty and we have an existing entry, delete it
       if (latestWorkHoursRef.current.has(key)) {
         setWorkHoursMap(prev => {
           const newMap = new Map(prev);
@@ -285,7 +271,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return;
     }
     
-    // Create a new map to trigger state update
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);
       newMap.set(key, {
@@ -293,16 +278,15 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         userId,
         startTime,
         endTime,
-        isCustom: true, // Always mark user-saved hours as custom
-        lastModified: Date.now() // Add timestamp for sync
+        isCustom: true,
+        lastModified: Date.now()
       });
       return newMap;
     });
     
     logger.debug(`Successfully saved work hours for ${dateString}`);
   }, []);
-  
-  // Reset work hours for a specific day to default/schedule
+
   const resetDayWorkHours = useCallback((date: Date, userId: string): void => {
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
@@ -317,15 +301,13 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return newMap;
     });
   }, []);
-  
-  // Clear all work hours for a user
+
   const clearWorkHours = useCallback((userId: string): void => {
     logger.debug(`Clearing all hours for user ${userId}`);
     
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);
       
-      // Find all entries for this user and remove them
       Array.from(newMap.entries())
         .filter(([key]) => key.startsWith(`${userId}-`))
         .forEach(([key]) => newMap.delete(key));
@@ -333,8 +315,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return newMap;
     });
   }, []);
-  
-  // Function to synchronize with remote data (for future use)
+
   const synchronizeFromRemote = useCallback((remoteData: WorkHoursData[]): void => {
     logger.info(`Synchronizing with ${remoteData.length} remote entries`);
     
@@ -345,7 +326,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         const key = `${remoteItem.userId}-${remoteItem.date}`;
         const localItem = updatedMap.get(key);
         
-        // If we don't have this entry or remote is newer, use remote
         if (!localItem || (remoteItem.lastModified > (localItem.lastModified || 0))) {
           updatedMap.set(key, {
             ...remoteItem,
@@ -357,16 +337,17 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return updatedMap;
     });
   }, []);
-  
+
   const value: WorkHoursContextType = {
     getWorkHours,
     saveWorkHours,
     clearWorkHours,
     hasCustomWorkHours,
     resetDayWorkHours,
+    refreshTimesForDate,
     synchronizeFromRemote
   };
-  
+
   return (
     <WorkHoursContext.Provider value={value}>
       {children}

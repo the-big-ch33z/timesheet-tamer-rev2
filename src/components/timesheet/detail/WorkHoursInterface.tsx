@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import TimeInputField from './components/TimeInputField';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
@@ -8,6 +8,8 @@ import { RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
 import { calculateHoursFromTimes } from '@/utils/time/calculations';
+import { TimeEntry } from '@/types';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -16,19 +18,23 @@ interface WorkHoursInterfaceProps {
   userId: string;
   interactive?: boolean;
   onHoursChange?: (hours: number) => void;
+  entries?: TimeEntry[];
+  workSchedule?: any;
 }
 
 const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   date,
   userId,
   interactive = true,
-  onHoursChange
+  onHoursChange,
+  entries = []
 }) => {
   const { 
     getWorkHoursForDate, 
     saveWorkHoursForDate, 
     resetWorkHours, 
-    hasCustomHours 
+    hasCustomHours,
+    refreshWorkHours
   } = useTimesheetWorkHours(userId);
   
   const [startTime, setStartTime] = useState('');
@@ -42,37 +48,60 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     if (!date || !userId) return;
     
     logger.debug(`Loading work hours for date: ${date.toDateString()}, userId: ${userId}`);
-    const { startTime: loadedStart, endTime: loadedEnd, isCustom: loadedIsCustom } = 
+    const { startTime: loadedStart, endTime: loadedEnd, isCustom: loadedIsCustom, calculatedHours } = 
       getWorkHoursForDate(date, userId);
     
     setStartTime(loadedStart);
     setEndTime(loadedEnd);
     setIsCustom(loadedIsCustom);
+    setCalculatedHours(calculatedHours);
     
-    // Calculate hours if both times are present
-    if (loadedStart && loadedEnd) {
-      try {
-        const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
-        setCalculatedHours(hours);
-        onHoursChange?.(hours);
-        logger.debug(`Calculated ${hours} hours from ${loadedStart} to ${loadedEnd}`);
-      } catch (error) {
-        logger.error("Failed to calculate hours:", error);
-        setCalculatedHours(0);
-        onHoursChange?.(0);
-      }
-    } else {
-      setCalculatedHours(0);
-      onHoursChange?.(0);
+    if (calculatedHours > 0) {
+      onHoursChange?.(calculatedHours);
     }
+    
   }, [date, userId, getWorkHoursForDate, onHoursChange]);
 
-  // Handle time change
-  const handleTimeChange = (type: 'start' | 'end', value: string) => {
+  // Subscribe to time entry events to detect changes
+  useEffect(() => {
+    const handleEntryEvent = () => {
+      logger.debug('Time entry event detected, refreshing work hours');
+      refreshWorkHours();
+      
+      // Re-fetch hours data after refresh
+      const { startTime: updatedStart, endTime: updatedEnd, calculatedHours } = 
+        getWorkHoursForDate(date, userId);
+      
+      setStartTime(updatedStart);
+      setEndTime(updatedEnd);
+      setCalculatedHours(calculatedHours);
+      onHoursChange?.(calculatedHours);
+    };
+    
+    // Subscribe to relevant events
+    const unsubCreate = timeEventsService.subscribe('entry-created', handleEntryEvent);
+    const unsubUpdate = timeEventsService.subscribe('entry-updated', handleEntryEvent);
+    const unsubDelete = timeEventsService.subscribe('entry-deleted', handleEntryEvent);
+    
+    return () => {
+      unsubCreate();
+      unsubUpdate();
+      unsubDelete();
+    };
+  }, [date, userId, getWorkHoursForDate, onHoursChange, refreshWorkHours]);
+
+  // Handle time change with smart change detection
+  const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!interactive || !date || !userId) return;
     
     const newStartTime = type === 'start' ? value : startTime;
     const newEndTime = type === 'end' ? value : endTime;
+    
+    // Only update if values actually changed
+    if (type === 'start' && newStartTime === startTime) return;
+    if (type === 'end' && newEndTime === endTime) return;
+    
+    logger.debug(`Time change: ${type} = ${value}`);
     
     // Update state
     if (type === 'start') setStartTime(value);
@@ -97,7 +126,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         setCalculatedHours(hours);
         onHoursChange?.(hours);
       } catch (error) {
-        console.error("Error calculating hours:", error);
         logger.error("Failed to calculate hours:", error);
       }
     } else {
@@ -107,20 +135,24 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     
     // Update the custom flag
     setIsCustom(true);
-  };
+  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate, toast, onHoursChange]);
 
   // Reset to default hours
   const handleReset = () => {
     if (!interactive || !date || !userId) return;
     
     resetWorkHours(date, userId);
+    refreshWorkHours();
     
-    // Reset state
-    setStartTime('');
-    setEndTime('');
-    setCalculatedHours(0);
+    // Re-fetch hours data after reset
+    const { startTime: updatedStart, endTime: updatedEnd, calculatedHours } = 
+      getWorkHoursForDate(date, userId);
+    
+    setStartTime(updatedStart);
+    setEndTime(updatedEnd);
+    setCalculatedHours(calculatedHours);
     setIsCustom(false);
-    onHoursChange?.(0);
+    onHoursChange?.(calculatedHours);
     
     toast({
       title: "Hours reset",
