@@ -12,7 +12,7 @@ interface TimeEntryFormManagerProps {
   startTime: string;
   endTime: string;
   calculatedHours: number;
-  showEntryForms: boolean[]; // Changed from number[] to boolean[]
+  showEntryForms: boolean[];
   addEntryForm: () => void;
   removeEntryForm: (index: number) => void;
   handleSaveEntry: (index: number) => void;
@@ -23,6 +23,10 @@ interface TimeEntryFormManagerProps {
 const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   formHandlers,
   interactive,
+  onCreateEntry,
+  startTime,
+  endTime,
+  calculatedHours,
   showEntryForms,
   addEntryForm,
   removeEntryForm,
@@ -44,6 +48,19 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
     } finally {
       // Reset saving state after a short delay to show feedback
       setTimeout(() => setIsSaving(false), 500);
+    }
+  };
+  
+  // Handle create new entry from template hours
+  const handleCreateNewEntry = () => {
+    console.debug("[TimeEntryFormManager] Create new entry button clicked");
+    if (startTime && endTime && calculatedHours > 0 && onCreateEntry) {
+      console.debug(`[TimeEntryFormManager] Creating entry with times: ${startTime}-${endTime} (${calculatedHours} hours)`);
+      onCreateEntry(startTime, endTime, calculatedHours);
+    } else {
+      // If we don't have valid time data, just open an empty form
+      console.debug("[TimeEntryFormManager] No valid time data for new entry, just adding form");
+      addEntryForm();
     }
   };
 
@@ -89,7 +106,7 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
       <div className="flex gap-2">
         {/* Add Entry Button */}
         <Button 
-          onClick={addEntryForm}
+          onClick={hasOpenForms ? addEntryForm : handleCreateNewEntry}
           size="sm"
           className="bg-green-500 hover:bg-green-600 text-white"
         >

@@ -28,7 +28,7 @@ export const useTimeEntryFormHandling = ({
   const { startTime, endTime, calculatedHours } = getWorkHoursForDate(date, userId || '');
   
   const [formHandlers, setFormHandlers] = useState<UseTimeEntryFormReturn[]>([]);
-  const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]); // Changed from number[] to boolean[]
+  const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]); 
   const previousDate = usePrevious(date);
   
   // Initialize form handlers based on entries
@@ -40,7 +40,7 @@ export const useTimeEntryFormHandling = ({
       
       // Reset form visibility array when entries change
       const newVisibility: boolean[] = entries.length > 0 
-        ? new Array(entries.length).fill(false)  // Changed from numbers to booleans
+        ? new Array(entries.length).fill(false)
         : [];
       
       setShowEntryForms(newVisibility);
@@ -88,7 +88,7 @@ export const useTimeEntryFormHandling = ({
           // Show an existing but hidden form
           setShowEntryForms(prev => {
             const updated = [...prev];
-            updated[firstHiddenIndex] = true; // Changed from index to true
+            updated[firstHiddenIndex] = true;
             return updated;
           });
           return;
@@ -112,7 +112,7 @@ export const useTimeEntryFormHandling = ({
       
       // Update the form handlers and visibility
       setFormHandlers(prev => [...prev, newHandler]);
-      setShowEntryForms(prev => [...prev, true]); // Changed from index to true
+      setShowEntryForms(prev => [...prev, true]);
     } catch (error) {
       logger.error('[useTimeEntryFormHandling] Error adding entry form:', error);
       
@@ -134,13 +134,13 @@ export const useTimeEntryFormHandling = ({
       // Check if the form has unsaved changes
       if (formHandlers[index]?.formState.formEdited) {
         // Save changes before removing
-        formHandlers[index].handleSave(); // Using handleSave() instead of handleSubmit()
+        formHandlers[index].handleSave();
       }
       
       // Hide the form instead of removing it completely
       setShowEntryForms(prev => {
         const updated = [...prev];
-        updated[index] = false; // Changed from number to false
+        updated[index] = false;
         return updated;
       });
     } catch (error) {
@@ -154,7 +154,7 @@ export const useTimeEntryFormHandling = ({
     
     try {
       logger.debug(`[useTimeEntryFormHandling] Saving entry at index ${index}`);
-      formHandlers[index].handleSave(); // Using handleSave() instead of handleSubmit()
+      formHandlers[index].handleSave();
     } catch (error) {
       logger.error(`[useTimeEntryFormHandling] Error saving entry ${index}:`, error);
       
@@ -178,7 +178,7 @@ export const useTimeEntryFormHandling = ({
       // Find all visible and edited forms
       showEntryForms.forEach((isVisible, index) => {
         if (isVisible && index < formHandlers.length && formHandlers[index].formState.formEdited) {
-          formHandlers[index].handleSave(); // Using handleSave() instead of handleSubmit()
+          formHandlers[index].handleSave();
           savedCount++;
         }
       });

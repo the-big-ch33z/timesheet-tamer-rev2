@@ -5,6 +5,7 @@ import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandli
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
+import TimeEntryFormManager from '../detail/managers/TimeEntryFormManager';
 
 const logger = createTimeLogger('TimeEntryController');
 
@@ -126,7 +127,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   const managerProps = {
     formHandlers,
     interactive,
-    onCreateEntry: handleCreateNewEntry,
+    onCreateEntry: handleCreateNewEntry, // Connect the handler here
     startTime,
     endTime,
     calculatedHours,
@@ -137,15 +138,9 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     saveAllPendingChanges,
     key: componentKey
   };
-
-  const TimeEntryFormManager = React.lazy(() => 
-    import('../detail/managers/TimeEntryFormManager')
-  );
   
   return (
-    <React.Suspense fallback={<div>Loading entry forms...</div>}>
-      <TimeEntryFormManager {...managerProps} />
-    </React.Suspense>
+    <TimeEntryFormManager {...managerProps} />
   );
 };
 
