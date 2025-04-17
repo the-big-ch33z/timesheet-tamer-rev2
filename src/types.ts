@@ -103,7 +103,7 @@ export interface TimeEntryService {
   getDayEntries: (date: Date, userId: string) => TimeEntry[];
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
   updateEntry: (entryId: string, updates: Partial<TimeEntry>) => boolean;
-  deleteEntry: (entryId: string) => boolean;
+  deleteEntry: (entryId: string) => Promise<boolean> | boolean;
   saveEntries: (entries: TimeEntry[]) => boolean;
   calculateTotalHours: (entries: TimeEntry[]) => number;
   validateEntry: (entry: Partial<TimeEntry>) => { valid: boolean; message?: string };

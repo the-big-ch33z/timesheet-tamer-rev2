@@ -13,7 +13,7 @@ interface EntriesContextValue {
   getUserEntries: (userId?: string) => TimeEntry[];
   getDayEntries: (date: Date, userId?: string) => TimeEntry[];
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
-  deleteEntry: (entryId: string) => boolean;
+  deleteEntry: (entryId: string) => Promise<boolean>;
 }
 
 const EntriesContext = createContext<EntriesContextValue | undefined>(undefined);

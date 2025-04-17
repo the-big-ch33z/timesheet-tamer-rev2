@@ -16,7 +16,7 @@ export interface UnifiedTimeEntriesState {
 export interface UnifiedTimeEntriesActions {
   createEntry: (entryData: Omit<TimeEntry, "id">) => string | null;
   updateEntry: (entryId: string, updates: Partial<TimeEntry>) => boolean;
-  deleteEntry: (entryId: string) => boolean;
+  deleteEntry: (entryId: string) => Promise<boolean>;
   refreshEntries: () => void;
 }
 

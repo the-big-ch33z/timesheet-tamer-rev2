@@ -26,7 +26,7 @@ export interface EntriesContextType {
   getUserEntries: (userId?: string) => TimeEntry[];
   getDayEntries: (day: Date, userId?: string) => TimeEntry[];
   createEntry: (entryData: Omit<TimeEntry, "id">) => void;
-  deleteEntry: (entryId: string) => void;
+  deleteEntry: (entryId: string) => Promise<boolean>;
 }
 
 // Timesheet UI Context Types

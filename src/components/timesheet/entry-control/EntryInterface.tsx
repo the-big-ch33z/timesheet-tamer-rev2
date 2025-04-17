@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
