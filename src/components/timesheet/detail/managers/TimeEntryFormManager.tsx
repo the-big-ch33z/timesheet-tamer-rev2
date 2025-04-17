@@ -106,7 +106,7 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
       <div className="flex gap-2">
         {/* Add Entry Button */}
         <Button 
-          onClick={hasOpenForms ? addEntryForm : handleCreateNewEntry}
+          onClick={addEntryForm}
           size="sm"
           className="bg-green-500 hover:bg-green-600 text-white"
         >

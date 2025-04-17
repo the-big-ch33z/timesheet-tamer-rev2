@@ -73,19 +73,13 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   }, [refreshWorkHours]);
   
   // Handle creating a new entry
-  const handleCreateNewEntry = useCallback(() => {
+  const handleCreateNewEntry = useCallback((startTime: string, endTime: string, hours: number) => {
     if (!interactive) return;
-    
-    const { startTime, endTime } = getWorkHoursForDate(date, userId);
-    if (!startTime || !endTime) {
-      logger.debug('[TimeEntryController] Cannot create entry - missing start/end times');
-      return;
-    }
     
     try {
       if (onCreateEntry) {
         logger.debug(`[TimeEntryController] Creating entry via prop callback: ${startTime}-${endTime}`);
-        onCreateEntry(startTime, endTime, calculatedHours);
+        onCreateEntry(startTime, endTime, hours);
       } else if (createEntry) {
         logger.debug(`[TimeEntryController] Creating entry via context: ${startTime}-${endTime}`);
         createEntry({
@@ -93,7 +87,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
           userId,
           startTime,
           endTime,
-          hours: calculatedHours,
+          hours,
           description: '',
           jobNumber: '',
           rego: '',
@@ -105,7 +99,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         timeEventsService.publish('entry-created', {
           startTime,
           endTime,
-          hours: calculatedHours,
+          hours,
           userId,
           date: date.toISOString()
         });
@@ -119,7 +113,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     } catch (error) {
       logger.error('[TimeEntryController] Error creating entry:', error);
     }
-  }, [date, userId, interactive, onCreateEntry, createEntry, calculatedHours, getWorkHoursForDate, refreshWorkHours]);
+  }, [date, userId, interactive, onCreateEntry, createEntry, refreshWorkHours]);
   
   if (!interactive) return null;
   
@@ -127,7 +121,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   const managerProps = {
     formHandlers,
     interactive,
-    onCreateEntry: handleCreateNewEntry, // Connect the handler here
+    onCreateEntry: handleCreateNewEntry,
     startTime,
     endTime,
     calculatedHours,

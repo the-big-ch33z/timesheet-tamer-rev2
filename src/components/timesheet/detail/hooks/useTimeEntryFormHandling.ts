@@ -77,26 +77,9 @@ export const useTimeEntryFormHandling = ({
     if (!interactive) return;
     
     try {
-      // If there are no existing forms, show the first entry form
-      if (entries.length > 0 && showEntryForms.length > 0) {
-        logger.debug('[useTimeEntryFormHandling] Adding new entry form from existing entries');
-        
-        // Find the first hidden form if any
-        const firstHiddenIndex = showEntryForms.findIndex(isVisible => !isVisible);
-        
-        if (firstHiddenIndex >= 0) {
-          // Show an existing but hidden form
-          setShowEntryForms(prev => {
-            const updated = [...prev];
-            updated[firstHiddenIndex] = true;
-            return updated;
-          });
-          return;
-        }
-      }
+      logger.debug('[useTimeEntryFormHandling] Adding new entry form');
       
-      // Create a new form if needed
-      logger.debug('[useTimeEntryFormHandling] Creating brand new entry form');
+      // Create a new form handler for the new entry
       const newHandler = useTimeEntryForm({
         selectedDate: date,
         userId,
@@ -113,6 +96,8 @@ export const useTimeEntryFormHandling = ({
       // Update the form handlers and visibility
       setFormHandlers(prev => [...prev, newHandler]);
       setShowEntryForms(prev => [...prev, true]);
+      
+      logger.debug('[useTimeEntryFormHandling] New entry form added successfully');
     } catch (error) {
       logger.error('[useTimeEntryFormHandling] Error adding entry form:', error);
       
@@ -122,7 +107,7 @@ export const useTimeEntryFormHandling = ({
         variant: 'destructive'
       });
     }
-  }, [interactive, entries.length, showEntryForms, date, userId, startTime, endTime, toast]);
+  }, [interactive, date, userId, startTime, endTime, toast]);
   
   // Remove an entry form
   const removeEntryForm = useCallback((index: number) => {
