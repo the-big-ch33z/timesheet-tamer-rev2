@@ -1,13 +1,9 @@
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEntryContext';
 import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandling';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
-import { timeEventsService } from '@/utils/time/events/timeEventsService';
-import { createTimeLogger } from '@/utils/time/errors';
 import TimeEntryFormManager from '../detail/managers/TimeEntryFormManager';
-
-const logger = createTimeLogger('TimeEntryController');
 
 interface TimeEntryControllerProps {
   date: Date;
@@ -22,7 +18,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  const { dayEntries, createEntry } = useTimeEntryContext();
+  const { dayEntries } = useTimeEntryContext();
   const { getWorkHoursForDate } = useTimesheetWorkHours(userId);
   const workHoursData = useMemo(() => getWorkHoursForDate(date, userId), [date, userId, getWorkHoursForDate]);
   const { startTime, endTime, calculatedHours } = workHoursData;
@@ -46,44 +42,26 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   // Memoize the create entry handler to avoid recreating on every render
   const handleCreateNewEntry = useCallback(() => {
     if (!interactive) return;
-    
-    // Trigger adding a new entry form
     addEntryForm();
   }, [interactive, addEntryForm]);
-  
-  // Memoize props to prevent unnecessary re-renders
-  const managerProps = useMemo(() => ({
-    formHandlers,
-    interactive,
-    onAddEntry: handleCreateNewEntry,
-    startTime,
-    endTime,
-    calculatedHours,
-    showEntryForms,
-    addEntryForm,
-    removeEntryForm,
-    handleSaveEntry,
-    saveAllPendingChanges,
-  }), [
-    formHandlers,
-    interactive,
-    handleCreateNewEntry,
-    startTime,
-    endTime,
-    calculatedHours,
-    showEntryForms,
-    addEntryForm,
-    removeEntryForm,
-    handleSaveEntry,
-    saveAllPendingChanges
-  ]);
   
   if (!interactive) return null;
   
   return (
-    <TimeEntryFormManager {...managerProps} />
+    <TimeEntryFormManager 
+      formHandlers={formHandlers}
+      showEntryForms={showEntryForms}
+      addEntryForm={addEntryForm}
+      removeEntryForm={removeEntryForm}
+      handleSaveEntry={handleSaveEntry}
+      saveAllPendingChanges={saveAllPendingChanges}
+      interactive={interactive}
+      startTime={startTime}
+      endTime={endTime}
+      calculatedHours={calculatedHours}
+      onAddEntry={handleCreateNewEntry}
+    />
   );
 };
 
-// Use React.memo to prevent unnecessary re-renders
 export default React.memo(TimeEntryController);

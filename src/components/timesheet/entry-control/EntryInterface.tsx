@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
-import EntryWizard from '../entry-wizard/EntryWizard';
 import ExistingEntriesList from '../detail/components/ExistingEntriesList';
 import { useLogger } from '@/hooks/useLogger';
 import TimeEntryFormManager from '../detail/managers/TimeEntryFormManager';
@@ -27,7 +26,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
 }) => {
   const logger = useLogger('EntryInterface');
 
-  // Integrate with the TimeEntryFormManager flow
+  // Integrate with the TimeEntryFormHandling hook
   const { 
     formHandlers,
     showEntryForms,
@@ -45,22 +44,10 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
     interactive
   });
 
-  // Handle creating a new entry from the manager
-  const handleCreateFormEntry = (startTime: string, endTime: string, hours: number) => {
-    logger.debug("[EntryInterface] Creating entry:", { startTime, endTime, hours });
-    
-    onCreateEntry({
-      date,
-      userId,
-      startTime,
-      endTime,
-      hours,
-      description: '',
-      jobNumber: '',
-      rego: '',
-      taskNumber: '',
-      project: 'General'
-    });
+  // Handle creating a new entry from the form
+  const handleAddNewEntry = () => {
+    logger.debug("[EntryInterface] Adding new entry form");
+    addEntryForm();
   };
 
   return (
@@ -75,17 +62,16 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       {interactive && (
         <TimeEntryFormManager
           formHandlers={formHandlers}
-          interactive={interactive}
-          onCreateEntry={handleCreateFormEntry}
-          startTime={startTime}
-          endTime={endTime}
-          calculatedHours={calculatedHours}
           showEntryForms={showEntryForms}
           addEntryForm={addEntryForm}
           removeEntryForm={removeEntryForm}
           handleSaveEntry={handleSaveEntry}
           saveAllPendingChanges={saveAllPendingChanges}
-          key={Date.now()}
+          interactive={interactive}
+          startTime={startTime}
+          endTime={endTime}
+          calculatedHours={calculatedHours}
+          onAddEntry={handleAddNewEntry}
         />
       )}
     </div>

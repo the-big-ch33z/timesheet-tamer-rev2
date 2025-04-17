@@ -32,22 +32,23 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
       {interactive && (
         <div>
           <WorkHoursActions 
-            onAddEntry={onAddEntry}
+            onAddEntry={onAddEntry || addEntryForm}
           />
           
-          <EntryFormsSection 
-            showEntryForms={showEntryForms}
-            formHandlers={formHandlers}
-            addEntryForm={addEntryForm} 
-            removeEntryForm={removeEntryForm}
-            handleSaveEntry={handleSaveEntry}
-            interactive={interactive}
-          />
+          {showEntryForms.some(Boolean) && (
+            <EntryFormsSection 
+              showEntryForms={showEntryForms}
+              formHandlers={formHandlers}
+              addEntryForm={addEntryForm} 
+              removeEntryForm={removeEntryForm}
+              handleSaveEntry={handleSaveEntry}
+              interactive={interactive}
+            />
+          )}
         </div>
       )}
     </div>
   );
 };
 
-// Use memo to prevent unnecessary re-renders
 export default memo(TimeEntryFormManager);
