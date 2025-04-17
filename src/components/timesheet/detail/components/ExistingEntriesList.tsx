@@ -8,7 +8,7 @@ interface ExistingEntriesListProps {
   entries: TimeEntry[];
   date: Date;
   interactive?: boolean;
-  onDeleteEntry: (entryId: string) => boolean;
+  onDeleteEntry: (entryId: string) => Promise<boolean>;
 }
 
 const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({

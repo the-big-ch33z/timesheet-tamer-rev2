@@ -12,7 +12,7 @@ import { Trash2 } from "lucide-react";
 interface EntryListProps {
   entries: TimeEntry[];
   interactive?: boolean;
-  onDelete?: (entryId: string) => Promise<boolean> | boolean;
+  onDelete?: (entryId: string) => Promise<boolean>;
 }
 
 const EntryList: React.FC<EntryListProps> = ({ 

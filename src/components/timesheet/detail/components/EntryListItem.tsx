@@ -22,7 +22,7 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
 }) => {
   const { deleteEntry } = useEntriesContext();
   
-  const handleDelete = () => {
+  const handleDelete = async () => {
     // Skip if already deleting
     if (isDeleting) return;
     
@@ -31,8 +31,8 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
     // Use the provided onDelete if available, otherwise use the context method
     if (onDelete) {
       onDelete();
-    } else {
-      deleteEntry(entry.id);
+    } else if (deleteEntry) {
+      await deleteEntry(entry.id);
     }
   };
   

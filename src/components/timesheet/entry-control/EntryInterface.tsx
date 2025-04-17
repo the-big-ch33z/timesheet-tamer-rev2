@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -9,7 +10,7 @@ interface EntryInterfaceProps {
   date: Date;
   userId: string;
   onCreateEntry: (entry: Omit<TimeEntry, "id">) => string | null;
-  onDeleteEntry: (entryId: string) => Promise<boolean> | boolean;
+  onDeleteEntry: (entryId: string) => Promise<boolean>;
   interactive?: boolean;
   existingEntries: TimeEntry[];
 }

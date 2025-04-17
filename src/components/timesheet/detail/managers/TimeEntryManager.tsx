@@ -21,11 +21,11 @@ const TimeEntryManager: React.FC<TimeEntryManagerProps> = ({
 }) => {
   const { deleteEntry } = useTimeEntryContext();
 
-  const handleDeleteEntry = (entryId: string) => {
+  const handleDeleteEntry = async (entryId: string): Promise<boolean> => {
     if (deleteEntry) {
-      return deleteEntry(entryId);
+      return await deleteEntry(entryId);
     }
-    return false;
+    return Promise.resolve(false);
   };
 
   return (

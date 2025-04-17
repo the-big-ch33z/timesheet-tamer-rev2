@@ -57,7 +57,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   }, [createEntry, date, userId, onCreateEntry, logger]);
 
   // Delete entry with proper connection to context
-  const handleDeleteEntry = useCallback((entryId: string) => {
+  const handleDeleteEntry = useCallback((entryId: string): Promise<boolean> => {
     logger.debug('Deleting entry in TimeEntryController', entryId);
     return deleteEntry(entryId);
   }, [deleteEntry, logger]);
