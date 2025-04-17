@@ -1,6 +1,7 @@
 
 import { useEffect, useCallback } from 'react';
-import { unifiedTimeEntryService, TimeEntryEvent } from '@/utils/time/services';
+import { unifiedTimeEntryService } from '@/utils/time/services';
+import type { TimeEntryEvent } from '@/utils/time/services';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { UseUnifiedTimeEntriesOptions } from './types';

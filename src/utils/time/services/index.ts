@@ -23,9 +23,5 @@ export {
   DELETED_ENTRIES_KEY
 } from './core';
 
-// Export common constants for backward compatibility
-export { 
-  STORAGE_KEY, 
-  DELETED_ENTRIES_KEY, 
-  storageWriteLock 
-} from './storage-operations';
+// Export common types for other components
+export type { TimeEntryEvent, TimeEntryEventType } from './types';
