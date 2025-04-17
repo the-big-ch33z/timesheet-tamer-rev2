@@ -42,7 +42,14 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
         </Alert>
       )}
       
-      {!hasEntries && !showEntryForms}
+      {!hasEntries && !showEntryForms && date && interactive && (
+        <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
+          <Calendar className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            No hours recorded for {date.toLocaleDateString()}
+          </AlertDescription>
+        </Alert>
+      )}
     </>
   );
 };
