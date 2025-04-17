@@ -1,8 +1,9 @@
+
 import React from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
-import { useEntriesContext } from "@/contexts/timesheet";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { unifiedTimeEntryService } from "@/utils/time/services";
 
 interface EntryListProps {
@@ -16,7 +17,7 @@ const EntryList: React.FC<EntryListProps> = ({
   interactive = true,
   onDelete
 }) => {
-  const { deleteEntry } = useEntriesContext();
+  const { deleteEntry } = useTimeEntryContext();
   const { toast } = useToast();
   
   const handleDeleteEntry = async (entryId: string) => {

@@ -4,6 +4,7 @@ import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEn
 import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandling';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 import TimeEntryFormManager from '../detail/managers/TimeEntryFormManager';
+import ExistingEntriesList from '../detail/components/ExistingEntriesList';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('TimeEntryController');
@@ -21,7 +22,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  const { dayEntries } = useTimeEntryContext();
+  const { dayEntries, deleteEntry } = useTimeEntryContext();
   
   // Get work hours service using the hook
   const workHoursService = useTimesheetWorkHours(userId);
@@ -71,22 +72,41 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     addEntryForm();
   }, [interactive, addEntryForm]);
   
+  // Handle delete entry with proper context
+  const handleDeleteEntry = useCallback((entryId: string) => {
+    if (deleteEntry) {
+      logger.debug(`Deleting entry: ${entryId}`);
+      return deleteEntry(entryId);
+    }
+    return false;
+  }, [deleteEntry]);
+  
   if (!interactive) return null;
   
   return (
-    <TimeEntryFormManager 
-      formHandlers={formHandlers}
-      showEntryForms={showEntryForms}
-      addEntryForm={addEntryForm}
-      removeEntryForm={removeEntryForm}
-      handleSaveEntry={handleSaveEntry}
-      saveAllPendingChanges={saveAllPendingChanges}
-      interactive={interactive}
-      startTime={stableWorkHours.startTime}
-      endTime={stableWorkHours.endTime}
-      calculatedHours={stableWorkHours.calculatedHours}
-      onAddEntry={handleCreateNewEntry}
-    />
+    <div className="space-y-6">
+      {/* Display existing entries */}
+      <ExistingEntriesList
+        entries={dayEntries}
+        date={date}
+        interactive={interactive}
+        onDeleteEntry={handleDeleteEntry}
+      />
+      
+      <TimeEntryFormManager 
+        formHandlers={formHandlers}
+        showEntryForms={showEntryForms}
+        addEntryForm={addEntryForm}
+        removeEntryForm={removeEntryForm}
+        handleSaveEntry={handleSaveEntry}
+        saveAllPendingChanges={saveAllPendingChanges}
+        interactive={interactive}
+        startTime={stableWorkHours.startTime}
+        endTime={stableWorkHours.endTime}
+        calculatedHours={stableWorkHours.calculatedHours}
+        onAddEntry={handleCreateNewEntry}
+      />
+    </div>
   );
 };
 

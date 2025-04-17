@@ -27,20 +27,21 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
   // Log for debugging
   console.debug(`[ExistingEntriesList] Rendering for ${formattedDate}, ${entries.length} entries, interactive=${interactive}`);
   
+  // Don't render anything if there are no entries
+  if (entries.length === 0) {
+    return null;
+  }
+  
   return (
     <div className="mt-4">
-      {entries.length > 0 && (
-        <>
-          <h3 className="text-sm font-medium text-gray-700 mb-2">
-            Existing entries for {formattedDate}:
-          </h3>
-          <EntryList 
-            entries={entries} 
-            interactive={interactive}
-            onDelete={onDeleteEntry}
-          />
-        </>
-      )}
+      <h3 className="text-sm font-medium text-gray-700 mb-2">
+        Existing entries for {formattedDate}:
+      </h3>
+      <EntryList 
+        entries={entries} 
+        interactive={interactive}
+        onDelete={onDeleteEntry}
+      />
     </div>
   );
 };
