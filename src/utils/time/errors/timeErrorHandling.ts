@@ -9,7 +9,7 @@ export class TimeError extends Error {
   context: string;
   timestamp: Date;
   
-  constructor(message: string, context: string = 'Time Operation') {
+  constructor(message: string, context = 'Time Operation') {
     super(message);
     this.name = 'TimeError';
     this.context = context;
@@ -19,7 +19,7 @@ export class TimeError extends Error {
 
 // Specialized error for time calculations
 export class TimeCalculationError extends TimeError {
-  constructor(message: string, context: string = 'Time Calculation') {
+  constructor(message: string, context = 'Time Calculation') {
     super(message, context);
     this.name = 'TimeCalculationError';
   }
@@ -27,7 +27,7 @@ export class TimeCalculationError extends TimeError {
 
 // Specialized error for time validation
 export class TimeValidationError extends TimeError {
-  constructor(message: string, context: string = 'Time Validation') {
+  constructor(message: string, context = 'Time Validation') {
     super(message, context);
     this.name = 'TimeValidationError';
   }
@@ -42,7 +42,7 @@ const errorLogger = createTimeLogger('TimeErrorHandler', { minLevel: 'error' });
  * @param fieldName Name of the field for error reporting
  * @throws TimeValidationError if the format is invalid
  */
-export function validateTimeString(timeString: string, fieldName: string = 'Time'): void {
+export function validateTimeString(timeString: string, fieldName = 'Time'): void {
   if (!timeString) {
     throw new TimeValidationError(`${fieldName} is required`);
   }
@@ -89,7 +89,7 @@ export function validateNumberInRange(
 export function safeTimeOperation<T>(
   operation: () => T,
   fallbackValue: T,
-  context: string = 'Time Operation'
+  context = 'Time Operation'
 ): T {
   try {
     return operation();
@@ -110,7 +110,7 @@ export const safeCalculation = safeTimeOperation;
  */
 export function formatTimeError(
   error: unknown,
-  userFriendly: boolean = true
+  userFriendly = true
 ): string {
   if (error instanceof TimeError) {
     return userFriendly

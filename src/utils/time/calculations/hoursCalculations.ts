@@ -94,7 +94,7 @@ export const calculateMonthlyTargetHours = (
  */
 export const calculateAdjustedFortnightHours = (
   workSchedule?: WorkSchedule,
-  fte: number = 1.0
+  fte = 1.0
 ): number => {
   try {
     // Validate FTE

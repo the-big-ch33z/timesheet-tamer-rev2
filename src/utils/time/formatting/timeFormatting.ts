@@ -46,7 +46,7 @@ export const formatTimeForDisplay = (timeString: string): string => {
  * @param formatStr Optional format string (defaults to yyyy-MM-dd)
  * @returns Formatted date string
  */
-export const formatDate = (date: Date | string | null | undefined, formatStr: string = 'yyyy-MM-dd'): string => {
+export const formatDate = (date: Date | string | null | undefined, formatStr = 'yyyy-MM-dd'): string => {
   try {
     if (!date) return '';
     

@@ -13,7 +13,7 @@ const OrganizationTree = () => {
   const admins = getUsersByRole("admin");
   
   // Helper function to render a user node
-  const renderUserNode = (user: User, level: number = 0) => {
+  const renderUserNode = (user: User, level = 0) => {
     const isAdmin = user.role === "admin";
     const isManager = user.role === "manager";
     

@@ -38,7 +38,7 @@ export const createMockEntryInput = (
 /**
  * Creates a mock work schedule for testing
  */
-export const createMockWorkSchedule = (userId: string = "test-user") => {
+export const createMockWorkSchedule = (userId = "test-user") => {
   return {
     id: `test-schedule-${uuidv4()}`,
     name: "Test Schedule",
