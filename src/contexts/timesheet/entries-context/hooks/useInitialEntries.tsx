@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react';
 import { TimeEntry } from "@/types";
 import { loadEntriesFromStorage } from '../timeEntryStorage';
 import { useToast } from "@/hooks/use-toast";
+import { createTimeLogger } from '@/utils/time/errors/timeLogger';
+
+const logger = createTimeLogger('useInitialEntries');
 
 /**
  * Hook to load initial entries from storage
@@ -18,12 +21,21 @@ export const useInitialEntries = () => {
     if (isInitialized) return;
     
     try {
-      console.debug("[TimeEntryProvider] Loading initial entries");
-      const loadedEntries = loadEntriesFromStorage();
+      logger.debug("[useInitialEntries] Loading initial entries");
+      
+      // Safely load entries with error handling
+      let loadedEntries: TimeEntry[] = [];
+      try {
+        loadedEntries = loadEntriesFromStorage();
+      } catch (error) {
+        logger.error("[useInitialEntries] Error loading initial entries", error);
+        // Continue with empty entries array instead of failing completely
+      }
+      
       setEntries(loadedEntries);
-      console.debug("[TimeEntryProvider] Loaded entries:", loadedEntries.length);
+      logger.debug("[useInitialEntries] Loaded entries:", loadedEntries.length);
     } catch (error) {
-      console.error("[TimeEntryProvider] Error loading entries:", error);
+      logger.error("[useInitialEntries] Error loading entries:", error);
       toast({
         title: "Error loading entries",
         description: "Your entries could not be loaded. Please try refreshing the page.",

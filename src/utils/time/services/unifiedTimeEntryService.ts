@@ -253,13 +253,13 @@ export class UnifiedTimeEntryService {
    * Load all entries from storage
    */
   public getAllEntries(): TimeEntry[] {
-    // Check cache first if enabled
-    if (this.isCacheValid()) {
-      logger.debug('Using cached entries');
-      return [...this.cache.entries];
-    }
-
     try {
+      // Check cache first if enabled
+      if (this.isCacheValid()) {
+        logger.debug('Using cached entries');
+        return [...this.cache.entries];
+      }
+
       // Load from storage
       const savedEntries = typeof localStorage !== 'undefined' 
         ? localStorage.getItem(this.config.storageKey) 

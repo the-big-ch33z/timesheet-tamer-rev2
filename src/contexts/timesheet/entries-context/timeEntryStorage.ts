@@ -6,6 +6,10 @@ import {
   DELETED_ENTRIES_KEY,
   storageWriteLock
 } from "@/utils/time/services/unifiedTimeEntryService";
+import { createTimeLogger } from "@/utils/time/errors/timeLogger";
+
+// Create a logger
+const logger = createTimeLogger('timeEntryStorage');
 
 // Re-export storage key constants for consistency
 export { STORAGE_KEY, DELETED_ENTRIES_KEY, storageWriteLock };
@@ -15,11 +19,20 @@ export { STORAGE_KEY, DELETED_ENTRIES_KEY, storageWriteLock };
  * @deprecated Use unifiedTimeEntryService directly instead
  */
 
+// Safe version of loadEntriesFromStorage that doesn't crash on errors
+export const loadEntriesFromStorage = (): TimeEntry[] => {
+  try {
+    return unifiedTimeEntryService.getAllEntries();
+  } catch (error) {
+    logger.error("Error in loadEntriesFromStorage:", error);
+    // Return empty array instead of failing
+    return [];
+  }
+};
+
 // Simple redirects to the unified service
 export const getDeletedEntryIds = unifiedTimeEntryService.getDeletedEntryIds;
 export const addToDeletedEntries = unifiedTimeEntryService.deleteEntryFromStorage;
 export const cleanupDeletedEntries = unifiedTimeEntryService.cleanupDeletedEntries;
-export const loadEntriesFromStorage = unifiedTimeEntryService.getAllEntries;
 export const saveEntriesToStorage = unifiedTimeEntryService.saveEntriesToStorage;
 export const deleteEntryFromStorage = unifiedTimeEntryService.deleteEntryFromStorage;
-
