@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { TimeEntry } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
@@ -35,16 +35,19 @@ export const useTimeEntryFormHandling = ({
 }: UseTimeEntryFormHandlingProps) => {
   const { toast } = useToast();
   
-  // Store these values in refs to prevent re-renders
+  // Store these values in refs to prevent re-renders when they don't change materially
   const startTimeRef = useRef(initialStartTime);
   const endTimeRef = useRef(initialEndTime);
   const calculatedHoursRef = useRef(8);
+  const prevEntriesRef = useRef<TimeEntry[]>([]);
   
-  // Update refs when props change
-  useEffect(() => {
+  // Only update refs when values actually change
+  if (initialStartTime !== startTimeRef.current) {
     startTimeRef.current = initialStartTime;
+  }
+  if (initialEndTime !== endTimeRef.current) {
     endTimeRef.current = initialEndTime;
-  }, [initialStartTime, initialEndTime]);
+  }
   
   // Create form handlers with fixed pattern
   const { fixedHandlers, emptyHandlers } = useEntryFormHandlers({
@@ -89,11 +92,32 @@ export const useTimeEntryFormHandling = ({
     interactive
   });
   
-  // Initialize only when entries change
-  const entriesStringified = JSON.stringify(entries.map(e => e.id));
+  // Memoize the entries comparison to prevent unnecessary re-renders
+  const entriesChanged = useMemo(() => {
+    if (entries.length !== prevEntriesRef.current.length) {
+      return true;
+    }
+    
+    // Compare entry IDs to determine if the entries array has changed substantively
+    const currentIds = new Set(entries.map(e => e.id));
+    const prevIds = new Set(prevEntriesRef.current.map(e => e.id));
+    
+    if (currentIds.size !== prevIds.size) {
+      return true;
+    }
+    
+    for (const id of currentIds) {
+      if (!prevIds.has(id)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }, [entries]);
   
+  // Initialize only when entries change substantively
   useEffect(() => {
-    if (!interactive) return;
+    if (!interactive || !entriesChanged) return;
     
     logger.debug(`[useTimeEntryFormHandling] Initializing with ${entries.length} entries`);
     
@@ -107,7 +131,10 @@ export const useTimeEntryFormHandling = ({
     
     // Set visibility state
     resetVisibility(newVisibility);
-  }, [entriesStringified, interactive, initializeHandlers, resetVisibility]);
+    
+    // Update the previous entries reference
+    prevEntriesRef.current = [...entries];
+  }, [entriesChanged, interactive, initializeHandlers, resetVisibility, entries]);
   
   // Reset when date changes
   useEffect(() => {
@@ -120,14 +147,17 @@ export const useTimeEntryFormHandling = ({
       
       // Re-initialize with empty entries
       initializeHandlers([]);
+      
+      // Clear previous entries
+      prevEntriesRef.current = [];
     }
     
     // Update ref
     previousDateRef.current = date;
   }, [date, resetVisibility, initializeHandlers]);
   
-  // Add entry form using a handler from the pre-initialized pool
-  const addEntryForm = () => {
+  // Add entry form using a handler from the pre-initialized pool - stabilize with useCallback
+  const addEntryForm = useCallback(() => {
     if (!interactive) return;
     
     logger.debug('[useTimeEntryFormHandling] Adding new entry form');
@@ -143,10 +173,10 @@ export const useTimeEntryFormHandling = ({
       // Add a visible form
       setShowEntryForms(prev => [...prev, true]);
     }
-  };
+  }, [interactive, addHandler, setShowEntryForms]);
   
-  // Remove entry form (just hide it)
-  const removeEntryForm = (index: number) => {
+  // Remove entry form (just hide it) - stabilize with useCallback
+  const removeEntryForm = useCallback((index: number) => {
     if (!interactive || index < 0 || index >= showEntryForms.length) return;
     
     try {
@@ -172,7 +202,7 @@ export const useTimeEntryFormHandling = ({
     } catch (error) {
       logger.error(`[useTimeEntryFormHandling] Error removing entry form ${index}:`, error);
     }
-  };
+  }, [interactive, showEntryForms.length, formHandlers, setShowEntryForms, entries.length, removeHandler]);
 
   // Expose values as an object to avoid re-renders
   const values = useMemo(() => ({

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 import TimeEntryController from "../entry-control/TimeEntryController";
@@ -46,8 +46,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     }
   }, [entries.length, entriesCount, date, userId]);
   
-  // Handle entry creation
-  const handleCreateEntry = (startTime: string, endTime: string, hours: number) => {
+  // Handle entry creation - stabilize with useCallback
+  const handleCreateEntry = useCallback((startTime: string, endTime: string, hours: number) => {
     if (onCreateEntry) {
       logger.debug(`[WorkHoursSection] Creating entry: ${startTime}-${endTime}, ${hours} hours`);
       onCreateEntry(startTime, endTime, hours);
@@ -61,7 +61,12 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         date: date.toISOString()
       });
     }
-  };
+  }, [onCreateEntry, userId, date]);
+  
+  // Memoize hours change handler
+  const handleHoursChange = useCallback((hours: number) => {
+    logger.debug(`[WorkHoursSection] Hours changed: ${hours}`);
+  }, []);
   
   return (
     <TimeEntryProvider selectedDate={date} userId={userId}>
@@ -73,9 +78,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
             interactive={interactive}
             entries={entries}
             workSchedule={workSchedule}
-            onHoursChange={(hours) => {
-              logger.debug(`[WorkHoursSection] Hours changed: ${hours}`);
-            }}
+            onHoursChange={handleHoursChange}
           />
         </Card>
         
@@ -90,4 +93,4 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   );
 };
 
-export default WorkHoursSection;
+export default React.memo(WorkHoursSection);

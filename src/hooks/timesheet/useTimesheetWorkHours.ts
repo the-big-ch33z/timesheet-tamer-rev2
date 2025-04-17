@@ -12,7 +12,7 @@ const logger = createTimeLogger('useTimesheetWorkHours');
  * Enhanced hook for working with timesheet work hours
  * Provides methods for getting, saving, and managing work hours with robust error handling
  */
-export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook => {
+export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook & { userId?: string } => {
   const context = useWorkHoursContext();
   
   // Keep track of last applied times for smart updates
@@ -197,6 +197,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook =
     lastAppliedTimesRef.current = {};
   }, []);
   
+  // Add userId to the returned object for tracking in useRef
   return {
     getWorkHoursForDate,
     saveWorkHoursForDate,
@@ -204,6 +205,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook =
     resetWorkHours,
     clearAllWorkHours,
     calculateDayHours,
-    refreshWorkHours
+    refreshWorkHours,
+    userId
   };
 };
