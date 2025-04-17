@@ -72,7 +72,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     };
   }, [refreshWorkHours]);
   
-  // Handle creating a new entry
+  // Handle creating a new entry from the form
   const handleCreateNewEntry = useCallback((startTime: string, endTime: string, hours: number) => {
     if (!interactive) return;
     

@@ -51,16 +51,12 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
     }
   };
   
-  // Handle create new entry from template hours
-  const handleCreateNewEntry = () => {
-    console.debug("[TimeEntryFormManager] Create new entry button clicked");
+  // Handle submit entry with template hours
+  const handleSubmitEntry = () => {
+    console.debug("[TimeEntryFormManager] Submit entry button clicked");
     if (startTime && endTime && calculatedHours > 0 && onCreateEntry) {
-      console.debug(`[TimeEntryFormManager] Creating entry with times: ${startTime}-${endTime} (${calculatedHours} hours)`);
+      console.debug(`[TimeEntryFormManager] Submitting entry with times: ${startTime}-${endTime} (${calculatedHours} hours)`);
       onCreateEntry(startTime, endTime, calculatedHours);
-    } else {
-      // If we don't have valid time data, just open an empty form
-      console.debug("[TimeEntryFormManager] No valid time data for new entry, just adding form");
-      addEntryForm();
     }
   };
 
@@ -71,11 +67,14 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
 
   // Check if there are any current forms
   const hasOpenForms = showEntryForms.filter(Boolean).length > 0;
+  
+  // Check if we have valid time data for submission
+  const hasValidTimeData = startTime && endTime && calculatedHours > 0;
 
   return (
     <div className="mt-4">
       {/* Entry Forms */}
-      {showEntryForms.filter(Boolean).length > 0 && (
+      {hasOpenForms && (
         <div className="mb-4">
           <EntryFormsList
             showEntryForms={showEntryForms}
@@ -104,30 +103,30 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
       
       {/* Action Buttons */}
       <div className="flex gap-2">
-        {/* Add Entry Button */}
+        {/* Add Entry Button - Always visible */}
         <Button 
           onClick={addEntryForm}
           size="sm"
           className="bg-green-500 hover:bg-green-600 text-white"
         >
           <Plus className="h-4 w-4 mr-1" />
-          {hasOpenForms ? "Add Another Entry" : "Add Entry"}
+          Add Entry
         </Button>
         
-        {/* Create Entry With Hours Button - Show when we have work hours */}
-        {startTime && endTime && calculatedHours > 0 && (
+        {/* Submit Entry Button - Only show when we have valid time data */}
+        {hasValidTimeData && (
           <Button 
-            onClick={handleCreateNewEntry}
+            onClick={handleSubmitEntry}
             size="sm"
             className="bg-blue-500 hover:bg-blue-600 text-white"
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Create Entry ({calculatedHours}h)
+            <Save className="h-4 w-4 mr-1" />
+            Submit Entry ({calculatedHours}h)
           </Button>
         )}
         
         {/* Save All Button - Alternative position when no forms are edited */}
-        {hasOpenForms && !hasEditedForms && (
+        {hasOpenForms && !hasEditedForms && hasValidTimeData && (
           <Button 
             onClick={handleSaveAll}
             size="sm"

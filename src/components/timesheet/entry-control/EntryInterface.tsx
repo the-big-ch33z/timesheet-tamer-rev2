@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
 import EntryWizard from '../entry-wizard/EntryWizard';
 import ExistingEntriesList from '../detail/components/ExistingEntriesList';
 import { useLogger } from '@/hooks/useLogger';
+import TimeEntryFormManager from '../detail/managers/TimeEntryFormManager';
+import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandling';
 
 interface EntryInterfaceProps {
   date: Date;
@@ -25,23 +25,42 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   interactive = true,
   existingEntries
 }) => {
-  const [showWizard, setShowWizard] = useState(false);
   const logger = useLogger('EntryInterface');
 
-  const handleLaunchWizard = () => {
-    setShowWizard(true);
-  };
+  // Integrate with the TimeEntryFormManager flow
+  const { 
+    formHandlers,
+    showEntryForms,
+    addEntryForm,
+    removeEntryForm,
+    handleSaveEntry,
+    saveAllPendingChanges,
+    startTime,
+    endTime,
+    calculatedHours
+  } = useTimeEntryFormHandling({
+    date,
+    userId,
+    entries: existingEntries,
+    interactive
+  });
 
-  const handleWizardCancel = () => {
-    setShowWizard(false);
-  };
-
-  const handleWizardSubmit = (entry: Omit<TimeEntry, "id">) => {
-    logger.debug("[EntryInterface] Submitting entry:", entry);
-    const result = onCreateEntry(entry);
-    if (result) {
-      setShowWizard(false);
-    }
+  // Handle creating a new entry from the manager
+  const handleCreateFormEntry = (startTime: string, endTime: string, hours: number) => {
+    logger.debug("[EntryInterface] Creating entry:", { startTime, endTime, hours });
+    
+    onCreateEntry({
+      date,
+      userId,
+      startTime,
+      endTime,
+      hours,
+      description: '',
+      jobNumber: '',
+      rego: '',
+      taskNumber: '',
+      project: 'General'
+    });
   };
 
   return (
@@ -54,27 +73,20 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       />
 
       {interactive && (
-        <div>
-          {!showWizard ? (
-            <Button
-              variant="outline"
-              className="w-full border-dashed border-2 bg-white hover:bg-gray-50"
-              onClick={handleLaunchWizard}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Entry
-            </Button>
-          ) : (
-            <Card className="p-4">
-              <EntryWizard
-                date={date}
-                userId={userId}
-                onSubmit={handleWizardSubmit}
-                onCancel={handleWizardCancel}
-              />
-            </Card>
-          )}
-        </div>
+        <TimeEntryFormManager
+          formHandlers={formHandlers}
+          interactive={interactive}
+          onCreateEntry={handleCreateFormEntry}
+          startTime={startTime}
+          endTime={endTime}
+          calculatedHours={calculatedHours}
+          showEntryForms={showEntryForms}
+          addEntryForm={addEntryForm}
+          removeEntryForm={removeEntryForm}
+          handleSaveEntry={handleSaveEntry}
+          saveAllPendingChanges={saveAllPendingChanges}
+          key={Date.now()}
+        />
       )}
     </div>
   );
