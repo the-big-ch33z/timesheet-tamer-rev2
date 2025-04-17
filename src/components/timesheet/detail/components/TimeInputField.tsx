@@ -43,6 +43,13 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
       onChange(newValue);
     }
   };
+
+  // Handle blur event to ensure validation
+  const handleBlur = () => {
+    if (interactive && localValue && localValue !== value) {
+      onChange(localValue);
+    }
+  };
   
   // Determine if the input is empty to apply placeholder styling
   const isEmpty = !localValue || localValue === "";
@@ -56,6 +63,7 @@ const TimeInputField: React.FC<TimeInputFieldProps> = ({
           type="time"
           value={localValue}
           onChange={handleChange}
+          onBlur={handleBlur}
           disabled={!interactive}
           className={`pr-10 ${isEmpty ? 'text-gray-400 placeholder-shown' : ''}`}
           data-testid={testId}

@@ -1,9 +1,12 @@
+
 import React, { useState } from 'react';
 import { TimeEntry } from '@/types';
 import { Card } from '@/components/ui/card';
 import ExistingEntriesList from '../detail/components/ExistingEntriesList';
 import { useLogger } from '@/hooks/useLogger';
 import TimeEntryForm from '../entry-dialog/form/TimeEntryForm';
+import { PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface EntryInterfaceProps {
   date: Date;
@@ -23,7 +26,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   existingEntries
 }) => {
   const logger = useLogger('EntryInterface');
-  const [showForm, setShowForm] = useState(true);
+  const [showForm, setShowForm] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
   // Get work hours for the day (from the context via component prop)
@@ -53,9 +56,13 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
     }
   };
   
-  // Handle canceling entry creation
-  const handleCancel = () => {
-    setShowForm(false);
+  // Toggle entry form visibility
+  const handleToggleForm = () => {
+    if (!showForm) {
+      // Increment form key to ensure we get a fresh form
+      setFormKey(prevKey => prevKey + 1);
+    }
+    setShowForm(prev => !prev);
   };
 
   return (
@@ -67,16 +74,28 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
         onDeleteEntry={onDeleteEntry}
       />
 
-      {interactive && showForm && (
-        <TimeEntryForm 
-          key={formKey}
-          startTime={startTime}
-          endTime={endTime}
-          onSubmit={handleSubmitEntry}
-          onCancel={handleCancel}
-          date={date}
-          userId={userId}
-        />
+      {interactive && (
+        <div>
+          {!showForm ? (
+            <Button 
+              onClick={handleToggleForm}
+              className="w-full bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 flex items-center justify-center gap-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Add New Entry
+            </Button>
+          ) : (
+            <TimeEntryForm 
+              key={formKey}
+              startTime={startTime}
+              endTime={endTime}
+              onSubmit={handleSubmitEntry}
+              onCancel={() => setShowForm(false)}
+              date={date}
+              userId={userId}
+            />
+          )}
+        </div>
       )}
     </div>
   );

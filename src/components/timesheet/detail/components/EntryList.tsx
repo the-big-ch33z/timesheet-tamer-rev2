@@ -5,6 +5,7 @@ import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { unifiedTimeEntryService } from "@/utils/time/services";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -66,8 +67,9 @@ const EntryList: React.FC<EntryListProps> = ({
     );
   }
 
-  return (
-    <div className="mt-4">
+  if (entries.length <= 3) {
+    // For a few entries, use the list style
+    return (
       <div className="space-y-2">
         {entries.map(entry => (
           <EntryListItem 
@@ -78,6 +80,68 @@ const EntryList: React.FC<EntryListProps> = ({
           />
         ))}
       </div>
+    );
+  }
+  
+  // For many entries use the table layout for better organization
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-16">Hours</TableHead>
+            <TableHead className="w-24 hidden md:table-cell">Time</TableHead>
+            <TableHead>Details</TableHead>
+            <TableHead className="hidden md:table-cell">Description</TableHead>
+            <TableHead className="w-12"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map(entry => (
+            <TableRow key={`entry-${entry.id}`}>
+              <TableCell className="font-medium">{entry.hours}h</TableCell>
+              <TableCell className="hidden md:table-cell text-xs">
+                {entry.startTime || '--:--'} - {entry.endTime || '--:--'}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {entry.jobNumber && (
+                    <span className="text-xs bg-blue-50 text-blue-800 px-2 py-1 rounded">
+                      Job: {entry.jobNumber}
+                    </span>
+                  )}
+                  {entry.rego && (
+                    <span className="text-xs bg-purple-50 text-purple-800 px-2 py-1 rounded">
+                      Rego: {entry.rego}
+                    </span>
+                  )}
+                  {entry.taskNumber && (
+                    <span className="text-xs bg-amber-50 text-amber-800 px-2 py-1 rounded">
+                      Task: {entry.taskNumber}
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
+                <div className="truncate max-w-xs">{entry.description}</div>
+              </TableCell>
+              <TableCell>
+                {interactive && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDeleteEntry(entry.id)}
+                    aria-label="Delete entry"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };

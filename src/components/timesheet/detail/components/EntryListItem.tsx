@@ -2,7 +2,7 @@
 import React from "react";
 import { TimeEntry } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Clock, Trash2 } from "lucide-react";
 import { useEntriesContext } from "@/contexts/timesheet";
 import { formatDateForDisplay } from "@/utils/time/formatting";
 import { ensureDate } from "@/utils/time/validation";
@@ -33,18 +33,43 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
   
   // Ensure entry.date is a valid Date object for formatting
   const entryDate = ensureDate(entry.date) || new Date();
-  const formattedDate = formatDateForDisplay(entryDate);
   
   return (
-    <div className="flex items-center p-3 border border-gray-200 rounded-md bg-white mb-2 space-x-4">
-      <div className="flex-none font-medium w-20">{entry.hours} hours</div>
+    <div className="flex items-center p-3 border border-gray-200 rounded-md bg-white mb-2 gap-3">
+      <div className="flex items-center gap-1 text-green-700 font-medium min-w-16">
+        <Clock size={16} />
+        {entry.hours}h
+      </div>
       
-      {entry.jobNumber && <div className="flex-none text-sm w-24">Job: {entry.jobNumber}</div>}
-      {entry.rego && <div className="flex-none text-sm w-24">Rego: {entry.rego}</div>}
-      {entry.taskNumber && <div className="flex-none text-sm w-24">Task: {entry.taskNumber}</div>}
+      {/* Display time range if available */}
+      {(entry.startTime || entry.endTime) && (
+        <div className="hidden md:block text-xs text-gray-500 min-w-24">
+          {entry.startTime || '--:--'} - {entry.endTime || '--:--'}
+        </div>
+      )}
+      
+      <div className="flex flex-wrap gap-x-4 flex-1">
+        {entry.jobNumber && (
+          <div className="text-xs bg-blue-50 text-blue-800 px-2 py-1 rounded">
+            Job: {entry.jobNumber}
+          </div>
+        )}
+        
+        {entry.rego && (
+          <div className="text-xs bg-purple-50 text-purple-800 px-2 py-1 rounded">
+            Rego: {entry.rego}
+          </div>
+        )}
+        
+        {entry.taskNumber && (
+          <div className="text-xs bg-amber-50 text-amber-800 px-2 py-1 rounded">
+            Task: {entry.taskNumber}
+          </div>
+        )}
+      </div>
       
       {entry.description && (
-        <div className="flex-1 text-sm text-gray-600 truncate">
+        <div className="hidden md:block flex-1 text-sm text-gray-600 truncate max-w-xs">
           {entry.description}
         </div>
       )}
@@ -53,7 +78,7 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="flex-none text-red-500 hover:text-red-700 hover:bg-red-50"
+          className="flex-none text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
           onClick={handleDelete}
           aria-label="Delete entry"
         >
