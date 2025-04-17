@@ -4,13 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Check, Clock, AlertTriangle } from "lucide-react";
+import { TimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
 
-interface HoursStatsProps {
+interface HoursStatsProps extends TimeEntryStats {
   calculatedHours: number;
-  totalHours: number;
-  hasEntries: boolean;
-  hoursVariance: number;
-  isUndertime: boolean;
 }
 
 const HoursStats: React.FC<HoursStatsProps> = ({

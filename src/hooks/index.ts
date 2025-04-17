@@ -15,4 +15,5 @@ export * from './timesheet/useWorkHours';
 export * from './timesheet/useTimesheetWorkHours';
 export * from './timesheet/useTimeCalculations';
 export * from './timesheet/useTimesheetData';
+export * from './timesheet/useTimeEntryStats';
 
