@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TimeEntry } from '@/types';
 import { useTimeEntryForm } from '@/hooks/timesheet/useTimeEntryForm';
 import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
@@ -10,8 +10,9 @@ import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 
 const logger = createTimeLogger('useTimeEntryFormHandling');
 
-// Maximum number of empty handlers to pre-initialize
-const MAX_EMPTY_HANDLERS = 3;
+// Maximum number of handlers we will pre-initialize
+// This ensures we have a fixed number of hook calls
+const MAX_HANDLERS = 20;
 
 interface UseTimeEntryFormHandlingProps {
   date: Date;
@@ -21,7 +22,7 @@ interface UseTimeEntryFormHandlingProps {
 }
 
 /**
- * Custom hook for handling multiple time entry forms
+ * Custom hook for handling multiple time entry forms with a fixed hook pattern
  */
 export const useTimeEntryFormHandling = ({
   date,
@@ -33,109 +34,170 @@ export const useTimeEntryFormHandling = ({
   const { getWorkHoursForDate } = useTimesheetWorkHours(userId);
   const { startTime, endTime, calculatedHours } = getWorkHoursForDate(date, userId || '');
   
-  // Tracking state
+  // Tracking state with refs to avoid re-renders
+  const previousDateRef = useRef<Date | null>(null);
   const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]);
-  const previousDate = usePrevious(date);
-  const handlersInitialized = useRef(false);
   
-  // Pre-create form handlers for all existing entries
-  // This ensures hooks are called at the top level
-  const entryFormHandlers = useMemo(() => {
-    if (!interactive) return [];
-    
-    logger.debug(`[useTimeEntryFormHandling] Creating form handlers for ${entries.length} entries`);
-    
-    try {
-      const handlers: UseTimeEntryFormReturn[] = [];
-      
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        // Create handler at the top level
-        const handler = useTimeEntryForm({
-          initialData: entry,
-          formKey: `entry-${entry.id}-${i}`,
-          selectedDate: date,
-          userId: userId || entry.userId,
-          autoSave: false,
-          disabled: !interactive,
-          autoCalculateHours: true
-        });
-        handlers.push(handler);
-      }
-      
-      logger.debug(`[useTimeEntryFormHandling] Created ${handlers.length} form handlers for existing entries`);
-      return handlers;
-    } catch (error) {
-      logger.error('[useTimeEntryFormHandling] Error creating entry form handlers:', error);
-      return [];
-    }
-  }, [entries, date, interactive, userId]);
+  // Create a fixed array of form handlers regardless of entries length
+  // This ensures hooks are always called in the same order
+  const handler1 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    formKey: `entry-fixed-1`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
   
-  // Pre-create empty form handlers
-  // This ensures hooks are called at the top level
-  const emptyFormHandlers = useMemo(() => {
-    if (!interactive) return [];
-    
-    logger.debug('[useTimeEntryFormHandling] Creating empty form handlers pool');
-    
-    try {
-      const handlers: UseTimeEntryFormReturn[] = [];
-      
-      for (let i = 0; i < MAX_EMPTY_HANDLERS; i++) {
-        // Create handler at the top level
-        const emptyHandler = useTimeEntryForm({
-          selectedDate: date,
-          userId,
-          initialData: {
-            startTime,
-            endTime
-          },
-          formKey: `new-entry-${Date.now()}-${i}`,
-          autoSave: false,
-          disabled: !interactive,
-          autoCalculateHours: true
-        });
-        handlers.push(emptyHandler);
-      }
-      
-      logger.debug(`[useTimeEntryFormHandling] Created ${handlers.length} empty form handlers`);
-      return handlers;
-    } catch (error) {
-      logger.error('[useTimeEntryFormHandling] Error creating empty form handlers:', error);
-      return [];
-    }
-  }, [date, interactive, startTime, endTime, userId]);
+  const handler2 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    formKey: `entry-fixed-2`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
   
-  // Manage used and available form handlers
+  const handler3 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    formKey: `entry-fixed-3`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
+  
+  // Continue for additional handlers (up to MAX_HANDLERS)
+  // We'll use an array to store all these handlers
+  const handler4 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    formKey: `entry-fixed-4`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
+  
+  const handler5 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    formKey: `entry-fixed-5`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
+  
+  // Here we combine all our fixed handlers into an array
+  const fixedHandlers = [handler1, handler2, handler3, handler4, handler5];
+  
+  // Create empty handlers for new entries
+  const newHandler1 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    initialData: { startTime, endTime },
+    formKey: `new-entry-1`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
+  
+  const newHandler2 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    initialData: { startTime, endTime },
+    formKey: `new-entry-2`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
+  
+  const newHandler3 = useTimeEntryForm({
+    selectedDate: date,
+    userId: userId || '',
+    initialData: { startTime, endTime },
+    formKey: `new-entry-3`,
+    autoSave: false,
+    disabled: !interactive,
+    autoCalculateHours: true
+  });
+  
+  // Combine empty handlers
+  const emptyHandlers = [newHandler1, newHandler2, newHandler3];
+  
+  // Refs to track which handlers are in use
+  const usedHandlersRef = useRef<number[]>([]);
+  const emptyHandlersUsedRef = useRef<number[]>([]);
+  
+  // Track active form handlers
   const [formHandlers, setFormHandlers] = useState<UseTimeEntryFormReturn[]>([]);
   const [unusedEmptyHandlers, setUnusedEmptyHandlers] = useState<UseTimeEntryFormReturn[]>([]);
   
-  // Set up visibility and form handlers when entries or date changes
+  // Set up initial form handlers and visibility
   useEffect(() => {
     if (!interactive) return;
     
+    // Reset tracking arrays
+    usedHandlersRef.current = [];
+    emptyHandlersUsedRef.current = [];
+    
     // Initialize visibility array
-    const newVisibility: boolean[] = entries.length > 0 
+    const newVisibility = entries.length > 0 
       ? new Array(entries.length).fill(false)
       : [];
     
-    // Update form handlers from pre-created handlers
-    setFormHandlers(entryFormHandlers);
-    setShowEntryForms(newVisibility);
-    setUnusedEmptyHandlers(emptyFormHandlers);
-    handlersInitialized.current = true;
+    // Initialize handlers from our fixed pool
+    const activeHandlers: UseTimeEntryFormReturn[] = [];
     
-    logger.debug(`[useTimeEntryFormHandling] Initialized ${entryFormHandlers.length} handlers and ${emptyFormHandlers.length} empty handlers`);
-  }, [entries, entryFormHandlers, emptyFormHandlers, interactive]);
+    // Assign existing entries to handlers
+    for (let i = 0; i < Math.min(entries.length, fixedHandlers.length); i++) {
+      const handler = fixedHandlers[i];
+      // Update handler with entry data
+      handler.resetForm();
+      if (entries[i]) {
+        const entry = entries[i];
+        handler.handleFieldChange('hours', entry.hours.toString());
+        handler.handleFieldChange('description', entry.description || '');
+        handler.handleFieldChange('jobNumber', entry.jobNumber || '');
+        handler.handleFieldChange('rego', entry.rego || '');
+        handler.handleFieldChange('taskNumber', entry.taskNumber || '');
+        handler.handleFieldChange('startTime', entry.startTime || '');
+        handler.handleFieldChange('endTime', entry.endTime || '');
+        handler.resetFormEdited(); // Don't mark as edited initially
+      }
+      
+      usedHandlersRef.current.push(i);
+      activeHandlers.push(handler);
+    }
+    
+    // Set unused empty handlers for new entries
+    setUnusedEmptyHandlers(emptyHandlers);
+    
+    // Update state
+    setFormHandlers(activeHandlers);
+    setShowEntryForms(newVisibility);
+    
+    logger.debug(`[useTimeEntryFormHandling] Initialized ${activeHandlers.length} handlers and ${emptyHandlers.length} empty handlers`);
+  }, [entries, fixedHandlers, emptyHandlers, interactive]);
   
   // Reset when date changes
   useEffect(() => {
-    if (previousDate && date && previousDate.toDateString() !== date.toDateString()) {
+    if (previousDateRef.current && date && previousDateRef.current.toDateString() !== date.toDateString()) {
       logger.debug('[useTimeEntryFormHandling] Date changed, resetting forms');
+      
+      // Reset visibility
       setShowEntryForms([]);
-      setUnusedEmptyHandlers(emptyFormHandlers);
+      
+      // Reset unused handlers
+      setUnusedEmptyHandlers(emptyHandlers);
+      
+      // Reset tracking
+      usedHandlersRef.current = [];
+      emptyHandlersUsedRef.current = [];
     }
-  }, [date, previousDate, emptyFormHandlers]);
+    
+    // Update ref
+    previousDateRef.current = date;
+  }, [date, emptyHandlers]);
   
   // Add entry form using a handler from the pre-initialized pool
   const addEntryForm = useCallback(() => {
@@ -149,6 +211,11 @@ export const useTimeEntryFormHandling = ({
         const emptyHandler = unusedEmptyHandlers[0];
         const remainingHandlers = unusedEmptyHandlers.slice(1);
         
+        // Reset the handler to ensure it's clean
+        emptyHandler.resetForm();
+        emptyHandler.handleFieldChange('startTime', startTime);
+        emptyHandler.handleFieldChange('endTime', endTime);
+        
         // Update form handlers and visibility
         setFormHandlers(prev => [...prev, emptyHandler]);
         setShowEntryForms(prev => [...prev, true]);
@@ -159,8 +226,9 @@ export const useTimeEntryFormHandling = ({
         logger.debug('[useTimeEntryFormHandling] Empty handler pool depleted');
         
         toast({
-          title: 'Processing',
-          description: 'Creating new entry form...',
+          title: 'Maximum entries reached',
+          description: 'Please save or remove existing entries first.',
+          variant: 'destructive'
         });
       }
     } catch (error) {
@@ -172,7 +240,7 @@ export const useTimeEntryFormHandling = ({
         variant: 'destructive'
       });
     }
-  }, [interactive, unusedEmptyHandlers, toast]);
+  }, [interactive, unusedEmptyHandlers, toast, startTime, endTime]);
   
   // Remove entry form (just hide it)
   const removeEntryForm = useCallback((index: number) => {
@@ -190,10 +258,27 @@ export const useTimeEntryFormHandling = ({
         updated[index] = false;
         return updated;
       });
+      
+      // If this was an empty handler, return it to the pool
+      if (index >= entries.length) {
+        const handler = formHandlers[index];
+        if (handler) {
+          handler.resetForm();
+          setUnusedEmptyHandlers(prev => [...prev, handler]);
+          
+          // Remove it from formHandlers
+          setFormHandlers(prev => {
+            const updated = [...prev];
+            updated.splice(index, 1);
+            return updated;
+          });
+        }
+      }
+      
     } catch (error) {
       logger.error(`[useTimeEntryFormHandling] Error removing entry form ${index}:`, error);
     }
-  }, [interactive, showEntryForms, formHandlers]);
+  }, [interactive, showEntryForms, formHandlers, entries.length]);
   
   // Save a specific entry
   const handleSaveEntry = useCallback((index: number) => {
@@ -267,4 +352,3 @@ export const useTimeEntryFormHandling = ({
     calculatedHours
   };
 };
-
