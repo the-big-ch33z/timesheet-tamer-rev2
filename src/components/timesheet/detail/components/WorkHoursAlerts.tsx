@@ -1,6 +1,6 @@
 
 import React from "react";
-import { AlertTriangle, Calendar, CheckCircle } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface WorkHoursAlertsProps {
@@ -42,7 +42,14 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
         </Alert>
       )}
       
-      {!hasEntries && !showEntryForms}
+      {!hasEntries && interactive && (
+        <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
+          <Info className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            No time entries for this day. Add an entry to record your hours.
+          </AlertDescription>
+        </Alert>
+      )}
     </>
   );
 };

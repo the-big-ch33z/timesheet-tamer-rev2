@@ -24,6 +24,7 @@ interface CalendarDayProps {
   status: DayStatus;
   onDayClick: (day: Date) => void;
   isComplete?: boolean;
+  totalHours?: number;
 }
 
 const CalendarDay: React.FC<CalendarDayProps> = ({
@@ -33,9 +34,9 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   isToday,
   status,
   onDayClick,
-  isComplete
+  isComplete = false,
+  totalHours = 0
 }) => {
-  const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
   const hasEntries = entries.length > 0;
   
   return (
@@ -51,7 +52,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               status.isWeekend && "bg-gray-50",
               status.dayHoliday && "bg-amber-50",
               status.isRDO && "bg-purple-50",
-              isComplete && "bg-green-50 border-green-200",
+              hasEntries && isComplete && "bg-green-50 border-green-200",
               hasEntries && !isComplete && "bg-yellow-50 border-yellow-200",
               !status.isWorkDay && "cursor-default"
             )}
@@ -64,7 +65,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 {format(day, 'd')}
               </span>
               
-              {isComplete && (
+              {isComplete && hasEntries && (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               )}
             </div>

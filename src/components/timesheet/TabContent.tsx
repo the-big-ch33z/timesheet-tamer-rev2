@@ -1,12 +1,10 @@
 
-import React, { useMemo, Suspense, lazy, useEffect, useState } from "react";
+import React, { useMemo, Suspense, lazy } from "react";
 import { TabsContent } from "@/components/ui/tabs";
-import { useTabContent } from "./hooks/useTabContent";
 import { 
   useCalendarContext,
   useUserTimesheetContext
 } from "@/contexts/timesheet";
-import { format } from "date-fns";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 
 // Lazy load components
@@ -27,8 +25,6 @@ const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
   
-  const [refreshKey, setRefreshKey] = useState(Date.now());
-
   // Ensure we have a user ID before rendering
   if (!viewedUser?.id) {
     return <div>No user selected</div>;
@@ -48,7 +44,6 @@ const TabContent: React.FC = () => {
                   onNextMonth={nextMonth}
                   onDayClick={handleDayClick}
                   workSchedule={workSchedule}
-                  entries={[]} // Pass an empty array as entries to satisfy the type requirement
                 />
               </Suspense>
               
@@ -60,7 +55,7 @@ const TabContent: React.FC = () => {
                       userId={viewedUser.id}
                       interactive={canEditTimesheet}
                       workSchedule={workSchedule}
-                      key={`work-hours-${selectedDay.toISOString()}-${refreshKey}`}
+                      key={`work-hours-${selectedDay.toISOString()}`}
                     />
                   </Suspense>
                 </div>
@@ -75,8 +70,6 @@ const TabContent: React.FC = () => {
                   workSchedule={workSchedule}
                 />
               </Suspense>
-              
-              {/* ToilSummary component removed */}
             </div>
           </div>
         </TabsContent>
