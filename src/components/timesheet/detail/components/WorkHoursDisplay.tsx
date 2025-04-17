@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -25,30 +25,9 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   onTimeChange,
   isComplete
 }) => {
-  // Local state to show immediate feedback
-  const [localStartTime, setLocalStartTime] = useState(startTime);
-  const [localEndTime, setLocalEndTime] = useState(endTime);
-
-  // Update local state when props change
-  useEffect(() => {
-    setLocalStartTime(startTime);
-  }, [startTime]);
-
-  useEffect(() => {
-    setLocalEndTime(endTime);
-  }, [endTime]);
-
+  // Handle time changes directly without local state
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
     console.log(`WorkHoursDisplay: Time changed: ${type} = ${value}`);
-    
-    // Update local state for immediate UI feedback
-    if (type === 'start') {
-      setLocalStartTime(value);
-    } else {
-      setLocalEndTime(value);
-    }
-    
-    // Also update parent component
     onTimeChange(type, value);
   };
 
@@ -60,14 +39,14 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           {interactive ? (
             <input
               type="time"
-              value={localStartTime}
+              value={startTime}
               onChange={(e) => handleTimeChange('start', e.target.value)}
               className="text-lg bg-transparent w-full outline-none"
               placeholder="Enter start time"
             />
           ) : (
             <span className="text-lg">
-              {localStartTime ? format(new Date(`2000-01-01T${localStartTime}`), "h:mm a") : "--:--"}
+              {startTime ? format(new Date(`2000-01-01T${startTime}`), "h:mm a") : "--:--"}
             </span>
           )}
           <Clock className="h-4 w-4 ml-2 text-gray-400" />
@@ -80,14 +59,14 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           {interactive ? (
             <input
               type="time"
-              value={localEndTime}
+              value={endTime}
               onChange={(e) => handleTimeChange('end', e.target.value)}
               className="text-lg bg-transparent w-full outline-none"
               placeholder="Enter end time"
             />
           ) : (
             <span className="text-lg">
-              {localEndTime ? format(new Date(`2000-01-01T${localEndTime}`), "h:mm a") : "--:--"}
+              {endTime ? format(new Date(`2000-01-01T${endTime}`), "h:mm a") : "--:--"}
             </span>
           )}
           <Clock className="h-4 w-4 ml-2 text-gray-400" />
@@ -100,7 +79,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           "bg-white border rounded-md p-2",
           isComplete ? "border-green-500" : hasEntries ? "border-amber-200" : "border-gray-200"
         )}>
-          {!localStartTime || !localEndTime ? (
+          {!startTime || !endTime ? (
             <span className="text-sm text-gray-500">Enter start/end times</span>
           ) : (
             <span className={cn(
