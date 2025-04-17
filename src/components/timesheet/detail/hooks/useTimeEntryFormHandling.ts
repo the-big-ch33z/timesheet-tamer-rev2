@@ -4,7 +4,7 @@ import { TimeEntry } from '@/types';
 import { useTimeEntryForm } from '@/hooks/timesheet/useTimeEntryForm';
 import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
 import { useToast } from '@/hooks/use-toast';
-import { usePrevious } from '@/hooks/usePrevious';
+import { usePrevious } from '@/hooks'; // Updated import path
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 

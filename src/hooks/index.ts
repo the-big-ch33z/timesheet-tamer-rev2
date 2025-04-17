@@ -8,6 +8,7 @@
 export * from './useLogger';
 export * from './use-toast';
 export * from './useErrorHandler';
+export * from './usePrevious';
 
 // Timesheet hooks
 export * from './timesheet/useWorkHours';
