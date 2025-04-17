@@ -68,6 +68,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     let dayWorkHours = null;
     
     if (workSchedule) {
+      // This is a simplified version - in a real app, you would likely have
+      // more complex logic to determine if it's an RDO based on the workSchedule
       const scheduleInfo = workSchedule.weeks;
       const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
       
