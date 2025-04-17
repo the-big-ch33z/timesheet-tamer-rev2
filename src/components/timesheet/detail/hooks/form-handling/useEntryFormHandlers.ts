@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useTimeEntryForm } from '@/hooks/timesheet/useTimeEntryForm';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 
@@ -27,6 +27,12 @@ export const useEntryFormHandlers = ({
   startTime = '09:00',
   endTime = '17:00'
 }: UseEntryFormHandlersProps) => {
+  
+  // Memoize initial data for new entries to prevent re-renders
+  const initialData = useMemo(() => ({
+    startTime, 
+    endTime
+  }), [startTime, endTime]);
   
   // Generate a series of fixed handlers for existing entries
   // These will always be created in the same order regardless of data
@@ -78,11 +84,11 @@ export const useEntryFormHandlers = ({
   // Combine all fixed handlers into an array
   const fixedHandlers = [handler1, handler2, handler3, handler4, handler5];
   
-  // Create handlers for new entries
+  // Create handlers for new entries using the memoized initialData
   const newHandler1 = useTimeEntryForm({
     selectedDate: date,
     userId: userId || '',
-    initialData: { startTime, endTime },
+    initialData,
     formKey: `new-entry-1`,
     autoSave: false,
     disabled: !interactive,
@@ -92,7 +98,7 @@ export const useEntryFormHandlers = ({
   const newHandler2 = useTimeEntryForm({
     selectedDate: date,
     userId: userId || '',
-    initialData: { startTime, endTime },
+    initialData,
     formKey: `new-entry-2`,
     autoSave: false,
     disabled: !interactive,
@@ -102,7 +108,7 @@ export const useEntryFormHandlers = ({
   const newHandler3 = useTimeEntryForm({
     selectedDate: date,
     userId: userId || '',
-    initialData: { startTime, endTime },
+    initialData,
     formKey: `new-entry-3`,
     autoSave: false,
     disabled: !interactive,

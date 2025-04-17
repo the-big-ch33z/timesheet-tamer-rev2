@@ -1,5 +1,5 @@
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEntryContext';
 import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandling';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
@@ -23,18 +23,13 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
 }) => {
   const { dayEntries } = useTimeEntryContext();
   
-  // Get work hours service - stabilize with useRef to prevent dependency churn
+  // Get work hours service using the hook
   const workHoursService = useTimesheetWorkHours(userId);
-  const workHoursServiceRef = useRef(workHoursService);
-  // Only update the ref when userId changes
-  if (userId !== workHoursServiceRef.current.userId) {
-    workHoursServiceRef.current = workHoursService;
-  }
   
   // Stabilize the getWorkHoursForDate function using useCallback
   const getWorkHoursForDate = useCallback((dateToUse: Date, userIdToUse: string) => {
-    return workHoursServiceRef.current.getWorkHoursForDate(dateToUse, userIdToUse);
-  }, []);
+    return workHoursService.getWorkHoursForDate(dateToUse, userIdToUse);
+  }, [workHoursService]);
   
   // Calculate work hours data with stabilized dependencies
   const workHoursData = useMemo(() => {
@@ -42,21 +37,16 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     return getWorkHoursForDate(date, userId);
   }, [date, userId, getWorkHoursForDate]);
   
-  // Extract values from workHoursData
-  const startTimeRef = useRef(workHoursData.startTime);
-  const endTimeRef = useRef(workHoursData.endTime);
-  const calculatedHoursRef = useRef(workHoursData.calculatedHours);
-  
-  // Only update refs when values actually change
-  if (workHoursData.startTime !== startTimeRef.current) {
-    startTimeRef.current = workHoursData.startTime;
-  }
-  if (workHoursData.endTime !== endTimeRef.current) {
-    endTimeRef.current = workHoursData.endTime;
-  }
-  if (workHoursData.calculatedHours !== calculatedHoursRef.current) {
-    calculatedHoursRef.current = workHoursData.calculatedHours;
-  }
+  // Use useMemo to create stable props instead of useRef
+  const stableWorkHours = useMemo(() => ({
+    startTime: workHoursData.startTime,
+    endTime: workHoursData.endTime,
+    calculatedHours: workHoursData.calculatedHours,
+  }), [
+    workHoursData.startTime,
+    workHoursData.endTime,
+    workHoursData.calculatedHours
+  ]);
   
   const { 
     formHandlers,
@@ -70,8 +60,8 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     userId,
     entries: dayEntries,
     interactive,
-    initialStartTime: startTimeRef.current,
-    initialEndTime: endTimeRef.current
+    initialStartTime: stableWorkHours.startTime,
+    initialEndTime: stableWorkHours.endTime
   });
   
   // Stabilize the create entry handler
@@ -92,9 +82,9 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
       handleSaveEntry={handleSaveEntry}
       saveAllPendingChanges={saveAllPendingChanges}
       interactive={interactive}
-      startTime={startTimeRef.current}
-      endTime={endTimeRef.current}
-      calculatedHours={calculatedHoursRef.current}
+      startTime={stableWorkHours.startTime}
+      endTime={stableWorkHours.endTime}
+      calculatedHours={stableWorkHours.calculatedHours}
       onAddEntry={handleCreateNewEntry}
     />
   );

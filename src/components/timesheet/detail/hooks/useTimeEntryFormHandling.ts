@@ -35,27 +35,22 @@ export const useTimeEntryFormHandling = ({
 }: UseTimeEntryFormHandlingProps) => {
   const { toast } = useToast();
   
-  // Store these values in refs to prevent re-renders when they don't change materially
-  const startTimeRef = useRef(initialStartTime);
-  const endTimeRef = useRef(initialEndTime);
-  const calculatedHoursRef = useRef(8);
+  // Use useMemo for stable time values instead of refs
+  const timeValues = useMemo(() => ({
+    startTime: initialStartTime,
+    endTime: initialEndTime,
+    calculatedHours: 8 // Default value
+  }), [initialStartTime, initialEndTime]);
+  
   const prevEntriesRef = useRef<TimeEntry[]>([]);
   
-  // Only update refs when values actually change
-  if (initialStartTime !== startTimeRef.current) {
-    startTimeRef.current = initialStartTime;
-  }
-  if (initialEndTime !== endTimeRef.current) {
-    endTimeRef.current = initialEndTime;
-  }
-  
-  // Create form handlers with fixed pattern
+  // Create form handlers with fixed pattern - pass memoized values
   const { fixedHandlers, emptyHandlers } = useEntryFormHandlers({
     date,
     userId,
     interactive,
-    startTime: startTimeRef.current,
-    endTime: endTimeRef.current
+    startTime: timeValues.startTime,
+    endTime: timeValues.endTime
   });
   
   // Tracking state with refs to avoid re-renders
@@ -167,13 +162,14 @@ export const useTimeEntryFormHandling = ({
     
     // If we got a handler, update the form time values
     if (newHandler) {
-      newHandler.handleFieldChange('startTime', startTimeRef.current);
-      newHandler.handleFieldChange('endTime', endTimeRef.current);
+      // Use the memoized time values
+      newHandler.handleFieldChange('startTime', timeValues.startTime);
+      newHandler.handleFieldChange('endTime', timeValues.endTime);
       
       // Add a visible form
       setShowEntryForms(prev => [...prev, true]);
     }
-  }, [interactive, addHandler, setShowEntryForms]);
+  }, [interactive, addHandler, setShowEntryForms, timeValues]);
   
   // Remove entry form (just hide it) - stabilize with useCallback
   const removeEntryForm = useCallback((index: number) => {
@@ -204,13 +200,6 @@ export const useTimeEntryFormHandling = ({
     }
   }, [interactive, showEntryForms.length, formHandlers, setShowEntryForms, entries.length, removeHandler]);
 
-  // Expose values as an object to avoid re-renders
-  const values = useMemo(() => ({
-    startTime: startTimeRef.current,
-    endTime: endTimeRef.current,
-    calculatedHours: calculatedHoursRef.current
-  }), []);
-
   return {
     formHandlers,
     showEntryForms,
@@ -219,6 +208,6 @@ export const useTimeEntryFormHandling = ({
     handleSaveEntry,
     saveAllPendingChanges,
     visibleFormsCount,
-    ...values
+    ...timeValues // Spread the memoized values
   };
 };
