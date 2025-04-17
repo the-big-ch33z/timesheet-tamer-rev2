@@ -1,55 +1,37 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { TimeEntry } from "@/types";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 
-interface ToilSummaryProps {
-  entries: TimeEntry[];
-}
-
-const ToilSummary: React.FC<ToilSummaryProps> = ({ entries }) => {
-  // For demo purposes - in a real app, this would calculate TOIL from entries
-  const earned = entries.filter(entry => entry.description?.toLowerCase().includes('toil')).reduce((sum, entry) => sum + entry.hours, 0);
-  const used = 0.0;
-  const remaining = earned - used;
+const ToilSummary = () => {
+  const { entries, calculateTotalHours } = useTimeEntryContext();
   
-  // Calculate balance percentage (50% is neutral)
-  const balancePercentage = 50; // In a real app, this would be calculated based on earned/used
+  // Calculate TOIL (Time Off In Lieu) - simplified example
+  const toilHours = React.useMemo(() => {
+    // Filter entries that are marked as overtime or TOIL eligible
+    const toilEligibleEntries = entries.filter(entry => 
+      entry.isOvertime || entry.isToilEligible
+    );
+    
+    // Calculate total TOIL hours
+    return calculateTotalHours(toilEligibleEntries);
+  }, [entries, calculateTotalHours]);
 
   return (
     <Card>
       <CardContent className="pt-6">
-        <h3 className="text-xl font-bold text-indigo-600 mb-4">TOIL Summary</h3>
+        <h3 className="text-xl font-bold mb-4">TOIL Balance</h3>
         
-        <div className="grid grid-cols-3 gap-2 mb-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-indigo-600">{earned.toFixed(1)}</div>
-            <div className="text-sm text-gray-500">hours</div>
-            <div className="text-sm">Earned</div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-red-500">{used.toFixed(1)}</div>
-            <div className="text-sm text-gray-500">hours</div>
-            <div className="text-sm">Used</div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-green-500">{remaining.toFixed(1)}</div>
-            <div className="text-sm text-gray-500">hours</div>
-            <div className="text-sm">Remaining</div>
-          </div>
+        <div className="text-4xl font-bold mb-1">
+          {toilHours.toFixed(1)} <span className="text-lg text-gray-500">hrs</span>
         </div>
-
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Balance</div>
-          <Progress 
-            value={balancePercentage} 
-            className="h-2" 
-          />
+        
+        <div className="text-sm text-gray-500 mt-4">
+          Time Off In Lieu available to use
         </div>
       </CardContent>
     </Card>
   );
 };
 
-export default ToilSummary;
+export default React.memo(ToilSummary);

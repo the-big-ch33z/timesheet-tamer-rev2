@@ -6,7 +6,7 @@ import { User, WorkSchedule } from "@/types";
 import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
 import { useUserMetrics } from "@/contexts/user-metrics";
-import { useTimesheetData } from "@/hooks/timesheet/useTimesheetData";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 
 interface MonthlyHoursProps {
   user?: User;
@@ -16,7 +16,7 @@ interface MonthlyHoursProps {
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ user, currentMonth, workSchedule }) => {
   const { getUserMetrics } = useUserMetrics();
-  const { entries } = useTimesheetData(user?.id);
+  const { entries } = useTimeEntryContext();  // Get entries directly from context
   
   // Call hook at the top level
   const calculation = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);

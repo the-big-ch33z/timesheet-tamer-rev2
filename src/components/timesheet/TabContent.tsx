@@ -4,11 +4,10 @@ import { TabsContent } from "@/components/ui/tabs";
 import { useTabContent } from "./hooks/useTabContent";
 import { 
   useCalendarContext,
-  useUserTimesheetContext,
-  useTimeEntryContext 
+  useUserTimesheetContext
 } from "@/contexts/timesheet";
 import { format } from "date-fns";
-import { useTimesheetData } from "@/hooks/timesheet/useTimesheetData";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
 
 // Lazy load components
 const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
@@ -28,102 +27,71 @@ const LoadingComponent = () => (
 const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
-  const { createEntry } = useTimeEntryContext();
-  const { entries, getDayEntries } = useTimesheetData(viewedUser?.id);
   
   const [refreshKey, setRefreshKey] = useState(Date.now());
 
-  const { sortedEntries } = useTabContent({ 
-    entries, 
-    currentMonth, 
-    workSchedule, 
-    user: viewedUser
-  });
-
-  const handleCreateEntry = (startTime: string, endTime: string, hours: number) => {
-    if (selectedDay && viewedUser) {
-      createEntry({
-        date: selectedDay,
-        hours: hours,
-        startTime: startTime,
-        endTime: endTime,
-        userId: viewedUser.id,
-        description: '',
-        jobNumber: '',
-        rego: '',
-        taskNumber: '',
-        project: 'General',
-      });
-      
-      setTimeout(() => setRefreshKey(Date.now()), 100);
-    }
-  };
-
-  const dayEntries = useMemo(() => {
-    if (!selectedDay) return [];
-    return getDayEntries(selectedDay);
-  }, [selectedDay, getDayEntries, entries, refreshKey]);
-
-  const workHoursSectionKey = useMemo(() => 
-    selectedDay ? `work-hours-${selectedDay.toISOString()}-${dayEntries.length}-${refreshKey}` : 'no-day'
-  , [selectedDay, dayEntries.length, refreshKey]);
+  // Ensure we have a user ID before rendering
+  if (!viewedUser?.id) {
+    return <div>No user selected</div>;
+  }
 
   return (
     <>
-      <TabsContent value="timesheet" className="mt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Suspense fallback={<LoadingComponent />}>
-              <TimesheetCalendar 
-                currentMonth={currentMonth}
-                entries={entries}
-                onPrevMonth={prevMonth}
-                onNextMonth={nextMonth}
-                onDayClick={handleDayClick}
-                workSchedule={workSchedule}
-              />
-            </Suspense>
-            
-            {selectedDay && viewedUser && (
-              <div className="mt-6">
-                <Suspense fallback={<LoadingComponent />}>
-                  <WorkHoursSection 
-                    entries={dayEntries}
-                    date={selectedDay}
-                    workSchedule={workSchedule}
-                    interactive={canEditTimesheet}
-                    onCreateEntry={handleCreateEntry}
-                    key={workHoursSectionKey}
-                  />
-                </Suspense>
-              </div>
-            )}
-          </div>
+      {/* Wrap both tabs with the TimeEntryProvider */}
+      <TimeEntryProvider selectedDate={selectedDay} userId={viewedUser.id}>
+        <TabsContent value="timesheet" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Suspense fallback={<LoadingComponent />}>
+                <TimesheetCalendar 
+                  currentMonth={currentMonth}
+                  onPrevMonth={prevMonth}
+                  onNextMonth={nextMonth}
+                  onDayClick={handleDayClick}
+                  workSchedule={workSchedule}
+                />
+              </Suspense>
+              
+              {selectedDay && (
+                <div className="mt-6">
+                  <Suspense fallback={<LoadingComponent />}>
+                    <WorkHoursSection 
+                      date={selectedDay}
+                      userId={viewedUser.id}
+                      interactive={canEditTimesheet}
+                      workSchedule={workSchedule}
+                      key={`work-hours-${selectedDay.toISOString()}-${refreshKey}`}
+                    />
+                  </Suspense>
+                </div>
+              )}
+            </div>
 
-          <div className="space-y-6">
+            <div className="space-y-6">
+              <Suspense fallback={<LoadingComponent />}>
+                <MonthlyHours 
+                  user={viewedUser} 
+                  currentMonth={currentMonth} 
+                  workSchedule={workSchedule}
+                />
+              </Suspense>
+              
+              <Suspense fallback={<LoadingComponent />}>
+                <ToilSummary />
+              </Suspense>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="recent">
+          <div className="bg-gray-50 p-8 rounded-lg">
+            <h3 className="text-xl font-medium mb-4">Recent Time Entries</h3>
             <Suspense fallback={<LoadingComponent />}>
-              <MonthlyHours 
-                user={viewedUser} 
-                currentMonth={currentMonth} 
-                workSchedule={workSchedule}
-              />
-            </Suspense>
-            
-            <Suspense fallback={<LoadingComponent />}>
-              <ToilSummary entries={entries} />
+              <RecentEntries />
             </Suspense>
           </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="recent">
-        <div className="bg-gray-50 p-8 rounded-lg">
-          <h3 className="text-xl font-medium mb-4">Recent Time Entries</h3>
-          <Suspense fallback={<LoadingComponent />}>
-            <RecentEntries entries={sortedEntries} />
-          </Suspense>
-        </div>
-      </TabsContent>
+        </TabsContent>
+      </TimeEntryProvider>
     </>
   );
 };
