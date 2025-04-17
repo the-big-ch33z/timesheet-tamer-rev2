@@ -15,7 +15,7 @@ interface TimeEntryFormManagerProps {
   startTime: string;
   endTime: string;
   calculatedHours: number;
-  onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
+  onAddEntry?: () => void;
 }
 
 const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
@@ -24,27 +24,15 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   addEntryForm,
   removeEntryForm,
   handleSaveEntry,
-  saveAllPendingChanges,
   interactive,
-  startTime,
-  endTime,
-  calculatedHours,
-  onCreateEntry
+  onAddEntry
 }) => {
-  // Create handler for quick add entry
-  const handleAddTime = () => {
-    if (!interactive || !onCreateEntry) return;
-    onCreateEntry(startTime, endTime, calculatedHours);
-  };
-
   return (
     <div className="space-y-4">
       {interactive && (
         <div>
           <WorkHoursActions 
-            onAddTime={handleAddTime}
-            onSaveAll={saveAllPendingChanges}
-            hasQuickAdd={!!onCreateEntry}
+            onAddEntry={onAddEntry}
           />
           
           <EntryFormsSection 

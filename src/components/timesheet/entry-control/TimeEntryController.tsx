@@ -27,12 +27,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   const workHoursData = useMemo(() => getWorkHoursForDate(date, userId), [date, userId, getWorkHoursForDate]);
   const { startTime, endTime, calculatedHours } = workHoursData;
   
-  // Use ref for component key to avoid re-renders
-  const componentKeyRef = useRef(Date.now());
-  
-  // Use ref for event subscriptions to avoid memory leaks
-  const unsubscribersRef = useRef<Array<() => void>>([]);
-  
   const { 
     formHandlers,
     showEntryForms,
@@ -49,77 +43,19 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     initialEndTime: endTime
   });
   
-  // Set up event listeners only once using refs
-  useEffect(() => {
-    logger.debug('[TimeEntryController] Setting up event listeners');
-    
-    // Clear any existing subscriptions to avoid duplicates
-    if (unsubscribersRef.current.length > 0) {
-      logger.debug('[TimeEntryController] Cleaning up previous subscriptions');
-      unsubscribersRef.current.forEach(unsub => unsub());
-      unsubscribersRef.current = [];
-    }
-    
-    // Store the unsubscribe functions in the ref
-    const handleEntryEvent = () => {
-      logger.debug('[TimeEntryController] Entry event received');
-    };
-    
-    unsubscribersRef.current = [
-      timeEventsService.subscribe('entry-created', handleEntryEvent),
-      timeEventsService.subscribe('entry-updated', handleEntryEvent),
-      timeEventsService.subscribe('entry-deleted', handleEntryEvent)
-    ];
-    
-    return () => {
-      // Cleanup subscriptions
-      logger.debug('[TimeEntryController] Cleaning up event subscriptions on unmount');
-      unsubscribersRef.current.forEach(unsub => unsub());
-      unsubscribersRef.current = [];
-    };
-  }, []); // Empty dependency array - only run once on mount
-  
   // Memoize the create entry handler to avoid recreating on every render
-  const handleCreateNewEntry = useCallback((entryStartTime: string, entryEndTime: string, hours: number) => {
+  const handleCreateNewEntry = useCallback(() => {
     if (!interactive) return;
     
-    try {
-      if (onCreateEntry) {
-        logger.debug(`[TimeEntryController] Creating entry via prop callback: ${entryStartTime}-${entryEndTime}`);
-        onCreateEntry(entryStartTime, entryEndTime, hours);
-      } else if (createEntry) {
-        logger.debug(`[TimeEntryController] Creating entry via context: ${entryStartTime}-${entryEndTime}`);
-        createEntry({
-          date,
-          userId,
-          startTime: entryStartTime,
-          endTime: entryEndTime,
-          hours,
-          description: '',
-          jobNumber: '',
-          rego: '',
-          taskNumber: '',
-          project: 'General'
-        });
-        
-        timeEventsService.publish('entry-created', {
-          startTime: entryStartTime,
-          endTime: entryEndTime,
-          hours,
-          userId,
-          date: date.toISOString()
-        });
-      }
-    } catch (error) {
-      logger.error('[TimeEntryController] Error creating entry:', error);
-    }
-  }, [date, userId, interactive, onCreateEntry, createEntry]);
+    // Trigger adding a new entry form
+    addEntryForm();
+  }, [interactive, addEntryForm]);
   
   // Memoize props to prevent unnecessary re-renders
   const managerProps = useMemo(() => ({
     formHandlers,
     interactive,
-    onCreateEntry: handleCreateNewEntry,
+    onAddEntry: handleCreateNewEntry,
     startTime,
     endTime,
     calculatedHours,
@@ -128,7 +64,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     removeEntryForm,
     handleSaveEntry,
     saveAllPendingChanges,
-    key: componentKeyRef.current
   }), [
     formHandlers,
     interactive,
