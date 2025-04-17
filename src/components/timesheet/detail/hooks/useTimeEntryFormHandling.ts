@@ -1,10 +1,9 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TimeEntry } from '@/types';
 import { useTimeEntryForm } from '@/hooks/timesheet/useTimeEntryForm';
 import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
 import { useToast } from '@/hooks/use-toast';
-import { usePrevious } from '@/hooks'; // Updated import path
+import { usePrevious } from '@/hooks';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 
@@ -29,23 +28,23 @@ export const useTimeEntryFormHandling = ({
   
   const [formHandlers, setFormHandlers] = useState<UseTimeEntryFormReturn[]>([]);
   const [showEntryForms, setShowEntryForms] = useState<boolean[]>([]); 
+  const [emptyHandlerPool, setEmptyHandlerPool] = useState<UseTimeEntryFormReturn[]>([]);
+  const handlersInitialized = useRef(false);
+  
   const previousDate = usePrevious(date);
   
-  // Initialize form handlers based on entries
   useEffect(() => {
     if (!date || !interactive) return;
     
     try {
       logger.debug(`[useTimeEntryFormHandling] Setting up form handlers for ${entries.length} entries`);
       
-      // Reset form visibility array when entries change
       const newVisibility: boolean[] = entries.length > 0 
         ? new Array(entries.length).fill(false)
         : [];
       
       setShowEntryForms(newVisibility);
       
-      // Create form handlers for each entry
       const handlers: UseTimeEntryFormReturn[] = entries.map((entry, index) => {
         return useTimeEntryForm({
           initialData: entry,
@@ -59,45 +58,79 @@ export const useTimeEntryFormHandling = ({
       });
       
       setFormHandlers(handlers);
+      handlersInitialized.current = true;
     } catch (error) {
       logger.error('[useTimeEntryFormHandling] Error setting up form handlers:', error);
     }
   }, [entries, date, interactive, userId]);
   
-  // Reset when date changes
+  useEffect(() => {
+    if (!date || !interactive || !handlersInitialized.current) return;
+    
+    try {
+      logger.debug('[useTimeEntryFormHandling] Initializing empty form handler pool');
+      
+      const neededEmptyHandlers = 3 - emptyHandlerPool.length;
+      
+      if (neededEmptyHandlers > 0) {
+        const newEmptyHandlers: UseTimeEntryFormReturn[] = [];
+        
+        for (let i = 0; i < neededEmptyHandlers; i++) {
+          const emptyHandler = useTimeEntryForm({
+            selectedDate: date,
+            userId,
+            initialData: {
+              startTime,
+              endTime
+            },
+            formKey: `new-entry-${Date.now()}-${i}`,
+            autoSave: false,
+            disabled: !interactive,
+            autoCalculateHours: true
+          });
+          newEmptyHandlers.push(emptyHandler);
+        }
+        
+        setEmptyHandlerPool(prev => [...prev, ...newEmptyHandlers]);
+        logger.debug(`[useTimeEntryFormHandling] Added ${neededEmptyHandlers} empty handlers to pool`);
+      }
+    } catch (error) {
+      logger.error('[useTimeEntryFormHandling] Error creating empty form handlers:', error);
+    }
+  }, [date, interactive, emptyHandlerPool.length, startTime, endTime, userId]);
+  
   useEffect(() => {
     if (previousDate && date && previousDate.toDateString() !== date.toDateString()) {
       logger.debug('[useTimeEntryFormHandling] Date changed, resetting forms');
       setShowEntryForms([]);
+      setEmptyHandlerPool([]);
     }
   }, [date, previousDate]);
   
-  // Add a new entry form
   const addEntryForm = useCallback(() => {
     if (!interactive) return;
     
     try {
       logger.debug('[useTimeEntryFormHandling] Adding new entry form');
       
-      // Create a new form handler for the new entry
-      const newHandler = useTimeEntryForm({
-        selectedDate: date,
-        userId,
-        initialData: {
-          startTime,
-          endTime
-        },
-        formKey: `new-entry-${Date.now()}`,
-        autoSave: false,
-        disabled: !interactive,
-        autoCalculateHours: true
-      });
-      
-      // Update the form handlers and visibility
-      setFormHandlers(prev => [...prev, newHandler]);
-      setShowEntryForms(prev => [...prev, true]);
-      
-      logger.debug('[useTimeEntryFormHandling] New entry form added successfully');
+      if (emptyHandlerPool.length > 0) {
+        const [newHandler, ...remainingHandlers] = emptyHandlerPool;
+        
+        setFormHandlers(prev => [...prev, newHandler]);
+        setShowEntryForms(prev => [...prev, true]);
+        setEmptyHandlerPool(remainingHandlers);
+        
+        logger.debug('[useTimeEntryFormHandling] Added new entry form from pool');
+      } else {
+        logger.debug('[useTimeEntryFormHandling] Empty handler pool depleted, waiting for replenishment');
+        
+        setEmptyHandlerPool([]);
+        
+        toast({
+          title: 'Processing',
+          description: 'Creating new entry form...',
+        });
+      }
     } catch (error) {
       logger.error('[useTimeEntryFormHandling] Error adding entry form:', error);
       
@@ -107,22 +140,18 @@ export const useTimeEntryFormHandling = ({
         variant: 'destructive'
       });
     }
-  }, [interactive, date, userId, startTime, endTime, toast]);
+  }, [interactive, emptyHandlerPool, toast]);
   
-  // Remove an entry form
   const removeEntryForm = useCallback((index: number) => {
     if (!interactive || index < 0 || index >= showEntryForms.length) return;
     
     try {
       logger.debug(`[useTimeEntryFormHandling] Removing entry form at index ${index}`);
       
-      // Check if the form has unsaved changes
       if (formHandlers[index]?.formState.formEdited) {
-        // Save changes before removing
         formHandlers[index].handleSave();
       }
       
-      // Hide the form instead of removing it completely
       setShowEntryForms(prev => {
         const updated = [...prev];
         updated[index] = false;
@@ -133,7 +162,6 @@ export const useTimeEntryFormHandling = ({
     }
   }, [interactive, showEntryForms, formHandlers]);
   
-  // Save a specific entry
   const handleSaveEntry = useCallback((index: number) => {
     if (!interactive || index < 0 || index >= formHandlers.length) return;
     
@@ -151,7 +179,6 @@ export const useTimeEntryFormHandling = ({
     }
   }, [interactive, formHandlers, toast]);
   
-  // Save all pending changes
   const saveAllPendingChanges = useCallback(() => {
     if (!interactive) return false;
     
@@ -160,7 +187,6 @@ export const useTimeEntryFormHandling = ({
       
       let savedCount = 0;
       
-      // Find all visible and edited forms
       showEntryForms.forEach((isVisible, index) => {
         if (isVisible && index < formHandlers.length && formHandlers[index].formState.formEdited) {
           formHandlers[index].handleSave();
@@ -191,7 +217,6 @@ export const useTimeEntryFormHandling = ({
     }
   }, [interactive, showEntryForms, formHandlers, toast]);
   
-  // Get visible entry forms count
   const visibleFormsCount = showEntryForms.filter(Boolean).length;
   
   return {
