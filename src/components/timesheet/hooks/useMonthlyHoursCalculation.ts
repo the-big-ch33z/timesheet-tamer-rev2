@@ -74,10 +74,10 @@ export const useMonthlyHoursCalculation = (
     [hours, targetHours]
   );
 
-  const hoursRemaining = useMemo(() =>
-    targetHours - hours > 0 ? (targetHours - hours).toFixed(1) : "0",
-    [targetHours, hours]
-  );
+  const hoursRemaining = useMemo(() => {
+    const remaining = targetHours - hours;
+    return remaining > 0 ? Number(remaining.toFixed(1)) : 0;
+  }, [targetHours, hours]);
 
   // Determine color based on percentage
   const progressColor = useMemo(() => {
