@@ -1,11 +1,9 @@
 
 import { useMemo } from "react";
-import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
-import { isSameDay } from "date-fns";
+import { eachDayOfInterval, startOfMonth, endOfMonth, getDay, isSameDay, format } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { useCalendarHelpers } from "../calendar/useCalendarHelpers";
 import { Holiday, getHolidays } from "@/lib/holidays";
-import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 import { WorkSchedule } from "@/types";
 import { areSameDates } from "@/utils/time/validation";
 
@@ -46,6 +44,30 @@ export function useCalendarData(
     const holidays = getHolidays();
     const today = new Date();
     
+    // Helper function to calculate completion status
+    const calculateCompletionStatus = (dayEntries: any[], dayWorkHours: { startTime: string; endTime: string } | null) => {
+      if (dayEntries.length === 0) return false;
+      
+      // If we don't have work hours, we can't determine if it's complete
+      if (!dayWorkHours) return false;
+      
+      // Simple estimation: if total hours matches expected work hours (roughly)
+      const totalHours = dayEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+      
+      // Calculate expected hours from start and end times
+      let [startHour, startMinute] = dayWorkHours.startTime.split(':').map(Number);
+      let [endHour, endMinute] = dayWorkHours.endTime.split(':').map(Number);
+      
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      const endTimeInMinutes = endHour * 60 + endMinute;
+      
+      const expectedHours = (endTimeInMinutes - startTimeInMinutes) / 60;
+      
+      // Less than 6 minutes difference is considered complete
+      const variance = Math.abs(expectedHours - totalHours);
+      return variance < 0.1;
+    };
+    
     // Create cell data for each day
     const days: DayCellData[] = daysInMonth.map(day => {
       // Find entries for this day
@@ -82,22 +104,8 @@ export function useCalendarData(
         }
       }
       
-      // Check completion status
-      let isComplete = false;
-      if (workSchedule && dayEntries.length > 0) {
-        const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
-        const week = 1;
-        const scheduleHours = workSchedule.weeks[week][weekdayName as keyof typeof workSchedule.weeks[typeof week]];
-
-        if (scheduleHours) {
-          const { isComplete: complete } = useTimeCompletion(
-            dayEntries,
-            scheduleHours.startTime,
-            scheduleHours.endTime
-          );
-          isComplete = complete;
-        }
-      }
+      // Calculate completion status
+      const isComplete = calculateCompletionStatus(dayEntries, dayWorkHours);
       
       // Return formatted day data
       return {
@@ -122,5 +130,5 @@ export function useCalendarData(
       days,
       monthStartDay
     };
-  }, [currentMonth, entries, selectedDate, workSchedule]);
+  }, [currentMonth, entries, selectedDate, workSchedule, getDayState]);
 }

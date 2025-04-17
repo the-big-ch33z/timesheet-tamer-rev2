@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { WorkSchedule } from "@/types";
-import { Holiday, getHolidays } from "@/lib/holidays";
 import CalendarHeader from "./calendar/CalendarHeader";
 import CalendarLegend from "./calendar/CalendarLegend";
 import CalendarWeekdayHeader from "./calendar/CalendarWeekdayHeader";
