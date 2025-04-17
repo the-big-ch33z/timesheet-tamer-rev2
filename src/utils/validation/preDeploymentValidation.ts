@@ -1,5 +1,5 @@
 import { createTimeLogger } from '../time/errors/timeLogger';
-import { unifiedTimeEntryService } from '../time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '../time/services';
 
 const logger = createTimeLogger('PreDeploymentValidation');
 

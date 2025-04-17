@@ -1,8 +1,7 @@
-
 import { renderHook, act } from '@testing-library/react';
 import { useTimeEntries } from '../useTimeEntries';
 import { createMockEntryInput } from '@/utils/testing/mockEntryFactory';
-import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 
 // Mock the unifiedTimeEntryService
 jest.mock('@/utils/time/services/unifiedTimeEntryService', () => {

@@ -1,7 +1,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { TimeEntry } from '@/types';
-import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 import { useLogger } from '../useLogger';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
 

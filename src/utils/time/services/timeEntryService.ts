@@ -4,7 +4,7 @@
  * Please use unifiedTimeEntryService instead.
  */
 
-import { unifiedTimeEntryService } from './unifiedTimeEntryService';
+import { unifiedTimeEntryService } from './core';
 
 // Re-export the storage key constants for compatibility
 export const STORAGE_KEY = 'timeEntries';

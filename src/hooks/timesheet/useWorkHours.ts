@@ -1,11 +1,10 @@
-
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { useTimesheetWorkHours } from './useTimesheetWorkHours';
 import { useTimeCalculations } from './useTimeCalculations';
-import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 
 const logger = createTimeLogger('useWorkHours');
 

@@ -1,7 +1,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { useUnifiedTimeEntries } from '../useUnifiedTimeEntries';
-import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 import { createTestEntryInput } from '@/utils/testing/mockUtils';
 
 // Mock the localStorage

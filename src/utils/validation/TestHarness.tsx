@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { PreDeploymentValidator, ValidationResult } from './preDeploymentValidation';
-import { unifiedTimeEntryService } from '../time/services/unifiedTimeEntryService';
+import { unifiedTimeEntryService } from '../time/services';
 import { createTimeLogger } from '../time/errors/timeLogger';
 
 const logger = createTimeLogger('TestHarness');

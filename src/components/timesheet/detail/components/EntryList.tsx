@@ -1,10 +1,9 @@
-
 import React from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
 import { useEntriesContext } from "@/contexts/timesheet";
-import { unifiedTimeEntryService } from "@/utils/time/services/unifiedTimeEntryService";
+import { unifiedTimeEntryService } from "@/utils/time/services";
 
 interface EntryListProps {
   entries: TimeEntry[];
