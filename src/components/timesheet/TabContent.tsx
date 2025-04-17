@@ -49,6 +49,7 @@ const TabContent: React.FC = () => {
                   onNextMonth={nextMonth}
                   onDayClick={handleDayClick}
                   workSchedule={workSchedule}
+                  entries={[]} // Pass an empty array as entries to satisfy the type requirement
                 />
               </Suspense>
               

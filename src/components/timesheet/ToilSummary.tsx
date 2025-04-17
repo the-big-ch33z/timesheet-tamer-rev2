@@ -9,8 +9,15 @@ const ToilSummary = () => {
   // Calculate TOIL (Time Off In Lieu) - simplified example
   const toilHours = React.useMemo(() => {
     // Filter entries that are marked as overtime or TOIL eligible
+    // Use optional chaining to safely check for these properties
     const toilEligibleEntries = entries.filter(entry => 
-      entry.isOvertime || entry.isToilEligible
+      entry.hours > 0 && (
+        // Either property might exist, check safely using optional properties
+        (entry as any).isOvertime === true || 
+        (entry as any).isToilEligible === true ||
+        // Default to any entry with more than 8 hours as potentially TOIL eligible
+        entry.hours > 8
+      )
     );
     
     // Calculate total TOIL hours
