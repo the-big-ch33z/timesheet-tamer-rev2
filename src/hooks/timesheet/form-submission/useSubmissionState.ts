@@ -1,32 +1,33 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 /**
- * Hook for managing submission state
+ * Hook to manage submission state with optimizations
+ * to prevent unnecessary re-renders
  */
 export const useSubmissionState = (disabled: boolean = false) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Track when disabled flag changes
-  useEffect(() => {
-    console.debug(`[useSubmissionState] Disabled state changed to: ${disabled}`);
-  }, [disabled]);
-
+  // Use a ref to track submission state for immediate access
+  const isSubmittingRef = useRef(false);
+  
   const startSubmission = useCallback(() => {
-    setIsSubmitting(true);
-    console.debug("[useSubmissionState] Starting submission");
-  }, []);
-
+    if (!disabled && !isSubmittingRef.current) {
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+    }
+  }, [disabled]);
+  
   const endSubmission = useCallback(() => {
-    // Allow the form to be submitted again after a short delay
+    // Use setTimeout to avoid state updates during rendering cycle
     setTimeout(() => {
-      console.debug("[useSubmissionState] Submission cooldown complete");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
-    }, 300);
+    }, 100);
   }, []);
-
+  
   return {
     isSubmitting,
+    isSubmittingRef,
     startSubmission,
     endSubmission
   };
