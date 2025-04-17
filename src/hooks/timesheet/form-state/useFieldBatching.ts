@@ -1,6 +1,24 @@
 
 import { useRef, useCallback } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
+import { Dispatch, SetStateAction } from 'react';
+import { ToastAPI } from '../../use-toast';
+
+interface UseFieldBatchingProps {
+  setHours: Dispatch<SetStateAction<string>>;
+  setDescription: Dispatch<SetStateAction<string>>;
+  setJobNumber: Dispatch<SetStateAction<string>>;
+  setRego: Dispatch<SetStateAction<string>>;
+  setTaskNumber: Dispatch<SetStateAction<string>>;
+  setStartTime: Dispatch<SetStateAction<string>>;
+  setEndTime: Dispatch<SetStateAction<string>>;
+  setFormEdited: Dispatch<SetStateAction<boolean>>;
+  disabled: boolean;
+  startTime: string;
+  endTime: string;
+  autoCalculateHours: boolean;
+  toast: ToastAPI;
+}
 
 /**
  * Hook to manage batched field changes for form performance
@@ -19,7 +37,7 @@ export const useFieldBatching = ({
   endTime,
   autoCalculateHours,
   toast
-}) => {
+}: UseFieldBatchingProps) => {
   const batchedChangesRef = useRef<Record<string, string>>({});
   const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   

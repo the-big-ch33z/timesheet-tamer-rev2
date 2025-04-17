@@ -1,6 +1,14 @@
 
-import { useCallback } from 'react';
+import { useCallback, MutableRefObject } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations";
+
+interface UseTimeCalculationProps {
+  startTime: string;
+  endTime: string;
+  processBatchedChanges: () => void;
+  batchedChangesRef: MutableRefObject<Record<string, string>>;
+  batchTimeoutRef: MutableRefObject<NodeJS.Timeout | null>;
+}
 
 /**
  * Hook for handling time-related calculations and updates
@@ -11,7 +19,7 @@ export const useTimeCalculation = ({
   processBatchedChanges,
   batchedChangesRef,
   batchTimeoutRef
-}) => {
+}: UseTimeCalculationProps) => {
   // Update time values
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
     console.debug(`[useTimeCalculation] Updating times: ${newStartTime} to ${newEndTime}`);

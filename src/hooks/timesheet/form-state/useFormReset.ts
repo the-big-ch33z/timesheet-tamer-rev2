@@ -1,5 +1,17 @@
 
-import { useCallback } from 'react';
+import { useCallback, Dispatch, SetStateAction, MutableRefObject } from 'react';
+
+interface UseFormResetProps {
+  setHours: Dispatch<SetStateAction<string>>;
+  setDescription: Dispatch<SetStateAction<string>>;
+  setJobNumber: Dispatch<SetStateAction<string>>;
+  setRego: Dispatch<SetStateAction<string>>;
+  setTaskNumber: Dispatch<SetStateAction<string>>;
+  setFormEdited: Dispatch<SetStateAction<boolean>>;
+  formKey?: string | number;
+  batchTimeoutRef: MutableRefObject<NodeJS.Timeout | null>;
+  batchedChangesRef: MutableRefObject<Record<string, string>>;
+}
 
 /**
  * Hook for handling form reset operations
@@ -14,7 +26,7 @@ export const useFormReset = ({
   formKey,
   batchTimeoutRef,
   batchedChangesRef
-}) => {
+}: UseFormResetProps) => {
   const resetForm = useCallback(() => {
     console.debug("[useFormReset] Resetting form fields to empty values");
     

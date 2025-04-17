@@ -6,15 +6,21 @@ import { useTimeCalculation } from './useTimeCalculation';
 import { useFormReset } from './useFormReset';
 import { TimeEntryFormState } from '../types/timeEntryTypes';
 import { useToast } from "@/hooks/use-toast";
+import { TimeEntry } from "@/types";
 
 /**
  * Core hook to manage form state with improved separation of concerns
  */
 export const useFormStateCore = ({ 
-  initialData = {}, 
+  initialData = {} as Partial<TimeEntry>, 
   formKey,
   disabled = false,
   autoCalculateHours = false
+}: {
+  initialData?: Partial<TimeEntry>;
+  formKey?: string | number;
+  disabled?: boolean;
+  autoCalculateHours?: boolean;
 }) => {
   const { toast } = useToast();
   
@@ -160,7 +166,7 @@ export const useFormStateCore = ({
     rego,
     taskNumber,
     formEdited,
-    userId: initialData.userId,
+    userId: initialData.userId || '',
     startTime,
     endTime
   };
