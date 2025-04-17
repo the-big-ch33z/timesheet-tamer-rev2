@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -186,6 +187,17 @@ function useToast() {
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
+}
+
+// Define the ToastAPI type here for export
+export interface ToastAPI {
+  (props: {
+    title?: string;
+    description?: React.ReactNode;
+    action?: React.ReactNode;
+    variant?: "default" | "destructive" | "success";
+  }): void;
+  dismiss: (toastId?: string) => void;
 }
 
 export { useToast, toast }
