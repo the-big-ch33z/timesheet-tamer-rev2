@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ensureDate } from '@/utils/time/validation';
 
 /**
@@ -56,5 +56,8 @@ export const useFormDataPreparation = ({
     };
   }, [initialData, selectedDate, userId]);
 
-  return { getFormData };
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({ 
+    getFormData 
+  }), [getFormData]);
 };

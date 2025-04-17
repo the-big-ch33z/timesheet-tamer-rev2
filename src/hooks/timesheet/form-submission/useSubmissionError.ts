@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -22,5 +22,8 @@ export const useSubmissionError = () => {
     });
   }, [toast]);
 
-  return { handleError };
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({ 
+    handleError 
+  }), [handleError]);
 };

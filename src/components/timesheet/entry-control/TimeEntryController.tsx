@@ -23,11 +23,14 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   onCreateEntry
 }) => {
   const { dayEntries, createEntry } = useTimeEntryContext();
-  const { getWorkHoursForDate, refreshWorkHours } = useTimesheetWorkHours(userId);
+  const { getWorkHoursForDate } = useTimesheetWorkHours(userId);
+  const workHoursData = useMemo(() => getWorkHoursForDate(date, userId), [date, userId, getWorkHoursForDate]);
+  const { startTime, endTime, calculatedHours } = workHoursData;
   
   // Use ref for component key to avoid re-renders
   const componentKeyRef = useRef(Date.now());
-  // Use ref to track event subscriptions
+  
+  // Use ref for event subscriptions to avoid memory leaks
   const unsubscribersRef = useRef<Array<() => void>>([]);
   
   const { 
@@ -37,40 +40,32 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     removeEntryForm,
     handleSaveEntry,
     saveAllPendingChanges,
-    startTime,
-    endTime,
-    calculatedHours
   } = useTimeEntryFormHandling({
     date,
     userId,
     entries: dayEntries,
-    interactive
+    interactive,
+    initialStartTime: startTime,
+    initialEndTime: endTime
   });
   
   // Set up event listeners only once using refs
   useEffect(() => {
     logger.debug('[TimeEntryController] Setting up event listeners');
     
-    const handleHoursUpdated = () => {
-      logger.debug('[TimeEntryController] Hours updated event received');
-      refreshWorkHours();
-      // No state updates that cause re-renders
-    };
-    
-    const handleEntryEvent = () => {
-      logger.debug('[TimeEntryController] Entry event received');
-      // No state updates that cause re-renders
-    };
-    
     // Clear any existing subscriptions to avoid duplicates
     if (unsubscribersRef.current.length > 0) {
+      logger.debug('[TimeEntryController] Cleaning up previous subscriptions');
       unsubscribersRef.current.forEach(unsub => unsub());
       unsubscribersRef.current = [];
     }
     
     // Store the unsubscribe functions in the ref
+    const handleEntryEvent = () => {
+      logger.debug('[TimeEntryController] Entry event received');
+    };
+    
     unsubscribersRef.current = [
-      timeEventsService.subscribe('hours-updated', handleHoursUpdated),
       timeEventsService.subscribe('entry-created', handleEntryEvent),
       timeEventsService.subscribe('entry-updated', handleEntryEvent),
       timeEventsService.subscribe('entry-deleted', handleEntryEvent)
@@ -78,26 +73,27 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     
     return () => {
       // Cleanup subscriptions
+      logger.debug('[TimeEntryController] Cleaning up event subscriptions on unmount');
       unsubscribersRef.current.forEach(unsub => unsub());
       unsubscribersRef.current = [];
     };
-  }, [refreshWorkHours]); // Only depend on refreshWorkHours
+  }, []); // Empty dependency array - only run once on mount
   
   // Memoize the create entry handler to avoid recreating on every render
-  const handleCreateNewEntry = useCallback((startTime: string, endTime: string, hours: number) => {
+  const handleCreateNewEntry = useCallback((entryStartTime: string, entryEndTime: string, hours: number) => {
     if (!interactive) return;
     
     try {
       if (onCreateEntry) {
-        logger.debug(`[TimeEntryController] Creating entry via prop callback: ${startTime}-${endTime}`);
-        onCreateEntry(startTime, endTime, hours);
+        logger.debug(`[TimeEntryController] Creating entry via prop callback: ${entryStartTime}-${entryEndTime}`);
+        onCreateEntry(entryStartTime, entryEndTime, hours);
       } else if (createEntry) {
-        logger.debug(`[TimeEntryController] Creating entry via context: ${startTime}-${endTime}`);
+        logger.debug(`[TimeEntryController] Creating entry via context: ${entryStartTime}-${entryEndTime}`);
         createEntry({
           date,
           userId,
-          startTime,
-          endTime,
+          startTime: entryStartTime,
+          endTime: entryEndTime,
           hours,
           description: '',
           jobNumber: '',
@@ -107,22 +103,17 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         });
         
         timeEventsService.publish('entry-created', {
-          startTime,
-          endTime,
+          startTime: entryStartTime,
+          endTime: entryEndTime,
           hours,
           userId,
           date: date.toISOString()
         });
       }
-      
-      // Use setTimeout to avoid state updates during rendering
-      setTimeout(() => {
-        refreshWorkHours();
-      }, 100);
     } catch (error) {
       logger.error('[TimeEntryController] Error creating entry:', error);
     }
-  }, [date, userId, interactive, onCreateEntry, createEntry, refreshWorkHours]);
+  }, [date, userId, interactive, onCreateEntry, createEntry]);
   
   // Memoize props to prevent unnecessary re-renders
   const managerProps = useMemo(() => ({

@@ -1,8 +1,7 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { TimeEntry } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { usePrevious } from '@/hooks';
 import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { 
@@ -19,6 +18,8 @@ interface UseTimeEntryFormHandlingProps {
   userId?: string;
   entries?: TimeEntry[];
   interactive?: boolean;
+  initialStartTime?: string;
+  initialEndTime?: string;
 }
 
 /**
@@ -28,23 +29,34 @@ export const useTimeEntryFormHandling = ({
   date,
   userId = '',
   entries = [],
-  interactive = true
+  interactive = true,
+  initialStartTime = '09:00',
+  initialEndTime = '17:00'
 }: UseTimeEntryFormHandlingProps) => {
   const { toast } = useToast();
-  const { getWorkHoursForDate } = useTimesheetWorkHours(userId);
-  const { startTime, endTime, calculatedHours } = getWorkHoursForDate(date, userId);
   
-  // Tracking state with refs to avoid re-renders
-  const previousDateRef = useRef<Date | null>(null);
+  // Store these values in refs to prevent re-renders
+  const startTimeRef = useRef(initialStartTime);
+  const endTimeRef = useRef(initialEndTime);
+  const calculatedHoursRef = useRef(8);
+  
+  // Update refs when props change
+  useEffect(() => {
+    startTimeRef.current = initialStartTime;
+    endTimeRef.current = initialEndTime;
+  }, [initialStartTime, initialEndTime]);
   
   // Create form handlers with fixed pattern
   const { fixedHandlers, emptyHandlers } = useEntryFormHandlers({
     date,
     userId,
     interactive,
-    startTime,
-    endTime
+    startTime: startTimeRef.current,
+    endTime: endTimeRef.current
   });
+  
+  // Tracking state with refs to avoid re-renders
+  const previousDateRef = useRef<Date | null>(null);
   
   // Use the visibility management hook
   const { 
@@ -77,9 +89,13 @@ export const useTimeEntryFormHandling = ({
     interactive
   });
   
-  // Set up initial form handlers and visibility
+  // Initialize only when entries change
+  const entriesStringified = JSON.stringify(entries.map(e => e.id));
+  
   useEffect(() => {
     if (!interactive) return;
+    
+    logger.debug(`[useTimeEntryFormHandling] Initializing with ${entries.length} entries`);
     
     // Initialize visibility array
     const newVisibility = entries.length > 0 
@@ -91,9 +107,7 @@ export const useTimeEntryFormHandling = ({
     
     // Set visibility state
     resetVisibility(newVisibility);
-    
-    logger.debug(`[useTimeEntryFormHandling] Initialized with ${entries.length} entries`);
-  }, [entries, interactive, initializeHandlers, resetVisibility]);
+  }, [entriesStringified, interactive, initializeHandlers, resetVisibility]);
   
   // Reset when date changes
   useEffect(() => {
@@ -123,8 +137,8 @@ export const useTimeEntryFormHandling = ({
     
     // If we got a handler, update the form time values
     if (newHandler) {
-      newHandler.handleFieldChange('startTime', startTime);
-      newHandler.handleFieldChange('endTime', endTime);
+      newHandler.handleFieldChange('startTime', startTimeRef.current);
+      newHandler.handleFieldChange('endTime', endTimeRef.current);
       
       // Add a visible form
       setShowEntryForms(prev => [...prev, true]);
@@ -160,6 +174,13 @@ export const useTimeEntryFormHandling = ({
     }
   };
 
+  // Expose values as an object to avoid re-renders
+  const values = useMemo(() => ({
+    startTime: startTimeRef.current,
+    endTime: endTimeRef.current,
+    calculatedHours: calculatedHoursRef.current
+  }), []);
+
   return {
     formHandlers,
     showEntryForms,
@@ -168,8 +189,6 @@ export const useTimeEntryFormHandling = ({
     handleSaveEntry,
     saveAllPendingChanges,
     visibleFormsCount,
-    startTime,
-    endTime,
-    calculatedHours
+    ...values
   };
 };

@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 
 /**
  * Hook to manage submission state with optimizations
@@ -25,10 +25,11 @@ export const useSubmissionState = (disabled: boolean = false) => {
     }, 100);
   }, []);
   
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({
     isSubmitting,
     isSubmittingRef,
     startSubmission,
     endSubmission
-  };
+  }), [isSubmitting, startSubmission, endSubmission]);
 };

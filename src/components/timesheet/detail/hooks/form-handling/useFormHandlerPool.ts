@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { useToast } from '@/hooks/use-toast';
@@ -103,7 +103,7 @@ export const useFormHandlerPool = ({
     }
   }, [interactive, formHandlers, fixedHandlers.length]);
   
-  // Initialize handlers with data
+  // Initialize handlers with data - use stringified entries for stable dependency
   const initializeHandlers = useCallback((entries: any[] = []) => {
     if (!interactive) return;
     
@@ -121,7 +121,7 @@ export const useFormHandlerPool = ({
       handler.resetForm();
       if (entries[i]) {
         const entry = entries[i];
-        handler.handleFieldChange('hours', entry.hours.toString());
+        handler.handleFieldChange('hours', entry.hours?.toString() || '');
         handler.handleFieldChange('description', entry.description || '');
         handler.handleFieldChange('jobNumber', entry.jobNumber || '');
         handler.handleFieldChange('rego', entry.rego || '');
@@ -142,11 +142,12 @@ export const useFormHandlerPool = ({
     logger.debug(`[useFormHandlerPool] Initialized ${activeHandlers.length} handlers and ${emptyHandlers.length} empty handlers`);
   }, [fixedHandlers, emptyHandlers, interactive]);
   
-  return {
+  // Use memo to stabilize the return values
+  return useMemo(() => ({
     formHandlers,
     unusedEmptyHandlers,
     addHandler,
     removeHandler,
     initializeHandlers
-  };
+  }), [formHandlers, unusedEmptyHandlers, addHandler, removeHandler, initializeHandlers]);
 };

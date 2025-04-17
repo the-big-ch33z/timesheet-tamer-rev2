@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 
 /**
  * Hook for tracking date changes for form submissions
@@ -23,7 +23,8 @@ export const useDateTracking = (selectedDate: Date | null) => {
     }
   }, [selectedDate]);
 
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({
     isDateValid: !!selectedDate
-  };
+  }), [selectedDate]);
 };
