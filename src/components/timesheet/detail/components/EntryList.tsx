@@ -12,7 +12,7 @@ import { Trash2 } from "lucide-react";
 interface EntryListProps {
   entries: TimeEntry[];
   interactive?: boolean;
-  onDelete?: (entryId: string) => boolean;
+  onDelete?: (entryId: string) => Promise<boolean> | boolean;
 }
 
 const EntryList: React.FC<EntryListProps> = ({ 
@@ -41,11 +41,11 @@ const EntryList: React.FC<EntryListProps> = ({
         return updated;
       });
       
-      // First, add to the deleted entries tracker to ensure it stays deleted
-      unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+      // Add to the deleted entries tracker first
+      await unifiedTimeEntryService.deleteEntryFromStorage(entryId);
       
       // Use the passed onDelete function if provided, otherwise use the context function
-      const result = onDelete ? onDelete(entryId) : deleteEntry(entryId);
+      const result = await (onDelete ? onDelete(entryId) : deleteEntry(entryId));
       
       if (!result) {
         toast({
@@ -59,10 +59,12 @@ const EntryList: React.FC<EntryListProps> = ({
           description: "The timesheet entry has been removed successfully",
         });
         
-        // Force storage sync and notify other tabs about the deletion
-        window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
-          detail: { entryId }
-        }));
+        // Notify other tabs after successful deletion
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
+            detail: { entryId }
+          }));
+        }
       }
     } catch (error) {
       console.error("Error deleting entry:", error);

@@ -8,16 +8,13 @@ import {
   EntryCache 
 } from "./types";
 import { createTimeLogger } from '../errors/timeLogger';
-import { ensureDate, isValidDate } from '../validation/dateValidation';
+import { ensureDate } from '../validation/dateValidation';
 import { EventManager } from "./event-handling";
 import { 
   createEmptyCache,
   isCacheValid, 
   invalidateCache, 
   updateCacheEntries,
-  getCachedUserEntries,
-  getCachedDayEntries,
-  getCachedMonthEntries
 } from "./cache-management";
 import {
   STORAGE_KEY,
@@ -28,7 +25,6 @@ import {
   addToDeletedEntries
 } from "./storage-operations";
 import { validateEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
-import { filterEntriesByUser, filterEntriesByDay, filterEntriesByMonth } from "./query-operations";
 import { TimeEntryOperations } from "./time-entry-operations";
 import { TimeEntryQueries } from "./time-entry-queries";
 
@@ -204,25 +200,14 @@ export class UnifiedTimeEntryService {
     }
   }
 
-  public deleteEntryFromStorage(entryId: string): boolean {
-    logger.debug("Direct deletion of entry:", entryId);
+  public async deleteEntryFromStorage(entryId: string): Promise<boolean> {
+    logger.debug("Direct deletion of entry from storage:", entryId);
     
     try {
-      addToDeletedEntries(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY)
-        .then(updatedIds => {
-          this.deletedEntryIds = updatedIds;
-          
-          this.invalidateCache();
-          
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
-              detail: { entryId }
-            }));
-          }
-        })
-        .catch(error => {
-          logger.error("Error updating deleted entries:", error);
-        });
+      const updatedIds = await addToDeletedEntries(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY);
+      this.deletedEntryIds = updatedIds;
+      
+      this.invalidateCache();
       
       return true;
     } catch (error) {

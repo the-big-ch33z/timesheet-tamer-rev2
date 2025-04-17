@@ -1,8 +1,10 @@
+
 import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { ensureDate } from "@/utils/time/validation";
+import { unifiedTimeEntryService } from "@/utils/time/services";
 
 /**
  * Hook that provides operations for manipulating time entries
@@ -90,33 +92,46 @@ export const useEntryOperations = (
   }, [setEntries, toast]);
 
   // Delete an entry
-  const deleteEntry = useCallback((entryId: string) => {
+  const deleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
     console.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
     
-    let success = false;
-    
-    setEntries(prev => {
-      const entryToDelete = prev.find(entry => entry.id === entryId);
-      if (!entryToDelete) {
-        console.warn("[TimeEntryProvider] Entry not found for deletion:", entryId);
-        return prev;
+    try {
+      // First, track the deletion in the service
+      await unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+      
+      // Then update the local state
+      let success = false;
+      
+      setEntries(prev => {
+        const entryToDelete = prev.find(entry => entry.id === entryId);
+        if (!entryToDelete) {
+          console.warn("[TimeEntryProvider] Entry not found for deletion:", entryId);
+          return prev;
+        }
+        
+        const filteredEntries = prev.filter(entry => entry.id !== entryId);
+        success = true;
+        
+        console.debug("[TimeEntryProvider] Entry deleted, remaining entries:", filteredEntries.length);
+        return filteredEntries;
+      });
+      
+      if (success) {
+        toast({
+          title: "Entry deleted",
+          description: "Time entry has been removed from your timesheet"
+        });
       }
       
-      const filteredEntries = prev.filter(entry => entry.id !== entryId);
-      success = true;
-      
-      console.debug("[TimeEntryProvider] Entry deleted, remaining entries:", filteredEntries.length);
-      return filteredEntries;
-    });
-    
-    if (success) {
+      return success;
+    } catch (error) {
+      console.error("[TimeEntryProvider] Error deleting entry:", error);
       toast({
-        title: "Entry deleted",
-        description: "Time entry has been removed from your timesheet"
+        title: "Error deleting entry",
+        description: "An unexpected error occurred"
       });
+      return false;
     }
-    
-    return success;
   }, [setEntries, toast]);
 
   // Create a new entry with validation

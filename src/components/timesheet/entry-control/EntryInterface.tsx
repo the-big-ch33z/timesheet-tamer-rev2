@@ -10,7 +10,7 @@ interface EntryInterfaceProps {
   date: Date;
   userId: string;
   onCreateEntry: (entry: Omit<TimeEntry, "id">) => string | null;
-  onDeleteEntry: (entryId: string) => boolean;
+  onDeleteEntry: (entryId: string) => Promise<boolean> | boolean;
   interactive?: boolean;
   existingEntries: TimeEntry[];
 }
@@ -44,7 +44,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   };
 
   // Enhanced delete entry handler with tracking
-  const handleDeleteEntry = (entryId: string): boolean => {
+  const handleDeleteEntry = async (entryId: string): Promise<boolean> => {
     // Avoid duplicate delete operations
     if (processingEntryIds.has(entryId)) {
       logger.debug("[EntryInterface] Already processing deletion for entry:", entryId);
@@ -61,7 +61,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       
       // Call the delete handler
       logger.debug("[EntryInterface] Deleting entry:", entryId);
-      const result = onDeleteEntry(entryId);
+      const result = await onDeleteEntry(entryId);
       
       if (result) {
         logger.debug("[EntryInterface] Entry deleted successfully:", entryId);

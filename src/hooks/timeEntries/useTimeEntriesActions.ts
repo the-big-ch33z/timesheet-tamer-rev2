@@ -58,21 +58,38 @@ export const useTimeEntriesActions = (
     return result;
   }, [toast, showToasts]);
   
-  const deleteEntry = useCallback((entryId: string): boolean => {
+  const deleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
     logger.debug('Deleting entry:', entryId);
     
-    const result = unifiedTimeEntryService.deleteEntry(entryId);
-    
-    if (!result && showToasts) {
-      toast({
-        title: 'Error deleting entry',
-        description: 'Could not delete your time entry',
-        variant: 'destructive'
-      });
+    try {
+      const result = unifiedTimeEntryService.deleteEntry(entryId);
+      
+      if (!result && showToasts) {
+        toast({
+          title: 'Error deleting entry',
+          description: 'Could not delete your time entry',
+          variant: 'destructive'
+        });
+      }
+      
+      // Always refresh entries list after deletion
+      setTimeout(() => refreshEntries(), 50);
+      
+      return result;
+    } catch (error) {
+      logger.error('Error during entry deletion:', error);
+      
+      if (showToasts) {
+        toast({
+          title: 'Error deleting entry',
+          description: 'An unexpected error occurred while deleting the entry',
+          variant: 'destructive'
+        });
+      }
+      
+      return false;
     }
-    
-    return result;
-  }, [toast, showToasts]);
+  }, [toast, showToasts, refreshEntries]);
 
   return {
     createEntry,
