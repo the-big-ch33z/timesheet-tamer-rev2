@@ -1,54 +1,51 @@
 
-import { useMemo } from "react";
-import { TimeEntry } from "@/types";
-import { calculateHoursVariance, isUndertime } from "@/utils/time/calculations";
-
-interface UseTimeEntryStatsProps {
-  entries: TimeEntry[];
-  calculatedHours: number;
-}
+import { useCallback, useMemo } from 'react';
+import { TimeEntry } from '@/types';
 
 export interface TimeEntryStats {
   totalHours: number;
-  hoursVariance: number;
   hasEntries: boolean;
+  hoursVariance: number;
   isUndertime: boolean;
 }
 
 /**
- * Hook for calculating time entry statistics and metrics
- * @param entries The time entries to calculate stats from
- * @param calculatedHours The target hours (e.g., from work schedule)
+ * Hook to calculate statistics for time entries
  */
 export const useTimeEntryStats = ({
   entries,
   calculatedHours
-}: UseTimeEntryStatsProps): TimeEntryStats => {
+}: {
+  entries: TimeEntry[];
+  calculatedHours: number;
+}): TimeEntryStats => {
   // Calculate total hours from entries
-  const totalHours = useMemo(() => 
-    entries.reduce((sum, entry) => sum + (entry.hours || 0), 0),
-    [entries]
-  );
-
-  // Calculate hours variance (difference between expected and actual hours)
-  const hoursVariance = useMemo(() => 
-    calculateHoursVariance(totalHours, calculatedHours),
-    [totalHours, calculatedHours]
-  );
+  const totalHours = useMemo(() => {
+    if (!entries || entries.length === 0) return 0;
+    
+    return entries.reduce((sum, entry) => {
+      return sum + (typeof entry.hours === 'number' ? entry.hours : 0);
+    }, 0);
+  }, [entries]);
 
   // Check if there are any entries
-  const hasEntries = entries.length > 0;
-
-  // Check if the user is under their scheduled hours
-  const isUndertimeValue = useMemo(() => 
-    isUndertime(hoursVariance),
-    [hoursVariance]
-  );
+  const hasEntries = entries && entries.length > 0;
+  
+  // Calculate the variance between scheduled and actual hours
+  const hoursVariance = useMemo(() => {
+    if (calculatedHours === 0) return 0;
+    return totalHours - calculatedHours;
+  }, [totalHours, calculatedHours]);
+  
+  // Determine if undertime
+  const isUndertime = hoursVariance < 0;
 
   return {
     totalHours,
-    hoursVariance,
     hasEntries,
-    isUndertime: isUndertimeValue
+    hoursVariance,
+    isUndertime
   };
 };
+
+export default useTimeEntryStats;

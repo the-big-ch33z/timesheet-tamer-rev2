@@ -1,13 +1,13 @@
 
-import React, { useCallback, useMemo } from 'react';
-import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEntryContext';
-import { useTimeEntryFormHandling } from '../detail/hooks/useTimeEntryFormHandling';
-import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
-import TimeEntryFormManager from '../detail/managers/TimeEntryFormManager';
-import ExistingEntriesList from '../detail/components/ExistingEntriesList';
-import { createTimeLogger } from '@/utils/time/errors';
-
-const logger = createTimeLogger('TimeEntryController');
+import React, { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { TimeEntry } from "@/types";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
+import { useLogger } from "@/hooks/useLogger";
+import { calculateHoursFromTimes } from "@/utils/time/calculations";
+import EntryInterface from "./EntryInterface";
 
 interface TimeEntryControllerProps {
   date: Date;
@@ -22,91 +22,73 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
-  const { dayEntries, deleteEntry } = useTimeEntryContext();
+  const logger = useLogger('TimeEntryController');
+  const [showEntryForm, setShowEntryForm] = useState(false);
   
-  // Get work hours service using the hook
-  const workHoursService = useTimesheetWorkHours(userId);
-  
-  // Stabilize the getWorkHoursForDate function using useCallback
-  const getWorkHoursForDate = useCallback((dateToUse: Date, userIdToUse: string) => {
-    return workHoursService.getWorkHoursForDate(dateToUse, userIdToUse);
-  }, [workHoursService]);
-  
-  // Calculate work hours data with stabilized dependencies
-  const workHoursData = useMemo(() => {
-    logger.debug(`Calculating work hours for date: ${date.toISOString()}, userId: ${userId}`);
-    return getWorkHoursForDate(date, userId);
-  }, [date, userId, getWorkHoursForDate]);
-  
-  // Use useMemo to create stable props instead of useRef
-  const stableWorkHours = useMemo(() => ({
-    startTime: workHoursData.startTime,
-    endTime: workHoursData.endTime,
-    calculatedHours: workHoursData.calculatedHours,
-  }), [
-    workHoursData.startTime,
-    workHoursData.endTime,
-    workHoursData.calculatedHours
-  ]);
-  
-  const { 
-    formHandlers,
-    showEntryForms,
-    addEntryForm,
-    removeEntryForm,
-    handleSaveEntry,
-    saveAllPendingChanges,
-  } = useTimeEntryFormHandling({
-    date,
-    userId,
-    entries: dayEntries,
-    interactive,
-    initialStartTime: stableWorkHours.startTime,
-    initialEndTime: stableWorkHours.endTime
-  });
-  
-  // Stabilize the create entry handler
-  const handleCreateNewEntry = useCallback(() => {
-    if (!interactive) return;
-    logger.debug('Creating new entry');
-    addEntryForm();
-  }, [interactive, addEntryForm]);
-  
-  // Handle delete entry with proper context
-  const handleDeleteEntry = useCallback((entryId: string) => {
-    if (deleteEntry) {
-      logger.debug(`Deleting entry: ${entryId}`);
-      return deleteEntry(entryId);
+  // Use our context to get access to entries and operations
+  const { createEntry, deleteEntry, dayEntries } = useTimeEntryContext();
+
+  // Toggle entry form visibility
+  const handleToggleEntryForm = () => {
+    setShowEntryForm(prev => !prev);
+  };
+
+  // Handle entry creation with proper connection to context
+  const handleCreateEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
+    logger.debug('Creating entry in TimeEntryController', entryData);
+    
+    // Use the context to create the entry
+    const newEntryId = createEntry({
+      ...entryData,
+      date,
+      userId
+    });
+    
+    // If successful and we have a callback, also call it
+    if (newEntryId && onCreateEntry && entryData.startTime && entryData.endTime) {
+      onCreateEntry(
+        entryData.startTime,
+        entryData.endTime,
+        entryData.hours || 0
+      );
     }
-    return false;
-  }, [deleteEntry]);
-  
-  if (!interactive) return null;
-  
+    
+    return newEntryId;
+  }, [createEntry, date, userId, onCreateEntry, logger]);
+
+  // Delete entry with proper connection to context
+  const handleDeleteEntry = useCallback((entryId: string) => {
+    logger.debug('Deleting entry in TimeEntryController', entryId);
+    return deleteEntry(entryId);
+  }, [deleteEntry, logger]);
+
   return (
-    <div className="space-y-6">
-      {/* Display existing entries */}
-      <ExistingEntriesList
-        entries={dayEntries}
-        date={date}
-        interactive={interactive}
-        onDeleteEntry={handleDeleteEntry}
-      />
-      
-      <TimeEntryFormManager 
-        formHandlers={formHandlers}
-        showEntryForms={showEntryForms}
-        addEntryForm={addEntryForm}
-        removeEntryForm={removeEntryForm}
-        handleSaveEntry={handleSaveEntry}
-        saveAllPendingChanges={saveAllPendingChanges}
-        interactive={interactive}
-        startTime={stableWorkHours.startTime}
-        endTime={stableWorkHours.endTime}
-        calculatedHours={stableWorkHours.calculatedHours}
-        onAddEntry={handleCreateNewEntry}
-      />
-    </div>
+    <Card className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">Time Entries</h3>
+        {interactive && (
+          <Button
+            onClick={handleToggleEntryForm}
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            {showEntryForm ? "Hide Form" : "Add Entry"}
+          </Button>
+        )}
+      </div>
+
+      {showEntryForm && (
+        <EntryInterface
+          date={date}
+          userId={userId}
+          onCreateEntry={handleCreateEntry}
+          onDeleteEntry={handleDeleteEntry}
+          interactive={interactive}
+          existingEntries={dayEntries}
+        />
+      )}
+    </Card>
   );
 };
 

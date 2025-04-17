@@ -7,6 +7,7 @@ import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
+import { format } from "date-fns";
 
 interface MonthlyHoursProps {
   user?: User;
@@ -16,10 +17,16 @@ interface MonthlyHoursProps {
 
 const MonthlyHours: React.FC<MonthlyHoursProps> = ({ user, currentMonth, workSchedule }) => {
   const { getUserMetrics } = useUserMetrics();
-  const { entries } = useTimeEntryContext();  // Get entries directly from context
+  const { entries, getMonthEntries } = useTimeEntryContext(); 
   
-  // Call hook at the top level
-  const calculation = useMonthlyHoursCalculation(entries, currentMonth, user, workSchedule);
+  // Get all entries for this month
+  const monthEntries = useMemo(() => {
+    if (!user?.id) return [];
+    return getMonthEntries(currentMonth, user.id);
+  }, [getMonthEntries, user, currentMonth]);
+  
+  // Call hook at the top level with month entries
+  const calculation = useMonthlyHoursCalculation(monthEntries, currentMonth, user, workSchedule);
   
   // Memoize derived values
   const {
@@ -38,7 +45,10 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ user, currentMonth, workSch
   return (
     <Card>
       <CardContent className="pt-6">
-        <h3 className="text-xl font-bold mb-4">Monthly Hours</h3>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-xl font-bold">Monthly Hours</h3>
+          <div className="text-sm text-gray-500">{format(currentMonth, 'MMMM yyyy')}</div>
+        </div>
         
         <div className="text-4xl font-bold mb-1">
           {hours.toFixed(1)} <span className="text-lg text-gray-500">/ {targetHours} hrs</span>
@@ -53,7 +63,10 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({ user, currentMonth, workSch
         />
         
         <div className="text-sm text-gray-500">
-          {hoursRemaining} hours remaining to meet target
+          {hoursRemaining > 0 ? 
+            `${hoursRemaining} hours remaining to meet target` :
+            "Target hours met for this month"
+          }
         </div>
         <div className="text-sm text-gray-500">
           Based on {getWorkdaysInMonth(currentMonth)} work days this month

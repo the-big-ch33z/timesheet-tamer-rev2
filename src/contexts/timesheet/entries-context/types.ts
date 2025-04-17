@@ -4,17 +4,23 @@ import { TimeEntry } from "@/types";
 export interface TimeEntryContextValue {
   entries: TimeEntry[];
   dayEntries: TimeEntry[];
-  addEntry: (entry: Omit<TimeEntry, "id">) => void;
+  addEntry: (entryData: Omit<TimeEntry, "id">) => void;
   updateEntry: (entryId: string, updates: Partial<TimeEntry>) => void;
   deleteEntry: (entryId: string) => boolean;
-  calculateTotalHours: (entriesList?: TimeEntry[]) => number;
+  calculateTotalHours: (entries?: TimeEntry[]) => number;
+  createEntry: (entryData: Omit<TimeEntry, "id">) => string | null;
   isLoading: boolean;
-  createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
-  getDayEntries: (date: Date) => TimeEntry[];
+  getDayEntries: (date: Date, userId?: string) => TimeEntry[];
+  getMonthEntries: (month: Date, userId: string) => TimeEntry[];
 }
 
 export interface TimeEntryProviderProps {
   children: React.ReactNode;
   selectedDate: Date;
-  userId?: string;
+  userId: string;
+}
+
+export interface EntryStorageItem {
+  entries: TimeEntry[];
+  lastUpdated: string;
 }
