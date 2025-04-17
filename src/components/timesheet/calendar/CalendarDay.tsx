@@ -36,6 +36,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   isComplete
 }) => {
   const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+  const hasEntries = entries.length > 0;
   
   return (
     <TooltipProvider>
@@ -51,6 +52,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               status.dayHoliday && "bg-amber-50",
               status.isRDO && "bg-purple-50",
               isComplete && "bg-green-50 border-green-200",
+              hasEntries && !isComplete && "bg-yellow-50 border-yellow-200",
               !status.isWorkDay && "cursor-default"
             )}
           >
@@ -79,10 +81,19 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </Badge>
             )}
 
-            {entries.length > 0 && (
-              <div className="mt-1 text-xs font-medium text-gray-600">
-                {totalHours.toFixed(1)} hrs
-              </div>
+            {/* Status indicators */}
+            {hasEntries && (
+              <>
+                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    isComplete ? "bg-green-500" : "bg-yellow-500"
+                  )}></div>
+                </div>
+                <div className="mt-1 text-xs font-medium text-gray-600">
+                  {totalHours.toFixed(1)} hrs
+                </div>
+              </>
             )}
           </button>
         </TooltipTrigger>
@@ -98,6 +109,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             {entries.length > 0 && (
               <div className="text-xs font-medium mt-1">
                 Total: {totalHours.toFixed(1)} hours
+                {isComplete ? " (Complete)" : " (In Progress)"}
               </div>
             )}
           </div>

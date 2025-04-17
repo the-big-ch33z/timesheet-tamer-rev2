@@ -8,7 +8,7 @@ const TimesheetTabs = () => {
   const { activeTab, setActiveTab } = useTimesheetUIContext();
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8" defaultValue="timesheet">
       <TabsList className="mb-4">
         <TabsTrigger value="timesheet">Calendar View</TabsTrigger>
         <TabsTrigger value="recent">Recent Entries</TabsTrigger>

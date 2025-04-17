@@ -1,3 +1,4 @@
+
 import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import CalendarDay from "./CalendarDay";
@@ -121,7 +122,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       {daysInMonth.map((day) => {
         const dayEntries = getDayEntries(day);
         const status = getDayStatus(day);
-        const isComplete = getDayCompletion(day, dayEntries);
+        const isComplete = dayEntries.length > 0 && getDayCompletion(day, dayEntries);
         
         return (
           <CalendarDay

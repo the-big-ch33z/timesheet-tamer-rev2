@@ -15,7 +15,7 @@ export const useTimesheetUIContext = () => {
 };
 
 export const TimesheetUIProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [activeTab, setActiveTab] = useState('timesheet');
   const [showHelpPanel, setShowHelpPanel] = useState(false);
 
   return (

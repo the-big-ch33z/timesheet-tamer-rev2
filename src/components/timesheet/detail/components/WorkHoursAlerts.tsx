@@ -1,15 +1,18 @@
+
 import React from "react";
 import { AlertTriangle, Calendar, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
 interface WorkHoursAlertsProps {
   hasEntries: boolean;
   isUndertime: boolean;
   hoursVariance: number;
   interactive: boolean;
   showEntryForms?: boolean;
-  date?: Date; // Make date optional
-  isComplete?: boolean; // Add the isComplete prop
+  date?: Date;
+  isComplete?: boolean;
 }
+
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   hasEntries,
   isUndertime,
@@ -17,24 +20,31 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   interactive,
   showEntryForms = false,
   date,
-  isComplete = false // Default to false
+  isComplete = false
 }) => {
-  return <>
-      {hasEntries && isComplete && <Alert className="mt-3 bg-green-50 border-green-200 text-green-800">
+  return (
+    <>
+      {hasEntries && isComplete && (
+        <Alert className="mt-3 bg-green-50 border-green-200 text-green-800">
           <CheckCircle className="h-4 w-4 mr-2" />
           <AlertDescription>
             Your hours are complete for this day
           </AlertDescription>
-        </Alert>}
+        </Alert>
+      )}
     
-      {hasEntries && isUndertime && !isComplete && <Alert variant="destructive" className="mt-3 bg-red-50 border-red-200 text-red-800">
+      {hasEntries && isUndertime && !isComplete && (
+        <Alert variant="destructive" className="mt-3 bg-red-50 border-red-200 text-red-800">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>
             Hours don't match daily entries (under by {Math.abs(hoursVariance).toFixed(1)} hrs)
           </AlertDescription>
-        </Alert>}
+        </Alert>
+      )}
       
       {!hasEntries && !showEntryForms}
-    </>;
+    </>
+  );
 };
+
 export default WorkHoursAlerts;
