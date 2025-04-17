@@ -61,6 +61,33 @@ interface EntryCache {
   isValid: boolean;
 }
 
+// Lock mechanism to prevent simultaneous writes to localStorage
+export const storageWriteLock = {
+  isLocked: false,
+  lockTimeout: null as NodeJS.Timeout | null,
+  acquire: function(): boolean {
+    if (this.isLocked) return false;
+    
+    this.isLocked = true;
+    
+    // Auto-release lock after 2 seconds as a safety measure
+    if (this.lockTimeout) clearTimeout(this.lockTimeout);
+    this.lockTimeout = setTimeout(() => {
+      this.release();
+      console.warn("[UnifiedTimeEntryService] Storage lock auto-released after timeout");
+    }, 2000);
+    
+    return true;
+  },
+  release: function(): void {
+    this.isLocked = false;
+    if (this.lockTimeout) {
+      clearTimeout(this.lockTimeout);
+      this.lockTimeout = null;
+    }
+  }
+};
+
 /**
  * Enhanced, unified time entry service with reactivity and caching
  */
@@ -213,6 +240,13 @@ export class UnifiedTimeEntryService {
     
     const now = Date.now();
     return (now - this.cache.timestamp) < this.config.cacheTTL;
+  }
+
+  /**
+   * Get the list of deleted entry IDs
+   */
+  public getDeletedEntryIds(): string[] {
+    return [...this.deletedEntryIds];
   }
 
   /**
@@ -716,9 +750,14 @@ export class UnifiedTimeEntryService {
   }
 
   /**
-   * Save entries to storage
+   * Save entries to storage with conflict resolution
    */
-  private saveEntriesToStorage(entriesToSave: TimeEntry[]): boolean {
+  public saveEntriesToStorage(entriesToSave: TimeEntry[]): boolean {
+    if (!storageWriteLock.acquire()) {
+      logger.debug('Storage write lock busy');
+      return false;
+    }
+    
     try {
       // Filter out any entries that are in the deleted list
       const filteredEntries = entriesToSave.filter(entry => 
@@ -742,6 +781,46 @@ export class UnifiedTimeEntryService {
         payload: { error, context: 'saveEntriesToStorage' }
       });
       
+      return false;
+    } finally {
+      storageWriteLock.release();
+    }
+  }
+
+  /**
+   * Direct deletion of an entry from storage
+   */
+  public deleteEntryFromStorage(entryId: string): boolean {
+    logger.debug("Direct deletion of entry:", entryId);
+    
+    try {
+      // Add to deleted entries list
+      this.addToDeletedEntries(entryId);
+      
+      // Update the main storage to remove the entry
+      const currentSaved = localStorage.getItem(this.config.storageKey);
+      if (currentSaved) {
+        const entries = JSON.parse(currentSaved);
+        const filteredEntries = entries.filter((entry: TimeEntry) => entry.id !== entryId);
+        localStorage.setItem(this.config.storageKey, JSON.stringify(filteredEntries));
+        logger.debug("Entry removed from storage:", entryId);
+        
+        // Invalidate cache
+        this.invalidateCache();
+        
+        // Dispatch event for cross-tab sync
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
+            detail: { entryId }
+          }));
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      logger.error("Error deleting entry from storage:", error);
       return false;
     }
   }
@@ -784,6 +863,15 @@ export class UnifiedTimeEntryService {
     } catch (error) {
       logger.error('Error adding to deleted entries', error);
     }
+  }
+
+  /**
+   * Clean up old deleted entries (optional, can be called periodically)
+   */
+  public cleanupDeletedEntries(maxAgeDays: number = 30): void {
+    // Implementation for future cleanup of old deleted entry IDs
+    // Can be implemented later if needed
+    logger.debug(`Cleanup requested for entries older than ${maxAgeDays} days`);
   }
 }
 

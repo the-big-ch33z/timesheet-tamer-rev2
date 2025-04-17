@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormItem from "./EntryFormItem";
 
@@ -10,7 +10,8 @@ interface EntryFormsListProps {
   removeEntryForm: (index: number) => void;
 }
 
-const EntryFormsList: React.FC<EntryFormsListProps> = ({
+// Use memo to prevent unnecessary re-renders
+const EntryFormsList: React.FC<EntryFormsListProps> = memo(({
   showEntryForms,
   formHandlers,
   handleSaveEntry,
@@ -46,6 +47,9 @@ const EntryFormsList: React.FC<EntryFormsListProps> = ({
       })}
     </div>
   );
-};
+});
+
+// Add display name for better debugging
+EntryFormsList.displayName = "EntryFormsList";
 
 export default EntryFormsList;

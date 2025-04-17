@@ -4,4 +4,4 @@
  * Exports all time-related services
  */
 
-export * from './timeEntryService';
+export * from './unifiedTimeEntryService';

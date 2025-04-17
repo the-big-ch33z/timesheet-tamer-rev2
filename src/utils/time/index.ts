@@ -22,7 +22,7 @@ export * from './scheduleUtils';
 // Export validation utilities
 export * from './validation';
 
-// Export services
+// Export services - use unified service only
 export * from './services';
 
 // Explicitly re-export key functions to resolve any ambiguity
@@ -36,5 +36,6 @@ export {
   isUndertime 
 } from './calculations/varianceCalculations';
 export { formatTimeForDisplay, formatHours, formatDate } from './formatting/timeFormatting';
-export { timeEntryService } from './services/timeEntryService';
+// Updated to use the unified service instead of the old service
+export { unifiedTimeEntryService } from './services/unifiedTimeEntryService';
 export { createTimeLogger } from './errors/timeLogger';

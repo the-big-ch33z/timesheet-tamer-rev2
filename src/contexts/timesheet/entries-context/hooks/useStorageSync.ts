@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { TimeEntry } from '@/types';
-import { saveEntriesToStorage } from '../timeEntryStorage';
+import { unifiedTimeEntryService } from '@/utils/time/services/unifiedTimeEntryService';
 import { useLogger } from '@/hooks/useLogger';
 
 /**
@@ -20,8 +20,29 @@ export const useStorageSync = (
     if (!isInitialized || isLoading) return;
     
     logger.debug('Syncing entries to storage', { count: entries.length });
-    saveEntriesToStorage(entries, isInitialized);
     
+    // Use the unified service to save entries
+    const saveEntries = async () => {
+      try {
+        // Filter out entries that might be in the deleted entries list
+        const deletedEntryIds = await unifiedTimeEntryService.getDeletedEntryIds();
+        const filteredEntries = entries.filter(entry => !deletedEntryIds.includes(entry.id));
+        
+        if (filteredEntries.length !== entries.length) {
+          logger.debug('Filtered out deleted entries', { 
+            original: entries.length, 
+            filtered: filteredEntries.length 
+          });
+        }
+        
+        // Save the filtered entries
+        unifiedTimeEntryService.saveEntriesToStorage(filteredEntries);
+      } catch (error) {
+        logger.error('Error saving entries to storage', error);
+      }
+    };
+    
+    saveEntries();
   }, [entries, isInitialized, isLoading]);
   
   // Set up listener for global save events
@@ -30,7 +51,9 @@ export const useStorageSync = (
       if (!isInitialized) return;
       
       logger.debug('Received global save event, syncing entries to storage');
-      saveEntriesToStorage(entries, isInitialized);
+      
+      // Use unified service to save entries
+      unifiedTimeEntryService.saveEntriesToStorage(entries);
     };
     
     window.addEventListener('timesheet:save-pending-changes', handleSaveEvent);
