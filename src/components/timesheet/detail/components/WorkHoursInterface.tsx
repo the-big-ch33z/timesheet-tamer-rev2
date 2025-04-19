@@ -33,8 +33,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   const {
     startTime,
     endTime,
-    calculatedHours,
-    totalHours,
+    scheduledHours, // Changed from calculatedHours
+    totalEnteredHours, // Changed from totalHours
     hasEntries,
     hoursVariance,
     isUndertime,
@@ -60,8 +60,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       <WorkHoursDisplay
         startTime={startTime}
         endTime={endTime}
-        totalHours={totalHours}
-        calculatedHours={calculatedHours}
+        totalHours={totalEnteredHours} // Changed from totalHours
+        calculatedHours={scheduledHours} // Changed from calculatedHours
         hasEntries={hasEntries}
         interactive={interactive}
         onTimeChange={handleTimeChange}

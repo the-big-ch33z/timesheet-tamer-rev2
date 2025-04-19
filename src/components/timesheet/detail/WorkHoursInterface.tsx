@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -35,8 +36,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   const {
     startTime,
     endTime,
-    calculatedHours,
-    totalHours,
+    scheduledHours, // Changed from calculatedHours
+    totalEnteredHours, // Changed from totalHours
     hasEntries,
     hoursVariance,
     isUndertime,
@@ -53,7 +54,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   // Use our unified stats hook
   const stats = useTimeEntryStats({
     entries,
-    calculatedHours
+    calculatedHours: scheduledHours // Pass scheduledHours as calculatedHours
   });
 
   // When entries change, ensure we're in sync
@@ -96,8 +97,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         <WorkHoursDisplay
           startTime={startTime}
           endTime={endTime}
-          totalHours={totalHours}
-          calculatedHours={calculatedHours}
+          totalHours={totalEnteredHours} // Changed from totalHours
+          calculatedHours={scheduledHours} // Changed from calculatedHours
           hasEntries={hasEntries}
           interactive={interactive}
           onTimeChange={enhancedHandleTimeChange}
@@ -115,7 +116,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       </div>
       
       <HoursStats 
-        calculatedHours={calculatedHours}
+        calculatedHours={scheduledHours} // Changed from calculatedHours
         totalHours={stats.totalHours}
         hasEntries={stats.hasEntries}
         hoursVariance={stats.hoursVariance}
