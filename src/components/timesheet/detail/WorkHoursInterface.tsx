@@ -1,10 +1,9 @@
-
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
-import { useTimeEntryState } from "./hooks/useTimeEntryState";
+import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useTimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";

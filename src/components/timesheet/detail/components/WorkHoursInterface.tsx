@@ -4,9 +4,10 @@ import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./WorkHoursHeader";
 import WorkHoursDisplay from "./WorkHoursDisplay";
 import WorkHoursAlerts from "./WorkHoursAlerts";
-import { useTimeEntryState } from "../hooks/useTimeEntryState";
+import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
