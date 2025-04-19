@@ -82,12 +82,17 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           {!startTime || !endTime ? (
             <span className="text-sm text-gray-500">Enter start/end times</span>
           ) : (
-            <span className={cn(
-              "text-lg",
-              isComplete ? "text-green-600 font-medium" : !hasEntries && "text-gray-400"
-            )}>
-              {hasEntries ? totalHours.toFixed(1) : calculatedHours.toFixed(1)}
-            </span>
+            <div className="space-y-1">
+              <div className={cn(
+                "text-lg",
+                isComplete ? "text-green-600 font-medium" : !hasEntries && "text-gray-400"
+              )}>
+                {totalHours.toFixed(1)} / {calculatedHours.toFixed(1)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {hasEntries ? "Entered / Scheduled" : "Scheduled Hours"}
+              </div>
+            </div>
           )}
         </div>
       </div>

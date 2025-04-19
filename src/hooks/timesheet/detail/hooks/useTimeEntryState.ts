@@ -1,0 +1,147 @@
+
+import { useState, useEffect, useCallback } from "react";
+import { TimeEntry, WorkSchedule } from "@/types";
+import { calculateHoursFromTimes } from "@/utils/time/calculations";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import { createTimeLogger } from "@/utils/time/errors";
+import { timeEventsService } from "@/utils/time/events/timeEventsService";
+
+const logger = createTimeLogger('useTimeEntryState');
+
+interface UseTimeEntryStateProps {
+  entries: TimeEntry[];
+  date: Date;
+  workSchedule?: WorkSchedule;
+  interactive?: boolean;
+  userId: string;
+}
+
+export const useTimeEntryState = ({
+  entries = [],
+  date,
+  workSchedule,
+  interactive = true,
+  userId
+}: UseTimeEntryStateProps) => {
+  const {
+    getWorkHoursForDate,
+    saveWorkHoursForDate,
+    refreshWorkHours
+  } = useTimesheetWorkHours(userId);
+  
+  // Get initial work hours
+  const { startTime: initialStart, endTime: initialEnd } = getWorkHoursForDate(date, userId);
+  
+  // State for time values and hours
+  const [startTime, setStartTime] = useState(initialStart);
+  const [endTime, setEndTime] = useState(initialEnd);
+  const [scheduledHours, setScheduledHours] = useState(0);
+  
+  // Calculate total entered hours from entries
+  const totalEnteredHours = entries.reduce((total, entry) => total + entry.hours, 0);
+  const hasEntries = entries.length > 0;
+  
+  // Determine completion based on entered vs scheduled hours
+  const isComplete = hasEntries && Math.abs(scheduledHours - totalEnteredHours) < 0.1;
+  const hoursVariance = scheduledHours - totalEnteredHours;
+  const isUndertime = hoursVariance > 0.1;
+  
+  // Subscribe to time entry events
+  useEffect(() => {
+    const handleTimeEvent = () => {
+      logger.debug('[useTimeEntryState] Time event detected, refreshing state');
+      refreshWorkHours();
+      
+      const { startTime: updatedStart, endTime: updatedEnd } = getWorkHoursForDate(date, userId);
+      
+      setStartTime(updatedStart);
+      setEndTime(updatedEnd);
+      
+      if (updatedStart && updatedEnd) {
+        try {
+          const hours = calculateHoursFromTimes(updatedStart, updatedEnd);
+          setScheduledHours(hours);
+        } catch (error) {
+          logger.error('Error calculating hours:', error);
+        }
+      }
+    };
+    
+    const unsubCreate = timeEventsService.subscribe('entry-created', handleTimeEvent);
+    const unsubUpdate = timeEventsService.subscribe('entry-updated', handleTimeEvent);
+    const unsubDelete = timeEventsService.subscribe('entry-deleted', handleTimeEvent);
+    const unsubHours = timeEventsService.subscribe('hours-updated', handleTimeEvent);
+    
+    return () => {
+      unsubCreate();
+      unsubUpdate();
+      unsubDelete();
+      unsubHours();
+    };
+  }, [date, userId, refreshWorkHours, getWorkHoursForDate]);
+  
+  // Update times and scheduled hours when date changes
+  useEffect(() => {
+    if (date && userId) {
+      logger.debug(`Loading work hours for date: ${date.toDateString()}, userId: ${userId}`);
+      
+      const { startTime: loadedStart, endTime: loadedEnd } = getWorkHoursForDate(date, userId);
+      
+      setStartTime(loadedStart);
+      setEndTime(loadedEnd);
+      
+      // Calculate scheduled hours from start and end times
+      if (loadedStart && loadedEnd) {
+        try {
+          const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
+          setScheduledHours(hours);
+        } catch (error) {
+          logger.error('Error calculating hours:', error);
+        }
+      }
+    }
+  }, [date, userId, getWorkHoursForDate]);
+  
+  // Handle time input changes
+  const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
+    if (!interactive) return;
+    
+    logger.debug(`Time change: ${type} = ${value}`);
+    
+    const newStartTime = type === 'start' ? value : startTime;
+    const newEndTime = type === 'end' ? value : endTime;
+    
+    if (type === 'start') setStartTime(value);
+    else setEndTime(value);
+    
+    saveWorkHoursForDate(date, newStartTime, newEndTime, userId);
+    
+    if (newStartTime && newEndTime) {
+      try {
+        const hours = calculateHoursFromTimes(newStartTime, newEndTime);
+        setScheduledHours(hours);
+      } catch (error) {
+        logger.error(`Error calculating hours: ${error}`);
+      }
+    }
+    
+    timeEventsService.publish('hours-updated', {
+      type,
+      value,
+      date: date.toISOString(),
+      userId
+    });
+  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
+  
+  return {
+    startTime,
+    endTime,
+    scheduledHours,
+    totalEnteredHours,
+    hasEntries,
+    hoursVariance,
+    isUndertime,
+    isComplete,
+    handleTimeChange
+  };
+};
