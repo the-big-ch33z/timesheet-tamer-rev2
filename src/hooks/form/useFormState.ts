@@ -17,7 +17,8 @@ export const useFormState = (formId: string, initialState: Record<string, any> =
       }
     }), {}),
     isValid: true,
-    isDirty: false
+    isDirty: false,
+    formEdited: false // Initialize formEdited property
   }));
 
   useEffect(() => {
@@ -36,7 +37,8 @@ export const useFormState = (formId: string, initialState: Record<string, any> =
           touched: true
         }
       },
-      isDirty: true
+      isDirty: true,
+      formEdited: true // Update formEdited when a field changes
     }));
     setFormDirty(formId, true);
   }, [formId, setFormDirty]);
@@ -82,7 +84,8 @@ export const useFormState = (formId: string, initialState: Record<string, any> =
         }
       }), {}),
       isDirty: false,
-      isValid: true
+      isValid: true,
+      formEdited: false // Reset formEdited when form is reset
     }));
     setFormDirty(formId, false);
     setFormValid(formId, true);

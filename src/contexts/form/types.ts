@@ -16,4 +16,5 @@ export interface FormState {
   fields: Record<string, FormField>;
   isValid: boolean;
   isDirty: boolean;
+  formEdited: boolean; // Added this property
 }
