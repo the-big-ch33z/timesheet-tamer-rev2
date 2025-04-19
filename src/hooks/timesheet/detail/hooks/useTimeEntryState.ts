@@ -14,6 +14,7 @@ interface UseTimeEntryStateProps {
   workSchedule?: WorkSchedule;
   interactive?: boolean;
   userId: string;
+  onHoursChange?: (hours: number) => void; // Added this property to fix the type error
 }
 
 interface TimeEntryState {
@@ -32,7 +33,8 @@ export const useTimeEntryState = ({
   date,
   workSchedule,
   interactive = true,
-  userId
+  userId,
+  onHoursChange // Add the parameter here
 }: UseTimeEntryStateProps): TimeEntryState & {
   handleTimeChange: (type: 'start' | 'end', value: string) => void;
 } => {
@@ -104,12 +106,17 @@ export const useTimeEntryState = ({
         try {
           const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
           setScheduledHours(hours);
+          
+          // Call onHoursChange if it exists
+          if (onHoursChange) {
+            onHoursChange(hours);
+          }
         } catch (error) {
           logger.error('Error calculating hours:', error);
         }
       }
     }
-  }, [date, userId, getWorkHoursForDate]);
+  }, [date, userId, getWorkHoursForDate, onHoursChange]);
   
   // Handle time input changes
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
@@ -129,6 +136,11 @@ export const useTimeEntryState = ({
       try {
         const hours = calculateHoursFromTimes(newStartTime, newEndTime);
         setScheduledHours(hours);
+        
+        // Call onHoursChange if it exists
+        if (onHoursChange) {
+          onHoursChange(hours);
+        }
       } catch (error) {
         logger.error('Error calculating hours:', error);
       }
@@ -140,7 +152,7 @@ export const useTimeEntryState = ({
       date: date.toISOString(),
       userId
     });
-  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
+  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate, onHoursChange]);
   
   return {
     startTime,
