@@ -1,8 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import InlineEntryForm from "../../entry-dialog/form/InlineEntryForm";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Clock, Trash2 } from "lucide-react";
 
 interface EntryFormItemProps {
   formState: TimeEntryFormState;
@@ -13,6 +16,10 @@ interface EntryFormItemProps {
   disabled?: boolean;
 }
 
+/**
+ * Entry form item component for managing time entries
+ * Refactored to use a consistent approach for form fields and validation
+ */
 const EntryFormItem: React.FC<EntryFormItemProps> = ({
   formState,
   handleFieldChange,
@@ -29,9 +36,9 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     disabled,
     formEdited: formState.formEdited,
     hours: formState.hours,
+    jobNumber: formState.jobNumber,
     description: formState.description ? 
       `${formState.description.substring(0, 20)}${formState.description.length > 20 ? '...' : ''}` : '',
-    jobNumber: formState.jobNumber,
     rego: formState.rego,
     taskNumber: formState.taskNumber
   });
@@ -41,16 +48,6 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     setLocalFormState(formState);
   }, [formState]);
   
-  // Track when disabled prop changes
-  useEffect(() => {
-    console.debug(`[EntryFormItem] Disabled state changed for entry ${entryId}: ${disabled}`);
-  }, [disabled, entryId]);
-  
-  // Track when form edited state changes
-  useEffect(() => {
-    console.debug(`[EntryFormItem] Form edited state changed for entry ${entryId}: ${formState.formEdited}`);
-  }, [formState.formEdited, entryId]);
-
   // Enhanced field change handler with detailed logging and local state management
   const onFieldChange = (field: string, value: string) => {
     console.debug(`[EntryFormItem] Field change for entry ${entryId}: ${field}=${value}`, {
@@ -81,11 +78,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
       stateField = 'description';
     }
     
-    console.debug(`[EntryFormItem] Mapped field "${field}" to state property "${stateField}"`);
-    
     // Then update parent state
     handleFieldChange(stateField, value);
-    console.debug(`[EntryFormItem] Field change handler executed for ${entryId}`);
   };
   
   // Enhanced save handler with loading state
@@ -111,18 +105,6 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     // Reset saving state after a short delay to show feedback
     setTimeout(() => setIsSaving(false), 500);
   };
-  
-  // Enhanced delete handler
-  const handleDelete = () => {
-    console.debug(`[EntryFormItem] Delete clicked for entry ${entryId}`, { disabled });
-    
-    if (disabled) {
-      console.warn(`[EntryFormItem] Delete prevented - form is disabled: ${entryId}`);
-      return;
-    }
-    
-    onDelete();
-  };
 
   // Check if form has content to determine save button state
   const hasContent = !!(
@@ -136,24 +118,85 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   const canSave = !disabled && formState.formEdited && hasContent;
 
   return (
-    <div className="bg-white rounded-md shadow p-3 border border-gray-200" 
+    <div className="bg-white rounded-md shadow p-4 border border-gray-200" 
          data-entry-id={entryId}
          data-disabled={disabled ? 'true' : 'false'}>
-      <InlineEntryForm 
-        visibleFields={[
-          { id: "job", name: "Job Number", type: "text", required: false, visible: true },
-          { id: "rego", name: "Rego", type: "text", required: false, visible: true },
-          { id: "task", name: "Task Number", type: "text", required: false, visible: true },
-          { id: "notes", name: "Notes", type: "text", required: false, visible: true },
-          { id: "hours", name: "Hours", type: "number", required: true, visible: true }
-        ]}
-        formValues={localFormState}
-        onFieldChange={onFieldChange}
-        onDelete={handleDelete}
-        entryId={entryId}
-        disabled={disabled}
-      />
-      <div className="flex justify-end mt-2">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor={`job-${entryId}`} className="block text-sm font-medium mb-1">Job Number</label>
+            <Input
+              id={`job-${entryId}`}
+              value={localFormState.jobNumber || ''}
+              onChange={(e) => onFieldChange('jobNumber', e.target.value)}
+              disabled={disabled}
+              placeholder="Job Number"
+            />
+          </div>
+          <div>
+            <label htmlFor={`task-${entryId}`} className="block text-sm font-medium mb-1">Task Number</label>
+            <Input
+              id={`task-${entryId}`}
+              value={localFormState.taskNumber || ''}
+              onChange={(e) => onFieldChange('taskNumber', e.target.value)}
+              disabled={disabled}
+              placeholder="Task Number"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor={`rego-${entryId}`} className="block text-sm font-medium mb-1">Rego</label>
+            <Input
+              id={`rego-${entryId}`}
+              value={localFormState.rego || ''}
+              onChange={(e) => onFieldChange('rego', e.target.value)}
+              disabled={disabled}
+              placeholder="Rego"
+            />
+          </div>
+          <div>
+            <label htmlFor={`hours-${entryId}`} className="block text-sm font-medium mb-1">Hours</label>
+            <Input
+              id={`hours-${entryId}`}
+              value={localFormState.hours || ''}
+              onChange={(e) => onFieldChange('hours', e.target.value)}
+              disabled={disabled}
+              placeholder="Hours"
+              type="number"
+              step="0.25"
+              min="0"
+              required
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label htmlFor={`desc-${entryId}`} className="block text-sm font-medium mb-1">Description</label>
+          <Textarea
+            id={`desc-${entryId}`}
+            value={localFormState.description || ''}
+            onChange={(e) => onFieldChange('description', e.target.value)}
+            disabled={disabled}
+            placeholder="Entry description"
+            rows={2}
+          />
+        </div>
+      </div>
+      
+      <div className="flex justify-between mt-3">
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={onDelete}
+          className="text-red-500 hover:text-red-700"
+          disabled={disabled}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Delete
+        </Button>
+        
         <Button 
           size="sm" 
           onClick={onSave}
@@ -161,7 +204,12 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           disabled={disabled || !formState.formEdited || !hasContent || isSaving}
           data-testid={`save-button-${entryId}`}
         >
-          {isSaving ? 'Saving...' : 'Save Entry'}
+          {isSaving ? (
+            <>
+              <Clock className="h-4 w-4 mr-1 animate-spin" />
+              Saving...
+            </>
+          ) : 'Save Changes'}
         </Button>
       </div>
     </div>

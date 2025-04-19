@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { TimeEntry } from '@/types';
-import { Card } from '@/components/ui/card';
 import ExistingEntriesList from '../detail/components/ExistingEntriesList';
 import { useLogger } from '@/hooks/useLogger';
 import TimeEntryForm from '../entry-dialog/form/TimeEntryForm';
@@ -15,6 +14,10 @@ interface EntryInterfaceProps {
   existingEntries: TimeEntry[];
 }
 
+/**
+ * EntryInterface component responsible for managing time entry creation and display
+ * Refactored to use consistent approach across the application
+ */
 const EntryInterface: React.FC<EntryInterfaceProps> = ({
   date,
   userId,
@@ -26,9 +29,13 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   const logger = useLogger('EntryInterface');
   const [processingEntryIds, setProcessingEntryIds] = useState<Set<string>>(new Set());
 
-  // Handle form submission
+  // Handle form submission with standardized logging
   const handleSubmitEntry = (entry: Omit<TimeEntry, "id">) => {
-    logger.debug("[EntryInterface] Submitting entry:", entry);
+    logger.debug("[EntryInterface] Submitting time entry", {
+      date: entry.date,
+      hours: entry.hours,
+      hasDescription: !!entry.description
+    });
     
     try {
       const newEntryId = onCreateEntry(entry);
@@ -43,7 +50,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
     }
   };
 
-  // Enhanced delete entry handler with tracking
+  // Enhanced delete entry handler with tracking and logging
   const handleDeleteEntry = async (entryId: string): Promise<boolean> => {
     // Avoid duplicate delete operations
     if (processingEntryIds.has(entryId)) {
@@ -85,24 +92,35 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
     }
   };
 
+  // Reuse the handleCancelForm function for consistent behavior
+  const handleCancelForm = () => {
+    logger.debug("[EntryInterface] Form cancelled");
+    // No-op since we always show the form, but we could add behavior here if needed
+  };
+
   return (
     <div className="space-y-4">
-      <ExistingEntriesList
-        entries={existingEntries}
-        date={date}
-        interactive={interactive}
-        onDeleteEntry={handleDeleteEntry}
-      />
+      {existingEntries.length > 0 && (
+        <ExistingEntriesList
+          entries={existingEntries}
+          date={date}
+          interactive={interactive}
+          onDeleteEntry={handleDeleteEntry}
+        />
+      )}
 
       {interactive && (
-        <div>
-          <TimeEntryForm 
-            onSubmit={handleSubmitEntry}
-            onCancel={() => {}} // Empty function since we're always showing the form
-            date={date}
-            userId={userId}
-          />
-        </div>
+        <TimeEntryForm 
+          onSubmit={handleSubmitEntry}
+          onCancel={handleCancelForm}
+          date={date}
+          userId={userId}
+          showTimeInputs={true}
+          initialData={{
+            startTime: "09:00",
+            endTime: "17:00"
+          }}
+        />
       )}
     </div>
   );

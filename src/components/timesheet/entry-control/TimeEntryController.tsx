@@ -16,6 +16,10 @@ interface TimeEntryControllerProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
+/**
+ * Controller component for managing time entries
+ * Refactored for consistent entry handling patterns
+ */
 const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   date,
   userId,
@@ -26,16 +30,26 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   const [showEntryForm, setShowEntryForm] = useState(false);
   
   // Use our context to get access to entries and operations
-  const { createEntry, deleteEntry, dayEntries } = useTimeEntryContext();
+  const { createEntry, deleteEntry, getDayEntries } = useTimeEntryContext();
+  
+  // Get entries for the current day
+  const dayEntries = getDayEntries(date);
 
   // Toggle entry form visibility
   const handleToggleEntryForm = () => {
+    logger.debug(`[TimeEntryController] Toggling entry form visibility: ${!showEntryForm}`);
     setShowEntryForm(prev => !prev);
   };
 
-  // Handle entry creation with proper connection to context
+  // Handle entry creation with proper connection to context and standardized logging
   const handleCreateEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
-    logger.debug('Creating entry in TimeEntryController', entryData);
+    logger.debug('[TimeEntryController] Creating entry', {
+      date: entryData.date,
+      userId: entryData.userId,
+      hours: entryData.hours,
+      hasStartTime: !!entryData.startTime,
+      hasEndTime: !!entryData.endTime
+    });
     
     // Use the context to create the entry
     const newEntryId = createEntry({
@@ -56,9 +70,9 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     return newEntryId;
   }, [createEntry, date, userId, onCreateEntry, logger]);
 
-  // Delete entry with proper connection to context
-  const handleDeleteEntry = useCallback((entryId: string): Promise<boolean> => {
-    logger.debug('Deleting entry in TimeEntryController', entryId);
+  // Delete entry with proper connection to context and standardized logging
+  const handleDeleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
+    logger.debug('[TimeEntryController] Deleting entry', { entryId });
     return deleteEntry(entryId);
   }, [deleteEntry, logger]);
 
