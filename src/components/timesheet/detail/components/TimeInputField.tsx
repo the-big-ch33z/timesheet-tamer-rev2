@@ -1,80 +1,46 @@
 
-import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React from "react";
 import { Clock } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface TimeInputFieldProps {
   label: string;
   value: string;
-  onChange: (value: string) => void;
-  interactive?: boolean;
-  testId?: string;
-  placeholder?: string;
+  type: 'start' | 'end';
+  interactive: boolean;
+  onChange: (type: 'start' | 'end', value: string) => void;
 }
 
-const TimeInputField: React.FC<TimeInputFieldProps> = ({
+export const TimeInputField: React.FC<TimeInputFieldProps> = ({
   label,
   value,
-  onChange,
-  interactive = true,
-  testId,
-  placeholder = "--:--"
+  type,
+  interactive,
+  onChange
 }) => {
-  const [localValue, setLocalValue] = useState(value);
-  
-  // Update local value when prop changes
-  useEffect(() => {
-    console.log(`[TimeInputField] Value prop updated for ${label}: '${value}'`);
-    setLocalValue(value);
-  }, [value, label]);
-  
-  // Handle input changes with immediate update
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    console.log(`[TimeInputField] Input changed for ${label}: '${newValue}'`);
-    
-    // Update local state for immediate UI feedback
-    setLocalValue(newValue);
-    
-    // Send update to parent immediately
-    if (interactive && newValue !== value) {
-      console.log(`[TimeInputField] Sending update for ${label}: '${newValue}'`);
-      onChange(newValue);
-    }
-  };
-
-  // Handle blur event to ensure validation
-  const handleBlur = () => {
-    if (interactive && localValue && localValue !== value) {
-      onChange(localValue);
-    }
-  };
-  
-  // Determine if the input is empty to apply placeholder styling
-  const isEmpty = !localValue || localValue === "";
-  
   return (
     <div>
-      <Label htmlFor={label.toLowerCase()}>{label}</Label>
-      <div className="relative">
-        <Input
-          id={label.toLowerCase()}
-          type="time"
-          value={localValue}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          disabled={!interactive}
-          className={`pr-10 ${isEmpty ? 'text-gray-400 placeholder-shown' : ''}`}
-          data-testid={testId}
-          placeholder={placeholder}
-        />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <Clock className="h-4 w-4 text-gray-500" />
-        </div>
+      <div className="text-sm text-amber-700 mb-1">{label}</div>
+      <div className={cn(
+        "border rounded-md p-2 flex items-center",
+        interactive ? "bg-white border-amber-200" : "bg-gray-50 border-gray-200"
+      )}>
+        {interactive ? (
+          <input
+            type="time"
+            value={value}
+            onChange={(e) => onChange(type, e.target.value)}
+            className="text-lg bg-transparent w-full outline-none"
+            placeholder={`Enter ${label.toLowerCase()}`}
+          />
+        ) : (
+          <span className="text-lg">
+            {value ? format(new Date(`2000-01-01T${value}`), "h:mm a") : "--:--"}
+          </span>
+        )}
+        <Clock className="h-4 w-4 ml-2 text-gray-400" />
       </div>
     </div>
   );
 };
-
-export default TimeInputField;
