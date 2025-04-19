@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFormContext } from '@/contexts/form/FormContext';
 import { FormState, FormField } from '@/contexts/form/types';
 import { FieldValidations, validateField } from './validation/fieldValidation';
@@ -10,6 +10,7 @@ export const useFormState = (
   validations: FieldValidations = {}
 ) => {
   const { registerForm, unregisterForm, setFormValid, setFormDirty } = useFormContext();
+  const mounted = useRef(true);
   
   const [formState, setFormState] = useState<FormState>(() => ({
     fields: Object.entries(initialState).reduce((acc, [key, value]) => ({
@@ -27,9 +28,15 @@ export const useFormState = (
     formEdited: false
   }));
 
+  // Cleanup effect
   useEffect(() => {
     registerForm(formId);
-    return () => unregisterForm(formId);
+    
+    return () => {
+      mounted.current = false;
+      unregisterForm(formId);
+      console.debug(`[useFormState] Cleaning up form state for ${formId}`);
+    };
   }, [formId, registerForm, unregisterForm]);
 
   const validateFieldValue = useCallback((fieldName: string, value: any) => {
@@ -38,6 +45,8 @@ export const useFormState = (
   }, [validations]);
 
   const setFieldValue = useCallback((fieldName: string, value: any) => {
+    if (!mounted.current) return;
+
     const error = validateFieldValue(fieldName, value);
     
     setFormState(prev => {
@@ -51,7 +60,6 @@ export const useFormState = (
         }
       };
       
-      // Check if any field has an error
       const hasErrors = Object.values(newFields).some(field => field.error);
       
       return {

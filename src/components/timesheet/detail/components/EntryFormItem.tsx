@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+
+import React, { useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
 import { useFormSubmission } from "@/hooks/form/useFormSubmission";
@@ -17,7 +18,7 @@ interface EntryFormItemProps {
   disabled?: boolean;
 }
 
-const EntryFormItem: React.FC<EntryFormItemProps> = ({
+const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   formState: initialFormState,
   handleFieldChange: parentHandleFieldChange,
   handleSave,
@@ -53,19 +54,31 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     }
   });
 
+  // Memoize the field change handler
+  const handleFieldChangeCallback = useCallback((field: string, value: string) => {
+    setFieldValue(field, value);
+    parentHandleFieldChange(field, value);
+  }, [setFieldValue, parentHandleFieldChange]);
+
+  // Effect cleanup for form state updates
   useEffect(() => {
     if (formState.formEdited) {
       Object.entries(formState.fields).forEach(([field, { value }]) => {
         parentHandleFieldChange(field, value);
       });
     }
-  }, [formState.fields, parentHandleFieldChange]);
 
-  const onSave = () => {
+    return () => {
+      // Cleanup when component unmounts
+      console.debug(`[EntryFormItem] Cleaning up form state for entry ${entryId}`);
+    };
+  }, [formState.fields, parentHandleFieldChange, entryId]);
+
+  const onSaveCallback = useCallback(() => {
     if (!disabled && validateForm()) {
-      handleSave();
+      handleSubmit(formState);
     }
-  };
+  }, [disabled, validateForm, handleSubmit, formState]);
 
   return (
     <div 
@@ -80,7 +93,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <Input
               id={`job-${entryId}`}
               value={formState.fields.jobNumber.value}
-              onChange={(e) => setFieldValue('jobNumber', e.target.value)}
+              onChange={(e) => handleFieldChangeCallback('jobNumber', e.target.value)}
               disabled={disabled}
               placeholder="Job Number"
             />
@@ -90,7 +103,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <Input
               id={`task-${entryId}`}
               value={formState.fields.taskNumber.value}
-              onChange={(e) => setFieldValue('taskNumber', e.target.value)}
+              onChange={(e) => handleFieldChangeCallback('taskNumber', e.target.value)}
               disabled={disabled}
               placeholder="Task Number"
             />
@@ -103,7 +116,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <Input
               id={`rego-${entryId}`}
               value={formState.fields.rego.value}
-              onChange={(e) => setFieldValue('rego', e.target.value)}
+              onChange={(e) => handleFieldChangeCallback('rego', e.target.value)}
               disabled={disabled}
               placeholder="Rego"
             />
@@ -113,7 +126,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <Input
               id={`hours-${entryId}`}
               value={formState.fields.hours.value}
-              onChange={(e) => setFieldValue('hours', e.target.value)}
+              onChange={(e) => handleFieldChangeCallback('hours', e.target.value)}
               disabled={disabled}
               placeholder="Hours"
               type="number"
@@ -132,7 +145,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           <Textarea
             id={`desc-${entryId}`}
             value={formState.fields.description.value}
-            onChange={(e) => setFieldValue('description', e.target.value)}
+            onChange={(e) => handleFieldChangeCallback('description', e.target.value)}
             disabled={disabled}
             placeholder="Entry description"
             rows={2}
@@ -154,7 +167,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
         
         <Button 
           size="sm" 
-          onClick={() => handleSubmit(formState)}
+          onClick={onSaveCallback}
           className={`${formState.isValid ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
           disabled={disabled || !formState.formEdited || !formState.isValid || isSubmitting}
           data-testid={`save-button-${entryId}`}
@@ -174,6 +187,15 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  return (
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.entryId === nextProps.entryId &&
+    JSON.stringify(prevProps.formState) === JSON.stringify(nextProps.formState)
+  );
+});
+
+EntryFormItem.displayName = 'EntryFormItem';
 
 export default EntryFormItem;
