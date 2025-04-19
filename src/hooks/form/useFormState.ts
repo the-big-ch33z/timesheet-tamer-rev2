@@ -1,15 +1,12 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useFormContext } from '@/contexts/form/FormContext';
 import { FormState, FormField } from '@/contexts/form/types';
 import { FieldValidations, validateField } from './validation/fieldValidation';
 
 export const useFormState = (
-  formId: string, 
   initialState: Record<string, any> = {},
   validations: FieldValidations = {}
 ) => {
-  const { registerForm, unregisterForm, setFormValid, setFormDirty } = useFormContext();
   const mounted = useRef(true);
   
   const [formState, setFormState] = useState<FormState>(() => ({
@@ -30,14 +27,11 @@ export const useFormState = (
 
   // Cleanup effect
   useEffect(() => {
-    registerForm(formId);
-    
     return () => {
       mounted.current = false;
-      unregisterForm(formId);
-      console.debug(`[useFormState] Cleaning up form state for ${formId}`);
+      console.debug('[useFormState] Cleaning up form state');
     };
-  }, [formId, registerForm, unregisterForm]);
+  }, []);
 
   const validateFieldValue = useCallback((fieldName: string, value: any) => {
     const validation = validations[fieldName];
@@ -70,10 +64,7 @@ export const useFormState = (
         isValid: !hasErrors
       };
     });
-    
-    setFormDirty(formId, true);
-    setFormValid(formId, !error);
-  }, [formId, setFormDirty, setFormValid, validateFieldValue]);
+  }, [validateFieldValue]);
 
   const validateForm = useCallback(() => {
     const newFields = { ...formState.fields };
@@ -91,10 +82,9 @@ export const useFormState = (
       fields: newFields,
       isValid
     }));
-    setFormValid(formId, isValid);
 
     return isValid;
-  }, [formState.fields, formId, setFormValid, validateFieldValue]);
+  }, [formState.fields, validateFieldValue]);
 
   const resetForm = useCallback(() => {
     setFormState(prev => ({
@@ -112,9 +102,7 @@ export const useFormState = (
       isValid: true,
       formEdited: false
     }));
-    setFormDirty(formId, false);
-    setFormValid(formId, true);
-  }, [formId, initialState, setFormDirty, setFormValid]);
+  }, [initialState]);
 
   return {
     formState,
