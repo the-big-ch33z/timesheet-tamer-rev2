@@ -1,76 +1,41 @@
 
-/**
- * Time logger utility
- * Provides consistent logging functionality for time-related operations
- */
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// Log levels for flexibility
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-// Default minimum log level based on environment
-const DEFAULT_MIN_LEVEL: LogLevel = import.meta.env.PROD ? 'warn' : 'debug';
-
-// Log level priorities (higher number = higher priority)
-const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3
-};
-
-interface TimeLoggerOptions {
-  minLevel?: LogLevel;
-  disabled?: boolean;
-  includeTimestamp?: boolean;
+interface TimeLogger {
+  debug: (message: string, ...args: any[]) => void;
+  info: (message: string, ...args: any[]) => void;
+  warn: (message: string, ...args: any[]) => void;
+  error: (message: string, ...args: any[]) => void;
 }
 
 /**
- * Creates a logger instance with a specific context
- * @param context The context/component name for the logs
- * @param options Optional configuration options
+ * Create a logger instance for time-related operations
  */
-export const createTimeLogger = (context: string, options?: TimeLoggerOptions) => {
-  const config = {
-    minLevel: options?.minLevel || DEFAULT_MIN_LEVEL,
-    disabled: options?.disabled || false,
-    includeTimestamp: options?.includeTimestamp !== false
-  };
-  
-  // Check if this log level should be logged based on priority
-  const shouldLog = (level: LogLevel): boolean => {
-    if (config.disabled) return false;
-    return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[config.minLevel];
-  };
-  
-  // Format a log message with timestamp and context
-  const formatMessage = (level: LogLevel, message: string): string => {
-    const timestamp = config.includeTimestamp ? `${new Date().toISOString()} ` : '';
-    return `${timestamp}${level}: [${context}] ${message}`;
+export const createTimeLogger = (context: string): TimeLogger => {
+  const log = (level: LogLevel, message: string, ...args: any[]) => {
+    const timestamp = new Date().toISOString();
+    const contextMessage = `[${context}] ${message}`;
+    
+    switch (level) {
+      case 'debug':
+        console.debug(timestamp, contextMessage, ...args);
+        break;
+      case 'info':
+        console.info(timestamp, contextMessage, ...args);
+        break;
+      case 'warn':
+        console.warn(timestamp, contextMessage, ...args);
+        break;
+      case 'error':
+        console.error(timestamp, contextMessage, ...args);
+        break;
+    }
   };
   
   return {
-    debug: (message: string, ...args: any[]): void => {
-      if (shouldLog('debug')) {
-        console.debug(formatMessage('debug', message), ...args);
-      }
-    },
-    
-    info: (message: string, ...args: any[]): void => {
-      if (shouldLog('info')) {
-        console.info(formatMessage('info', message), ...args);
-      }
-    },
-    
-    warn: (message: string, ...args: any[]): void => {
-      if (shouldLog('warn')) {
-        console.warn(formatMessage('warn', message), ...args);
-      }
-    },
-    
-    error: (message: string, ...args: any[]): void => {
-      if (shouldLog('error')) {
-        console.error(formatMessage('error', message), ...args);
-      }
-    }
+    debug: (message: string, ...args: any[]) => log('debug', message, ...args),
+    info: (message: string, ...args: any[]) => log('info', message, ...args),
+    warn: (message: string, ...args: any[]) => log('warn', message, ...args),
+    error: (message: string, ...args: any[]) => log('error', message, ...args)
   };
 };

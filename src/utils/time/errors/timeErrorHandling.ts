@@ -1,134 +1,93 @@
 
 /**
- * Error handling utilities for time-related operations
+ * Base class for time-related errors
  */
-import { createTimeLogger } from './timeLogger';
-
-// Standard error class for time-related errors
 export class TimeError extends Error {
-  context: string;
-  timestamp: Date;
-  
-  constructor(message: string, context: string = 'Time Operation') {
+  constructor(message: string) {
     super(message);
     this.name = 'TimeError';
-    this.context = context;
-    this.timestamp = new Date();
   }
 }
 
-// Specialized error for time calculations
+/**
+ * Error for time calculation issues
+ */
 export class TimeCalculationError extends TimeError {
-  constructor(message: string, context: string = 'Time Calculation') {
-    super(message, context);
+  constructor(message: string) {
+    super(message);
     this.name = 'TimeCalculationError';
   }
 }
 
-// Specialized error for time validation
+/**
+ * Error for time validation issues
+ */
 export class TimeValidationError extends TimeError {
-  constructor(message: string, context: string = 'Time Validation') {
-    super(message, context);
+  constructor(message: string) {
+    super(message);
     this.name = 'TimeValidationError';
   }
 }
 
-// Create a specific logger for error handling
-const errorLogger = createTimeLogger('TimeErrorHandler', { minLevel: 'error' });
+/**
+ * Validate a time string meets format requirements
+ */
+export const validateTimeString = (time: string): void => {
+  if (!time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+    throw new TimeValidationError('Invalid time format. Use HH:MM (24-hour)');
+  }
+};
 
 /**
- * Validates a time string has the correct format (HH:MM)
- * @param timeString Time string to validate
- * @param fieldName Name of the field for error reporting
- * @throws TimeValidationError if the format is invalid
+ * Validate a number is within a specified range
  */
-export function validateTimeString(timeString: string, fieldName: string = 'Time'): void {
-  if (!timeString) {
-    throw new TimeValidationError(`${fieldName} is required`);
-  }
-
-  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  if (!timeRegex.test(timeString)) {
-    throw new TimeValidationError(
-      `${fieldName} must be in 24-hour format (HH:MM) with leading zeros`
-    );
-  }
-}
-
-/**
- * Validates a number is within the specified range
- * @param value Number to validate
- * @param fieldName Name of the field for error reporting
- * @param min Minimum allowed value (inclusive)
- * @param max Maximum allowed value (inclusive)
- * @throws TimeValidationError if the value is outside the range
- */
-export function validateNumberInRange(
-  value: number, 
-  fieldName: string, 
-  min: number, 
-  max: number
-): void {
-  if (isNaN(value)) {
-    throw new TimeValidationError(`${fieldName} must be a number`);
-  }
-
+export const validateNumberInRange = (
+  value: number,
+  min: number,
+  max: number,
+  fieldName: string
+): void => {
   if (value < min || value > max) {
     throw new TimeValidationError(
-      `${fieldName} must be between ${min} and ${max}, got ${value}`
+      `${fieldName} must be between ${min} and ${max}`
     );
   }
-}
+};
 
 /**
- * Safely executes a time-related operation with error handling
- * @param operation Function to execute
- * @param fallbackValue Value to return if operation fails
- * @param context Context for error reporting
+ * Wrap a time operation in error handling
  */
-export function safeTimeOperation<T>(
+export const safeTimeOperation = <T>(
   operation: () => T,
-  fallbackValue: T,
-  context: string = 'Time Operation'
-): T {
+  fallback: T
+): T => {
   try {
     return operation();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    errorLogger.error(`Error in ${context}: ${errorMessage}`);
-    return fallbackValue;
+    console.error('Time operation failed:', error);
+    return fallback;
   }
-}
-
-// Renamed version of safeTimeOperation for consistency with imports
-export const safeCalculation = safeTimeOperation;
+};
 
 /**
- * Format a time-related error for display
- * @param error Error object
- * @param userFriendly Whether to return a user-friendly message
+ * Wrap a calculation in error handling
  */
-export function formatTimeError(
-  error: unknown,
-  userFriendly: boolean = true
-): string {
+export const safeCalculation = (
+  calculation: () => number,
+  fallback: number = 0
+): number => {
+  return safeTimeOperation(calculation, fallback);
+};
+
+/**
+ * Format error message for display
+ */
+export const formatTimeError = (error: unknown): string => {
   if (error instanceof TimeError) {
-    return userFriendly
-      ? `Something went wrong with time calculations. Please try again.`
-      : `[${error.context}] ${error.message}`;
+    return error.message;
   }
-  
   if (error instanceof Error) {
-    return userFriendly
-      ? `Something went wrong. Please try again.`
-      : error.message;
+    return error.message;
   }
-  
-  return userFriendly
-    ? `An unknown error occurred. Please try again.`
-    : String(error);
-}
-
-// Re-export createTimeLogger to maintain compatibility with existing imports
-export { createTimeLogger } from './timeLogger';
-
+  return 'An unknown error occurred';
+};

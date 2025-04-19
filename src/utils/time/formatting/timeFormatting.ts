@@ -1,103 +1,78 @@
 
-/**
- * Time formatting utilities
- * Functions for formatting time values for display
- */
-import { format, isValid, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 /**
- * Format hours to display format
- * @param hours Number of hours
- * @returns Formatted string (e.g. "8.0 hrs")
+ * Format hours for display (e.g. "8.5" -> "8.5h")
  */
 export const formatHours = (hours: number): string => {
-  return `${hours.toFixed(1)} hrs`;
+  if (isNaN(hours)) return '0h';
+  return `${Math.round(hours * 10) / 10}h`;
 };
 
 /**
- * Format hours for display with one decimal place
- * @param hours Number of hours
- * @returns Formatted number string with one decimal place
+ * Format display hours with plus/minus (e.g. "+8.5h" or "-2.0h")
  */
 export const formatDisplayHours = (hours: number): string => {
-  return hours.toFixed(1);
+  if (isNaN(hours)) return '0h';
+  const sign = hours >= 0 ? '+' : '';
+  return `${sign}${formatHours(hours)}`;
 };
 
 /**
- * Convert time string to formatted display
- * @param timeString Time in HH:MM format
- * @returns Formatted time (e.g. "9:00 AM")
+ * Format time for display (e.g. "09:00" -> "9:00 AM")
  */
-export const formatTimeForDisplay = (timeString: string): string => {
+export const formatTimeForDisplay = (time: string): string => {
+  if (!time) return '';
+  
   try {
-    if (!timeString || timeString.trim() === '') {
-      return '';
-    }
-    return format(new Date(`2000-01-01T${timeString}`), "h:mm a");
+    const [hours, minutes] = time.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return time;
+    
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   } catch (error) {
-    console.error("Error formatting time:", error);
-    return timeString;
+    console.error('Error formatting time:', error);
+    return time;
   }
 };
 
 /**
- * Standard date formatting for consistency
- * @param date Date to format
- * @param formatStr Optional format string (defaults to yyyy-MM-dd)
- * @returns Formatted date string
+ * Format date using date-fns
  */
-export const formatDate = (date: Date | string | null | undefined, formatStr: string = 'yyyy-MM-dd'): string => {
+export const formatDate = (date: Date | string): string => {
   try {
-    if (!date) return '';
-    
-    // Convert string to Date if needed
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
-    
-    // Validate date
-    if (!isValid(dateObj)) {
-      console.warn('Invalid date passed to formatDate:', date);
-      return '';
-    }
-    
-    return format(dateObj, formatStr);
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, 'yyyy-MM-dd');
   } catch (error) {
-    console.error("Error formatting date:", error, "for value:", date);
-    return typeof date === 'string' ? date : '';
-  }
-};
-
-/**
- * Format date for display in UI (user-friendly format)
- * @param date Date to format
- * @returns Formatted date string in user-friendly format
- */
-export const formatDateForDisplay = (date: Date | string | null | undefined): string => {
-  return formatDate(date, 'MMM d, yyyy'); // e.g., "Jan 1, 2024"
-};
-
-/**
- * Format date and time together
- * @param date Date object
- * @param time Time string in HH:MM format
- * @returns Formatted date and time string
- */
-export const formatDateWithTime = (date: Date, time: string): string => {
-  try {
-    if (!date || !time) return '';
-    
-    const dateStr = formatDate(date);
-    return `${dateStr} ${time}`;
-  } catch (error) {
-    console.error("Error formatting date with time:", error);
+    console.error('Error formatting date:', error);
     return '';
   }
 };
 
 /**
- * Format date for comparison (strips time component)
- * @param date Date to format
- * @returns Date string in yyyy-MM-dd format
+ * Format date for display
  */
-export const formatDateForComparison = (date: Date | string | null | undefined): string => {
-  return formatDate(date, 'yyyy-MM-dd');
+export const formatDateForDisplay = (date: Date | string): string => {
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, 'MMMM d, yyyy');
+  } catch (error) {
+    console.error('Error formatting date for display:', error);
+    return '';
+  }
+};
+
+/**
+ * Format date with time
+ */
+export const formatDateWithTime = (date: Date | string, time?: string): string => {
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const baseFormat = format(dateObj, 'MMMM d, yyyy');
+    return time ? `${baseFormat} at ${formatTimeForDisplay(time)}` : baseFormat;
+  } catch (error) {
+    console.error('Error formatting date with time:', error);
+    return '';
+  }
 };
