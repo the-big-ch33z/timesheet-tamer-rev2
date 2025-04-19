@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
@@ -25,13 +24,25 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
   entryId,
   disabled = false
 }) => {
+  const validations = {
+    hours: {
+      required: true,
+      rules: [
+        {
+          validate: (value: string) => parseFloat(value) > 0,
+          message: "Hours must be greater than 0"
+        }
+      ]
+    }
+  };
+
   const { formState, setFieldValue, validateForm } = useFormState(`entry-${entryId}`, {
     hours: initialFormState.hours || '',
     description: initialFormState.description || '',
     jobNumber: initialFormState.jobNumber || '',
     rego: initialFormState.rego || '',
     taskNumber: initialFormState.taskNumber || ''
-  });
+  }, validations);
 
   useEffect(() => {
     if (formState.formEdited) {

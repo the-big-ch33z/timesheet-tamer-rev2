@@ -2,8 +2,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useFormContext } from '@/contexts/form/FormContext';
 import { FormState, FormField } from '@/contexts/form/types';
+import { FieldValidations, validateField } from './validation/fieldValidation';
 
-export const useFormState = (formId: string, initialState: Record<string, any> = {}) => {
+export const useFormState = (
+  formId: string, 
+  initialState: Record<string, any> = {},
+  validations: FieldValidations = {}
+) => {
   const { registerForm, unregisterForm, setFormValid, setFormDirty } = useFormContext();
   
   const [formState, setFormState] = useState<FormState>(() => ({
@@ -13,12 +18,13 @@ export const useFormState = (formId: string, initialState: Record<string, any> =
         name: key,
         value,
         touched: false,
-        required: false
+        required: validations[key]?.required || false,
+        error: undefined
       }
     }), {}),
     isValid: true,
     isDirty: false,
-    formEdited: false // Initialize formEdited property
+    formEdited: false
   }));
 
   useEffect(() => {
@@ -26,50 +32,61 @@ export const useFormState = (formId: string, initialState: Record<string, any> =
     return () => unregisterForm(formId);
   }, [formId, registerForm, unregisterForm]);
 
+  const validateFieldValue = useCallback((fieldName: string, value: any) => {
+    const validation = validations[fieldName];
+    return validateField(value, validation);
+  }, [validations]);
+
   const setFieldValue = useCallback((fieldName: string, value: any) => {
-    setFormState(prev => ({
-      ...prev,
-      fields: {
+    const error = validateFieldValue(fieldName, value);
+    
+    setFormState(prev => {
+      const newFields = {
         ...prev.fields,
         [fieldName]: {
           ...prev.fields[fieldName],
           value,
-          touched: true
+          touched: true,
+          error
         }
-      },
-      isDirty: true,
-      formEdited: true // Update formEdited when a field changes
-    }));
+      };
+      
+      // Check if any field has an error
+      const hasErrors = Object.values(newFields).some(field => field.error);
+      
+      return {
+        ...prev,
+        fields: newFields,
+        isDirty: true,
+        formEdited: true,
+        isValid: !hasErrors
+      };
+    });
+    
     setFormDirty(formId, true);
-  }, [formId, setFormDirty]);
-
-  const validateField = useCallback((field: FormField): string | undefined => {
-    if (field.required && !field.value) {
-      return `${field.name} is required`;
-    }
-    return undefined;
-  }, []);
+    setFormValid(formId, !error);
+  }, [formId, setFormDirty, setFormValid, validateFieldValue]);
 
   const validateForm = useCallback(() => {
-    const fields = { ...formState.fields };
+    const newFields = { ...formState.fields };
     let isValid = true;
 
-    Object.keys(fields).forEach(key => {
-      const field = fields[key];
-      const error = validateField(field);
-      fields[key] = { ...field, error };
+    Object.keys(newFields).forEach(key => {
+      const field = newFields[key];
+      const error = validateFieldValue(key, field.value);
+      newFields[key] = { ...field, error };
       if (error) isValid = false;
     });
 
     setFormState(prev => ({
       ...prev,
-      fields,
+      fields: newFields,
       isValid
     }));
     setFormValid(formId, isValid);
 
     return isValid;
-  }, [formState.fields, formId, setFormValid, validateField]);
+  }, [formState.fields, formId, setFormValid, validateFieldValue]);
 
   const resetForm = useCallback(() => {
     setFormState(prev => ({
@@ -85,7 +102,7 @@ export const useFormState = (formId: string, initialState: Record<string, any> =
       }), {}),
       isDirty: false,
       isValid: true,
-      formEdited: false // Reset formEdited when form is reset
+      formEdited: false
     }));
     setFormDirty(formId, false);
     setFormValid(formId, true);
