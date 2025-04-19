@@ -1,6 +1,7 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormState } from "@/hooks/form/useFormState";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,119 +17,50 @@ interface EntryFormItemProps {
   disabled?: boolean;
 }
 
-/**
- * Entry form item component for managing time entries
- * Refactored to use a consistent approach for form fields and validation
- */
 const EntryFormItem: React.FC<EntryFormItemProps> = ({
-  formState,
-  handleFieldChange,
+  formState: initialFormState,
+  handleFieldChange: parentHandleFieldChange,
   handleSave,
   onDelete,
   entryId,
   disabled = false
 }) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [localFormState, setLocalFormState] = useState(formState);
-  
-  // Enhanced logging for component rendering
-  console.debug(`[EntryFormItem] Rendering form item for entryId=${entryId}`, {
-    disabled,
-    formEdited: formState.formEdited,
-    hours: formState.hours,
-    jobNumber: formState.jobNumber,
-    description: formState.description ? 
-      `${formState.description.substring(0, 20)}${formState.description.length > 20 ? '...' : ''}` : '',
-    rego: formState.rego,
-    taskNumber: formState.taskNumber
+  const { formState, setFieldValue, validateForm } = useFormState(`entry-${entryId}`, {
+    hours: initialFormState.hours || '',
+    description: initialFormState.description || '',
+    jobNumber: initialFormState.jobNumber || '',
+    rego: initialFormState.rego || '',
+    taskNumber: initialFormState.taskNumber || ''
   });
-  
-  // Update local state when formState changes
-  useEffect(() => {
-    setLocalFormState(formState);
-  }, [formState]);
-  
-  // Enhanced field change handler with detailed logging and local state management
-  const onFieldChange = (field: string, value: string) => {
-    console.debug(`[EntryFormItem] Field change for entry ${entryId}: ${field}=${value}`, {
-      disabled,
-      currentValue: (localFormState as any)[field]
-    });
-    
-    if (disabled) {
-      console.warn(`[EntryFormItem] Ignoring field change because form is disabled: ${entryId}`);
-      return;
-    }
-    
-    // Update local state first for immediate UI feedback
-    setLocalFormState(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Map field names to match expected state properties
-    let stateField = field;
-    
-    // Normalize field names to match state property names
-    if (field.toLowerCase() === 'job number' || field.toLowerCase() === 'job') {
-      stateField = 'jobNumber';
-    } else if (field.toLowerCase() === 'task number' || field.toLowerCase() === 'task') {
-      stateField = 'taskNumber';
-    } else if (field.toLowerCase() === 'notes') {
-      stateField = 'description';
-    }
-    
-    // Then update parent state
-    handleFieldChange(stateField, value);
-  };
-  
-  // Enhanced save handler with loading state
-  const onSave = () => {
-    console.debug(`[EntryFormItem] Save clicked for entry ${entryId}`, {
-      disabled, 
-      canSave: !disabled && formState.formEdited
-    });
-    
-    if (disabled) {
-      console.warn(`[EntryFormItem] Save prevented - form is disabled: ${entryId}`);
-      return;
-    }
-    
-    if (!formState.formEdited) {
-      console.warn(`[EntryFormItem] Save skipped - no changes: ${entryId}`);
-      return;
-    }
-    
-    setIsSaving(true);
-    handleSave();
-    
-    // Reset saving state after a short delay to show feedback
-    setTimeout(() => setIsSaving(false), 500);
-  };
 
-  // Check if form has content to determine save button state
-  const hasContent = !!(
-    localFormState.hours || 
-    localFormState.description || 
-    localFormState.jobNumber || 
-    localFormState.rego || 
-    localFormState.taskNumber
-  );
-  
-  const canSave = !disabled && formState.formEdited && hasContent;
+  useEffect(() => {
+    if (formState.formEdited) {
+      Object.entries(formState.fields).forEach(([field, { value }]) => {
+        parentHandleFieldChange(field, value);
+      });
+    }
+  }, [formState.fields, parentHandleFieldChange]);
+
+  const onSave = () => {
+    if (!disabled && validateForm()) {
+      handleSave();
+    }
+  };
 
   return (
-    <div className="bg-white rounded-md shadow p-4 border border-gray-200" 
-         data-entry-id={entryId}
-         data-disabled={disabled ? 'true' : 'false'}>
+    <div 
+      className="bg-white rounded-md shadow p-4 border border-gray-200" 
+      data-entry-id={entryId}
+      data-disabled={disabled ? 'true' : 'false'}
+    >
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor={`job-${entryId}`} className="block text-sm font-medium mb-1">Job Number</label>
             <Input
               id={`job-${entryId}`}
-              value={localFormState.jobNumber || ''}
-              onChange={(e) => onFieldChange('jobNumber', e.target.value)}
+              value={formState.fields.jobNumber.value}
+              onChange={(e) => setFieldValue('jobNumber', e.target.value)}
               disabled={disabled}
               placeholder="Job Number"
             />
@@ -137,8 +69,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <label htmlFor={`task-${entryId}`} className="block text-sm font-medium mb-1">Task Number</label>
             <Input
               id={`task-${entryId}`}
-              value={localFormState.taskNumber || ''}
-              onChange={(e) => onFieldChange('taskNumber', e.target.value)}
+              value={formState.fields.taskNumber.value}
+              onChange={(e) => setFieldValue('taskNumber', e.target.value)}
               disabled={disabled}
               placeholder="Task Number"
             />
@@ -150,8 +82,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <label htmlFor={`rego-${entryId}`} className="block text-sm font-medium mb-1">Rego</label>
             <Input
               id={`rego-${entryId}`}
-              value={localFormState.rego || ''}
-              onChange={(e) => onFieldChange('rego', e.target.value)}
+              value={formState.fields.rego.value}
+              onChange={(e) => setFieldValue('rego', e.target.value)}
               disabled={disabled}
               placeholder="Rego"
             />
@@ -160,8 +92,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
             <label htmlFor={`hours-${entryId}`} className="block text-sm font-medium mb-1">Hours</label>
             <Input
               id={`hours-${entryId}`}
-              value={localFormState.hours || ''}
-              onChange={(e) => onFieldChange('hours', e.target.value)}
+              value={formState.fields.hours.value}
+              onChange={(e) => setFieldValue('hours', e.target.value)}
               disabled={disabled}
               placeholder="Hours"
               type="number"
@@ -169,6 +101,9 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
               min="0"
               required
             />
+            {formState.fields.hours.error && (
+              <p className="text-red-500 text-xs mt-1">{formState.fields.hours.error}</p>
+            )}
           </div>
         </div>
         
@@ -176,8 +111,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           <label htmlFor={`desc-${entryId}`} className="block text-sm font-medium mb-1">Description</label>
           <Textarea
             id={`desc-${entryId}`}
-            value={localFormState.description || ''}
-            onChange={(e) => onFieldChange('description', e.target.value)}
+            value={formState.fields.description.value}
+            onChange={(e) => setFieldValue('description', e.target.value)}
             disabled={disabled}
             placeholder="Entry description"
             rows={2}
@@ -200,14 +135,14 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
         <Button 
           size="sm" 
           onClick={onSave}
-          className={`${canSave ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
-          disabled={disabled || !formState.formEdited || !hasContent || isSaving}
+          className={`${formState.isValid ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
+          disabled={disabled || !formState.formEdited || !formState.isValid}
           data-testid={`save-button-${entryId}`}
         >
-          {isSaving ? (
+          {formState.formEdited ? (
             <>
-              <Clock className="h-4 w-4 mr-1 animate-spin" />
-              Saving...
+              <Clock className="h-4 w-4 mr-1" />
+              Save Changes
             </>
           ) : 'Save Changes'}
         </Button>
