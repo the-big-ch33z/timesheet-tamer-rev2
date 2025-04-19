@@ -3,6 +3,12 @@ import React from "react";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider
+} from "@/components/ui/tooltip";
 
 interface WorkHoursDisplayProps {
   startTime: string;
@@ -32,71 +38,88 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4 mb-3">
-      <div>
-        <div className="text-sm text-amber-700 mb-1">Start Time</div>
-        <div className={`${interactive ? 'bg-white' : 'bg-white'} border border-amber-200 rounded-md p-2 flex items-center`}>
-          {interactive ? (
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => handleTimeChange('start', e.target.value)}
-              className="text-lg bg-transparent w-full outline-none"
-              placeholder="Enter start time"
-            />
-          ) : (
-            <span className="text-lg">
-              {startTime ? format(new Date(`2000-01-01T${startTime}`), "h:mm a") : "--:--"}
-            </span>
-          )}
-          <Clock className="h-4 w-4 ml-2 text-gray-400" />
+    <TooltipProvider>
+      <div className="grid grid-cols-3 gap-4 mb-3">
+        <div>
+          <div className="text-sm text-amber-700 mb-1">Start Time</div>
+          <div className={cn(
+            "border rounded-md p-2 flex items-center",
+            interactive ? "bg-white border-amber-200" : "bg-gray-50 border-gray-200"
+          )}>
+            {interactive ? (
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => handleTimeChange('start', e.target.value)}
+                className="text-lg bg-transparent w-full outline-none"
+                placeholder="Enter start time"
+              />
+            ) : (
+              <span className="text-lg">
+                {startTime ? format(new Date(`2000-01-01T${startTime}`), "h:mm a") : "--:--"}
+              </span>
+            )}
+            <Clock className="h-4 w-4 ml-2 text-gray-400" />
+          </div>
+        </div>
+        
+        <div>
+          <div className="text-sm text-amber-700 mb-1">End Time</div>
+          <div className={cn(
+            "border rounded-md p-2 flex items-center",
+            interactive ? "bg-white border-amber-200" : "bg-gray-50 border-gray-200"
+          )}>
+            {interactive ? (
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => handleTimeChange('end', e.target.value)}
+                className="text-lg bg-transparent w-full outline-none"
+                placeholder="Enter end time"
+              />
+            ) : (
+              <span className="text-lg">
+                {endTime ? format(new Date(`2000-01-01T${endTime}`), "h:mm a") : "--:--"}
+              </span>
+            )}
+            <Clock className="h-4 w-4 ml-2 text-gray-400" />
+          </div>
+        </div>
+        
+        <div>
+          <div className="text-sm text-amber-700 mb-1">Hours Summary</div>
+          <div className={cn(
+            "bg-white border rounded-md p-2",
+            isComplete ? "border-green-500" : hasEntries ? "border-amber-200" : "border-gray-200"
+          )}>
+            {!startTime || !endTime ? (
+              <span className="text-sm text-gray-500">Enter start/end times</span>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="space-y-1">
+                    <div className={cn(
+                      "text-lg",
+                      isComplete ? "text-green-600 font-medium" : !hasEntries && "text-gray-400"
+                    )}>
+                      {totalHours.toFixed(1)} / {calculatedHours.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {hasEntries ? "Entered / Scheduled" : "Scheduled Hours"}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {totalHours.toFixed(1)} hours entered out of {calculatedHours.toFixed(1)} scheduled hours
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </div>
-      
-      <div>
-        <div className="text-sm text-amber-700 mb-1">End Time</div>
-        <div className={`${interactive ? 'bg-white' : 'bg-white'} border border-amber-200 rounded-md p-2 flex items-center`}>
-          {interactive ? (
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => handleTimeChange('end', e.target.value)}
-              className="text-lg bg-transparent w-full outline-none"
-              placeholder="Enter end time"
-            />
-          ) : (
-            <span className="text-lg">
-              {endTime ? format(new Date(`2000-01-01T${endTime}`), "h:mm a") : "--:--"}
-            </span>
-          )}
-          <Clock className="h-4 w-4 ml-2 text-gray-400" />
-        </div>
-      </div>
-      
-      <div>
-        <div className="text-sm text-amber-700 mb-1">Total Hours</div>
-        <div className={cn(
-          "bg-white border rounded-md p-2",
-          isComplete ? "border-green-500" : hasEntries ? "border-amber-200" : "border-gray-200"
-        )}>
-          {!startTime || !endTime ? (
-            <span className="text-sm text-gray-500">Enter start/end times</span>
-          ) : (
-            <div className="space-y-1">
-              <div className={cn(
-                "text-lg",
-                isComplete ? "text-green-600 font-medium" : !hasEntries && "text-gray-400"
-              )}>
-                {totalHours.toFixed(1)} / {calculatedHours.toFixed(1)}
-              </div>
-              <div className="text-xs text-gray-500">
-                {hasEntries ? "Entered / Scheduled" : "Scheduled Hours"}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 };
 

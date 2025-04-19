@@ -16,13 +16,26 @@ interface UseTimeEntryStateProps {
   userId: string;
 }
 
+interface TimeEntryState {
+  startTime: string;
+  endTime: string;
+  scheduledHours: number;
+  totalEnteredHours: number;
+  hasEntries: boolean;
+  hoursVariance: number;
+  isUndertime: boolean;
+  isComplete: boolean;
+}
+
 export const useTimeEntryState = ({
   entries = [],
   date,
   workSchedule,
   interactive = true,
   userId
-}: UseTimeEntryStateProps) => {
+}: UseTimeEntryStateProps): TimeEntryState & {
+  handleTimeChange: (type: 'start' | 'end', value: string) => void;
+} => {
   const {
     getWorkHoursForDate,
     saveWorkHoursForDate,
@@ -41,10 +54,10 @@ export const useTimeEntryState = ({
   const totalEnteredHours = entries.reduce((total, entry) => total + entry.hours, 0);
   const hasEntries = entries.length > 0;
   
-  // Determine completion based on entered vs scheduled hours
-  const isComplete = hasEntries && Math.abs(scheduledHours - totalEnteredHours) < 0.1;
+  // Calculate hours variance and completion status
   const hoursVariance = scheduledHours - totalEnteredHours;
   const isUndertime = hoursVariance > 0.1;
+  const isComplete = hasEntries && Math.abs(hoursVariance) < 0.1;
   
   // Subscribe to time entry events
   useEffect(() => {
@@ -67,17 +80,14 @@ export const useTimeEntryState = ({
       }
     };
     
-    const unsubCreate = timeEventsService.subscribe('entry-created', handleTimeEvent);
-    const unsubUpdate = timeEventsService.subscribe('entry-updated', handleTimeEvent);
-    const unsubDelete = timeEventsService.subscribe('entry-deleted', handleTimeEvent);
-    const unsubHours = timeEventsService.subscribe('hours-updated', handleTimeEvent);
+    const unsubscribe = [
+      timeEventsService.subscribe('entry-created', handleTimeEvent),
+      timeEventsService.subscribe('entry-updated', handleTimeEvent),
+      timeEventsService.subscribe('entry-deleted', handleTimeEvent),
+      timeEventsService.subscribe('hours-updated', handleTimeEvent)
+    ];
     
-    return () => {
-      unsubCreate();
-      unsubUpdate();
-      unsubDelete();
-      unsubHours();
-    };
+    return () => unsubscribe.forEach(unsub => unsub());
   }, [date, userId, refreshWorkHours, getWorkHoursForDate]);
   
   // Update times and scheduled hours when date changes
@@ -90,7 +100,6 @@ export const useTimeEntryState = ({
       setStartTime(loadedStart);
       setEndTime(loadedEnd);
       
-      // Calculate scheduled hours from start and end times
       if (loadedStart && loadedEnd) {
         try {
           const hours = calculateHoursFromTimes(loadedStart, loadedEnd);
@@ -121,7 +130,7 @@ export const useTimeEntryState = ({
         const hours = calculateHoursFromTimes(newStartTime, newEndTime);
         setScheduledHours(hours);
       } catch (error) {
-        logger.error(`Error calculating hours: ${error}`);
+        logger.error('Error calculating hours:', error);
       }
     }
     
