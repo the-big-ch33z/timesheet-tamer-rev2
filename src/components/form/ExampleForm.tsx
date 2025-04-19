@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 
 const ExampleForm = () => {
   const { formState, setFieldValue, validateForm, resetForm } = useFormState(
+    'example-form',
     {
       name: '',
       email: ''

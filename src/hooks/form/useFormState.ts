@@ -4,6 +4,7 @@ import { FormState, FormField } from '@/contexts/form/types';
 import { FieldValidations, validateField } from './validation/fieldValidation';
 
 export const useFormState = (
+  formKey?: string,
   initialState: Record<string, any> = {},
   validations: FieldValidations = {}
 ) => {
