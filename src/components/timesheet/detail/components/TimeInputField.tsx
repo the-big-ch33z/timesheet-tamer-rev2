@@ -7,18 +7,34 @@ import { cn } from "@/lib/utils";
 interface TimeInputFieldProps {
   label: string;
   value: string;
-  type: 'start' | 'end';
+  type?: 'start' | 'end';
   interactive: boolean;
-  onChange: (type: 'start' | 'end', value: string) => void;
+  onChange: (type: 'start' | 'end', value: string) => void | ((value: string) => void);
+  testId?: string; // Added testId prop
+  placeholder?: string; // Added placeholder prop
 }
 
 export const TimeInputField: React.FC<TimeInputFieldProps> = ({
   label,
   value,
-  type,
+  type = 'start', // Provide default value
   interactive,
-  onChange
+  onChange,
+  testId,
+  placeholder
 }) => {
+  // Handle change based on whether we receive a direct onChange or a type+value onChange
+  const handleChange = (newValue: string) => {
+    if (typeof onChange === 'function') {
+      // Check if onChange expects type parameter
+      if (onChange.length === 2) {
+        (onChange as (type: 'start' | 'end', value: string) => void)(type, newValue);
+      } else {
+        (onChange as (value: string) => void)(newValue);
+      }
+    }
+  };
+
   return (
     <div>
       <div className="text-sm text-amber-700 mb-1">{label}</div>
@@ -30,9 +46,10 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = ({
           <input
             type="time"
             value={value}
-            onChange={(e) => onChange(type, e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             className="text-lg bg-transparent w-full outline-none"
-            placeholder={`Enter ${label.toLowerCase()}`}
+            placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+            data-testid={testId}
           />
         ) : (
           <span className="text-lg">
