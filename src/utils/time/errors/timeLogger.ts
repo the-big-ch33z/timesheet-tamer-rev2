@@ -1,5 +1,5 @@
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface TimeLogger {
   debug: (message: string, ...args: any[]) => void;

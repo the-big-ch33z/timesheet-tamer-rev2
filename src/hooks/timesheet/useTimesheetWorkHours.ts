@@ -68,7 +68,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       isCustom: false, 
       hasData: false,
       calculatedHours: 0
-    }, `Get work hours for ${format(date, 'yyyy-MM-dd')}`);
+    });
   }, [context, userId]);
   
   // Save work hours with enhanced validation and error handling
@@ -113,7 +113,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       context.saveWorkHours(date, targetUserId, startTime, endTime);
       logger.debug(`Saved work hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}`);
       return true;
-    }, false, `Save work hours for ${format(date, 'yyyy-MM-dd')}`);
+    }, false);
   }, [context, userId]);
   
   // Check if there are custom hours for a date
@@ -127,7 +127,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       const hasCustom = context.hasCustomWorkHours(date, targetUserId);
       logger.debug(`Checked custom hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}, result: ${hasCustom}`);
       return hasCustom;
-    }, false, `Check custom hours for ${format(date, 'yyyy-MM-dd')}`);
+    }, false);
   }, [context, userId]);
   
   // Reset work hours for a date to defaults
@@ -147,7 +147,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       
       context.resetDayWorkHours(date, targetUserId);
       logger.debug(`Reset work hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}`);
-    }, undefined, `Reset work hours for ${format(date, 'yyyy-MM-dd')}`);
+    }, undefined);
   }, [context, userId]);
   
   // Clear all work hours for a user
@@ -169,7 +169,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       
       context.clearWorkHours(targetUserId);
       logger.debug(`Cleared all work hours for user ${targetUserId}`);
-    }, undefined, 'Clear all work hours');
+    }, undefined);
   }, [context, userId]);
   
   // Calculate hours for a day based on stored work hours
@@ -187,7 +187,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       }
       
       return 0;
-    }, 0, `Calculate day hours for ${format(date, 'yyyy-MM-dd')}`);
+    }, 0);
   }, [getWorkHoursForDate, userId]);
   
   // Force refresh of all cached work hours data

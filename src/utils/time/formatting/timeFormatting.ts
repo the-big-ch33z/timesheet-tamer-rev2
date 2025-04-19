@@ -76,3 +76,16 @@ export const formatDateWithTime = (date: Date | string, time?: string): string =
     return '';
   }
 };
+
+/**
+ * Format date for comparison
+ */
+export const formatDateForComparison = (date: Date | string): string => {
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, 'yyyy-MM-dd');
+  } catch (error) {
+    console.error('Error formatting date for comparison:', error);
+    return '';
+  }
+};

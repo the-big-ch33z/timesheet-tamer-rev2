@@ -1,7 +1,8 @@
 
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import { TimeCalculationError, createTimeLogger } from '../errors/timeErrorHandling';
+import { TimeCalculationError } from '../errors/timeErrorHandling';
+import { createTimeLogger } from '../errors/timeLogger';
 import { ensureDate, isValidDate } from '../validation/dateValidation';
 import { calculateHoursFromTimes } from '../calculations/hoursCalculations';
 
