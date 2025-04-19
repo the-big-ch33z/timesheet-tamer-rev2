@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect } from "react";
-import TimeInputField from "./TimeInputField";
+import { TimeInputField } from "./TimeInputField"; // Changed to named import
 import { formatDisplayHours } from "@/utils/time/formatting/timeFormatting";
 
 interface TimeDisplayProps {
