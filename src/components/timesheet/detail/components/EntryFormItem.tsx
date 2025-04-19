@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
+import { useFormSubmission } from "@/hooks/form/useFormSubmission";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Trash2 } from "lucide-react";
+import { Clock, Loader2, Trash2 } from "lucide-react";
 
 interface EntryFormItemProps {
   formState: TimeEntryFormState;
@@ -43,6 +44,14 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
     rego: initialFormState.rego || '',
     taskNumber: initialFormState.taskNumber || ''
   }, validations);
+
+  const { isSubmitting, handleSubmit } = useFormSubmission({
+    onSubmit: async () => {
+      if (validateForm()) {
+        handleSave();
+      }
+    }
+  });
 
   useEffect(() => {
     if (formState.formEdited) {
@@ -137,7 +146,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
           variant="ghost"
           onClick={onDelete}
           className="text-red-500 hover:text-red-700"
-          disabled={disabled}
+          disabled={disabled || isSubmitting}
         >
           <Trash2 className="h-4 w-4 mr-1" />
           Delete
@@ -145,12 +154,17 @@ const EntryFormItem: React.FC<EntryFormItemProps> = ({
         
         <Button 
           size="sm" 
-          onClick={onSave}
+          onClick={() => handleSubmit(formState)}
           className={`${formState.isValid ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
-          disabled={disabled || !formState.formEdited || !formState.isValid}
+          disabled={disabled || !formState.formEdited || !formState.isValid || isSubmitting}
           data-testid={`save-button-${entryId}`}
         >
-          {formState.formEdited ? (
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              Saving...
+            </>
+          ) : formState.formEdited ? (
             <>
               <Clock className="h-4 w-4 mr-1" />
               Save Changes
