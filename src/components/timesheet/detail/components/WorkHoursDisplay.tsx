@@ -25,7 +25,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   onTimeChange,
   isComplete
 }) => {
-  // Handle time changes directly without local state
+  // Handle time changes without local state
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
     console.log(`WorkHoursDisplay: Time changed: ${type} = ${value}`);
     onTimeChange(type, value);

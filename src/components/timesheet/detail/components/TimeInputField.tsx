@@ -10,14 +10,14 @@ interface TimeInputFieldProps {
   type?: 'start' | 'end';
   interactive: boolean;
   onChange: (type: 'start' | 'end', value: string) => void | ((value: string) => void);
-  testId?: string; // Added testId prop
-  placeholder?: string; // Added placeholder prop
+  testId?: string;
+  placeholder?: string;
 }
 
 export const TimeInputField: React.FC<TimeInputFieldProps> = ({
   label,
   value,
-  type = 'start', // Provide default value
+  type = 'start',
   interactive,
   onChange,
   testId,

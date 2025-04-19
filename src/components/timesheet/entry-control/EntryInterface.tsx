@@ -16,7 +16,6 @@ interface EntryInterfaceProps {
 
 /**
  * EntryInterface component responsible for managing time entry creation and display
- * Refactored to use consistent approach across the application
  */
 const EntryInterface: React.FC<EntryInterfaceProps> = ({
   date,
@@ -29,7 +28,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
   const logger = useLogger('EntryInterface');
   const [processingEntryIds, setProcessingEntryIds] = useState<Set<string>>(new Set());
 
-  // Handle form submission with standardized logging
+  // Handle form submission
   const handleSubmitEntry = (entry: Omit<TimeEntry, "id">) => {
     logger.debug("[EntryInterface] Submitting time entry", {
       date: entry.date,
@@ -50,9 +49,8 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
     }
   };
 
-  // Enhanced delete entry handler with tracking and logging
+  // Enhanced delete entry handler with tracking
   const handleDeleteEntry = async (entryId: string): Promise<boolean> => {
-    // Avoid duplicate delete operations
     if (processingEntryIds.has(entryId)) {
       logger.debug("[EntryInterface] Already processing deletion for entry:", entryId);
       return false;
@@ -92,10 +90,8 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
     }
   };
 
-  // Reuse the handleCancelForm function for consistent behavior
   const handleCancelForm = () => {
     logger.debug("[EntryInterface] Form cancelled");
-    // No-op since we always show the form, but we could add behavior here if needed
   };
 
   return (

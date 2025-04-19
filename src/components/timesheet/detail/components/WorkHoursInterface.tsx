@@ -1,13 +1,11 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./WorkHoursHeader";
 import WorkHoursDisplay from "./WorkHoursDisplay";
 import WorkHoursAlerts from "./WorkHoursAlerts";
 import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
-import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
-import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -17,6 +15,7 @@ interface WorkHoursInterfaceProps {
   entries: TimeEntry[];
   interactive?: boolean;
   workSchedule?: WorkSchedule;
+  onHoursChange?: (hours: number) => void;
 }
 
 const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
@@ -24,17 +23,15 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   userId,
   entries,
   interactive = true,
-  workSchedule
+  workSchedule,
+  onHoursChange
 }) => {
-  // Use the unified timesheet work hours hook
-  const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
-  
   // Use the time entry state management hook
   const {
     startTime,
     endTime,
-    scheduledHours, // Changed from calculatedHours
-    totalEnteredHours, // Changed from totalHours
+    scheduledHours,
+    totalEnteredHours, 
     hasEntries,
     hoursVariance,
     isUndertime,
@@ -45,11 +42,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     date,
     workSchedule,
     interactive,
-    userId
+    userId,
+    onHoursChange
   });
 
-  // When entries change, ensure we're in sync
-  useEffect(() => {
+  // Log when entries change
+  React.useEffect(() => {
     logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
   }, [entries, date]);
 
@@ -60,8 +58,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       <WorkHoursDisplay
         startTime={startTime}
         endTime={endTime}
-        totalHours={totalEnteredHours} // Changed from totalHours
-        calculatedHours={scheduledHours} // Changed from calculatedHours
+        totalHours={totalEnteredHours}
+        calculatedHours={scheduledHours}
         hasEntries={hasEntries}
         interactive={interactive}
         onTimeChange={handleTimeChange}

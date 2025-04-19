@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { TimeEntry } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { useLogger } from "@/hooks/useLogger";
-import { calculateHoursFromTimes } from "@/utils/time/calculations";
 import EntryInterface from "./EntryInterface";
 
 interface TimeEntryControllerProps {
@@ -41,7 +40,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     setShowEntryForm(prev => !prev);
   };
 
-  // Handle entry creation with proper connection to context and standardized logging
+  // Handle entry creation with proper connection to context
   const handleCreateEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
     logger.debug('[TimeEntryController] Creating entry', {
       date: entryData.date,
@@ -70,7 +69,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     return newEntryId;
   }, [createEntry, date, userId, onCreateEntry, logger]);
 
-  // Delete entry with proper connection to context and standardized logging
+  // Delete entry with proper connection to context
   const handleDeleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
     logger.debug('[TimeEntryController] Deleting entry', { entryId });
     return deleteEntry(entryId);
