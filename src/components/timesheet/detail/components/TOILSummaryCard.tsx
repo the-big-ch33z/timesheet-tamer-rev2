@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
-import { Hourglass, Clock, ClockCheck } from "lucide-react";
+import { Hourglass, Clock, CheckCheck } from "lucide-react";
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -47,7 +47,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center text-sm text-amber-700">
-                <ClockCheck className="h-4 w-4 mr-2" />
+                <CheckCheck className="h-4 w-4 mr-2" />
                 TOIL Used
               </div>
               <div className="font-medium text-amber-900">{formatDisplayHours(used)}</div>
