@@ -1,7 +1,12 @@
+
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { validateTimeEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
-import { createTimeLogger } from "../errors/timeLogger";
+import { createTimeLogger } from '../errors/timeLogger';
+import { ensureDate } from '../validation/dateValidation';
+import { saveEntriesToStorage } from "./storage-operations";
+import { TimeEntryServiceConfig } from "./types";
+import { EventManager } from "./event-handling";
 
 const logger = createTimeLogger('TimeEntryOperations');
 
