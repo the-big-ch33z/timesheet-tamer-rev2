@@ -115,9 +115,24 @@ export const useScheduleState = () => {
   const updateWorkDay = (day: WeekDay, isWorkDay: boolean) => {
     const updatedSchedule = {...editingSchedule};
     updatedSchedule.weeks[activeWeek][day] = isWorkDay 
-      ? { startTime: '09:00', endTime: '17:00' } 
+      ? { 
+          startTime: '09:00', 
+          endTime: '17:00',
+          breaks: { lunch: false, smoko: false }
+        } 
       : null;
     setEditingSchedule(updatedSchedule);
+  };
+
+  const toggleBreak = (day: WeekDay, breakType: 'lunch' | 'smoko') => {
+    const updatedSchedule = {...editingSchedule};
+    const dayConfig = updatedSchedule.weeks[activeWeek][day];
+    
+    if (dayConfig) {
+      dayConfig.breaks = dayConfig.breaks || { lunch: false, smoko: false };
+      dayConfig.breaks[breakType] = !dayConfig.breaks[breakType];
+      setEditingSchedule(updatedSchedule);
+    }
   };
 
   const updateWorkHours = (day: WeekDay, field: 'startTime' | 'endTime', value: string) => {
@@ -158,6 +173,7 @@ export const useScheduleState = () => {
     handleDeleteSchedule,
     updateWorkDay,
     updateWorkHours,
-    toggleRdoDay
+    toggleRdoDay,
+    toggleBreak
   };
 };

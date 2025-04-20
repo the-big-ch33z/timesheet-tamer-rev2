@@ -1,4 +1,3 @@
-
 /**
  * Schedule utility functions
  * Functions for working with work schedules and calendar data
@@ -98,6 +97,26 @@ export const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean =>
 };
 
 /**
+ * Calculate hours for a work day accounting for breaks
+ */
+export const calculateDayHours = (startTime: string, endTime: string, breaks?: { lunch?: boolean; smoko?: boolean }): number => {
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  
+  // Calculate base hours
+  let hours = endHour - startHour + (endMinute - startMinute) / 60;
+  
+  // Subtract unpaid lunch break if enabled
+  if (breaks?.lunch) {
+    hours -= 0.5; // 30 minutes
+  }
+  
+  // Don't subtract smoko break as it's paid time
+  
+  return Math.max(0, hours);
+};
+
+/**
  * Calculate total hours for a fortnight based on the work schedule
  * @param workSchedule The work schedule
  * @returns Total hours in the fortnight
@@ -105,31 +124,16 @@ export const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean =>
 export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule): number => {
   let totalHours = 0;
   
-  // Process both weeks in the fortnight
-  [1, 2].forEach(weekNum => {
-    const weekNumKey = weekNum as 1 | 2;
-    const weekDays: WeekDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    
-    // Calculate hours for each day of the week
-    weekDays.forEach(day => {
-      const daySchedule = workSchedule.weeks[weekNumKey][day];
-      
-      // Skip if no hours scheduled for this day or if it's an RDO
-      if (!daySchedule || workSchedule.rdoDays[weekNumKey].includes(day)) return;
-      
-      // Calculate hours based on start and end time
-      const startHour = parseInt(daySchedule.startTime.split(':')[0]);
-      const startMinute = parseInt(daySchedule.startTime.split(':')[1]);
-      
-      const endHour = parseInt(daySchedule.endTime.split(':')[0]);
-      const endMinute = parseInt(daySchedule.endTime.split(':')[1]);
-      
-      // Calculate total hours including partial hours
-      const hours = endHour - startHour + (endMinute - startMinute) / 60;
-      totalHours += hours;
+  // Loop through each week in the schedule
+  Object.values(workSchedule.weeks).forEach(week => {
+    // Loop through each day in the week
+    Object.values(week).forEach(day => {
+      if (day) {
+        const hours = calculateDayHours(day.startTime, day.endTime, day.breaks);
+        totalHours += hours;
+      }
     });
   });
   
-  // Round to nearest 0.5
-  return Math.round(totalHours * 2) / 2;
+  return Math.round(totalHours * 2) / 2; // Round to nearest 0.5
 };

@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { WorkSchedule, WeekDay } from "@/types";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Coffee, Bell } from "lucide-react";
 
 interface WorkDayConfigurationProps {
   day: WeekDay;
@@ -12,6 +14,7 @@ interface WorkDayConfigurationProps {
   updateWorkDay: (day: WeekDay, isWorkDay: boolean) => void;
   updateWorkHours: (day: WeekDay, field: 'startTime' | 'endTime', value: string) => void;
   toggleRdoDay: (day: WeekDay) => void;
+  toggleBreak: (day: WeekDay, breakType: 'lunch' | 'smoko') => void;
 }
 
 export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
@@ -21,8 +24,11 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
   updateWorkDay,
   updateWorkHours,
   toggleRdoDay,
+  toggleBreak,
 }) => {
   const isWorkDay = editingSchedule.weeks[activeWeek][day] !== null;
+  const dayConfig = editingSchedule.weeks[activeWeek][day];
+  const breaks = dayConfig?.breaks || { lunch: false, smoko: false };
 
   return (
     <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
@@ -44,7 +50,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
             <Input
               id={`start-${activeWeek}-${day}`}
               type="time"
-              value={editingSchedule.weeks[activeWeek][day]?.startTime}
+              value={dayConfig?.startTime}
               onChange={(e) => updateWorkHours(day, 'startTime', e.target.value)}
               className="w-24"
             />
@@ -55,10 +61,33 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
             <Input
               id={`end-${activeWeek}-${day}`}
               type="time"
-              value={editingSchedule.weeks[activeWeek][day]?.endTime}
+              value={dayConfig?.endTime}
               onChange={(e) => updateWorkHours(day, 'endTime', e.target.value)}
               className="w-24"
             />
+          </div>
+
+          <div className="flex items-center gap-4 ml-4">
+            <ToggleGroup type="multiple" variant="outline" size="sm">
+              <ToggleGroupItem 
+                value="lunch"
+                aria-label="Toggle lunch break"
+                pressed={breaks.lunch}
+                onClick={() => toggleBreak(day, 'lunch')}
+              >
+                <Bell className="h-4 w-4 mr-1" />
+                <span className="text-xs">Lunch</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="smoko"
+                aria-label="Toggle smoko break"
+                pressed={breaks.smoko}
+                onClick={() => toggleBreak(day, 'smoko')}
+              >
+                <Coffee className="h-4 w-4 mr-1" />
+                <span className="text-xs">Smoko</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           
           <div className="flex items-center gap-2 ml-4">

@@ -73,6 +73,11 @@ export interface Invoice {
 
 export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
+export interface WorkDayBreaks {
+  lunch?: boolean;  // 30-min unpaid break
+  smoko?: boolean;  // 15-min paid break
+}
+
 export interface WorkSchedule {
   id: string;
   name: string;
@@ -80,7 +85,11 @@ export interface WorkSchedule {
   isDefault?: boolean;
   weeks: {
     [weekNumber: number]: {
-      [key in WeekDay]?: { startTime: string; endTime: string } | null;
+      [key in WeekDay]?: { 
+        startTime: string; 
+        endTime: string;
+        breaks?: WorkDayBreaks;
+      } | null;
     };
   };
   rdoDays: {
