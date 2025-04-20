@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, Suspense } from "react";
+import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -11,21 +10,13 @@ import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import ExistingEntriesList from "../detail/components/ExistingEntriesList";
 import { useToast } from "@/hooks/use-toast";
 
-const logger = useLogger('TimeEntryController');
-
-interface TimeEntryControllerProps {
-  date: Date;
-  userId: string;
-  interactive?: boolean;
-  onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
-}
-
 const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   date,
   userId,
   interactive = true,
   onCreateEntry
 }) => {
+  const logger = useLogger('TimeEntryController');
   const { toast } = useToast();
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
