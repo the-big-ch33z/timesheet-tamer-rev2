@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from "uuid";
 import { TOILRecord, TOILSummary, TOILUsage, TOIL_JOB_NUMBER } from "@/types/toil";
 import { TimeEntry, WorkSchedule } from "@/types";
@@ -6,6 +5,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { calculateHoursFromTimes } from '../calculations';
 import { storageWriteLock } from './storage-operations';
+import { getFortnightWeek, calculateDayHours } from '../scheduleUtils';
 
 const logger = createTimeLogger('TOILService');
 
@@ -34,24 +34,36 @@ export class TOILService {
 
       const monthYear = format(date, 'yyyy-MM');
       
-      // Calculate scheduled hours for this day based on work schedule
-      const scheduledHours = this.getScheduledHoursForDay(date, workSchedule);
+      // Get the correct week number (1 or 2) from the schedule
+      const weekNum = getFortnightWeek(date);
+      const dayOfWeek = format(date, 'EEEE').toLowerCase() as keyof typeof workSchedule.weeks[1];
       
-      // If no scheduled hours (e.g., weekend), no TOIL accrual
-      if (scheduledHours <= 0) {
-        logger.debug(`No scheduled hours for ${format(date, 'yyyy-MM-dd')}, no TOIL accrual`);
+      // Get scheduled hours for this day
+      const daySchedule = workSchedule.weeks[weekNum][dayOfWeek];
+      
+      if (!daySchedule?.startTime || !daySchedule?.endTime) {
+        logger.debug(`No schedule found for ${format(date, 'yyyy-MM-dd')}`);
         return null;
       }
+
+      // Calculate scheduled hours including break deductions
+      const scheduledHours = calculateDayHours(
+        daySchedule.startTime,
+        daySchedule.endTime,
+        daySchedule.breaks
+      );
+      
+      logger.debug(`Scheduled hours for ${format(date, 'yyyy-MM-dd')}: ${scheduledHours}`);
       
       // Calculate total hours worked from timesheet entries
       const actualHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
+      logger.debug(`Actual hours worked: ${actualHours}`);
       
       // Calculate excess hours (TOIL to accrue)
       const excessHours = Math.max(0, actualHours - scheduledHours);
+      logger.debug(`Excess hours (TOIL): ${excessHours}`);
       
       if (excessHours > 0) {
-        logger.debug(`TOIL accrual: ${excessHours} hours for ${format(date, 'yyyy-MM-dd')}`);
-        
         // Create TOIL record
         const record: TOILRecord = {
           id: uuidv4(),
@@ -65,6 +77,7 @@ export class TOILService {
         
         // Store TOIL record
         await this.storeTOILRecord(record);
+        logger.debug(`Stored TOIL record: ${excessHours} hours`);
       }
       
       // Return summary for the month

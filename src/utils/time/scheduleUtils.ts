@@ -13,11 +13,10 @@ export const getWeekDay = (date: Date): WeekDay => {
 
 // Helper function to determine fortnight week (1 or 2)
 export const getFortnightWeek = (date: Date): 1 | 2 => {
-  const yearStart = new Date(date.getFullYear(), 0, 1);
-  const weeksSinceYearStart = Math.floor(
-    (date.getTime() - yearStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
-  );
-  return ((weeksSinceYearStart % 2) + 1) as 1 | 2;
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const daysSinceStart = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+  const weekNumber = Math.floor(daysSinceStart / 7);
+  return ((weekNumber % 2) + 1) as 1 | 2;
 };
 
 /**
@@ -104,14 +103,12 @@ export const calculateDayHours = (startTime: string, endTime: string, breaks?: {
   const [endHour, endMinute] = endTime.split(':').map(Number);
   
   // Calculate base hours
-  let hours = endHour - startHour + (endMinute - startMinute) / 60;
+  let hours = (endHour + endMinute/60) - (startHour + startMinute/60);
   
   // Subtract unpaid lunch break if enabled
   if (breaks?.lunch) {
     hours -= 0.5; // 30 minutes
   }
-  
-  // Don't subtract smoko break as it's paid time
   
   return Math.max(0, hours);
 };

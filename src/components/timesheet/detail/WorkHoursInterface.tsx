@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -9,6 +8,7 @@ import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useTimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
 import HoursStats from "./components/HoursStats";
+import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -57,6 +57,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     calculatedHours: scheduledHours // Pass scheduledHours as calculatedHours
   });
 
+  // Use TOIL calculations
+  const { calculateToilForDay } = useTOILCalculations({
+    userId,
+    date,
+    entries,
+    workSchedule
+  });
+
   // When entries change, ensure we're in sync
   useEffect(() => {
     logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
@@ -88,6 +96,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       saveWorkHoursForDate(date, updatedStartTime, updatedEndTime, userId);
     }
   };
+
+  // Calculate TOIL when entries are present and complete
+  useEffect(() => {
+    if (hasEntries && totalEnteredHours > 0) {
+      // Calculate TOIL regardless of variance
+      calculateToilForDay();
+    }
+  }, [hasEntries, totalEnteredHours, calculateToilForDay]);
 
   return (
     <div className="space-y-4">
