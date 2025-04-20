@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -21,14 +20,7 @@ export const useFormSubmission = ({
   const { isDateValid } = useDateTracking(selectedDate);
   const { handleError } = useSubmissionError();
 
-  const handleSave = useCallback((formState: {
-    hours: string;
-    description: string;
-    jobNumber: string;
-    rego: string;
-    taskNumber: string;
-    formEdited: boolean;
-  }, resetFormEdited: () => void) => {
+  const handleSave = useCallback((formState: TimeEntryFormState, resetFormEdited: () => void) => {
     if (disabled || isSubmitting) {
       return;
     }
