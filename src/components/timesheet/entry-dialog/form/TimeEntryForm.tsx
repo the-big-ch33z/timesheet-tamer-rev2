@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useFormState } from "@/hooks/form/useFormState";
 import HoursField from "../fields/field-types/HoursField";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, Clock, X } from "lucide-react";
 import EntryField from "../fields/EntryField";
 
-// Common field definitions to reduce duplication
 const FIELD_TYPES = {
   JOB_NUMBER: "jobNumber",
   TASK_NUMBER: "taskNumber",
@@ -32,6 +31,7 @@ interface TimeEntryFormProps {
   date: Date;
   userId: string;
   initialData?: Partial<TimeEntryFormData>;
+  isSubmitting: boolean;
 }
 
 const renderFormField = (fieldType: string, value: string, onChange: (value: string) => void, required: boolean = false, error?: string) => {
@@ -41,7 +41,6 @@ const renderFormField = (fieldType: string, value: string, onChange: (value: str
     required
   };
 
-  // Common field configurations
   const fieldConfig = {
     [FIELD_TYPES.JOB_NUMBER]: {
       name: "Job Number",
@@ -59,7 +58,6 @@ const renderFormField = (fieldType: string, value: string, onChange: (value: str
   const config = fieldConfig[fieldType];
   if (config) {
     return <div className="w-full">
-        
         <EntryField id={fieldType} name={config.name} value={value} onChange={onChange} placeholder={config.placeholder} required={required} />
         {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       </div>;
@@ -72,10 +70,10 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   onCancel,
   date,
   userId,
-  initialData = {}
+  initialData = {},
+  isSubmitting
 }) => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   
   const {
     formState,
@@ -100,7 +98,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       });
       return;
     }
-    setIsLoading(true);
+
     try {
       const hoursNum = parseFloat(formState.fields.hours.value);
       const entry: Omit<TimeEntry, "id"> = {
@@ -113,12 +111,9 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         rego: formState.fields.rego.value || undefined,
         project: "General"
       };
+      
       onSubmit(entry);
       resetForm();
-      toast({
-        title: "Entry added",
-        description: `Added ${hoursNum} hours to your timesheet`
-      });
     } catch (error) {
       console.error("Error submitting entry:", error);
       toast({
@@ -126,8 +121,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         description: "There was a problem saving your entry",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -189,7 +182,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
               type="button" 
               variant="outline" 
               onClick={onCancel} 
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="flex items-center gap-1"
             >
               <X className="h-4 w-4" />
@@ -197,10 +190,10 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || !formState.isValid}
+              disabled={isSubmitting || !formState.isValid}
               className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Clock className="h-4 w-4 animate-spin" />
                   Saving...

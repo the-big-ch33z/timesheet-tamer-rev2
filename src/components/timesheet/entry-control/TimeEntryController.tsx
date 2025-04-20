@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useState, useCallback, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -9,13 +9,9 @@ import { useLogger } from "@/hooks/useLogger";
 import EntryInterface from "./EntryInterface";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import ExistingEntriesList from "../detail/components/ExistingEntriesList";
+import { useToast } from "@/hooks/use-toast";
 
-// Standard toast message patterns
-const TOAST_MESSAGES = {
-  CREATE_SUCCESS: (hours: number) => `Added ${hours} hours to your timesheet`,
-  DELETE_SUCCESS: "Entry deleted successfully",
-  ERROR: "There was a problem with the operation"
-};
+const logger = useLogger('TimeEntryController');
 
 interface TimeEntryControllerProps {
   date: Date;
@@ -24,18 +20,15 @@ interface TimeEntryControllerProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
-/**
- * Controller component for managing time entries
- * Refactored for consistent entry handling patterns
- */
 const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   date,
   userId,
   interactive = true,
   onCreateEntry
 }) => {
-  const logger = useLogger('TimeEntryController');
+  const { toast } = useToast();
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { getWorkHoursForDate } = useTimesheetWorkHours();
 
   // Use our context to get access to entries and operations
@@ -47,58 +40,75 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
 
   // Get entries for the current day
   const dayEntries = getDayEntries(date);
-  
-  // Log when the selected date changes
-  useEffect(() => {
-    logger.debug(`[TimeEntryController] Date changed to: ${date.toISOString()}, entries count: ${dayEntries.length}`);
-  }, [date, dayEntries.length, logger]);
 
-  // Toggle entry form visibility
-  const handleToggleEntryForm = () => {
-    logger.debug(`[TimeEntryController] Toggling entry form visibility: ${!showEntryForm}`);
-    setShowEntryForm(prev => !prev);
-  };
-
-  // Standard operation wrapper for entry creation
-  const handleCreateEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
-    logger.debug('[TimeEntryController] Creating entry', {
-      date: entryData.date,
-      userId: entryData.userId,
-      hours: entryData.hours
-    });
-
-    // Use the context to create the entry
-    const newEntryId = createEntry({
-      ...entryData,
-      date,
-      userId
-    });
-
-    // If successful and we have a callback, also call it
-    if (newEntryId && onCreateEntry) {
-      // Get work hours for the date instead of using entry fields
-      const { startTime, endTime } = getWorkHoursForDate(date, userId);
-      onCreateEntry(startTime, endTime, entryData.hours || 0);
+  // Centralized submission handler
+  const handleEntrySubmit = useCallback(async (entryData: Omit<TimeEntry, "id">) => {
+    if (isSubmitting) {
+      logger.debug('[TimeEntryController] Submission already in progress, skipping');
+      return;
     }
-    return newEntryId;
-  }, [createEntry, date, userId, onCreateEntry, logger, getWorkHoursForDate]);
 
-  // Standard operation wrapper for entry deletion
+    try {
+      setIsSubmitting(true);
+      logger.debug('[TimeEntryController] Submitting entry:', entryData);
+
+      const newEntryId = createEntry({
+        ...entryData,
+        date,
+        userId
+      });
+
+      if (newEntryId) {
+        // If successful and we have a callback, also call it
+        if (onCreateEntry) {
+          const { startTime, endTime } = getWorkHoursForDate(date, userId);
+          onCreateEntry(startTime, endTime, entryData.hours || 0);
+        }
+
+        toast({
+          title: "Entry created",
+          description: `Added ${entryData.hours} hours to your timesheet`
+        });
+
+        setShowEntryForm(false); // Auto-hide form after successful submission
+      }
+    } catch (error) {
+      logger.error('[TimeEntryController] Error submitting entry:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create time entry",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [createEntry, date, userId, onCreateEntry, getWorkHoursForDate, isSubmitting, toast, logger]);
+
+  // Handle deletion with submission lock check
   const handleDeleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
-    logger.debug('[TimeEntryController] Deleting entry', {
-      entryId
-    });
-    return deleteEntry(entryId);
-  }, [deleteEntry, logger]);
-  
+    if (isSubmitting) {
+      logger.debug('[TimeEntryController] Operation in progress, skipping delete');
+      return false;
+    }
+
+    try {
+      setIsSubmitting(true);
+      logger.debug('[TimeEntryController] Deleting entry:', entryId);
+      return await deleteEntry(entryId);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [deleteEntry, isSubmitting, logger]);
+
   return (
     <Card className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">Timesheet Entries</h3>
         {interactive && (
           <Button 
-            onClick={handleToggleEntryForm} 
-            variant="outline" 
+            onClick={() => setShowEntryForm(!showEntryForm)} 
+            variant="outline"
+            disabled={isSubmitting}
             className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
@@ -107,7 +117,6 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         )}
       </div>
 
-      {/* Always show existing entries regardless of form visibility */}
       <div className="mb-4">
         <ExistingEntriesList
           entries={dayEntries}
@@ -121,10 +130,11 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         <EntryInterface 
           date={date} 
           userId={userId} 
-          onCreateEntry={handleCreateEntry} 
-          onDeleteEntry={handleDeleteEntry} 
+          onCreateEntry={handleEntrySubmit}
+          onDeleteEntry={handleDeleteEntry}
           interactive={interactive} 
-          existingEntries={dayEntries} 
+          existingEntries={dayEntries}
+          isSubmitting={isSubmitting}
         />
       )}
     </Card>
