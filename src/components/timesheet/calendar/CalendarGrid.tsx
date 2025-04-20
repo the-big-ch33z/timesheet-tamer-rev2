@@ -2,9 +2,9 @@
 import React, { useMemo } from "react";
 import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
-import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
+import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 
 const logger = createTimeLogger('CalendarGrid');
 
@@ -29,7 +29,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     
     return days.map(day => {
       const workHours = getWorkHoursForDate(day.date);
-      const { isComplete } = useTimeCompletion(
+      const { isComplete } = calculateCompletion(
         day.entries,
         workHours?.startTime,
         workHours?.endTime
