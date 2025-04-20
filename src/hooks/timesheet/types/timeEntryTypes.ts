@@ -7,7 +7,7 @@ export interface TimeEntryFormState {
   rego: string;
   taskNumber: string;
   formEdited: boolean;
-  userId?: string; // Added userId as an optional property
+  userId?: string;
 }
 
 export interface UseTimeEntryFormProps {

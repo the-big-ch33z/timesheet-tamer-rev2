@@ -6,6 +6,7 @@ import { Clock, Trash2 } from "lucide-react";
 import { useEntriesContext } from "@/contexts/timesheet";
 import { formatDateForDisplay } from "@/utils/time/formatting";
 import { ensureDate } from "@/utils/time/validation";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 
 interface EntryListItemProps {
   entry: TimeEntry;
@@ -21,14 +22,13 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
   isDeleting = false
 }) => {
   const { deleteEntry } = useEntriesContext();
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
   
   const handleDelete = async () => {
-    // Skip if already deleting
     if (isDeleting) return;
     
     console.log("Deleting entry:", entry.id);
     
-    // Use the provided onDelete if available, otherwise use the context method
     if (onDelete) {
       onDelete();
     } else if (deleteEntry) {
@@ -36,8 +36,8 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
     }
   };
   
-  // Ensure entry.date is a valid Date object for formatting
   const entryDate = ensureDate(entry.date) || new Date();
+  const workHours = getWorkHoursForDate(entryDate, entry.userId);
   
   return (
     <div className="flex items-center p-3 border border-gray-200 rounded-md bg-white mb-2 gap-3">
@@ -46,10 +46,9 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
         {entry.hours}h
       </div>
       
-      {/* Display time range if available */}
-      {(entry.startTime || entry.endTime) && (
+      {workHours.hasData && (
         <div className="hidden md:block text-xs text-gray-500 min-w-24">
-          {entry.startTime || '--:--'} - {entry.endTime || '--:--'}
+          {workHours.startTime || '--:--'} - {workHours.endTime || '--:--'}
         </div>
       )}
       

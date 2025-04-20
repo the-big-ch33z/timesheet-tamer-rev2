@@ -3,9 +3,11 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { isAfter } from "date-fns";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 
 const RecentEntries = () => {
   const { entries } = useTimeEntryContext();
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
 
   // Sort entries by date (most recent first)
   const sortedEntries = React.useMemo(() => {
@@ -29,6 +31,7 @@ const RecentEntries = () => {
     <div className="space-y-4">
       {sortedEntries.slice(0, 10).map((entry) => {
         const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+        const workHours = getWorkHoursForDate(entryDate, entry.userId);
         
         return (
           <Card key={entry.id} className="p-4">
@@ -41,9 +44,11 @@ const RecentEntries = () => {
                     month: 'short'
                   })}
                 </div>
-                <div className="text-sm text-gray-500">
-                  {entry.startTime} - {entry.endTime}
-                </div>
+                {workHours.hasData && (
+                  <div className="text-sm text-gray-500">
+                    {workHours.startTime || '--:--'} - {workHours.endTime || '--:--'}
+                  </div>
+                )}
                 {entry.project && (
                   <div className="text-xs text-gray-400 mt-1">
                     Project: {entry.project}
