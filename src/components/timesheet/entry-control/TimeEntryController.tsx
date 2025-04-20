@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -9,6 +10,14 @@ import EntryInterface from "./EntryInterface";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import ExistingEntriesList from "../detail/components/ExistingEntriesList";
 import { useToast } from "@/hooks/use-toast";
+
+// Define the interface for TimeEntryController props
+interface TimeEntryControllerProps {
+  date: Date;
+  userId: string;
+  interactive?: boolean;
+  onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
+}
 
 const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   date,
