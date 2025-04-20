@@ -12,38 +12,44 @@ interface CalendarGridProps {
   selectedDate: Date | null;
   workSchedule?: any;
   onDayClick: (day: Date) => void;
+  userId: string;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   currentMonth,
   selectedDate,
   workSchedule,
-  onDayClick
+  onDayClick,
+  userId
 }) => {
-  const { days, monthStartDay } = useCalendarData(currentMonth, selectedDate, workSchedule);
+  const { days, monthStartDay } = useCalendarData(currentMonth, selectedDate, workSchedule, userId);
   const { getWorkHoursForDate } = useTimesheetWorkHours();
 
   const processedDays = useMemo(() => {
-    logger.debug(`Processing ${days.length} days for month ${currentMonth.toISOString()}`);
+    logger.debug(`Processing ${days.length} days for month ${currentMonth.toISOString()}, userId: ${userId}`);
     
     return days.map(day => {
-      const workHours = getWorkHoursForDate(day.date);
+      const workHours = getWorkHoursForDate(day.date, userId);
+      
+      if (!workHours) {
+        logger.debug(`No work hours found for date ${day.date.toISOString()}, userId: ${userId}`);
+      }
+      
       const { isComplete } = calculateCompletion(
         day.entries,
         workHours?.startTime,
         workHours?.endTime
       );
 
-      logger.debug(`Day ${day.date.toISOString()}: entries=${day.entries.length}, complete=${isComplete}`);
+      logger.debug(`Day ${day.date.toISOString()}: entries=${day.entries.length}, complete=${isComplete}, userId: ${userId}`);
 
       return {
         ...day,
         isComplete
       };
     });
-  }, [days, getWorkHoursForDate]);
+  }, [days, getWorkHoursForDate, userId]);
 
-  // Log when days or completion status changes
   React.useEffect(() => {
     logger.debug(`Calendar grid updated with ${processedDays.length} days`);
     processedDays.forEach(day => {

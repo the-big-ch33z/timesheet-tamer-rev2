@@ -50,6 +50,7 @@ const TabContent: React.FC = () => {
                 onNextMonth={nextMonth}
                 onDayClick={handleDayClick}
                 workSchedule={workSchedule}
+                userId={viewedUser.id}
               />
             </Suspense>
             

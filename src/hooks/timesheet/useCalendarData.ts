@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -32,14 +31,15 @@ export interface DayCellData {
 export function useCalendarData(
   currentMonth: Date,
   selectedDate: Date | null,
-  workSchedule?: WorkSchedule
+  workSchedule?: WorkSchedule,
+  userId?: string
 ) {
   const { getDayEntries } = useTimeEntryContext();
   const { getDayState } = useCalendarHelpers(workSchedule);
   const { getWorkHoursForDate } = useTimesheetWorkHours();
   
   return useMemo(() => {
-    logger.debug(`Calculating calendar data for month: ${currentMonth.toISOString()}`);
+    logger.debug(`Calculating calendar data for month: ${currentMonth.toISOString()}, userId: ${userId}`);
     
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -50,9 +50,12 @@ export function useCalendarData(
     const today = new Date();
     
     const days = daysInMonth.map(day => {
-      // Get entries for this specific day using context
       const dayEntries = getDayEntries(day);
-      const workHours = getWorkHoursForDate(day);
+      const workHours = userId ? getWorkHoursForDate(day, userId) : null;
+      
+      if (!workHours && userId) {
+        logger.warn(`No work hours found for ${formatDateForComparison(day)} — userId: ${userId}`);
+      }
       
       logger.debug(`Processing ${formatDateForComparison(day)}: found ${dayEntries.length} entries`);
       
@@ -100,11 +103,11 @@ export function useCalendarData(
       };
     });
     
-    logger.debug(`Calendar data calculation complete. Month has ${days.length} days`);
+    logger.debug(`Calendar data calculation complete. Month has ${days.length} days, userId: ${userId}`);
     
     return {
       days,
       monthStartDay
     };
-  }, [currentMonth, selectedDate, workSchedule, getDayEntries, getDayState, getWorkHoursForDate]);
+  }, [currentMonth, selectedDate, workSchedule, userId, getDayEntries, getDayState, getWorkHoursForDate]);
 }

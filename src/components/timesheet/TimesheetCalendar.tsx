@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { WorkSchedule } from "@/types";
@@ -16,6 +15,7 @@ interface TimesheetCalendarProps {
   onNextMonth: () => void;
   onDayClick: (day: Date) => void;
   workSchedule?: WorkSchedule;
+  userId: string;
 }
 
 const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
@@ -24,11 +24,11 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   onNextMonth,
   onDayClick,
   workSchedule,
+  userId
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { toast } = useToast();
   
-  // Enhanced month navigation to trigger saving
   const handlePrevMonth = useCallback(() => {
     console.debug("[TimesheetCalendar] Moving to previous month, saving pending changes");
     const saved = triggerGlobalSave();
@@ -55,7 +55,6 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
     }
   }, [onNextMonth, toast]);
 
-  // Enhanced day click handler with explicit selected date state
   const handleDayClick = useCallback((day: Date) => {
     console.debug("[TimesheetCalendar] Day clicked:", format(day, "yyyy-MM-dd"));
     if (selectedDate?.getTime() !== day.getTime()) {
@@ -70,25 +69,22 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   return (
     <Card className="shadow-sm">
       <CardContent className="p-4">
-        {/* Calendar Header */}
         <CalendarHeader 
           currentMonth={currentMonth}
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
         />
         
-        {/* Calendar Legend */}
         <CalendarLegend hasWorkSchedule={!!workSchedule} />
 
-        {/* Weekday Headers */}
         <CalendarWeekdayHeader />
 
-        {/* Calendar Grid */}
         <CalendarGrid 
           currentMonth={currentMonth}
           selectedDate={selectedDate}
           workSchedule={workSchedule}
           onDayClick={handleDayClick}
+          userId={userId}
         />
       </CardContent>
     </Card>
