@@ -22,8 +22,6 @@ export interface TimeEntry {
   hours: number;
   description: string;
   userId: string;
-  startTime?: string;
-  endTime?: string;
   jobNumber?: string;
   taskNumber?: string;
   rego?: string;

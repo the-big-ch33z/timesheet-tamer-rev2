@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
@@ -8,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Loader2, Trash2 } from "lucide-react";
 
-// Common field definitions to reduce duplication
 const FIELD_TYPES = {
   HOURS: "hours",
   DESCRIPTION: "description",
@@ -17,7 +15,6 @@ const FIELD_TYPES = {
   TASK_NUMBER: "taskNumber"
 };
 
-// Standardized validation rules across components
 const VALIDATION_RULES = {
   hours: {
     required: true,
@@ -39,7 +36,6 @@ interface EntryFormItemProps {
   disabled?: boolean;
 }
 
-// Reusable form field renderer
 const renderFormField = (
   id: string,
   fieldName: string,
@@ -89,13 +85,11 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     }
   });
 
-  // Memoize the field change handler
   const handleFieldChangeCallback = useCallback((field: string, value: string) => {
     setFieldValue(field, value);
     parentHandleFieldChange(field, value);
   }, [setFieldValue, parentHandleFieldChange]);
 
-  // Effect cleanup for form state updates
   useEffect(() => {
     if (formState.formEdited) {
       Object.entries(formState.fields).forEach(([field, { value }]) => {
@@ -104,7 +98,6 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     }
 
     return () => {
-      // Cleanup when component unmounts
       console.debug(`[EntryFormItem] Cleaning up form state for entry ${entryId}`);
     };
   }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
@@ -216,13 +209,6 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
         </Button>
       </div>
     </div>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison function for memo
-  return (
-    prevProps.disabled === nextProps.disabled &&
-    prevProps.entryId === nextProps.entryId &&
-    JSON.stringify(prevProps.formState) === JSON.stringify(nextProps.formState)
   );
 });
 

@@ -1,5 +1,4 @@
-
-import { TimeEntry } from "@/types";
+import { TimeEntry } from '@/types';
 
 export interface TimeEntryFormState {
   hours: string;
@@ -7,8 +6,6 @@ export interface TimeEntryFormState {
   jobNumber: string;
   rego: string;
   taskNumber: string;
-  startTime: string;
-  endTime: string;
   formEdited: boolean;
   userId?: string; // Added userId as an optional property
 }
