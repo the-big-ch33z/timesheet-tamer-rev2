@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -153,8 +154,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     try {
       const userScheduleId = getUserSchedule(userId);
       
+      // FIX: Compare schedule ID (string) to 'default', not comparing schedule object to string
       const schedule = userScheduleId === 'default'
         ? defaultSchedule
+        // FIX: Compare schedule.id (string) to userScheduleId (string)
         : schedules.find(s => s.id === userScheduleId) || defaultSchedule;
       
       const daySchedule = getDayScheduleInfo(date, schedule);
