@@ -1,16 +1,15 @@
 
-import { calculateCompletion } from '@/utils/timesheet/completionUtils';
 import { TimeEntry } from '@/types';
+import { calculateCompletion } from '@/utils/timesheet/completionUtils';
+import { createTimeLogger } from '@/utils/time/errors';
 
-/**
- * @deprecated Use calculateCompletion utility function directly instead
- * This hook is kept for backward compatibility
- */
+const logger = createTimeLogger('useTimeCompletion');
+
 export const useTimeCompletion = (
   entries: TimeEntry[],
   startTime: string | null | undefined,
   endTime: string | null | undefined
 ) => {
-  // Since this is just a pure calculation now, we can simply return the result of our utility function
+  logger.debug(`Calculating completion for ${entries.length} entries`);
   return calculateCompletion(entries, startTime, endTime);
 };

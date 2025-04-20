@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
@@ -39,7 +38,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
       return {
         ...day,
-        isComplete: isComplete || day.isComplete
+        isComplete
       };
     });
   }, [days, getWorkHoursForDate]);
