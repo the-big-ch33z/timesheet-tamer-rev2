@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,7 +90,11 @@ const EntryField: React.FC<EntryFieldProps> = ({
   const hasError = required && touched && !localValue;
   const fieldClasses = `${className} ${hasError ? 'border-red-500' : ''}`;
   return <div className={inline ? "flex items-center gap-2" : "space-y-2"}>
-      {showLabel}
+      {showLabel && (
+        <Label htmlFor={id} className="block text-sm font-medium">
+          {name}
+        </Label>
+      )}
 
       {type === "textarea" ? <Textarea id={id} value={localValue} onChange={handleChange} onBlur={handleBlur} placeholder={placeholder} className={fieldClasses} disabled={disabled} required={required} data-field-name={name} data-testid={`textarea-${id}`} aria-invalid={hasError} /> : <Input id={id} type={type} value={localValue} onChange={handleChange} onBlur={handleBlur} placeholder={placeholder} className={fieldClasses} min={min} max={max} step={step} disabled={disabled} required={required} data-field-name={name} data-testid={`input-${id}`} aria-invalid={hasError} />}
 

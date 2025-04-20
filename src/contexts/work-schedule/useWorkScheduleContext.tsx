@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { defaultWorkSchedule } from './defaultSchedule';
@@ -7,7 +7,17 @@ import { createStorageOperations } from './storage-utils';
 import { createScheduleOperations } from './schedule-operations';
 import { createUserScheduleOperations } from './user-schedule-operations';
 import { WorkScheduleState } from './internal-types';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
+/**
+ * Core implementation of the WorkSchedule context
+ * This hook manages work schedules and provides operations to manipulate them.
+ * 
+ * Integration with other parts of the system:
+ * 1. Dispatches events when schedules change (for WorkHoursContext to respond)
+ * 2. Provides utilities for deriving time information from schedules
+ * 3. Syncs schedule data to localStorage for persistence
+ */
 export function useWorkScheduleContext() {
   const { toast } = useToast();
   const { updateUserMetrics } = useAuth();
@@ -25,11 +35,23 @@ export function useWorkScheduleContext() {
   // Save schedules to localStorage whenever they change
   useEffect(() => {
     storageOps.saveSchedules(state.schedules);
+    
+    // Publish an event when schedules change so other contexts can react
+    timeEventsService.publish('schedules-updated', {
+      scheduleCount: state.schedules.length,
+      timestamp: Date.now(),
+    });
   }, [state.schedules]);
 
   // Save user schedules to localStorage whenever they change
   useEffect(() => {
     storageOps.saveUserSchedules(state.userSchedules);
+    
+    // Publish an event when user schedules change
+    timeEventsService.publish('user-schedules-updated', {
+      userCount: Object.keys(state.userSchedules).length,
+      timestamp: Date.now(),
+    });
   }, [state.userSchedules]);
 
   // Helper function to update user's workScheduleId property
@@ -90,6 +112,14 @@ export function useWorkScheduleContext() {
         
         // Update user objects to reflect this change
         updateUserWorkScheduleId(userId, 'default');
+        
+        // Publish event for each affected user
+        timeEventsService.publish('user-schedule-changed', {
+          userId,
+          oldScheduleId: scheduleId,
+          newScheduleId: 'default',
+          timestamp: Date.now()
+        });
       });
       
       setState(prev => ({

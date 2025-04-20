@@ -1,6 +1,8 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
+import { useWorkSchedule } from '@/contexts/work-schedule';
+import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
 
 // Create a dedicated logger for this context
 const logger = createTimeLogger('WorkHoursContext');
@@ -52,6 +54,14 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   const latestWorkHoursRef = useRef<Map<string, WorkHoursData>>(new Map());
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef<boolean>(false);
+  
+  // Access WorkScheduleContext to derive defaults when needed
+  const { 
+    defaultSchedule, 
+    schedules, 
+    userSchedules, 
+    getUserSchedule 
+  } = useWorkSchedule();
 
   const cleanupCache = useCallback(() => {
     const now = Date.now();
@@ -138,6 +148,37 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       }
     };
   }, [workHoursMap, debouncedSave]);
+
+  // Helper function to get default hours from a user's schedule
+  const getDefaultHoursFromSchedule = useCallback((date: Date, userId: string): { startTime: string; endTime: string } => {
+    try {
+      // Get the user's assigned schedule
+      const userSchedule = getUserSchedule(userId);
+      
+      // Find the actual schedule object
+      const schedule = userSchedule === 'default'
+        ? defaultSchedule
+        : schedules.find(s => s.id === userSchedule) || defaultSchedule;
+      
+      // Get the day's schedule info using the utility function
+      const daySchedule = getDayScheduleInfo(date, schedule);
+      
+      if (daySchedule && daySchedule.isWorkingDay && daySchedule.hours) {
+        logger.debug(`Derived default hours for ${userId} on ${format(date, 'yyyy-MM-dd')} from schedule: ${daySchedule.hours.startTime}-${daySchedule.hours.endTime}`);
+        return {
+          startTime: daySchedule.hours.startTime,
+          endTime: daySchedule.hours.endTime
+        };
+      }
+      
+      // Fall back to standard working hours if no schedule found
+      logger.debug(`No schedule hours found for ${userId} on ${format(date, 'yyyy-MM-dd')}, using defaults`);
+      return { startTime: "09:00", endTime: "17:00" };
+    } catch (error) {
+      logger.error(`Error getting default hours from schedule: ${error}`);
+      return { startTime: "09:00", endTime: "17:00" };
+    }
+  }, [defaultSchedule, schedules, getUserSchedule]);
 
   const refreshTimesForDate = useCallback((date: Date, userId: string) => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -244,13 +285,16 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       };
     }
     
-    logger.debug(`No saved hours for ${dateString}, returning empty values`);
+    // If no saved hours are found, derive defaults from the work schedule
+    const defaultHours = getDefaultHoursFromSchedule(date, userId);
+    logger.debug(`No saved hours for ${dateString}, returning derived schedule hours: ${defaultHours.startTime}-${defaultHours.endTime}`);
+    
     return {
-      startTime: "",
-      endTime: "",
+      startTime: defaultHours.startTime,
+      endTime: defaultHours.endTime,
       isCustom: false
     };
-  }, []);
+  }, [getDefaultHoursFromSchedule]);
 
   const saveWorkHours = useCallback((date: Date, userId: string, startTime: string, endTime: string): void => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -271,6 +315,24 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return;
     }
     
+    // Check if these hours match the schedule default
+    const defaultHours = getDefaultHoursFromSchedule(date, userId);
+    const isDefault = startTime === defaultHours.startTime && endTime === defaultHours.endTime;
+    
+    if (isDefault) {
+      logger.debug(`Hours match schedule default, removing custom entry`);
+      // If times match default, remove the custom entry (if any) to save space
+      if (latestWorkHoursRef.current.has(key)) {
+        setWorkHoursMap(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(key);
+          return newMap;
+        });
+      }
+      return;
+    }
+    
+    // Otherwise save as a custom entry
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);
       newMap.set(key, {
@@ -285,7 +347,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     });
     
     logger.debug(`Successfully saved work hours for ${dateString}`);
-  }, []);
+  }, [getDefaultHoursFromSchedule]);
 
   const resetDayWorkHours = useCallback((date: Date, userId: string): void => {
     const dateString = format(date, 'yyyy-MM-dd');

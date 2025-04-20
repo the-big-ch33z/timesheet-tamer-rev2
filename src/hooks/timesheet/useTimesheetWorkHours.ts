@@ -1,22 +1,45 @@
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { safeTimeOperation } from '@/utils/time/errors/timeErrorHandling';
 import { calculateHoursFromTimes } from '@/utils/time/calculations/hoursCalculations';
 import { TimesheetWorkHoursHook, WorkHoursData } from './types/timeEntryTypes';
+import { useWorkSchedule } from '@/contexts/work-schedule';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useTimesheetWorkHours');
 
 /**
  * Enhanced hook for working with timesheet work hours
  * Provides methods for getting, saving, and managing work hours with robust error handling
+ * Integrates with WorkScheduleContext to derive defaults and respond to schedule changes
  */
 export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook & { userId?: string } => {
   const context = useWorkHoursContext();
+  const workSchedule = useWorkSchedule();
   
   // Keep track of last applied times for smart updates
   const lastAppliedTimesRef = useRef<Record<string, { startTime: string; endTime: string }>>({});
+  
+  // Listen for schedule change events that might affect our work hours
+  useEffect(() => {
+    const handleScheduleChange = (data: any) => {
+      if (data.userId === userId || !data.userId) {
+        logger.debug('Schedule change detected, refreshing work hours cache');
+        refreshWorkHours();
+      }
+    };
+    
+    // Subscribe to relevant events
+    const scheduleSubscription = timeEventsService.subscribe('user-schedule-changed', handleScheduleChange);
+    const schedulesSubscription = timeEventsService.subscribe('schedules-updated', handleScheduleChange);
+    
+    return () => {
+      scheduleSubscription.unsubscribe();
+      schedulesSubscription.unsubscribe();
+    };
+  }, [userId]);
   
   // Get work hours for a specific date with enhanced error handling
   const getWorkHoursForDate = useCallback((date: Date, specificUserId?: string): WorkHoursData => {
@@ -55,7 +78,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
         endTime: result.endTime
       };
       
-      logger.debug(`Retrieved work hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}, hasData: ${hasData}`);
+      logger.debug(`Retrieved work hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}, hasData: ${hasData}, isCustom: ${result.isCustom}`);
       
       return {
         ...result,
@@ -109,9 +132,19 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       // Update the cache
       lastAppliedTimesRef.current[cacheKey] = { startTime, endTime };
       
-      // Save to context
+      // Save to context - which will now check against schedule defaults
       context.saveWorkHours(date, targetUserId, startTime, endTime);
       logger.debug(`Saved work hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}`);
+      
+      // Publish event that hours have been updated
+      timeEventsService.publish('work-hours-updated', {
+        date: format(date, 'yyyy-MM-dd'),
+        userId: targetUserId,
+        startTime,
+        endTime,
+        timestamp: Date.now()
+      });
+      
       return true;
     }, false);
   }, [context, userId]);
@@ -130,7 +163,7 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
     }, false);
   }, [context, userId]);
   
-  // Reset work hours for a date to defaults
+  // Reset work hours for a date to defaults from schedule
   const resetWorkHours = useCallback((date: Date, specificUserId?: string): void => {
     safeTimeOperation(() => {
       const targetUserId = specificUserId || userId;
@@ -145,8 +178,16 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       // Clear the cache entry
       delete lastAppliedTimesRef.current[cacheKey];
       
+      // Reset to schedule default
       context.resetDayWorkHours(date, targetUserId);
       logger.debug(`Reset work hours for ${format(date, 'yyyy-MM-dd')}, userId: ${targetUserId}`);
+      
+      // Publish event that hours have been reset
+      timeEventsService.publish('work-hours-reset', {
+        date: format(date, 'yyyy-MM-dd'),
+        userId: targetUserId,
+        timestamp: Date.now()
+      });
     }, undefined);
   }, [context, userId]);
   
@@ -169,6 +210,12 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       
       context.clearWorkHours(targetUserId);
       logger.debug(`Cleared all work hours for user ${targetUserId}`);
+      
+      // Publish event that all hours have been cleared
+      timeEventsService.publish('work-hours-cleared', {
+        userId: targetUserId,
+        timestamp: Date.now()
+      });
     }, undefined);
   }, [context, userId]);
   
