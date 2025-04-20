@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import TimeEntryController from "../entry-control/TimeEntryController";
@@ -33,6 +33,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   // Track when entries change for logging and notifications
   const [entriesCount, setEntriesCount] = useState(dayEntries.length);
+  
+  // Log initial entries data for debugging
+  useEffect(() => {
+    logger.debug(`[WorkHoursSection] Initial entries for ${date.toISOString()}: ${dayEntries.length}`);
+  }, []);
   
   // Update entry count when entries change
   useEffect(() => {
@@ -78,12 +83,14 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         />
       </Card>
       
-      <TimeEntryController
-        date={date}
-        userId={userId}
-        interactive={interactive}
-        onCreateEntry={handleCreateEntry}
-      />
+      <Suspense fallback={<div className="text-center py-4">Loading entries...</div>}>
+        <TimeEntryController
+          date={date}
+          userId={userId}
+          interactive={interactive}
+          onCreateEntry={handleCreateEntry}
+        />
+      </Suspense>
     </div>
   );
 };

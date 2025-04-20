@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,9 @@ import { unifiedTimeEntryService } from "@/utils/time/services";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('EntryList');
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -23,6 +26,14 @@ const EntryList: React.FC<EntryListProps> = ({
   const { deleteEntry } = useTimeEntryContext();
   const { toast } = useToast();
   const [deletingEntryIds, setDeletingEntryIds] = useState<Set<string>>(new Set());
+  
+  // Add debug logging to track entries passed to this component
+  useEffect(() => {
+    logger.debug(`EntryList received ${entries.length} entries`);
+    if (entries.length > 0) {
+      logger.debug('Entry IDs:', entries.map(e => e.id));
+    }
+  }, [entries]);
   
   const handleDeleteEntry = async (entryId: string) => {
     console.log("EntryList: Deleting entry:", entryId);
