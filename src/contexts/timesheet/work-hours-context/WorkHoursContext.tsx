@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
 import { useWorkSchedule } from '@/contexts/work-schedule';
 import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
+import { WorkSchedule } from '@/types';
 
 // Create a dedicated logger for this context
 const logger = createTimeLogger('WorkHoursContext');
@@ -154,13 +154,12 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     try {
       const userScheduleId = getUserSchedule(userId);
       
-      // FIX: Compare schedule ID (string) to 'default', not comparing schedule object to string
-      const schedule = userScheduleId === 'default'
+      // Correctly compare schedule IDs as strings
+      const selectedSchedule: WorkSchedule = userScheduleId === 'default'
         ? defaultSchedule
-        // FIX: Compare schedule.id (string) to userScheduleId (string)
         : schedules.find(s => s.id === userScheduleId) || defaultSchedule;
       
-      const daySchedule = getDayScheduleInfo(date, schedule);
+      const daySchedule = getDayScheduleInfo(date, selectedSchedule);
       
       if (daySchedule && daySchedule.isWorkingDay && daySchedule.hours) {
         logger.debug(`Derived default hours for ${userId} on ${format(date, 'yyyy-MM-dd')} from schedule: ${daySchedule.hours.startTime}-${daySchedule.hours.endTime}`);
