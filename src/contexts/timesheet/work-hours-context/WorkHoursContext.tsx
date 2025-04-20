@@ -36,7 +36,19 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   const isInitializedRef = useRef<boolean>(false);
   
   const { defaultSchedule, schedules, getUserSchedule } = useWorkSchedule();
-  const { getDefaultHoursFromSchedule } = createWorkHoursOperations(defaultSchedule, schedules, getUserSchedule);
+
+  // Create a wrapper function to extract schedule ID
+  const getUserScheduleId = (userId: string): string => {
+    const schedule = getUserSchedule(userId);
+    return schedule?.id || 'default';
+  };
+
+  // Now pass the wrapper function that returns a string
+  const { getDefaultHoursFromSchedule } = createWorkHoursOperations(
+    defaultSchedule,
+    schedules,
+    getUserScheduleId
+  );
 
   const cleanupCache = useCallback(() => {
     const now = Date.now();
