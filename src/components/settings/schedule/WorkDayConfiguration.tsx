@@ -55,7 +55,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
                 <Bell className="h-4 w-4 mr-1" />
                 <span className="text-xs">Lunch</span>
               </ToggleGroupItem>
-              <ToggleGroupItem value="smoko" aria-label="Toggle smoko break" data-state={breaks.smoko ? "on" : "off"} onClick={() => toggleBreak(day, 'smoko')}>
+              <ToggleGroupItem value="smoko" aria-label="Toggle smoko break" data-state={breaks.smoko ? "on" : "off"} onClick={() => toggleBreak(day, 'smoko')} className="bg-yellow-200 hover:bg-yellow-100 rounded-sm">
                 <Coffee className="h-4 w-4 mr-1" />
                 <span className="text-xs">Smoko</span>
               </ToggleGroupItem>
