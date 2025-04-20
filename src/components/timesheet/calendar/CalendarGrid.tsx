@@ -1,8 +1,12 @@
-import React from "react";
+
+import React, { useMemo } from "react";
 import { useCalendarData } from "../hooks/useCalendarData";
 import CalendarDay from "./CalendarDay";
 import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('CalendarGrid');
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -20,19 +24,35 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const { days, monthStartDay } = useCalendarData(currentMonth, selectedDate, workSchedule);
   const { getWorkHoursForDate } = useTimesheetWorkHours();
 
-  const processedDays = days.map(day => {
-    const workHours = getWorkHoursForDate(day.date);
-    const { isComplete } = useTimeCompletion(
-      day.entries,
-      workHours?.startTime,
-      workHours?.endTime
-    );
+  const processedDays = useMemo(() => {
+    logger.debug(`Processing ${days.length} days for month ${currentMonth.toISOString()}`);
+    
+    return days.map(day => {
+      const workHours = getWorkHoursForDate(day.date);
+      const { isComplete } = useTimeCompletion(
+        day.entries,
+        workHours?.startTime,
+        workHours?.endTime
+      );
 
-    return {
-      ...day,
-      isComplete: isComplete || day.isComplete
-    };
-  });
+      logger.debug(`Day ${day.date.toISOString()}: entries=${day.entries.length}, complete=${isComplete}`);
+
+      return {
+        ...day,
+        isComplete: isComplete || day.isComplete
+      };
+    });
+  }, [days, getWorkHoursForDate]);
+
+  // Log when days or completion status changes
+  React.useEffect(() => {
+    logger.debug(`Calendar grid updated with ${processedDays.length} days`);
+    processedDays.forEach(day => {
+      if (day.entries.length > 0) {
+        logger.debug(`Day ${day.date.toISOString()} has ${day.entries.length} entries, complete: ${day.isComplete}`);
+      }
+    });
+  }, [processedDays]);
 
   return (
     <div className="grid grid-cols-7 gap-2">
