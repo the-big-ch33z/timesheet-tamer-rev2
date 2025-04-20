@@ -1,20 +1,16 @@
-
 import React, { useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryList from "./EntryList";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
-
 const logger = createTimeLogger('ExistingEntriesList');
-
 interface ExistingEntriesListProps {
   entries: TimeEntry[];
   date: Date;
   interactive?: boolean;
   onDeleteEntry: (entryId: string) => Promise<boolean>;
 }
-
 const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
   entries,
   date,
@@ -27,9 +23,7 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
     if (entries.length > 0) {
       logger.debug('First entry:', {
         id: entries[0].id,
-        date: entries[0].date instanceof Date 
-          ? entries[0].date.toISOString() 
-          : entries[0].date,
+        date: entries[0].date instanceof Date ? entries[0].date.toISOString() : entries[0].date,
         hours: entries[0].hours,
         userId: entries[0].userId
       });
@@ -37,29 +31,17 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
       logger.debug('No entries received for this date');
     }
   }, [entries, date]);
-
-  return (
-    <div>
-      {entries.length > 0 ? (
-        <Card>
+  return <div>
+      {entries.length > 0 ? <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium">Time Entries</CardTitle>
+            
           </CardHeader>
           <CardContent>
-            <EntryList 
-              entries={entries}
-              interactive={interactive}
-              onDeleteEntry={onDeleteEntry}
-            />
+            <EntryList entries={entries} interactive={interactive} onDeleteEntry={onDeleteEntry} />
           </CardContent>
-        </Card>
-      ) : (
-        <div className="text-center py-4 text-gray-500">
+        </Card> : <div className="text-center py-4 text-gray-500">
           No entries for this date. Add a new entry using the button above.
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default ExistingEntriesList;
