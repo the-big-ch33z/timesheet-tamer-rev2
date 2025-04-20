@@ -12,6 +12,7 @@ interface WeekConfigurationProps {
   updateWorkDay: (day: WeekDay, isWorkDay: boolean) => void;
   updateWorkHours: (day: WeekDay, field: 'startTime' | 'endTime', value: string) => void;
   toggleRdoDay: (day: WeekDay) => void;
+  toggleBreak: (day: WeekDay, breakType: 'lunch' | 'smoko') => void;
 }
 
 export const WeekConfiguration: React.FC<WeekConfigurationProps> = ({
@@ -22,6 +23,7 @@ export const WeekConfiguration: React.FC<WeekConfigurationProps> = ({
   updateWorkDay,
   updateWorkHours,
   toggleRdoDay,
+  toggleBreak,
 }) => {
   return (
     <div>
@@ -50,6 +52,7 @@ export const WeekConfiguration: React.FC<WeekConfigurationProps> = ({
             updateWorkDay={updateWorkDay}
             updateWorkHours={updateWorkHours}
             toggleRdoDay={toggleRdoDay}
+            toggleBreak={toggleBreak}
           />
         ))}
       </div>

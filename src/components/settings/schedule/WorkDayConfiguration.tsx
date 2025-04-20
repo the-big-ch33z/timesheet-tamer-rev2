@@ -72,7 +72,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
               <ToggleGroupItem 
                 value="lunch"
                 aria-label="Toggle lunch break"
-                pressed={breaks.lunch}
+                data-state={breaks.lunch ? "on" : "off"}
                 onClick={() => toggleBreak(day, 'lunch')}
               >
                 <Bell className="h-4 w-4 mr-1" />
@@ -81,7 +81,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
               <ToggleGroupItem
                 value="smoko"
                 aria-label="Toggle smoko break"
-                pressed={breaks.smoko}
+                data-state={breaks.smoko ? "on" : "off"}
                 onClick={() => toggleBreak(day, 'smoko')}
               >
                 <Coffee className="h-4 w-4 mr-1" />

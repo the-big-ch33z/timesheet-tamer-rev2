@@ -10,7 +10,7 @@ import { WeekConfiguration } from "./schedule/WeekConfiguration";
 import { CreateScheduleDialog } from "./schedule/CreateScheduleDialog";
 import { useScheduleState } from "./schedule/useScheduleState";
 import { Badge } from "@/components/ui/badge";
-import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
+import { calculateFortnightHoursFromSchedule } from "@/utils/time/scheduleUtils";
 
 const WorkScheduleSettings: React.FC = () => {
   const {
@@ -29,7 +29,8 @@ const WorkScheduleSettings: React.FC = () => {
     handleDeleteSchedule,
     updateWorkDay,
     updateWorkHours,
-    toggleRdoDay
+    toggleRdoDay,
+    toggleBreak
   } = useScheduleState();
   
   // Calculate fortnight hours based on the current editing schedule
@@ -93,6 +94,7 @@ const WorkScheduleSettings: React.FC = () => {
             updateWorkDay={updateWorkDay}
             updateWorkHours={updateWorkHours}
             toggleRdoDay={toggleRdoDay}
+            toggleBreak={toggleBreak}
           />
 
           <div className="flex justify-between pt-4">
