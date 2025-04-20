@@ -1,8 +1,7 @@
-
 import { useMemo } from "react";
 import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
-import { useCalendarHelpers } from "../calendar/useCalendarHelpers";
+import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
 import { Holiday, getHolidays } from "@/lib/holidays";
 import { WorkSchedule } from "@/types";
 import { createTimeLogger } from "@/utils/time/errors";
