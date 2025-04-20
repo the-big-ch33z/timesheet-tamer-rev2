@@ -3,10 +3,48 @@ import React from 'react';
 import { TimeEntry } from '@/types';
 import EntryField from '../../entry-dialog/fields/EntryField';
 
+// Field type constants
+const FIELD_TYPES = {
+  HOURS: "hours",
+  JOB_NUMBER: "jobNumber",
+  REGO: "rego",
+  TASK_NUMBER: "taskNumber",
+  DESCRIPTION: "description"
+};
+
 interface EntryFormStepProps {
   values: Partial<TimeEntry>;
   onFieldChange: (field: string, value: string | number) => void;
 }
+
+// Reusable field configuration
+const FIELD_CONFIG = {
+  [FIELD_TYPES.HOURS]: {
+    name: "Hours",
+    type: "number",
+    placeholder: "Enter hours",
+    required: true,
+    min: "0",
+    step: "0.1"
+  },
+  [FIELD_TYPES.JOB_NUMBER]: {
+    name: "Job Number",
+    placeholder: "Enter job number"
+  },
+  [FIELD_TYPES.REGO]: {
+    name: "Rego",
+    placeholder: "Enter rego"
+  },
+  [FIELD_TYPES.TASK_NUMBER]: {
+    name: "Task Number",
+    placeholder: "Enter task number"
+  },
+  [FIELD_TYPES.DESCRIPTION]: {
+    name: "Description",
+    placeholder: "Enter description",
+    type: "textarea"
+  }
+};
 
 const EntryFormStep: React.FC<EntryFormStepProps> = ({
   values,
@@ -17,9 +55,9 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
     console.debug(`[EntryFormStep] Field change: ${field}=${value}`);
     
     // Special handling for numeric fields
-    if (field === 'hours') {
+    if (field === FIELD_TYPES.HOURS) {
       const numValue = parseFloat(value) || 0;
-      onFieldChange('hours', numValue);
+      onFieldChange(field, numValue);
     } else {
       onFieldChange(field, value);
     }
@@ -30,70 +68,43 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
     return value !== undefined && value !== null ? String(value) : '';
   };
 
+  // Render a standard field based on configuration
+  const renderField = (fieldType: string) => {
+    const config = FIELD_CONFIG[fieldType];
+    if (!config) return null;
+    
+    return (
+      <div>
+        <EntryField
+          id={fieldType}
+          name={config.name}
+          value={ensureString(values[fieldType])}
+          onChange={(value) => handleFieldChange(fieldType, value)}
+          placeholder={config.placeholder}
+          type={config.type}
+          min={config.min}
+          step={config.step}
+          required={config.required}
+          showLabel={true}
+        />
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <EntryField
-            id="hours"
-            name="Hours"
-            value={ensureString(values.hours)}
-            onChange={(value) => handleFieldChange('hours', value)}
-            placeholder="Enter hours"
-            type="number"
-            min="0"
-            step="0.1"
-            required={true}
-            showLabel={true}
-          />
-        </div>
-        
-        <div>
-          <EntryField
-            id="jobNumber"
-            name="Job Number"
-            value={ensureString(values.jobNumber)}
-            onChange={(value) => handleFieldChange('jobNumber', value)}
-            placeholder="Enter job number"
-            showLabel={true}
-          />
-        </div>
+        {renderField(FIELD_TYPES.HOURS)}
+        {renderField(FIELD_TYPES.JOB_NUMBER)}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <EntryField
-            id="rego"
-            name="Rego"
-            value={ensureString(values.rego)}
-            onChange={(value) => handleFieldChange('rego', value)}
-            placeholder="Enter rego"
-            showLabel={true}
-          />
-        </div>
-        
-        <div>
-          <EntryField
-            id="taskNumber"
-            name="Task Number"
-            value={ensureString(values.taskNumber)}
-            onChange={(value) => handleFieldChange('taskNumber', value)}
-            placeholder="Enter task number"
-            showLabel={true}
-          />
-        </div>
+        {renderField(FIELD_TYPES.REGO)}
+        {renderField(FIELD_TYPES.TASK_NUMBER)}
       </div>
       
       <div>
-        <EntryField
-          id="description"
-          name="Description"
-          value={ensureString(values.description)}
-          onChange={(value) => handleFieldChange('description', value)}
-          placeholder="Enter description"
-          type="textarea"
-          showLabel={true}
-        />
+        {renderField(FIELD_TYPES.DESCRIPTION)}
       </div>
     </div>
   );

@@ -1,27 +1,50 @@
 import { useRef, useCallback } from 'react';
-import { calculateHoursFromTimes } from "@/utils/time/calculations";
-import { Dispatch, SetStateAction } from 'react';
-import { ToastAPI } from '@/hooks/use-toast';
+import { calculateHoursFromTimes } from '@/utils/time/calculations';
+import { useToast } from '@/hooks/use-toast';
 
-interface UseFieldBatchingProps {
-  setHours: Dispatch<SetStateAction<string>>;
-  setDescription: Dispatch<SetStateAction<string>>;
-  setJobNumber: Dispatch<SetStateAction<string>>;
-  setRego: Dispatch<SetStateAction<string>>;
-  setTaskNumber: Dispatch<SetStateAction<string>>;
-  setStartTime: Dispatch<SetStateAction<string>>;
-  setEndTime: Dispatch<SetStateAction<string>>;
-  setFormEdited: Dispatch<SetStateAction<boolean>>;
-  disabled: boolean;
-  startTime: string;
-  endTime: string;
-  autoCalculateHours: boolean;
-  toast: ToastAPI;
-}
+// Standard field types for consistency
+export const FIELD_TYPES = {
+  HOURS: "hours",
+  DESCRIPTION: "description",
+  JOB_NUMBER: "jobNumber",
+  REGO: "rego",
+  TASK_NUMBER: "taskNumber",
+  START_TIME: "startTime",
+  END_TIME: "endTime"
+};
 
-/**
- * Hook to manage batched field changes for form performance
- */
+// Standard toast notification patterns
+export const TOAST_MESSAGES = {
+  SUCCESS: (message: string) => ({ title: "Success", description: message }),
+  ERROR: (message: string) => ({ title: "Error", description: message, variant: "destructive" }),
+  WARNING: (message: string) => ({ title: "Warning", description: message, variant: "destructive" })
+};
+
+// Common validation patterns
+export const validateTime = (startTime: string, endTime: string): boolean => {
+  if (!startTime || !endTime) return true;
+  
+  try {
+    const hours = calculateHoursFromTimes(startTime, endTime);
+    return hours > 0;
+  } catch {
+    return false;
+  }
+};
+
+// Common time auto-calculation
+export const calculateHoursString = (startTime: string, endTime: string): string => {
+  if (!startTime || !endTime) return "";
+  
+  try {
+    const hours = calculateHoursFromTimes(startTime, endTime);
+    return hours.toString();
+  } catch (err) {
+    console.error("[useFieldBatching] Error calculating hours:", err);
+    return "";
+  }
+};
+
 export const useFieldBatching = ({
   setHours,
   setDescription,
@@ -34,109 +57,96 @@ export const useFieldBatching = ({
   disabled,
   startTime,
   endTime,
-  autoCalculateHours,
+  autoCalculateHours = false,
   toast
-}: UseFieldBatchingProps) => {
+}) => {
+  // Keep track of batched changes
   const batchedChangesRef = useRef<Record<string, string>>({});
-  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const batchTimeoutRef = useRef<number | null>(null);
   
-  // Process batched field changes
+  // Process all batched changes at once
   const processBatchedChanges = useCallback(() => {
-    console.debug("[useFieldBatching] Processing batched changes", batchedChangesRef.current);
+    if (disabled) return;
     
     const changes = batchedChangesRef.current;
-    batchedChangesRef.current = {};
+    const hasChanges = Object.keys(changes).length > 0;
     
-    // Apply all batched changes
-    Object.entries(changes).forEach(([field, value]) => {
-      try {
-        switch (field) {
-          case 'hours':
-            console.debug(`[useFieldBatching] Setting hours to ${value}`);
-            setHours(value);
-            break;
-          case 'description':
-            console.debug(`[useFieldBatching] Setting description to ${value}`);
-            setDescription(value);
-            break;
-          case 'jobNumber':
-            console.debug(`[useFieldBatching] Setting jobNumber to ${value}`);
-            setJobNumber(value);
-            break;
-          case 'rego':
-            console.debug(`[useFieldBatching] Setting rego to ${value}`);
-            setRego(value);
-            break;
-          case 'taskNumber':
-            console.debug(`[useFieldBatching] Setting taskNumber to ${value}`);
-            setTaskNumber(value);
-            break;
-          case 'startTime':
-            console.debug(`[useFieldBatching] Setting startTime to ${value}`);
-            setStartTime(value);
-            break;
-          case 'endTime':
-            console.debug(`[useFieldBatching] Setting endTime to ${value}`);
-            setEndTime(value);
-            break;
-          default:
-            console.warn(`[useFieldBatching] Unknown field in batch: ${field}`);
-            break;
+    if (hasChanges) {
+      console.debug("[useFieldBatching] Processing batched changes:", changes);
+      
+      // Apply all changes
+      if (FIELD_TYPES.HOURS in changes) setHours(changes[FIELD_TYPES.HOURS]);
+      if (FIELD_TYPES.DESCRIPTION in changes) setDescription(changes[FIELD_TYPES.DESCRIPTION]);
+      if (FIELD_TYPES.JOB_NUMBER in changes) setJobNumber(changes[FIELD_TYPES.JOB_NUMBER]);
+      if (FIELD_TYPES.REGO in changes) setRego(changes[FIELD_TYPES.REGO]);
+      if (FIELD_TYPES.TASK_NUMBER in changes) setTaskNumber(changes[FIELD_TYPES.TASK_NUMBER]);
+      
+      // Special handling for time fields
+      const newStartTime = changes[FIELD_TYPES.START_TIME] !== undefined ? changes[FIELD_TYPES.START_TIME] : startTime;
+      const newEndTime = changes[FIELD_TYPES.END_TIME] !== undefined ? changes[FIELD_TYPES.END_TIME] : endTime;
+      
+      if (FIELD_TYPES.START_TIME in changes) setStartTime(newStartTime);
+      if (FIELD_TYPES.END_TIME in changes) setEndTime(newEndTime);
+      
+      // Auto-calculate hours from times if needed
+      if (autoCalculateHours && 
+          (FIELD_TYPES.START_TIME in changes || FIELD_TYPES.END_TIME in changes) &&
+          newStartTime && newEndTime) {
+        try {
+          const hoursValue = calculateHoursString(newStartTime, newEndTime);
+          if (hoursValue) {
+            setHours(hoursValue);
+            console.debug(`[useFieldBatching] Auto-calculated hours: ${hoursValue}`);
+          }
+        } catch (err) {
+          console.error("[useFieldBatching] Error auto-calculating hours:", err);
+          if (toast) {
+            toast(TOAST_MESSAGES.ERROR("Could not calculate hours from times"));
+          }
         }
-      } catch (error) {
-        console.error(`[useFieldBatching] Error processing batched change for ${field}:`, error);
       }
-    });
-    
-    // Mark form as edited if we have changes
-    if (Object.keys(changes).length > 0) {
+      
+      // Mark form as edited
       setFormEdited(true);
+      
+      // Clear batched changes
+      batchedChangesRef.current = {};
     }
-  }, [setHours, setDescription, setJobNumber, setRego, setTaskNumber, setStartTime, setEndTime, setFormEdited]);
-
+  }, [
+    disabled,
+    setHours,
+    setDescription,
+    setJobNumber,
+    setRego,
+    setTaskNumber,
+    setStartTime,
+    setEndTime,
+    setFormEdited,
+    startTime,
+    endTime,
+    autoCalculateHours,
+    toast
+  ]);
+  
   // Handle field changes with batching
   const handleFieldChange = useCallback((field: string, value: string) => {
-    console.debug(`[useFieldBatching] Field changed: ${field} = ${value}, disabled=${disabled}`);
+    if (disabled) return;
     
-    if (disabled) {
-      console.debug("[useFieldBatching] Form is disabled, ignoring field change");
-      return;
+    console.debug(`[useFieldBatching] Field change: ${field}=${value}`);
+    
+    // Store the change
+    batchedChangesRef.current[field] = value;
+    
+    // Set a timeout to batch process changes
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
     }
     
-    try {
-      // Add to batched changes
-      batchedChangesRef.current[field] = value;
-      
-      // Handle special cases for time fields with auto-calculation
-      if (autoCalculateHours && (field === 'startTime' || field === 'endTime')) {
-        const newStartTime = field === 'startTime' ? value : startTime;
-        const newEndTime = field === 'endTime' ? value : endTime;
-        
-        const calculatedHours = calculateHoursFromTimes(newStartTime, newEndTime);
-        console.debug(`[useFieldBatching] Auto-calculated hours: ${calculatedHours}`);
-        batchedChangesRef.current['hours'] = calculatedHours.toFixed(1);
-      }
-      
-      // Clear any existing batch timeout
-      if (batchTimeoutRef.current) {
-        clearTimeout(batchTimeoutRef.current);
-      }
-      
-      // Schedule processing of batched changes
-      batchTimeoutRef.current = setTimeout(() => {
-        processBatchedChanges();
-        batchTimeoutRef.current = null;
-      }, 50);
-      
-    } catch (error) {
-      console.error("[useFieldBatching] Error handling field change:", error);
-      toast({
-        title: "Error updating field",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive"
-      });
-    }
-  }, [disabled, autoCalculateHours, startTime, endTime, processBatchedChanges, toast]);
+    batchTimeoutRef.current = window.setTimeout(() => {
+      processBatchedChanges();
+      batchTimeoutRef.current = null;
+    }, 100); // Small delay to batch rapid changes
+  }, [disabled, processBatchedChanges]);
   
   return {
     batchedChangesRef,

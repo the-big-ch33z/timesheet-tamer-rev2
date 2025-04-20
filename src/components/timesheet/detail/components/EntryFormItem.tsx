@@ -4,10 +4,31 @@ import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
 import { useFormSubmission } from "@/hooks/form/useFormSubmission";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Loader2, Trash2 } from "lucide-react";
+
+// Common field definitions to reduce duplication
+const FIELD_TYPES = {
+  HOURS: "hours",
+  DESCRIPTION: "description",
+  JOB_NUMBER: "jobNumber",
+  REGO: "rego",
+  TASK_NUMBER: "taskNumber"
+};
+
+// Standardized validation rules across components
+const VALIDATION_RULES = {
+  hours: {
+    required: true,
+    rules: [
+      {
+        validate: (value: string) => parseFloat(value) > 0,
+        message: "Hours must be greater than 0"
+      }
+    ]
+  }
+};
 
 interface EntryFormItemProps {
   formState: TimeEntryFormState;
@@ -18,6 +39,32 @@ interface EntryFormItemProps {
   disabled?: boolean;
 }
 
+// Reusable form field renderer
+const renderFormField = (
+  id: string,
+  fieldName: string,
+  label: string,
+  value: string,
+  onChange: (value: string) => void,
+  disabled: boolean = false,
+  error?: string,
+  placeholder: string = ""
+) => {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium mb-1">{label}</label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        placeholder={placeholder || label}
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  );
+};
+
 const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   formState: initialFormState,
   handleFieldChange: parentHandleFieldChange,
@@ -26,25 +73,13 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   entryId,
   disabled = false
 }) => {
-  const validations = {
-    hours: {
-      required: true,
-      rules: [
-        {
-          validate: (value: string) => parseFloat(value) > 0,
-          message: "Hours must be greater than 0"
-        }
-      ]
-    }
-  };
-
   const { formState, setFieldValue, validateForm } = useFormState(`entry-${entryId}`, {
     hours: initialFormState.hours || '',
     description: initialFormState.description || '',
     jobNumber: initialFormState.jobNumber || '',
     rego: initialFormState.rego || '',
     taskNumber: initialFormState.taskNumber || ''
-  }, validations);
+  }, VALIDATION_RULES);
 
   const { isSubmitting, handleSubmit } = useFormSubmission({
     onSubmit: async () => {
@@ -72,7 +107,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
       // Cleanup when component unmounts
       console.debug(`[EntryFormItem] Cleaning up form state for entry ${entryId}`);
     };
-  }, [formState.fields, parentHandleFieldChange, entryId]);
+  }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
 
   const onSaveCallback = useCallback(() => {
     if (!disabled && validateForm()) {
@@ -88,56 +123,51 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     >
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor={`job-${entryId}`} className="block text-sm font-medium mb-1">Job Number</label>
-            <Input
-              id={`job-${entryId}`}
-              value={formState.fields.jobNumber.value}
-              onChange={(e) => handleFieldChangeCallback('jobNumber', e.target.value)}
-              disabled={disabled}
-              placeholder="Job Number"
-            />
-          </div>
-          <div>
-            <label htmlFor={`task-${entryId}`} className="block text-sm font-medium mb-1">Task Number</label>
-            <Input
-              id={`task-${entryId}`}
-              value={formState.fields.taskNumber.value}
-              onChange={(e) => handleFieldChangeCallback('taskNumber', e.target.value)}
-              disabled={disabled}
-              placeholder="Task Number"
-            />
-          </div>
+          {renderFormField(
+            `job-${entryId}`, 
+            FIELD_TYPES.JOB_NUMBER,
+            "Job Number", 
+            formState.fields.jobNumber.value, 
+            (value) => handleFieldChangeCallback(FIELD_TYPES.JOB_NUMBER, value),
+            disabled,
+            formState.fields.jobNumber.error,
+            "Job Number"
+          )}
+          
+          {renderFormField(
+            `task-${entryId}`, 
+            FIELD_TYPES.TASK_NUMBER,
+            "Task Number", 
+            formState.fields.taskNumber.value, 
+            (value) => handleFieldChangeCallback(FIELD_TYPES.TASK_NUMBER, value),
+            disabled,
+            formState.fields.taskNumber.error,
+            "Task Number"
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor={`rego-${entryId}`} className="block text-sm font-medium mb-1">Rego</label>
-            <Input
-              id={`rego-${entryId}`}
-              value={formState.fields.rego.value}
-              onChange={(e) => handleFieldChangeCallback('rego', e.target.value)}
-              disabled={disabled}
-              placeholder="Rego"
-            />
-          </div>
-          <div>
-            <label htmlFor={`hours-${entryId}`} className="block text-sm font-medium mb-1">Hours</label>
-            <Input
-              id={`hours-${entryId}`}
-              value={formState.fields.hours.value}
-              onChange={(e) => handleFieldChangeCallback('hours', e.target.value)}
-              disabled={disabled}
-              placeholder="Hours"
-              type="number"
-              step="0.25"
-              min="0"
-              required
-            />
-            {formState.fields.hours.error && (
-              <p className="text-red-500 text-xs mt-1">{formState.fields.hours.error}</p>
-            )}
-          </div>
+          {renderFormField(
+            `rego-${entryId}`, 
+            FIELD_TYPES.REGO,
+            "Rego", 
+            formState.fields.rego.value, 
+            (value) => handleFieldChangeCallback(FIELD_TYPES.REGO, value),
+            disabled,
+            formState.fields.rego.error,
+            "Rego"
+          )}
+          
+          {renderFormField(
+            `hours-${entryId}`, 
+            FIELD_TYPES.HOURS,
+            "Hours", 
+            formState.fields.hours.value, 
+            (value) => handleFieldChangeCallback(FIELD_TYPES.HOURS, value),
+            disabled,
+            formState.fields.hours.error,
+            "Hours"
+          )}
         </div>
         
         <div>
@@ -145,7 +175,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
           <Textarea
             id={`desc-${entryId}`}
             value={formState.fields.description.value}
-            onChange={(e) => handleFieldChangeCallback('description', e.target.value)}
+            onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.DESCRIPTION, e.target.value)}
             disabled={disabled}
             placeholder="Entry description"
             rows={2}

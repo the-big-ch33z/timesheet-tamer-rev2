@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -6,6 +7,14 @@ import { TimeEntry } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { useLogger } from "@/hooks/useLogger";
 import EntryInterface from "./EntryInterface";
+
+// Standard toast message patterns
+const TOAST_MESSAGES = {
+  CREATE_SUCCESS: (hours: number) => `Added ${hours} hours to your timesheet`,
+  DELETE_SUCCESS: "Entry deleted successfully",
+  ERROR: "There was a problem with the operation"
+};
+
 interface TimeEntryControllerProps {
   date: Date;
   userId: string;
@@ -42,7 +51,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     setShowEntryForm(prev => !prev);
   };
 
-  // Handle entry creation with proper connection to context
+  // Standard operation wrapper for entry creation
   const handleCreateEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
     logger.debug('[TimeEntryController] Creating entry', {
       date: entryData.date,
@@ -66,23 +75,42 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     return newEntryId;
   }, [createEntry, date, userId, onCreateEntry, logger]);
 
-  // Delete entry with proper connection to context
+  // Standard operation wrapper for entry deletion
   const handleDeleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
     logger.debug('[TimeEntryController] Deleting entry', {
       entryId
     });
     return deleteEntry(entryId);
   }, [deleteEntry, logger]);
-  return <Card className="p-4">
+  
+  return (
+    <Card className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">Timesheet Entries</h3>
-        {interactive && <Button onClick={handleToggleEntryForm} variant="outline" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
+        {interactive && (
+          <Button 
+            onClick={handleToggleEntryForm} 
+            variant="outline" 
+            className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+          >
             <PlusCircle className="h-4 w-4 mr-2" />
             {showEntryForm ? "Hide Form" : "Add Entry"}
-          </Button>}
+          </Button>
+        )}
       </div>
 
-      {showEntryForm && <EntryInterface date={date} userId={userId} onCreateEntry={handleCreateEntry} onDeleteEntry={handleDeleteEntry} interactive={interactive} existingEntries={dayEntries} />}
-    </Card>;
+      {showEntryForm && (
+        <EntryInterface 
+          date={date} 
+          userId={userId} 
+          onCreateEntry={handleCreateEntry} 
+          onDeleteEntry={handleDeleteEntry} 
+          interactive={interactive} 
+          existingEntries={dayEntries} 
+        />
+      )}
+    </Card>
+  );
 };
+
 export default React.memo(TimeEntryController);
