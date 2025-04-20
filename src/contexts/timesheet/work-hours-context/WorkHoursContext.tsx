@@ -152,13 +152,16 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   const getDefaultHoursFromSchedule = useCallback((date: Date, userId: string): { startTime: string; endTime: string } => {
     try {
-      const userScheduleId = getUserSchedule(userId);
+      const userScheduleId: string = getUserSchedule(userId);
       
-      // Correctly compare schedule IDs as strings
-      const selectedSchedule: WorkSchedule = 
-        userScheduleId === 'default' 
-          ? defaultSchedule 
-          : schedules.find(s => s.id === userScheduleId) || defaultSchedule;
+      let selectedSchedule: WorkSchedule;
+      
+      if (userScheduleId === 'default') {
+        selectedSchedule = defaultSchedule;
+      } else {
+        const foundSchedule = schedules.find(s => s.id === userScheduleId);
+        selectedSchedule = foundSchedule || defaultSchedule;
+      }
       
       const daySchedule = getDayScheduleInfo(date, selectedSchedule);
       
