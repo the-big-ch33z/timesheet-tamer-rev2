@@ -8,8 +8,6 @@ export interface EntryFormState {
   jobNumber: string;
   rego: string;
   taskNumber: string; // Added task number field
-  startTime: string;
-  endTime: string;
   formEdited: boolean;
 }
 
@@ -23,8 +21,6 @@ export const useEntryFormState = (
   const [jobNumber, setJobNumber] = useState("");
   const [rego, setRego] = useState("");
   const [taskNumber, setTaskNumber] = useState(""); // Added task number state
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("17:00");
   const [formEdited, setFormEdited] = useState(false);
 
   // Reset form values when initialData or formKey changes
@@ -34,8 +30,6 @@ export const useEntryFormState = (
     setJobNumber(initialData.jobNumber || "");
     setRego(initialData.rego || "");
     setTaskNumber(initialData.taskNumber || ""); // Reset task number from initialData
-    setStartTime(initialData.startTime || "09:00");
-    setEndTime(initialData.endTime || "17:00");
     setFormEdited(false);
   }, [initialData, formKey]);
 
@@ -61,12 +55,6 @@ export const useEntryFormState = (
       case 'taskNumber': // Added case for task number
         setTaskNumber(value);
         break;
-      case 'startTime':
-        setStartTime(value);
-        break;
-      case 'endTime':
-        setEndTime(value);
-        break;
       default:
         break;
     }
@@ -80,8 +68,6 @@ export const useEntryFormState = (
     jobNumber,
     rego,
     taskNumber, // Include task number in form data
-    startTime,
-    endTime,
     project: initialData.project || "General",
     userId: initialData.userId || "", // Add userId from initialData
   });
@@ -93,8 +79,6 @@ export const useEntryFormState = (
       jobNumber,
       rego,
       taskNumber, // Include task number in form state
-      startTime,
-      endTime,
       formEdited
     },
     handleFieldChange,

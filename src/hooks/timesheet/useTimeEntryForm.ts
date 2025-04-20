@@ -4,7 +4,7 @@ import { TimeEntry } from "@/types";
 import { useFormStateManagement } from './useFormStateManagement';
 import { useFormSubmission } from './useFormSubmission';
 import { useAutoSave } from './useAutoSave';
-import { UseTimeEntryFormProps, UseTimeEntryFormReturn } from './types/timeEntryTypes';
+import { UseTimeEntryFormProps, UseTimeEntryFormReturn, TimeEntryFormState } from './types/timeEntryTypes';
 import { useToast } from "@/hooks/use-toast";
 
 /**

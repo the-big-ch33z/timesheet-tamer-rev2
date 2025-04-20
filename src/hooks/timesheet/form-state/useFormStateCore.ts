@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useFormStorage } from './useFormStorage';
 import { useFieldBatching } from './useFieldBatching';
@@ -37,9 +38,11 @@ export const useFormStateCore = ({
   const [jobNumber, setJobNumber] = useState("");
   const [rego, setRego] = useState("");
   const [taskNumber, setTaskNumber] = useState("");
-  const [startTime, setStartTime] = useState(initialData.startTime || "09:00");
-  const [endTime, setEndTime] = useState(initialData.endTime || "17:00");
   const [formEdited, setFormEdited] = useState(false);
+  
+  // We'll store these in local variables only, they're not part of TimeEntry anymore
+  const [startTime, setStartTime] = useState("09:00"); 
+  const [endTime, setEndTime] = useState("17:00");
   
   // Use specialized sub-hooks 
   const { 
@@ -105,8 +108,6 @@ export const useFormStateCore = ({
       if (draft.jobNumber) setJobNumber(draft.jobNumber);
       if (draft.rego) setRego(draft.rego);
       if (draft.taskNumber) setTaskNumber(draft.taskNumber);
-      if (draft.startTime) setStartTime(draft.startTime);
-      if (draft.endTime) setEndTime(draft.endTime);
       
       // Only mark as edited if we have substantive content
       if (draft.hours || draft.description || draft.jobNumber || 
@@ -125,8 +126,11 @@ export const useFormStateCore = ({
     setJobNumber(initialData.jobNumber || "");
     setRego(initialData.rego || "");
     setTaskNumber(initialData.taskNumber || "");
-    setStartTime(initialData.startTime || "09:00");
-    setEndTime(initialData.endTime || "17:00");
+    
+    // These are no longer part of TimeEntry
+    setStartTime("09:00");
+    setEndTime("17:00");
+    
     setFormEdited(false);
     console.debug("[useFormStateCore] Form reset complete");
     
@@ -152,13 +156,11 @@ export const useFormStateCore = ({
       description,
       jobNumber,
       rego,
-      taskNumber,
-      startTime,
-      endTime
+      taskNumber
     };
     
     saveFormDraft(formData);
-  }, [hours, description, jobNumber, rego, taskNumber, startTime, endTime, formEdited, disabled, formKey, saveFormDraft]);
+  }, [hours, description, jobNumber, rego, taskNumber, formEdited, disabled, formKey, saveFormDraft]);
 
   // Current form state
   const formState: TimeEntryFormState = {
@@ -169,8 +171,6 @@ export const useFormStateCore = ({
     taskNumber,
     formEdited,
     userId: initialData.userId || '',
-    startTime,
-    endTime
   };
 
   return {

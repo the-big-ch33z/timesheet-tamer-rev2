@@ -112,10 +112,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
           date={date}
           userId={userId}
           showTimeInputs={true}
-          initialData={{
-            startTime: "09:00",
-            endTime: "17:00"
-          }}
+          initialData={{}}
         />
       )}
     </div>

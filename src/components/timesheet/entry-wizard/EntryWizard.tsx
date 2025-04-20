@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import EntryFormStep from './steps/EntryFormStep';
 import EntryReviewStep from './steps/EntryReviewStep';
 import { Check, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTimesheetWorkHours };
 
 interface EntryWizardProps {
   onSubmit: (entry: Omit<TimeEntry, 'id'>) => void;
@@ -19,6 +19,9 @@ interface EntryWizardProps {
 
 type WizardStep = 'fill' | 'review';
 
+interface EntryWizardFormData extends Partial<TimeEntry> {
+}
+
 const EntryWizard: React.FC<EntryWizardProps> = ({
   onSubmit,
   date,
@@ -27,7 +30,7 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   onCancel
 }) => {
   const [currentStep, setCurrentStep] = useState<WizardStep>('fill');
-  const [formValues, setFormValues] = useState<Partial<TimeEntry>>({
+  const [formValues, setFormValues] = useState<EntryWizardFormData>({
     ...initialValues,
     date,
     userId,
@@ -36,24 +39,15 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   
   const { saveDraft, clearDraft } = useDraftContext();
   const { toast } = useToast();
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
   
-  // Log initial values when component mounts
   useEffect(() => {
     console.debug('[EntryWizard] Component mounted with initialValues:', initialValues);
     console.debug('[EntryWizard] Initial form values set to:', formValues);
   }, []);
   
-  // Log values whenever they change for debugging
   useEffect(() => {
     console.debug('[EntryWizard] Form values updated:', formValues);
-    
-    // Specifically log time values for debugging
-    if ('startTime' in formValues || 'endTime' in formValues) {
-      console.debug('[EntryWizard] Time values updated:', {
-        startTime: formValues.startTime || 'not set',
-        endTime: formValues.endTime || 'not set'
-      });
-    }
   }, [formValues]);
 
   const handleFieldChange = (field: string, value: string | number) => {
@@ -65,7 +59,6 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
   };
 
   const handleNext = () => {
-    // Validate before proceeding to review
     if (!formValues.hours || formValues.hours <= 0) {
       toast({
         title: "Hours required",
@@ -75,7 +68,6 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
       return;
     }
     
-    // Log all form values before going to review step
     console.debug("[EntryWizard] Moving to review step with values:", formValues);
     setCurrentStep('review');
   };
@@ -105,11 +97,9 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
 
     setIsSubmitting(true);
     
-    // Log submission values for debugging
     console.debug("[EntryWizard] Submitting entry with values:", formValues);
     
     try {
-      // Ensure we have all required fields
       const entryToSubmit: Omit<TimeEntry, 'id'> = {
         date: formValues.date || date,
         hours: formValues.hours || 0,
@@ -118,15 +108,12 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
         rego: formValues.rego || '',
         taskNumber: formValues.taskNumber || '',
         userId: formValues.userId || userId,
-        // Don't set default values for times if not provided
-        startTime: formValues.startTime || '',
-        endTime: formValues.endTime || '',
         project: formValues.project || 'General'
       };
       
       console.debug("[EntryWizard] Final submission data:", entryToSubmit);
       onSubmit(entryToSubmit);
-      clearDraft(); // Clear draft after successful submission
+      clearDraft();
       toast({
         title: "Entry submitted",
         description: "Your timesheet entry has been saved successfully."
@@ -145,7 +132,6 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
 
   return (
     <Card className="p-4 shadow-md">
-      {/* Wizard header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">
           {currentStep === 'fill' ? 'Fill Timesheet Entry' : 'Review & Submit'}
@@ -155,7 +141,6 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
         </div>
       </div>
       
-      {/* Wizard content */}
       <div className="mb-4">
         {currentStep === 'fill' ? (
           <EntryFormStep 
@@ -167,28 +152,25 @@ const EntryWizard: React.FC<EntryWizardProps> = ({
         )}
       </div>
       
-      {/* Wizard navigation */}
       <div className="flex justify-between mt-6">
-        <div>
-          {currentStep === 'review' && (
-            <Button 
-              variant="outline" 
-              onClick={handleBack}
-              className="flex items-center"
-            >
-              <ChevronLeft size={16} className="mr-1" /> Back
-            </Button>
-          )}
-          
-          {onCancel && currentStep === 'fill' && (
-            <Button 
-              variant="outline" 
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-          )}
-        </div>
+        {currentStep === 'review' && (
+          <Button 
+            variant="outline" 
+            onClick={handleBack}
+            className="flex items-center"
+          >
+            <ChevronLeft size={16} className="mr-1" /> Back
+          </Button>
+        )}
+        
+        {onCancel && currentStep === 'fill' && (
+          <Button 
+            variant="outline" 
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+        )}
         
         <div className="flex space-x-2">
           {currentStep === 'fill' && (

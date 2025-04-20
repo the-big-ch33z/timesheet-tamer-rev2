@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -5,7 +6,7 @@ import { useFormDataPreparation } from './form-submission/useFormDataPreparation
 import { useSubmissionState } from './form-submission/useSubmissionState';
 import { useDateTracking } from './form-submission/useDateTracking';
 import { useSubmissionError } from './form-submission/useSubmissionError';
-import { UseTimeEntryFormProps } from './types/timeEntryTypes';
+import { UseTimeEntryFormProps, TimeEntryFormState } from './types/timeEntryTypes';
 
 export const useFormSubmission = ({
   initialData = {},

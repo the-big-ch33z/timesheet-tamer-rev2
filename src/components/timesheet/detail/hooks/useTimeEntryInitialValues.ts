@@ -1,9 +1,8 @@
 
 import { useMemo } from "react";
-import { TimeEntry, WorkSchedule } from "@/types";
+import { WorkSchedule } from "@/types";
 
 interface UseTimeEntryInitialValuesProps {
-  entries: TimeEntry[];
   date: Date;
   workSchedule?: WorkSchedule;
 }

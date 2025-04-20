@@ -7,6 +7,7 @@ import { TimeEntry } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { useLogger } from "@/hooks/useLogger";
 import EntryInterface from "./EntryInterface";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 
 // Standard toast message patterns
 const TOAST_MESSAGES = {
@@ -34,6 +35,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
 }) => {
   const logger = useLogger('TimeEntryController');
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
 
   // Use our context to get access to entries and operations
   const {
@@ -56,9 +58,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     logger.debug('[TimeEntryController] Creating entry', {
       date: entryData.date,
       userId: entryData.userId,
-      hours: entryData.hours,
-      hasStartTime: !!entryData.startTime,
-      hasEndTime: !!entryData.endTime
+      hours: entryData.hours
     });
 
     // Use the context to create the entry
@@ -69,11 +69,13 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
     });
 
     // If successful and we have a callback, also call it
-    if (newEntryId && onCreateEntry && entryData.startTime && entryData.endTime) {
-      onCreateEntry(entryData.startTime, entryData.endTime, entryData.hours || 0);
+    if (newEntryId && onCreateEntry) {
+      // Get work hours for the date instead of using entry fields
+      const { startTime, endTime } = getWorkHoursForDate(date, userId);
+      onCreateEntry(startTime, endTime, entryData.hours || 0);
     }
     return newEntryId;
-  }, [createEntry, date, userId, onCreateEntry, logger]);
+  }, [createEntry, date, userId, onCreateEntry, logger, getWorkHoursForDate]);
 
   // Standard operation wrapper for entry deletion
   const handleDeleteEntry = useCallback(async (entryId: string): Promise<boolean> => {

@@ -1,3 +1,4 @@
+
 import { TimeEntry } from '@/types';
 
 export interface TimeEntryFormState {

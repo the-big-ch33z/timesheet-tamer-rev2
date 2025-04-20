@@ -28,10 +28,9 @@ export const useEntryFormHandlers = ({
   endTime = '17:00'
 }: UseEntryFormHandlersProps) => {
   
-  // Memoize initial data for new entries to prevent re-renders
-  const initialData = useMemo(() => ({
-    startTime, 
-    endTime
+  // Memoize configuration for handlers with work hours data
+  const workHoursData = useMemo(() => ({
+    workHours: { startTime, endTime }
   }), [startTime, endTime]);
   
   // Generate a series of fixed handlers for existing entries
@@ -84,11 +83,11 @@ export const useEntryFormHandlers = ({
   // Combine all fixed handlers into an array
   const fixedHandlers = [handler1, handler2, handler3, handler4, handler5];
   
-  // Create handlers for new entries using the memoized initialData
+  // Create handlers for new entries
   const newHandler1 = useTimeEntryForm({
     selectedDate: date,
     userId: userId || '',
-    initialData,
+    initialData: {},  // No longer pass startTime and endTime as part of initialData
     formKey: `new-entry-1`,
     autoSave: false,
     disabled: !interactive,
@@ -98,7 +97,7 @@ export const useEntryFormHandlers = ({
   const newHandler2 = useTimeEntryForm({
     selectedDate: date,
     userId: userId || '',
-    initialData,
+    initialData: {},  // No longer pass startTime and endTime as part of initialData
     formKey: `new-entry-2`,
     autoSave: false,
     disabled: !interactive,
@@ -108,7 +107,7 @@ export const useEntryFormHandlers = ({
   const newHandler3 = useTimeEntryForm({
     selectedDate: date,
     userId: userId || '',
-    initialData,
+    initialData: {},  // No longer pass startTime and endTime as part of initialData
     formKey: `new-entry-3`,
     autoSave: false,
     disabled: !interactive,
@@ -118,14 +117,22 @@ export const useEntryFormHandlers = ({
   // Combine empty handlers
   const emptyHandlers = [newHandler1, newHandler2, newHandler3];
   
-  // Log handler initialization
+  // Update times in handlers after initialization
   useEffect(() => {
+    // Set times using the handler's methods rather than through initialData
+    emptyHandlers.forEach(handler => {
+      if (startTime && endTime) {
+        handler.updateTimes(startTime, endTime);
+      }
+    });
+    
     logger.debug(`[useEntryFormHandlers] Created ${fixedHandlers.length} fixed handlers and ${emptyHandlers.length} empty handlers`);
-  }, [fixedHandlers.length, emptyHandlers.length]);
+  }, [fixedHandlers.length, emptyHandlers.length, startTime, endTime, emptyHandlers]);
   
   // Return all handlers
   return {
     fixedHandlers,
-    emptyHandlers
+    emptyHandlers,
+    workHoursData
   };
 };
