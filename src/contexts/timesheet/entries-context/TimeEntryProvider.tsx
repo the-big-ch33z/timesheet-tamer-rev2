@@ -1,10 +1,13 @@
 
-import React, { createContext } from 'react';
+import React, { createContext, useEffect } from 'react';
 import { TimeEntryContextValue, TimeEntryProviderProps } from './types';
 import { useInitialEntries } from './hooks/useInitialEntries';
 import { useEntryOperations } from './hooks/useEntryOperations';
 import { useEntryQueries } from './hooks/useEntryQueries';
 import { useStorageSync } from './hooks/useStorageSync';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('TimeEntryProvider');
 
 // Create the context
 export const TimeEntryContext = createContext<TimeEntryContextValue | undefined>(undefined);
@@ -28,6 +31,13 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
 
   // Get entries for the currently selected day
   const dayEntries = selectedDate ? getDayEntries(selectedDate) : [];
+  
+  // Log when selectedDate changes to track updates
+  useEffect(() => {
+    if (selectedDate) {
+      logger.debug(`Selected date in TimeEntryProvider: ${selectedDate.toISOString()}, entries: ${dayEntries.length}`);
+    }
+  }, [selectedDate, dayEntries.length]);
 
   // Prepare context value
   const value: TimeEntryContextValue = {

@@ -1,10 +1,11 @@
 
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { 
   useCalendarContext,
   useUserTimesheetContext
 } from "@/contexts/timesheet";
+import { useLogger } from "@/hooks/useLogger";
 
 // Lazy load components
 const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
@@ -23,6 +24,14 @@ const LoadingComponent = () => (
 const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
+  const logger = useLogger('TabContent');
+  
+  // Log when selected day changes to track updates
+  useEffect(() => {
+    if (selectedDay) {
+      logger.debug(`Selected day updated: ${selectedDay.toISOString()}`);
+    }
+  }, [selectedDay, logger]);
   
   // Ensure we have a user ID before rendering
   if (!viewedUser?.id) {

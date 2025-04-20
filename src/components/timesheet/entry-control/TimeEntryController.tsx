@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEn
 import { useLogger } from "@/hooks/useLogger";
 import EntryInterface from "./EntryInterface";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import ExistingEntriesList from "../detail/components/ExistingEntriesList";
 
 // Standard toast message patterns
 const TOAST_MESSAGES = {
@@ -46,6 +47,11 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
 
   // Get entries for the current day
   const dayEntries = getDayEntries(date);
+  
+  // Log when the selected date changes
+  useEffect(() => {
+    logger.debug(`[TimeEntryController] Date changed to: ${date.toISOString()}, entries count: ${dayEntries.length}`);
+  }, [date, dayEntries.length, logger]);
 
   // Toggle entry form visibility
   const handleToggleEntryForm = () => {
@@ -99,6 +105,16 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
             {showEntryForm ? "Hide Form" : "Add Entry"}
           </Button>
         )}
+      </div>
+
+      {/* Always show existing entries regardless of form visibility */}
+      <div className="mb-4">
+        <ExistingEntriesList
+          entries={dayEntries}
+          date={date}
+          interactive={interactive}
+          onDeleteEntry={handleDeleteEntry}
+        />
       </div>
 
       {showEntryForm && (

@@ -7,6 +7,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import WorkHoursInterface from "./WorkHoursInterface";
 import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
+import ExistingEntriesList from "./components/ExistingEntriesList";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -26,7 +27,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   onCreateEntry
 }) => {
   // Use the TimeEntryContext directly
-  const { getDayEntries } = useTimeEntryContext();
+  const { getDayEntries, dayEntries: contextDayEntries } = useTimeEntryContext();
   
   // Get entries for the current day
   const dayEntries = getDayEntries(date);
@@ -36,8 +37,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   
   // Log initial entries data for debugging
   useEffect(() => {
-    logger.debug(`[WorkHoursSection] Initial entries for ${date.toISOString()}: ${dayEntries.length}`);
-  }, []);
+    logger.debug(`[WorkHoursSection] Selected date: ${date.toISOString()}, entries: ${dayEntries.length}`);
+  }, [date, dayEntries.length]);
   
   // Update entry count when entries change
   useEffect(() => {

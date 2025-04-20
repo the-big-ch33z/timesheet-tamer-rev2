@@ -39,18 +39,26 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
   }, [entries, date]);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Time Entries</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <EntryList 
-          entries={entries}
-          interactive={interactive}
-          onDeleteEntry={onDeleteEntry}
-        />
-      </CardContent>
-    </Card>
+    <div>
+      {entries.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium">Time Entries</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EntryList 
+              entries={entries}
+              interactive={interactive}
+              onDeleteEntry={onDeleteEntry}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="text-center py-4 text-gray-500">
+          No entries for this date. Add a new entry using the button above.
+        </div>
+      )}
+    </div>
   );
 };
 

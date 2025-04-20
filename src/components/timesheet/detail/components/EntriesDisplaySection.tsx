@@ -14,7 +14,7 @@ const EntriesDisplaySection: React.FC<EntriesDisplaySectionProps> = ({
   hasEntries,
   formsListKey
 }) => {
-  // Remove the conditional return so entries are always displayed
+  // Always display entries regardless of hasEntries flag
   return (
     <EntryList 
       entries={entries}
