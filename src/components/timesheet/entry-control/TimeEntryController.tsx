@@ -59,7 +59,8 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
       });
 
       if (newEntryId) {
-        // If successful and we have a callback, also call it
+        // Notify parent about the creation but don't create again
+        // This is for reporting/UI updates only, not creating another entry
         if (onCreateEntry) {
           const { startTime, endTime } = getWorkHoursForDate(date, userId);
           onCreateEntry(startTime, endTime, entryData.hours || 0);

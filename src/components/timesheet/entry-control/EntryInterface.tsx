@@ -32,6 +32,7 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       hours: entry.hours,
       hasDescription: !!entry.description
     });
+    // Pure pass-through to parent handler
     onCreateEntry(entry);
   };
 
@@ -41,15 +42,6 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
 
   return (
     <div className="space-y-4">
-      {existingEntries.length > 0 && (
-        <ExistingEntriesList
-          entries={existingEntries}
-          date={date}
-          interactive={interactive}
-          onDeleteEntry={onDeleteEntry}
-        />
-      )}
-
       {interactive && (
         <TimeEntryForm 
           onSubmit={handleSubmitEntry}
