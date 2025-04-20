@@ -7,7 +7,7 @@ import EntryFormStep from './steps/EntryFormStep';
 import EntryReviewStep from './steps/EntryReviewStep';
 import { Check, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useTimesheetWorkHours };
+import { useTimesheetWorkHours } from '@/hooks/timesheet/useTimesheetWorkHours';
 
 interface EntryWizardProps {
   onSubmit: (entry: Omit<TimeEntry, 'id'>) => void;
