@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { TimeEntry } from '@/types';
-import EntryField from '../../entry-dialog/fields/EntryField';
+import EntryField, { EntryFieldType } from '../../entry-dialog/fields/EntryField';
 
 // Field type constants
 const FIELD_TYPES = {
@@ -17,11 +17,11 @@ interface EntryFormStepProps {
   onFieldChange: (field: string, value: string | number) => void;
 }
 
-// Reusable field configuration
+// Reusable field configuration with proper type definitions
 const FIELD_CONFIG = {
   [FIELD_TYPES.HOURS]: {
     name: "Hours",
-    type: "number",
+    type: "number" as EntryFieldType,
     placeholder: "Enter hours",
     required: true,
     min: "0",
@@ -29,20 +29,23 @@ const FIELD_CONFIG = {
   },
   [FIELD_TYPES.JOB_NUMBER]: {
     name: "Job Number",
-    placeholder: "Enter job number"
+    placeholder: "Enter job number",
+    type: "text" as EntryFieldType
   },
   [FIELD_TYPES.REGO]: {
     name: "Rego",
-    placeholder: "Enter rego"
+    placeholder: "Enter rego",
+    type: "text" as EntryFieldType
   },
   [FIELD_TYPES.TASK_NUMBER]: {
     name: "Task Number",
-    placeholder: "Enter task number"
+    placeholder: "Enter task number",
+    type: "text" as EntryFieldType
   },
   [FIELD_TYPES.DESCRIPTION]: {
     name: "Description",
     placeholder: "Enter description",
-    type: "textarea"
+    type: "textarea" as EntryFieldType
   }
 };
 

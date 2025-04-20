@@ -1,60 +1,61 @@
 
-import { useCallback, MutableRefObject } from 'react';
-import { calculateHoursFromTimes } from "@/utils/time/calculations";
+import { useCallback } from 'react';
+import { calculateHoursFromTimes } from '@/utils/time/calculations';
 
-interface UseTimeCalculationProps {
-  startTime: string;
-  endTime: string;
-  processBatchedChanges: () => void;
-  batchedChangesRef: MutableRefObject<Record<string, string>>;
-  batchTimeoutRef: MutableRefObject<NodeJS.Timeout | null>;
-}
+// Define Timeout type to match NodeJS.Timeout
+type Timeout = ReturnType<typeof setTimeout>;
 
-/**
- * Hook for handling time-related calculations and updates
- */
 export const useTimeCalculation = ({
   startTime,
   endTime,
   processBatchedChanges,
   batchedChangesRef,
   batchTimeoutRef
-}: UseTimeCalculationProps) => {
-  // Update time values
+}: {
+  startTime: string;
+  endTime: string;
+  processBatchedChanges: () => void;
+  batchedChangesRef: React.MutableRefObject<Record<string, string>>;
+  batchTimeoutRef: React.MutableRefObject<Timeout | null>;
+}) => {
+  // Helper to update both times at once and trigger calculations
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
-    console.debug(`[useTimeCalculation] Updating times: ${newStartTime} to ${newEndTime}`);
+    console.debug(`[useTimeCalculation] Updating times: ${newStartTime} - ${newEndTime}`);
     
-    // Add to batched changes
+    // Store changes
     batchedChangesRef.current['startTime'] = newStartTime;
     batchedChangesRef.current['endTime'] = newEndTime;
     
-    // Clear any existing batch timeout
+    // Clear any existing timeout
     if (batchTimeoutRef.current) {
       clearTimeout(batchTimeoutRef.current);
     }
     
-    // Process immediately
+    // Apply changes immediately
     processBatchedChanges();
   }, [processBatchedChanges, batchedChangesRef, batchTimeoutRef]);
-
-  // Calculate hours from times
+  
+  // Calculate hours directly from current times
   const setHoursFromTimes = useCallback(() => {
-    const calculatedHours = calculateHoursFromTimes(startTime, endTime);
-    console.debug(`[useTimeCalculation] Setting hours from times: ${startTime} to ${endTime} = ${calculatedHours}`);
+    console.debug(`[useTimeCalculation] Calculating hours from times: ${startTime} - ${endTime}`);
     
-    // Add to batched changes
-    batchedChangesRef.current['hours'] = calculatedHours.toFixed(1);
-    
-    // Clear any existing batch timeout
-    if (batchTimeoutRef.current) {
-      clearTimeout(batchTimeoutRef.current);
+    if (!startTime || !endTime) {
+      console.debug('[useTimeCalculation] Missing start or end time, skipping calculation');
+      return;
     }
     
-    // Process immediately
-    processBatchedChanges();
-    
-    return calculatedHours;
-  }, [startTime, endTime, processBatchedChanges, batchedChangesRef, batchTimeoutRef]);
+    try {
+      const hours = calculateHoursFromTimes(startTime, endTime);
+      console.debug(`[useTimeCalculation] Calculated hours: ${hours}`);
+      
+      batchedChangesRef.current['hours'] = hours.toString();
+      
+      // Apply changes immediately
+      processBatchedChanges();
+    } catch (err) {
+      console.error('[useTimeCalculation] Error calculating hours:', err);
+    }
+  }, [startTime, endTime, processBatchedChanges, batchedChangesRef]);
   
   return {
     updateTimes,

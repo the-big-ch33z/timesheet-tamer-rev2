@@ -1,6 +1,10 @@
+
 import { useRef, useCallback } from 'react';
 import { calculateHoursFromTimes } from '@/utils/time/calculations';
 import { useToast } from '@/hooks/use-toast';
+
+// Define Timeout type to match NodeJS.Timeout
+type Timeout = ReturnType<typeof setTimeout>;
 
 // Standard field types for consistency
 export const FIELD_TYPES = {
@@ -62,7 +66,7 @@ export const useFieldBatching = ({
 }) => {
   // Keep track of batched changes
   const batchedChangesRef = useRef<Record<string, string>>({});
-  const batchTimeoutRef = useRef<number | null>(null);
+  const batchTimeoutRef = useRef<Timeout | null>(null);
   
   // Process all batched changes at once
   const processBatchedChanges = useCallback(() => {
@@ -142,7 +146,7 @@ export const useFieldBatching = ({
       clearTimeout(batchTimeoutRef.current);
     }
     
-    batchTimeoutRef.current = window.setTimeout(() => {
+    batchTimeoutRef.current = setTimeout(() => {
       processBatchedChanges();
       batchTimeoutRef.current = null;
     }, 100); // Small delay to batch rapid changes

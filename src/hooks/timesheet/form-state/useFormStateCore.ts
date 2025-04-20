@@ -8,6 +8,9 @@ import { TimeEntryFormState } from '../types/timeEntryTypes';
 import { useToast } from "@/hooks/use-toast";
 import { TimeEntry } from "@/types";
 
+// Define the Timeout type to match NodeJS.Timeout
+type Timeout = ReturnType<typeof setTimeout>;
+
 /**
  * Core hook to manage form state with improved separation of concerns
  */

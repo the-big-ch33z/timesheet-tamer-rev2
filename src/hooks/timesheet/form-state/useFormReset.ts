@@ -1,21 +1,9 @@
 
-import { useCallback, Dispatch, SetStateAction, MutableRefObject } from 'react';
+import { useCallback } from 'react';
 
-interface UseFormResetProps {
-  setHours: Dispatch<SetStateAction<string>>;
-  setDescription: Dispatch<SetStateAction<string>>;
-  setJobNumber: Dispatch<SetStateAction<string>>;
-  setRego: Dispatch<SetStateAction<string>>;
-  setTaskNumber: Dispatch<SetStateAction<string>>;
-  setFormEdited: Dispatch<SetStateAction<boolean>>;
-  formKey?: string | number;
-  batchTimeoutRef: MutableRefObject<NodeJS.Timeout | null>;
-  batchedChangesRef: MutableRefObject<Record<string, string>>;
-}
+// Define Timeout type to match NodeJS.Timeout
+type Timeout = ReturnType<typeof setTimeout>;
 
-/**
- * Hook for handling form reset operations
- */
 export const useFormReset = ({
   setHours,
   setDescription,
@@ -26,43 +14,47 @@ export const useFormReset = ({
   formKey,
   batchTimeoutRef,
   batchedChangesRef
-}: UseFormResetProps) => {
+}: {
+  setHours: React.Dispatch<React.SetStateAction<string>>;
+  setDescription: React.Dispatch<React.SetStateAction<string>>;
+  setJobNumber: React.Dispatch<React.SetStateAction<string>>;
+  setRego: React.Dispatch<React.SetStateAction<string>>;
+  setTaskNumber: React.Dispatch<React.SetStateAction<string>>;
+  setFormEdited: React.Dispatch<React.SetStateAction<boolean>>;
+  formKey?: string | number;
+  batchTimeoutRef: React.MutableRefObject<Timeout | null>;
+  batchedChangesRef: React.MutableRefObject<Record<string, string>>;
+}) => {
+  // Reset all form fields and state
   const resetForm = useCallback(() => {
-    console.debug("[useFormReset] Resetting form fields to empty values");
+    console.debug('[useFormReset] Resetting form fields');
     
-    setHours("");
-    setDescription("");
-    setJobNumber("");
-    setRego("");
-    setTaskNumber("");
-    setFormEdited(false);
-    
-    // Clear any batched changes
+    // Clear any pending timeout
     if (batchTimeoutRef.current) {
       clearTimeout(batchTimeoutRef.current);
       batchTimeoutRef.current = null;
     }
+    
+    // Clear any batched changes
     batchedChangesRef.current = {};
     
-    // Clear any saved draft for this form
-    if (formKey) {
-      try {
-        const savedDrafts = localStorage.getItem('timesheet-form-drafts');
-        if (savedDrafts) {
-          const drafts = JSON.parse(savedDrafts);
-          if (drafts[formKey]) {
-            delete drafts[formKey];
-            localStorage.setItem('timesheet-form-drafts', JSON.stringify(drafts));
-            console.debug(`[useFormReset] Cleared draft for form ${formKey}`);
-          }
-        }
-      } catch (error) {
-        console.error("[useFormReset] Error clearing form draft:", error);
-      }
-    }
-  }, [setHours, setDescription, setJobNumber, setRego, setTaskNumber, setFormEdited, formKey, batchTimeoutRef, batchedChangesRef]);
+    // Reset all form fields
+    setHours('');
+    setDescription('');
+    setJobNumber('');
+    setRego('');
+    setTaskNumber('');
+    setFormEdited(false);
+  }, [
+    setHours,
+    setDescription,
+    setJobNumber,
+    setRego,
+    setTaskNumber,
+    setFormEdited,
+    batchTimeoutRef,
+    batchedChangesRef
+  ]);
 
-  return {
-    resetForm
-  };
+  return { resetForm };
 };
