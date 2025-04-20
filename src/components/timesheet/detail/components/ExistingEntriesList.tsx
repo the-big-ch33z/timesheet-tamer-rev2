@@ -1,16 +1,21 @@
+
 import React, { useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryList from "./EntryList";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
+import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil-service";
+
 const logger = createTimeLogger('ExistingEntriesList');
+
 interface ExistingEntriesListProps {
   entries: TimeEntry[];
   date: Date;
   interactive?: boolean;
   onDeleteEntry: (entryId: string) => Promise<boolean>;
 }
+
 const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
   entries,
   date,
@@ -27,14 +32,27 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
         hours: entries[0].hours,
         userId: entries[0].userId
       });
+      
+      // Log if there are any TOIL entries
+      const toilEntries = entries.filter(entry => entry.jobNumber === TOIL_JOB_NUMBER);
+      if (toilEntries.length > 0) {
+        logger.debug(`Found ${toilEntries.length} TOIL usage entries`);
+      }
     } else {
       logger.debug('No entries received for this date');
     }
   }, [entries, date]);
+  
   return <div>
       {entries.length > 0 ? <Card>
           <CardHeader className="pb-2">
-            
+            <CardTitle className="text-base">
+              {entries.some(e => e.jobNumber === TOIL_JOB_NUMBER) && 
+                <span className="text-amber-600 text-sm font-normal mb-1 block">
+                  Includes TOIL usage
+                </span>
+              }
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <EntryList entries={entries} interactive={interactive} onDeleteEntry={onDeleteEntry} />
@@ -44,4 +62,5 @@ const ExistingEntriesList: React.FC<ExistingEntriesListProps> = ({
         </div>}
     </div>;
 };
+
 export default ExistingEntriesList;

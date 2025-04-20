@@ -12,6 +12,7 @@ const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
 const WorkHoursSection = lazy(() => import("./detail/WorkHoursSection"));
 const MonthlyHours = lazy(() => import("./MonthlyHours"));
 const RecentEntries = lazy(() => import("./RecentEntries"));
+// TOIL Management is loaded directly in TimesheetTabs
 
 // Loading component
 const LoadingComponent = () => (
@@ -89,6 +90,8 @@ const TabContent: React.FC = () => {
           </Suspense>
         </div>
       </TabsContent>
+      
+      {/* Note: TOIL Management tab content is defined in TimesheetTabs component */}
     </>
   );
 };

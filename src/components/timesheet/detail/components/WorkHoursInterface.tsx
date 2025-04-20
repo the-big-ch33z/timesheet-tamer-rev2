@@ -1,11 +1,12 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./WorkHoursHeader";
 import WorkHoursDisplay from "./WorkHoursDisplay";
 import WorkHoursAlerts from "./WorkHoursAlerts";
 import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
 import { createTimeLogger } from "@/utils/time/errors";
+import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -45,11 +46,27 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     userId,
     onHoursChange
   });
+  
+  // Use TOIL calculations
+  const { calculateToilForDay } = useTOILCalculations({
+    userId,
+    date,
+    entries,
+    workSchedule
+  });
 
   // Log when entries change
   React.useEffect(() => {
     logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
   }, [entries, date]);
+  
+  // Calculate TOIL when entries, date, or schedule changes
+  useEffect(() => {
+    if (hasEntries && !isUndertime && isComplete) {
+      // Only calculate TOIL if all required hours are met
+      calculateToilForDay();
+    }
+  }, [hasEntries, isUndertime, isComplete, calculateToilForDay]);
 
   return (
     <div>

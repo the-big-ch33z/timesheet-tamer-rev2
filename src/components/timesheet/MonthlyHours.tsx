@@ -1,85 +1,56 @@
 
-import React, { useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import React from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
-import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
-import { useMonthlyHoursCalculation } from "./hooks/useMonthlyHoursCalculation";
-import { useUserMetrics } from "@/contexts/user-metrics";
-import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
+import MonthSummary from "./MonthSummary";
+import TOILSummaryCard from "./detail/components/TOILSummaryCard";
+import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import { format } from "date-fns";
 
 interface MonthlyHoursProps {
-  user?: User;
+  user: User;
   currentMonth: Date;
   workSchedule?: WorkSchedule;
 }
 
-const MonthlyHours: React.FC<MonthlyHoursProps> = ({ user, currentMonth, workSchedule }) => {
-  const { getUserMetrics } = useUserMetrics();
-  const { entries, getMonthEntries } = useTimeEntryContext(); 
+const MonthlyHours: React.FC<MonthlyHoursProps> = ({
+  user,
+  currentMonth,
+  workSchedule
+}) => {
+  // Get TOIL summary for the current month
+  const { summary: toilSummary, isLoading: toilLoading } = useTOILSummary({
+    userId: user.id,
+    date: currentMonth
+  });
   
-  // Get all entries for this month
-  const monthEntries = useMemo(() => {
-    if (!user?.id) return [];
-    return getMonthEntries(currentMonth, user.id);
-  }, [getMonthEntries, user, currentMonth]);
-  
-  // Call hook at the top level with month entries
-  const calculation = useMonthlyHoursCalculation(monthEntries, currentMonth, user, workSchedule);
-  
-  // Memoize derived values
-  const {
-    hours,
-    targetHours,
-    percentage,
-    hoursRemaining,
-    progressColor
-  } = useMemo(() => ({
-    ...calculation
-  }), [calculation]);
-
-  // Get user metrics for FTE information
-  const userMetrics = user ? getUserMetrics(user.id) : null;
+  const monthName = format(currentMonth, 'MMMM yyyy');
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-xl font-bold">Monthly Hours</h3>
-          <div className="text-sm text-gray-500">{format(currentMonth, 'MMMM yyyy')}</div>
-        </div>
-        
-        <div className="text-4xl font-bold mb-1">
-          {hours.toFixed(1)} <span className="text-lg text-gray-500">/ {targetHours} hrs</span>
-        </div>
-        
-        <div className="text-right mb-2">{percentage}%</div>
-        
-        <Progress 
-          value={percentage} 
-          className="h-2 mb-4"
-          color={progressColor}
+    <>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Month Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MonthSummary
+            userId={user.id}
+            date={currentMonth}
+            workSchedule={workSchedule}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Add TOIL Summary Card */}
+      <div className="mt-4">
+        <TOILSummaryCard
+          summary={toilSummary}
+          loading={toilLoading}
+          monthName={monthName}
         />
-        
-        <div className="text-sm text-gray-500">
-          {hoursRemaining > 0 ? 
-            `${hoursRemaining} hours remaining to meet target` :
-            "Target hours met for this month"
-          }
-        </div>
-        <div className="text-sm text-gray-500">
-          Based on {getWorkdaysInMonth(currentMonth)} work days this month
-        </div>
-        
-        {userMetrics && (
-          <div className="mt-2 text-xs text-gray-400 border-t pt-2">
-            FTE: {userMetrics.fte} · Required hours/fortnight: {userMetrics.fortnightHours}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 };
 
-export default React.memo(MonthlyHours);
+export default MonthlyHours;
