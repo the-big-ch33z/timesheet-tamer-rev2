@@ -1,3 +1,4 @@
+
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { useCallback, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -31,11 +32,12 @@ export const useTimesheetWorkHours = (userId?: string): TimesheetWorkHoursHook &
       }
     };
     
-    // Subscribe to relevant events
+    // Subscribe to relevant events and fix the unsubscribe handling
     const scheduleSubscription = timeEventsService.subscribe('user-schedule-changed', handleScheduleChange);
     const schedulesSubscription = timeEventsService.subscribe('schedules-updated', handleScheduleChange);
     
     return () => {
+      // Properly call unsubscribe method on subscription objects
       scheduleSubscription.unsubscribe();
       schedulesSubscription.unsubscribe();
     };

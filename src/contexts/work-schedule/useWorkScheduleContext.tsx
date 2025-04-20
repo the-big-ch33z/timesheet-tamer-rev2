@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
@@ -100,7 +99,7 @@ export function useWorkScheduleContext() {
       schedules: prev.schedules.filter(s => s.id !== scheduleId)
     }));
     
-    // Reset any users using this schedule to default
+    // Update any users using this schedule to default
     const affectedUsers = Object.entries(state.userSchedules)
       .filter(([_, sId]) => sId === scheduleId)
       .map(([userId]) => userId);
@@ -146,7 +145,7 @@ export function useWorkScheduleContext() {
     updateDefaultSchedule: scheduleOps.updateDefaultSchedule,
     createSchedule: scheduleOps.createSchedule,
     updateSchedule: scheduleOps.updateSchedule,
-    deleteSchedule: handleDeleteSchedule, // Use our enhanced delete function
+    deleteSchedule: handleDeleteSchedule,
     getScheduleById: scheduleOps.getScheduleById,
     assignScheduleToUser: userScheduleOps.assignScheduleToUser,
     getUserSchedule: userScheduleOps.getUserSchedule,

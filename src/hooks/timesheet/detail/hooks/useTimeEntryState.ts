@@ -14,7 +14,7 @@ interface UseTimeEntryStateProps {
   workSchedule?: WorkSchedule;
   interactive?: boolean;
   userId: string;
-  onHoursChange?: (hours: number) => void; // Added this property to fix the type error
+  onHoursChange?: (hours: number) => void;
 }
 
 interface TimeEntryState {
@@ -34,7 +34,7 @@ export const useTimeEntryState = ({
   workSchedule,
   interactive = true,
   userId,
-  onHoursChange // Add the parameter here
+  onHoursChange
 }: UseTimeEntryStateProps): TimeEntryState & {
   handleTimeChange: (type: 'start' | 'end', value: string) => void;
 } => {
@@ -82,14 +82,18 @@ export const useTimeEntryState = ({
       }
     };
     
-    const unsubscribe = [
+    // Fix: properly store and call unsubscribe methods from subscription objects
+    const subscriptions = [
       timeEventsService.subscribe('entry-created', handleTimeEvent),
       timeEventsService.subscribe('entry-updated', handleTimeEvent),
       timeEventsService.subscribe('entry-deleted', handleTimeEvent),
       timeEventsService.subscribe('hours-updated', handleTimeEvent)
     ];
     
-    return () => unsubscribe.forEach(unsub => unsub());
+    return () => {
+      // Fix: Properly access the unsubscribe method on each subscription
+      subscriptions.forEach(subscription => subscription.unsubscribe());
+    };
   }, [date, userId, refreshWorkHours, getWorkHoursForDate]);
   
   // Update times and scheduled hours when date changes
