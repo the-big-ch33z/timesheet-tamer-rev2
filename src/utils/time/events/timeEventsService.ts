@@ -3,7 +3,18 @@
  * Simple event service for timesheet-related events
  */
 
-type TimeEventType = 'entry-created' | 'entry-updated' | 'entry-deleted' | 'hours-updated' | 'hours-reset';
+type TimeEventType = 
+  | 'entry-created' 
+  | 'entry-updated' 
+  | 'entry-deleted' 
+  | 'hours-updated' 
+  | 'hours-reset'
+  | 'work-hours-updated'
+  | 'work-hours-reset'
+  | 'work-hours-cleared'
+  | 'schedules-updated'
+  | 'user-schedules-updated'
+  | 'user-schedule-changed';
 
 interface TimeEventPayload {
   [key: string]: any;
@@ -14,7 +25,11 @@ interface TimeEvent {
   payload: TimeEventPayload;
 }
 
-type TimeEventListener = (event: TimeEvent) => void;
+type TimeEventListener = (event: TimeEventPayload) => void;
+
+interface Subscription {
+  unsubscribe: () => void;
+}
 
 class TimeEventsService {
   private listeners: Map<TimeEventType, Set<TimeEventListener>> = new Map();
@@ -25,7 +40,7 @@ class TimeEventsService {
    * @param callback Function to call when event occurs
    * @returns Unsubscribe function
    */
-  subscribe(type: TimeEventType, callback: TimeEventListener): () => void {
+  subscribe(type: TimeEventType, callback: TimeEventListener): Subscription {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
     }
@@ -33,10 +48,12 @@ class TimeEventsService {
     const callbacks = this.listeners.get(type)!;
     callbacks.add(callback);
 
-    return () => {
-      callbacks.delete(callback);
-      if (callbacks.size === 0) {
-        this.listeners.delete(type);
+    return {
+      unsubscribe: () => {
+        callbacks.delete(callback);
+        if (callbacks.size === 0) {
+          this.listeners.delete(type);
+        }
       }
     };
   }
@@ -52,10 +69,9 @@ class TimeEventsService {
     const callbacks = this.listeners.get(type);
     if (!callbacks) return;
 
-    const event: TimeEvent = { type, payload };
     callbacks.forEach(callback => {
       try {
-        callback(event);
+        callback(payload);
       } catch (error) {
         console.error(`[TimeEventsService] Error in event listener for ${type}:`, error);
       }

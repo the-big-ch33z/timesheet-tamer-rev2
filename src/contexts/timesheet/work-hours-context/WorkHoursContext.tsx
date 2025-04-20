@@ -149,18 +149,14 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     };
   }, [workHoursMap, debouncedSave]);
 
-  // Helper function to get default hours from a user's schedule
   const getDefaultHoursFromSchedule = useCallback((date: Date, userId: string): { startTime: string; endTime: string } => {
     try {
-      // Get the user's assigned schedule
-      const userSchedule = getUserSchedule(userId);
+      const userScheduleId = getUserSchedule(userId);
       
-      // Find the actual schedule object
-      const schedule = userSchedule === 'default'
+      const schedule = userScheduleId === 'default'
         ? defaultSchedule
-        : schedules.find(s => s.id === userSchedule) || defaultSchedule;
+        : schedules.find(s => s.id === userScheduleId) || defaultSchedule;
       
-      // Get the day's schedule info using the utility function
       const daySchedule = getDayScheduleInfo(date, schedule);
       
       if (daySchedule && daySchedule.isWorkingDay && daySchedule.hours) {
@@ -171,7 +167,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
         };
       }
       
-      // Fall back to standard working hours if no schedule found
       logger.debug(`No schedule hours found for ${userId} on ${format(date, 'yyyy-MM-dd')}, using defaults`);
       return { startTime: "09:00", endTime: "17:00" };
     } catch (error) {
@@ -285,7 +280,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       };
     }
     
-    // If no saved hours are found, derive defaults from the work schedule
     const defaultHours = getDefaultHoursFromSchedule(date, userId);
     logger.debug(`No saved hours for ${dateString}, returning derived schedule hours: ${defaultHours.startTime}-${defaultHours.endTime}`);
     
@@ -315,13 +309,11 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return;
     }
     
-    // Check if these hours match the schedule default
     const defaultHours = getDefaultHoursFromSchedule(date, userId);
     const isDefault = startTime === defaultHours.startTime && endTime === defaultHours.endTime;
     
     if (isDefault) {
       logger.debug(`Hours match schedule default, removing custom entry`);
-      // If times match default, remove the custom entry (if any) to save space
       if (latestWorkHoursRef.current.has(key)) {
         setWorkHoursMap(prev => {
           const newMap = new Map(prev);
@@ -332,7 +324,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       return;
     }
     
-    // Otherwise save as a custom entry
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);
       newMap.set(key, {
