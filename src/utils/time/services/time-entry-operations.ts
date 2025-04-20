@@ -1,12 +1,7 @@
-
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import { TimeEntryServiceConfig, ValidationResult } from "./types";
-import { EventManager } from "./event-handling";
-import { createTimeLogger } from '../errors/timeLogger';
-import { ensureDate, isValidDate } from '../validation/dateValidation';
-import { saveEntriesToStorage } from "./storage-operations";
-import { validateEntry } from "./entry-validation";
+import { validateTimeEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
+import { createTimeLogger } from "../errors/timeLogger";
 
 const logger = createTimeLogger('TimeEntryOperations');
 
@@ -36,7 +31,7 @@ export class TimeEntryOperations {
    */
   public createEntry(entryData: Omit<TimeEntry, "id">, deletedEntryIds: string[]): string | null {
     // Validate entry data
-    const validation = validateEntry(entryData);
+    const validation = validateTimeEntry(entryData);
     if (!validation.valid) {
       logger.error(`Invalid entry data: ${validation.message}`, entryData);
       

@@ -38,3 +38,6 @@ export const autoCalculateHours = (startTime: string, endTime: string): number =
 export const calculateTotalHours = (entries: TimeEntry[]): number => {
   return entries.reduce((total, entry) => total + (entry.hours || 0), 0);
 };
+
+// For backward compatibility
+export const validateEntry = validateTimeEntry;

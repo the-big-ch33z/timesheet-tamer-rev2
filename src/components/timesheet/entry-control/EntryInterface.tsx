@@ -111,7 +111,6 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
           onCancel={handleCancelForm}
           date={date}
           userId={userId}
-          showTimeInputs={true}
           initialData={{}}
         />
       )}

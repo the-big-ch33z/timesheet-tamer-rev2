@@ -89,6 +89,24 @@ export const storageWriteLock = {
   }
 };
 
+// Add an extended TimeEntry type for backwards compatibility
+interface LegacyTimeEntry extends TimeEntry {
+  startTime?: string;
+  endTime?: string;
+}
+
+// Helper to safely access time fields
+const getTimeFields = (entry: Partial<TimeEntry> | any): { startTime?: string, endTime?: string } => {
+  if (!entry) return {};
+  
+  // Extract any time fields that might exist in the entry data
+  const result: { startTime?: string, endTime?: string } = {};
+  if ('startTime' in entry) result.startTime = entry.startTime;
+  if ('endTime' in entry) result.endTime = entry.endTime;
+  
+  return result;
+};
+
 /**
  * Enhanced, unified time entry service with reactivity and caching
  */
@@ -718,11 +736,14 @@ export class UnifiedTimeEntryService {
       }
     }
     
+    // Safely access time fields with our helper
+    const { startTime, endTime } = getTimeFields(entry);
+    
     // Validate time fields if both are provided
-    if (entry.startTime && entry.endTime) {
+    if (startTime && endTime) {
       try {
         // This will throw if times are invalid
-        calculateHoursFromTimes(entry.startTime, entry.endTime);
+        calculateHoursFromTimes(startTime, endTime);
       } catch (error) {
         if (error instanceof TimeCalculationError) {
           return { valid: false, message: error.message };

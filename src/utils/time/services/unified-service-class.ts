@@ -1,4 +1,3 @@
-
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -24,7 +23,7 @@ import {
   loadDeletedEntries,
   addToDeletedEntries
 } from "./storage-operations";
-import { validateEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
+import { validateTimeEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
 import { TimeEntryOperations } from "./time-entry-operations";
 import { TimeEntryQueries } from "./time-entry-queries";
 
@@ -182,7 +181,7 @@ export class UnifiedTimeEntryService {
   }
 
   public validateEntry(entry: Partial<TimeEntry>) {
-    return validateEntry(entry);
+    return validateTimeEntry(entry);
   }
 
   public async saveEntriesToStorage(entriesToSave: TimeEntry[]): Promise<boolean> {

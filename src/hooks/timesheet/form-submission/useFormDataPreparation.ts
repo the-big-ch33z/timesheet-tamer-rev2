@@ -21,8 +21,6 @@ export const useFormDataPreparation = ({
     jobNumber: string;
     rego: string;
     taskNumber: string;
-    startTime: string;
-    endTime: string;
     formEdited: boolean;
   }) => {
     console.debug("[useFormDataPreparation] Preparing form data");
@@ -48,8 +46,6 @@ export const useFormDataPreparation = ({
       jobNumber: formState.jobNumber,
       rego: formState.rego,
       taskNumber: formState.taskNumber,
-      startTime: formState.startTime,
-      endTime: formState.endTime,
       userId,
       date: selectedDate,
       project: initialData.project || 'General'
