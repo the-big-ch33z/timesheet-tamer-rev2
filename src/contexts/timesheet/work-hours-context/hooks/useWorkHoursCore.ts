@@ -1,9 +1,7 @@
 
 import { useCallback } from 'react';
 import { format } from 'date-fns';
-import { createTimeLogger } from '@/utils/time/errors';
-
-const logger = createTimeLogger('useWorkHoursCore');
+import { useWorkHoursLogger } from './useWorkHoursLogger';
 
 interface UseWorkHoursCoreProps {
   workHoursMap: Map<string, any>;
@@ -18,14 +16,16 @@ export const useWorkHoursCore = ({
   latestWorkHoursRef,
   getDefaultHoursFromSchedule
 }: UseWorkHoursCoreProps) => {
+  const { logWorkHoursRetrieval, logDefaultHours, logCustomHoursCheck } = useWorkHoursLogger();
+
   const getWorkHours = useCallback((date: Date, userId: string) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const key = `${userId}-${dateString}`;
     
     const savedHours = latestWorkHoursRef.current.get(key);
+    logWorkHoursRetrieval(dateString, userId, savedHours);
     
     if (savedHours) {
-      logger.debug(`Found saved hours for ${dateString}:`, savedHours);
       return {
         startTime: savedHours.startTime || "",
         endTime: savedHours.endTime || "",
@@ -34,14 +34,14 @@ export const useWorkHoursCore = ({
     }
     
     const defaultHours = getDefaultHoursFromSchedule(date, userId);
-    logger.debug(`No saved hours for ${dateString}, returning derived schedule hours: ${defaultHours.startTime}-${defaultHours.endTime}`);
+    logDefaultHours(dateString, defaultHours.startTime, defaultHours.endTime);
     
     return {
       startTime: defaultHours.startTime,
       endTime: defaultHours.endTime,
       isCustom: false
     };
-  }, [getDefaultHoursFromSchedule]);
+  }, [getDefaultHoursFromSchedule, logWorkHoursRetrieval, logDefaultHours]);
 
   const hasCustomWorkHours = useCallback((date: Date, userId: string): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -49,9 +49,9 @@ export const useWorkHoursCore = ({
     const hasHours = latestWorkHoursRef.current.has(key) && 
                     latestWorkHoursRef.current.get(key)?.isCustom === true;
     
-    logger.debug(`Checking for custom hours for ${dateString}, userId: ${userId}, result: ${hasHours}`);
+    logCustomHoursCheck(dateString, userId, hasHours);
     return hasHours;
-  }, []);
+  }, [logCustomHoursCheck]);
 
   return {
     getWorkHours,
