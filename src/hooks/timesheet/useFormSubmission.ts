@@ -8,9 +8,6 @@ import { useDateTracking } from './form-submission/useDateTracking';
 import { useSubmissionError } from './form-submission/useSubmissionError';
 import { UseTimeEntryFormProps } from './types/timeEntryTypes';
 
-/**
- * Hook to handle form submission and data preparation
- */
 export const useFormSubmission = ({
   initialData = {},
   selectedDate,
@@ -24,27 +21,15 @@ export const useFormSubmission = ({
   const { isDateValid } = useDateTracking(selectedDate);
   const { handleError } = useSubmissionError();
 
-  // Handle form submission
   const handleSave = useCallback((formState: {
     hours: string;
     description: string;
     jobNumber: string;
     rego: string;
     taskNumber: string;
-    startTime: string;
-    endTime: string;
     formEdited: boolean;
   }, resetFormEdited: () => void) => {
-    console.debug("[useFormSubmission] handleSave called with formState:", formState);
-    console.debug("[useFormSubmission] disabled:", disabled, "isSubmitting:", isSubmitting);
-    
-    if (disabled) {
-      console.debug("[useFormSubmission] Form is disabled, aborting save");
-      return;
-    }
-    
-    if (isSubmitting) {
-      console.debug("[useFormSubmission] Already submitting, aborting duplicate save");
+    if (disabled || isSubmitting) {
       return;
     }
     
@@ -52,17 +37,11 @@ export const useFormSubmission = ({
       startSubmission();
       
       const formData = getFormData(formState);
-      console.debug("[useFormSubmission] Form data prepared:", formData);
       
       if (onSave) {
-        console.debug("[useFormSubmission] Calling onSave function");
         onSave(formData);
-        console.debug("[useFormSubmission] onSave function executed");
-      } else {
-        console.warn("[useFormSubmission] No onSave function provided");
       }
       
-      console.debug("[useFormSubmission] Resetting formEdited flag");
       resetFormEdited();
       
       toast({

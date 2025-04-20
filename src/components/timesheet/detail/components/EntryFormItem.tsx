@@ -120,46 +120,42 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
             `job-${entryId}`, 
             FIELD_TYPES.JOB_NUMBER,
             "Job Number", 
-            formState.fields.jobNumber.value, 
+            formState.fields.jobNumber.value,
             (value) => handleFieldChangeCallback(FIELD_TYPES.JOB_NUMBER, value),
             disabled,
-            formState.fields.jobNumber.error,
-            "Job Number"
+            formState.fields.jobNumber.error
           )}
           
           {renderFormField(
             `task-${entryId}`, 
             FIELD_TYPES.TASK_NUMBER,
             "Task Number", 
-            formState.fields.taskNumber.value, 
+            formState.fields.taskNumber.value,
             (value) => handleFieldChangeCallback(FIELD_TYPES.TASK_NUMBER, value),
             disabled,
-            formState.fields.taskNumber.error,
-            "Task Number"
+            formState.fields.taskNumber.error
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {renderFormField(
             `rego-${entryId}`, 
             FIELD_TYPES.REGO,
             "Rego", 
-            formState.fields.rego.value, 
+            formState.fields.rego.value,
             (value) => handleFieldChangeCallback(FIELD_TYPES.REGO, value),
             disabled,
-            formState.fields.rego.error,
-            "Rego"
+            formState.fields.rego.error
           )}
           
           {renderFormField(
             `hours-${entryId}`, 
             FIELD_TYPES.HOURS,
             "Hours", 
-            formState.fields.hours.value, 
+            formState.fields.hours.value,
             (value) => handleFieldChangeCallback(FIELD_TYPES.HOURS, value),
             disabled,
-            formState.fields.hours.error,
-            "Hours"
+            formState.fields.hours.error
           )}
         </div>
         
