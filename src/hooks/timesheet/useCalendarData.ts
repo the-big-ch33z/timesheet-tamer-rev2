@@ -1,21 +1,42 @@
+
 import { useMemo } from "react";
 import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
-import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { Holiday, getHolidays } from "@/lib/holidays";
 import { WorkSchedule } from "@/types";
 import { createTimeLogger } from "@/utils/time/errors";
 import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
+import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
+import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 
 const logger = createTimeLogger('useCalendarData');
+
+export interface DayCellData {
+  date: Date;
+  isSelected: boolean;
+  isToday: boolean;
+  status: {
+    isWeekend: boolean;
+    dayHoliday: boolean;
+    holidayName: string | null;
+    isRDO: boolean;
+    workHours: { startTime: string; endTime: string } | null;
+    isWorkDay: boolean;
+  };
+  entries: any[];
+  isComplete: boolean;
+  totalHours: number;
+}
 
 export function useCalendarData(
   currentMonth: Date,
   selectedDate: Date | null,
   workSchedule?: WorkSchedule
 ) {
-  const { entries, getDayEntries } = useTimeEntryContext();
+  const { getDayEntries } = useTimeEntryContext();
   const { getDayState } = useCalendarHelpers(workSchedule);
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
   
   return useMemo(() => {
     logger.debug(`Calculating calendar data for month: ${currentMonth.toISOString()}`);
@@ -29,10 +50,11 @@ export function useCalendarData(
     const today = new Date();
     
     const days = daysInMonth.map(day => {
-      // Get entries for this specific day using the context's getDayEntries
+      // Get entries for this specific day using context
       const dayEntries = getDayEntries(day);
+      const workHours = getWorkHoursForDate(day);
       
-      logger.debug(`Processing day ${formatDateForComparison(day)}, found ${dayEntries.length} entries`);
+      logger.debug(`Processing ${formatDateForComparison(day)}: found ${dayEntries.length} entries`);
       
       const totalHours = dayEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
       
@@ -54,6 +76,12 @@ export function useCalendarData(
         }
       }
 
+      const { isComplete } = useTimeCompletion(
+        dayEntries,
+        workHours?.startTime,
+        workHours?.endTime
+      );
+
       return {
         date: day,
         isSelected: selectedDate ? areSameDates(day, selectedDate) : false,
@@ -67,7 +95,7 @@ export function useCalendarData(
           isWorkDay: baseState.isWorkingDay && !isRDO && !holiday
         },
         entries: dayEntries,
-        isComplete: false, // This will be calculated in CalendarGrid
+        isComplete,
         totalHours
       };
     });
@@ -78,5 +106,5 @@ export function useCalendarData(
       days,
       monthStartDay
     };
-  }, [currentMonth, entries, selectedDate, workSchedule, getDayState, getDayEntries]);
+  }, [currentMonth, selectedDate, workSchedule, getDayEntries, getDayState, getWorkHoursForDate]);
 }
