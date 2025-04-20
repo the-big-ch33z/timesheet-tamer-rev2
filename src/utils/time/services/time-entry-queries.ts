@@ -1,8 +1,7 @@
-
 import { TimeEntry } from "@/types";
 import { EntryCache, TimeEntryServiceConfig } from "./types";
 import { createTimeLogger } from '../errors/timeLogger';
-import { isValidDate } from '../validation/dateValidation';
+import { isValidDate, formatDateForComparison } from '../validation/dateValidation';
 import { 
   getCachedUserEntries, 
   getCachedDayEntries, 
@@ -36,7 +35,7 @@ export class TimeEntryQueries {
   }
 
   /**
-   * Get entries for a specific day and user
+   * Get entries for a specific day and user with improved date comparison
    */
   public getDayEntries(date: Date, userId: string, userEntries: TimeEntry[]): TimeEntry[] {
     if (!isValidDate(date)) {
@@ -49,7 +48,12 @@ export class TimeEntryQueries {
       return [];
     }
     
-    return getCachedDayEntries(this.cache, date, userId, userEntries);
+    const dateString = formatDateForComparison(date);
+    
+    return userEntries.filter(entry => {
+      const entryDateString = formatDateForComparison(entry.date);
+      return entryDateString === dateString;
+    });
   }
 
   /**

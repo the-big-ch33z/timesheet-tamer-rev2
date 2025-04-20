@@ -1,7 +1,8 @@
-
 import React from "react";
 import { useCalendarData } from "../hooks/useCalendarData";
 import CalendarDay from "./CalendarDay";
+import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -16,18 +17,30 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   workSchedule,
   onDayClick
 }) => {
-  // Use our new hook to get all the day data
   const { days, monthStartDay } = useCalendarData(currentMonth, selectedDate, workSchedule);
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
+
+  const processedDays = days.map(day => {
+    const workHours = getWorkHoursForDate(day.date);
+    const { isComplete } = useTimeCompletion(
+      day.entries,
+      workHours?.startTime,
+      workHours?.endTime
+    );
+
+    return {
+      ...day,
+      isComplete: isComplete || day.isComplete
+    };
+  });
 
   return (
     <div className="grid grid-cols-7 gap-2">
-      {/* Empty cells for days before month starts */}
       {Array.from({ length: monthStartDay }).map((_, i) => (
         <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-100 border border-gray-200 rounded" />
       ))}
 
-      {/* Day cells */}
-      {days.map((day) => (
+      {processedDays.map((day) => (
         <CalendarDay
           key={day.date.toString()}
           day={day.date}
@@ -44,4 +57,4 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   );
 };
 
-export default CalendarGrid;
+export default React.memo(CalendarGrid);

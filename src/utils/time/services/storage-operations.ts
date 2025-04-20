@@ -1,6 +1,6 @@
-
 import { TimeEntry } from "@/types";
 import { createTimeLogger } from '../errors/timeLogger';
+import { formatDateForComparison } from '../validation/dateValidation';
 
 const logger = createTimeLogger('TimeEntryStorageOps');
 
@@ -63,7 +63,7 @@ export const storageWriteLock = {
 };
 
 /**
- * Load entries from localStorage
+ * Load entries from localStorage with improved date handling
  */
 export function loadEntriesFromStorage(
   storageKey: string = STORAGE_KEY,
@@ -81,22 +81,23 @@ export function loadEntriesFromStorage(
       // Parse entries
       const parsedEntries = JSON.parse(savedEntries);
       
-      // Filter out deleted entries
+      // Filter out deleted entries and ensure proper date formats
       entries = parsedEntries
         .filter((entry: any) => !deletedIds.includes(entry.id))
         .map((entry: any) => {
-          // Ensure date is a valid Date object
-          const entryDate = entry.date ? new Date(entry.date) : new Date();
+          // Always create a new Date object to ensure proper date handling
+          const entryDate = new Date(entry.date);
           
           return {
             ...entry,
-            date: entryDate
+            date: entryDate,
+            // Store formatted date string for comparison
+            dateString: formatDateForComparison(entryDate)
           };
         });
       
       logger.debug(`Loaded ${entries.length} entries from storage`);
     } else {
-      // Initialize with empty array
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(storageKey, JSON.stringify([]));
       }
