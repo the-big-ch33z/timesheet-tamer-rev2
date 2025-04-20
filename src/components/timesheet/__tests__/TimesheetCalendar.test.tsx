@@ -13,6 +13,7 @@ const mockProps = {
   onNextMonth: jest.fn(),
   onDayClick: jest.fn(),
   workSchedule: undefined,
+  userId: 'test-user-id', // Add a mock userId
 };
 
 describe('TimesheetCalendar', () => {
@@ -51,3 +52,4 @@ describe('TimesheetCalendar', () => {
     expect(screen.getByText('Sa')).toBeInTheDocument();
   });
 });
+
