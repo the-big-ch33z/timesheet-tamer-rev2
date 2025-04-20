@@ -155,9 +155,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       const userScheduleId = getUserSchedule(userId);
       
       // Correctly compare schedule IDs as strings
-      const selectedSchedule: WorkSchedule = userScheduleId === 'default'
-        ? defaultSchedule
-        : schedules.find(s => s.id === userScheduleId) || defaultSchedule;
+      const selectedSchedule: WorkSchedule = 
+        userScheduleId === 'default' 
+          ? defaultSchedule 
+          : schedules.find(s => s.id === userScheduleId) || defaultSchedule;
       
       const daySchedule = getDayScheduleInfo(date, selectedSchedule);
       
