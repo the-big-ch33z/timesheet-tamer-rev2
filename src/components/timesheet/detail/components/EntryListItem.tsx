@@ -7,9 +7,19 @@ import { formatDisplayHours } from "@/utils/time/formatting";
 import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil-service";
 import { cn } from "@/lib/utils";
 
-// Reusable Badge component for compact badges
-const SlimBadge: React.FC<{ className?: string; children: React.ReactNode }> = ({ className, children }) => (
-  <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", className)}>{children}</span>
+// Slim and visually prominent badge for top-row info
+const TopFieldBadge: React.FC<{ className?: string; children: React.ReactNode }> = ({
+  className,
+  children,
+}) => (
+  <span
+    className={cn(
+      "inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold",
+      className
+    )}
+  >
+    {children}
+  </span>
 );
 
 interface EntryListItemProps {
@@ -23,61 +33,66 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
   entry,
   onDelete,
   interactive = true,
-  isDeleting = false
+  isDeleting = false,
 }) => {
   const isToilUsage = entry.jobNumber === TOIL_JOB_NUMBER;
 
-  // "General" badge comes from the `project` field; we clarify this in the comment below.
-  // If project is present and not "General", show the badge.
-  const showProjectBadge =
-    entry.project && entry.project !== "General";
+  // No longer show "General" project badge
+  // const showProjectBadge =
+  //   entry.project && entry.project !== "General";
 
-  // Layout: Top row has Hours, Rego, Job No, Task No, delete; second row is Description
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 p-2 rounded-lg border transition-shadow hover:shadow-sm",
-        isToilUsage ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
+        "flex flex-col gap-1 p-2 rounded-lg border transition-shadow hover:shadow-sm bg-white border-gray-200",
+        isToilUsage && "bg-amber-50 border-amber-200"
       )}
       style={{ minHeight: "unset" }}
     >
-      {/* First row: horizontal fields */}
+      {/* Top row: All key fields horizontally, visual emphasis increased */}
       <div className="flex items-center w-full gap-2">
-        <div className={cn("font-semibold text-base", isToilUsage ? "text-amber-800" : "text-gray-900")}>
+        {/* Hours badge */}
+        <TopFieldBadge
+          className={cn(
+            "bg-blue-600 text-white mr-1 min-w-[52px] justify-center shadow",
+            "text-[1.28rem] leading-tight", // About 10% larger than default
+            isToilUsage && "bg-amber-500"
+          )}
+        >
           {formatDisplayHours(entry.hours)}
-        </div>
+        </TopFieldBadge>
         {/* Rego badge */}
         {entry.rego && (
-          <SlimBadge className="bg-green-100 text-green-800 ml-1">
+          <TopFieldBadge className="bg-green-100 text-green-900 border border-green-200 mr-1 text-[1.07rem]">
             Rego: {entry.rego}
-          </SlimBadge>
+          </TopFieldBadge>
         )}
         {/* Job Number badge */}
         {entry.jobNumber && (
-          <SlimBadge className={isToilUsage ? "bg-amber-200 text-amber-800 ml-1" : "bg-blue-100 text-blue-800 ml-1"}>
+          <TopFieldBadge
+            className={cn(
+              "bg-blue-100 text-blue-900 border border-blue-200 mr-1 text-[1.07rem]",
+              isToilUsage && "bg-amber-200 text-amber-900 border-amber-300"
+            )}
+          >
             Job: {entry.jobNumber}
-          </SlimBadge>
+          </TopFieldBadge>
         )}
         {/* Task Number badge */}
         {entry.taskNumber && (
-          <SlimBadge className="bg-gray-100 text-gray-700 ml-1">
+          <TopFieldBadge className="bg-gray-100 text-gray-800 border border-gray-200 mr-1 text-[1.07rem]">
             Task: {entry.taskNumber}
-          </SlimBadge>
-        )}
-        {/* Project (General) badge - only if not "General" */}
-        {showProjectBadge && (
-          <SlimBadge className="bg-purple-100 text-purple-800 ml-1">
-            {entry.project}
-          </SlimBadge>
-        )}
-        {/* TOIL Usage badge */}
-        {isToilUsage && (
-          <SlimBadge className="bg-amber-200 text-amber-800 ml-1">
-            TOIL Usage
-          </SlimBadge>
+          </TopFieldBadge>
         )}
 
-        {/* Grow, then Hours on right, then trash */}
+        {/* TOIL badge (if relevant) */}
+        {isToilUsage && (
+          <TopFieldBadge className="bg-amber-200 text-amber-900 border border-amber-300 mr-1 text-[1.07rem]">
+            TOIL Usage
+          </TopFieldBadge>
+        )}
+
+        {/* Flexible spacer pushes trash to right edge */}
         <div className="flex-1" />
 
         {interactive && onDelete && (
@@ -94,11 +109,14 @@ const EntryListItem: React.FC<EntryListItemProps> = ({
           </Button>
         )}
       </div>
-      {/* Description field, full width */}
-      <div className={cn("text-sm text-gray-700 pl-1 mt-0.5 break-all")}>
-        {entry.description || <span className="italic text-gray-400">No description</span>}
+      {/* Description: single row, full width, compact */}
+      <div className="text-sm text-gray-700 pl-1 mt-0.5 break-all leading-snug">
+        {entry.description || (
+          <span className="italic text-gray-400">No description</span>
+        )}
       </div>
     </div>
   );
 };
+
 export default EntryListItem;
