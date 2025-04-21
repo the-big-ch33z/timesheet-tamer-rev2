@@ -67,39 +67,43 @@ export const useTOILCalculations = ({
       calculationInProgressRef.current = true;
       lastCalculationTimeRef.current = now;
       
-      // Filter out TOIL usage entries from accrual calculation
-      const accrualEntries = entries.filter(entry => !isToilEntry(entry));
+      // Get count of TOIL usage entries for debugging
+      const toilUsageEntries = entries.filter(isToilEntry);
+      const nonToilEntries = entries.filter(entry => !isToilEntry(entry));
+      
+      logger.debug(`[TOILCalc] Starting calculation with ${nonToilEntries.length} regular entries and ${toilUsageEntries.length} TOIL usage entries`);
       
       // Store current entries in ref to compare later
       entriesRef.current = [...entries];
       
-      // Calculate and store TOIL
+      // Process TOIL usage entries first
+      if (toilUsageEntries.length > 0) {
+        logger.debug(`[TOILCalc] Processing ${toilUsageEntries.length} TOIL usage entries`);
+        
+        // Process each TOIL usage entry
+        for (const entry of toilUsageEntries) {
+          logger.debug(`[TOILCalc] Recording TOIL usage for entry ${entry.id}: ${entry.hours}h`);
+          const result = await toilService.recordTOILUsage(entry);
+          logger.debug(`[TOILCalc] TOIL usage recording ${result ? 'succeeded' : 'failed'}`);
+        }
+      }
+      
+      // Calculate and store TOIL accrual
+      logger.debug(`[TOILCalc] Calculating TOIL accrual with ${nonToilEntries.length} entries`);
       const summary = await toilService.calculateAndStoreTOIL(
-        accrualEntries,
+        nonToilEntries,
         date,
         userId,
         workSchedule
       );
       
-      // Process any TOIL usage entries
-      const toilUsageEntries = entries.filter(isToilEntry);
-      
-      // Use Promise.all for better performance with multiple entries
-      if (toilUsageEntries.length > 0) {
-        await Promise.all(toilUsageEntries.map(entry => toilService.recordTOILUsage(entry)));
-      }
-      
-      // Get updated summary after recording usage
-      const updatedSummary = toilUsageEntries.length > 0 
-        ? toilService.getTOILSummary(userId, currentMonthYear)
-        : summary;
-      
-      setToilSummary(updatedSummary);
+      // Update internal state
+      setToilSummary(summary);
       
       // Calculation complete
       calculationInProgressRef.current = false;
       
-      return updatedSummary;
+      return summary;
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
       calculationInProgressRef.current = false;
@@ -130,14 +134,23 @@ export const useTOILCalculations = ({
           setToilSummary(storedSummary);
         }
         
-        // Schedule TOIL calculation for the next frame to prevent UI blocking
-        if (typeof window !== 'undefined') {
-          window.requestAnimationFrame(() => {
-            // Using setTimeout to further defer heavy calculation
-            setTimeout(() => {
-              calculateToilForDay();
-            }, 100);
-          });
+        // Check if any entries are TOIL usage entries
+        const hasToilUsage = entries.some(isToilEntry);
+        
+        // If we have any TOIL entries, prioritize calculation
+        if (hasToilUsage) {
+          logger.debug('[TOILCalc] TOIL usage entries detected, calculating immediately');
+          calculateToilForDay();
+        } else {
+          // Schedule TOIL calculation for the next frame to prevent UI blocking
+          if (typeof window !== 'undefined') {
+            window.requestAnimationFrame(() => {
+              // Using setTimeout to further defer heavy calculation
+              setTimeout(() => {
+                calculateToilForDay();
+              }, 100);
+            });
+          }
         }
       } catch (error) {
         logger.error('Error loading TOIL summary:', error);
@@ -146,11 +159,7 @@ export const useTOILCalculations = ({
     
     loadSummary();
     
-    // Clean up on unmount or when dependencies change
-    return () => {
-      // No need for cleanup as we're using refs for state
-    };
-  }, [userId, date, currentMonthYear, calculateToilForDay, entriesSignature, toilSummary, logger]);
+  }, [userId, date, currentMonthYear, calculateToilForDay, entriesSignature, toilSummary, logger, isToilEntry, entries]);
   
   return {
     toilSummary,

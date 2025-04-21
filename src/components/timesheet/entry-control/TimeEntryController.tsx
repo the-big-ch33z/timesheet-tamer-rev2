@@ -10,6 +10,7 @@ import EntryInterface from "./EntryInterface";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import ExistingEntriesList from "../detail/components/ExistingEntriesList";
 import { useToast } from "@/hooks/use-toast";
+import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil-service";
 
 // Define the interface for TimeEntryController props
 interface TimeEntryControllerProps {
@@ -50,6 +51,14 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
 
     try {
       setIsSubmitting(true);
+      
+      // Check if this is a TOIL usage entry
+      const isToilUsage = entryData.jobNumber === TOIL_JOB_NUMBER;
+      
+      if (isToilUsage) {
+        logger.debug('[TimeEntryController] Creating TOIL usage entry:', entryData.hours);
+      }
+      
       logger.debug('[TimeEntryController] Submitting entry:', entryData);
 
       const newEntryId = createEntry({
@@ -67,8 +76,10 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         }
 
         toast({
-          title: "Entry created",
-          description: `Added ${entryData.hours} hours to your timesheet`
+          title: isToilUsage ? "TOIL Usage recorded" : "Entry created",
+          description: isToilUsage 
+            ? `Used ${entryData.hours} hours from your TOIL balance` 
+            : `Added ${entryData.hours} hours to your timesheet`
         });
 
         setShowEntryForm(false); // Auto-hide form after successful submission

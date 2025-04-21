@@ -62,9 +62,12 @@ export class TOILService {
         daySchedule.endTime,
         daySchedule.breaks
       );
-      const actualHours = entries.reduce((sum, entry) => sum + (isFinite(entry.hours) ? entry.hours : 0), 0);
+      
+      // Filter out TOIL usage entries before calculating actual hours
+      const nonToilEntries = entries.filter(entry => entry.jobNumber !== TOIL_JOB_NUMBER);
+      const actualHours = nonToilEntries.reduce((sum, entry) => sum + (isFinite(entry.hours) ? entry.hours : 0), 0);
 
-      logger.debug(`[TOIL Calc] scheduledHours=${scheduledHours}, actualHours=${actualHours}`);
+      logger.debug(`[TOIL Calc] scheduledHours=${scheduledHours}, actualHours=${actualHours}, filteredOutToilEntries=${entries.length - nonToilEntries.length}`);
 
       let excessHours = Math.max(0, actualHours - scheduledHours);
 
@@ -110,11 +113,22 @@ export class TOILService {
             date,
             hours: getSanitizedTOILHours(excessHours),
             monthYear,
-            entryId: entries.length > 0 ? entries[0].id : undefined,
+            entryId: nonToilEntries.length > 0 ? nonToilEntries[0].id : undefined,
             status: 'active'
           };
           await this.storeTOILRecord(record);
           logger.debug(`[TOIL Calc] Created new TOIL record: ${record.hours}h (id=${record.id})`);
+        }
+      }
+
+      // Process any TOIL usage entries
+      const toilUsageEntries = entries.filter(entry => entry.jobNumber === TOIL_JOB_NUMBER);
+      logger.debug(`[TOIL Calc] Found ${toilUsageEntries.length} TOIL usage entries to process`);
+      
+      if (toilUsageEntries.length > 0) {
+        for (const entry of toilUsageEntries) {
+          await this.recordTOILUsage(entry);
+          logger.debug(`[TOIL Calc] Processed TOIL usage entry: ${entry.id}, hours: ${entry.hours}`);
         }
       }
 
@@ -169,23 +183,39 @@ export class TOILService {
   public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
     try {
       if (entry.jobNumber !== TOIL_JOB_NUMBER) {
+        logger.debug(`[TOILService] Entry ${entry.id} not a TOIL usage (job number: ${entry.jobNumber})`);
         return false;
       }
+      
       // Validation for TOIL usage hours
       if (!isValidTOILHours(entry.hours)) {
         logger.error('[TOILService] Refusing TOIL usage entry with invalid hours:', entry.hours, getTOILHoursValidationMessage(entry.hours));
         return false;
       }
+      
+      logger.debug(`[TOILService] Recording TOIL usage: ${entry.hours}h for user ${entry.userId} on ${format(entry.date, 'yyyy-MM-dd')}`);
+      
+      // Check if this entry has already been recorded as TOIL usage
+      const existingUsage = this.loadTOILUsage().find(usage => usage.entryId === entry.id);
+      if (existingUsage) {
+        logger.debug(`[TOILService] TOIL usage already recorded for entry ${entry.id}, updating`);
+        existingUsage.hours = getSanitizedTOILHours(entry.hours);
+        await this.updateTOILUsage(existingUsage);
+        return true;
+      }
+      
       const usage: TOILUsage = {
         id: uuidv4(),
         userId: entry.userId,
-        date: entry.date,
+        date: entry.date instanceof Date ? entry.date : new Date(entry.date),
         hours: getSanitizedTOILHours(entry.hours),
         entryId: entry.id,
-        monthYear: format(entry.date, 'yyyy-MM')
+        monthYear: format(entry.date instanceof Date ? entry.date : new Date(entry.date), 'yyyy-MM')
       };
-      await this.storeTOILUsage(usage);
-      return true;
+      
+      const result = await this.storeTOILUsage(usage);
+      logger.debug(`[TOILService] TOIL usage ${result ? 'successfully' : 'failed to be'} recorded: ${usage.hours}h`);
+      return result;
     } catch (error) {
       logger.error('Error recording TOIL usage:', error);
       return false;
@@ -318,6 +348,41 @@ export class TOILService {
   }
 
   /**
+   * Update existing TOIL usage
+   */
+  private async updateTOILUsage(usage: TOILUsage): Promise<boolean> {
+    try {
+      // Acquire lock
+      await storageWriteLock.acquire();
+      
+      try {
+        // Get existing usage records
+        const usageRecords = this.loadTOILUsage();
+        
+        // Find and update the usage record
+        const index = usageRecords.findIndex(r => r.id === usage.id);
+        if (index >= 0) {
+          usageRecords[index] = usage;
+          
+          // Save usage records
+          localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usageRecords));
+          
+          logger.debug(`Updated TOIL usage: ${usage.id}, ${usage.hours} hours`);
+          return true;
+        }
+        
+        return false;
+      } finally {
+        // Release lock
+        storageWriteLock.release();
+      }
+    } catch (error) {
+      logger.error('Error updating TOIL usage:', error);
+      return false;
+    }
+  }
+
+  /**
    * Load TOIL records from storage
    */
   private loadTOILRecords(): TOILRecord[] {
@@ -371,6 +436,8 @@ export class TOILService {
       const records = this.loadTOILRecords();
       const usage = this.loadTOILUsage();
       
+      logger.debug(`[TOILService] Getting summary for user=${userId}, month=${monthYear}, records=${records.length}, usage=${usage.length}`);
+      
       // Filter records for this user and month
       const userRecords = records.filter(
         record => record.userId === userId && record.monthYear === monthYear
@@ -389,6 +456,8 @@ export class TOILService {
       
       // Calculate remaining hours
       const remaining = Math.max(0, accrued - used);
+      
+      logger.debug(`[TOILService] Summary: accrued=${accrued}, used=${used}, remaining=${remaining}`);
       
       return {
         userId,

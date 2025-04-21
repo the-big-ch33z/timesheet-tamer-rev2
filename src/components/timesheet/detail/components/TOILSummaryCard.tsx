@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
-import { Hourglass, Clock, CheckCheck } from "lucide-react";
+import { Hourglass, Clock, CheckCheck, AlertCircle } from "lucide-react";
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -21,6 +21,9 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
   const used = summary?.used || 0;
   const remaining = summary?.remaining || 0;
 
+  // Determine if there's no TOIL activity
+  const hasNoTOILActivity = accrued === 0 && used === 0;
+
   return (
     <Card className="shadow-sm bg-amber-50/50 border-amber-200">
       <CardHeader className="pb-2">
@@ -35,6 +38,14 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
             <div className="h-6 bg-amber-100 rounded w-1/2"></div>
             <div className="h-6 bg-amber-100 rounded w-3/4"></div>
             <div className="h-6 bg-amber-100 rounded w-2/3"></div>
+          </div>
+        ) : hasNoTOILActivity ? (
+          <div className="flex flex-col items-center py-3 text-amber-600">
+            <AlertCircle className="h-8 w-8 mb-2 opacity-70" />
+            <p className="text-center">No TOIL activity recorded for this month.</p>
+            <p className="text-sm text-amber-700/70 mt-1">
+              Work overtime to accrue TOIL or use job number "TOIL" to claim time off.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
