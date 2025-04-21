@@ -4,6 +4,7 @@
  */
 export * from './hoursCalculations';
 export * from './varianceCalculations';
+export * from './timeCalculations';
 
 // To avoid ambiguous exports, explicitly re-export key functions
 export {
@@ -18,3 +19,4 @@ export {
   isUndertime,
   safeCalculateVariance
 } from './varianceCalculations';
+

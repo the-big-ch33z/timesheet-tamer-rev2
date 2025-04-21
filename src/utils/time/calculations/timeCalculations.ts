@@ -13,3 +13,17 @@ export const calculateHoursVariance = (actualHours: number, expectedHours: numbe
 export const isUndertime = (hoursVariance: number): boolean => {
   return hoursVariance < 0;
 };
+
+// Re-export functions from hoursCalculations.ts that are used across the application
+export { 
+  calculateHoursFromTimes,
+  calculateMonthlyTargetHours,
+  calculateAdjustedFortnightHours,
+  calculateFortnightHoursFromSchedule
+} from './hoursCalculations';
+
+// Export additional utility functions if needed from other files
+export { 
+  safeCalculateVariance 
+} from './varianceCalculations';
+
