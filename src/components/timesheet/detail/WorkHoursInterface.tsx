@@ -8,7 +8,6 @@ import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntrySt
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useTimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
-import HoursStats from "./components/HoursStats";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 
 const logger = createTimeLogger('WorkHoursInterface');
@@ -53,10 +52,10 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   });
   
   // Use our unified stats hook with memoization
-  const stats = useTimeEntryStats({
-    entries,
-    calculatedHours: scheduledHours
-  });
+  // const stats = useTimeEntryStats({
+  //   entries,
+  //   calculatedHours: scheduledHours
+  // });
 
   // Use TOIL calculations with performance optimizations
   const { calculateToilForDay } = useTOILCalculations({
@@ -69,9 +68,9 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   // When entries change, ensure we're in sync - use callback for stability
   const notifyHoursChange = useCallback(() => {
     if (onHoursChange) {
-      onHoursChange(stats.totalHours);
+      onHoursChange(totalEnteredHours);
     }
-  }, [onHoursChange, stats.totalHours]);
+  }, [onHoursChange, totalEnteredHours]);
   
   // This effect runs when entries change
   useEffect(() => {
@@ -133,6 +132,9 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           interactive={interactive}
           onTimeChange={enhancedHandleTimeChange}
           isComplete={isComplete}
+          // Passing in new status values for summary:
+          hoursVariance={hoursVariance}
+          isUndertime={isUndertime}
         />
         
         <WorkHoursAlerts
@@ -144,17 +146,10 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           isComplete={isComplete}
         />
       </div>
-      
-      <HoursStats 
-        calculatedHours={scheduledHours}
-        totalHours={stats.totalHours}
-        hasEntries={stats.hasEntries}
-        hoursVariance={stats.hoursVariance}
-        isUndertime={stats.isUndertime}
-      />
     </div>
   );
 };
 
 // Use memo to prevent unnecessary re-renders of the entire component
 export default memo(WorkHoursInterface);
+
