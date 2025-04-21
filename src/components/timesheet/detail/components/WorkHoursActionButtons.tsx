@@ -43,7 +43,6 @@ const ACTIONS: ActionConf[] = [
     color: "text-blue-500",
     activeBg: "bg-blue-100",
   },
-  // Coffee cup at end, static, no action
   {
     type: "coffee",
     icon: Coffee,
@@ -63,64 +62,52 @@ const WorkHoursActionButtons: React.FC<WorkHoursActionButtonsProps> = ({ value, 
   <TooltipProvider>
     <div
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-full shadow-xl bg-white/70 backdrop-blur-[2.5px] border border-gray-100 mx-auto",
-        "w-fit mb-3",
-        "ring-1 ring-gray-200",
-        "hover:shadow-2xl transition-all",
+        "flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-white border border-gray-200 mx-auto",
+        "w-fit mb-4",
         "animate-fade-in"
       )}
-      style={{
-        boxShadow: "0 2px 16px rgba(20,20,60,0.10), 0 1.5px 3px 0 rgba(60,60,64,0.08)",
-        backdropFilter: "blur(8px)"
-      }}
       data-testid="work-hours-action-bar"
     >
       {ACTIONS.map(
         ({ type, icon: Icon, tooltip, color, activeBg, disabled }) => {
-          // Only clickable if not coffee
           const isActive = type !== "coffee" ? value[type as WorkHoursActionType] : false;
           return (
             <Tooltip key={type}>
               <TooltipTrigger asChild>
-                {/* Only main actions are clickable */}
                 {type !== "coffee" ? (
                   <button
                     type="button"
                     aria-label={tooltip}
                     onClick={() => onToggle(type as WorkHoursActionType)}
                     className={cn(
-                      "rounded-full flex items-center justify-center focus-visible:ring-2 focus:outline-none transition-all border-none shadow-none",
-                      "bg-transparent",
+                      "rounded-md flex items-center justify-center focus-visible:ring-2 focus:outline-none transition-colors",
+                      "border border-gray-100",
+                      "bg-gray-50 hover:bg-gray-100",
                       color,
                       isActive && activeBg,
-                      "hover:bg-gray-100",
-                      "w-10 h-10",
-                      "relative"
+                      "w-9 h-9"
                     )}
-                    style={{
-                      fontSize: "1.45rem",
-                      transition: "background 0.16s, color 0.16s",
-                    }}
                     tabIndex={0}
                     data-testid={`hours-action-${type}`}
                   >
-                    <Icon className={cn("w-6 h-6", isActive ? "scale-110" : "opacity-90", "transition-all")} strokeWidth={2.2} />
+                    <Icon className={cn("w-5 h-5", isActive && "scale-110")} strokeWidth={2} />
                   </button>
                 ) : (
                   <span
                     className={cn(
-                      "rounded-full flex items-center justify-center",
-                      "w-10 h-10 cursor-default bg-transparent",
+                      "rounded-md flex items-center justify-center",
+                      "border border-gray-100",
+                      "bg-gray-50",
+                      "w-9 h-9 cursor-default",
                       color,
-                      "opacity-60"
                     )}
                     aria-label={tooltip}
                   >
-                    <Icon className="w-6 h-6" strokeWidth={2.2} />
+                    <Icon className="w-5 h-5" strokeWidth={2} />
                   </span>
                 )}
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="shadow-lg px-4 py-1.5 bg-white/90 text-gray-900 border border-gray-200 text-sm rounded-md">
+              <TooltipContent side="bottom" className="shadow-sm px-3 py-1 bg-white text-gray-800 border border-gray-100 text-xs">
                 {tooltip}
               </TooltipContent>
             </Tooltip>

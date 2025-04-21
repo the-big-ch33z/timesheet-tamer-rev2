@@ -121,16 +121,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 
   return (
     <div>
-      {/* Floating-style action bar above the header */}
-      <div className="flex justify-center">
+      {/* Floating action buttons above header */}
+      <div className="flex justify-center mb-1">
         <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
       </div>
 
-      <WorkHoursHeader
-        hasEntries={hasEntries}
-        actionStates={actionStates}
-        onToggleAction={handleToggleAction}
-      />
+      <WorkHoursHeader hasEntries={hasEntries} />
 
       <WorkHoursDisplay
         startTime={startTime}
