@@ -46,6 +46,16 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
           </AlertDescription>
         </Alert>
       )}
+
+      {/* New overtime warning message */}
+      {hasEntries && !isUndertime && !isComplete && hoursVariance > 0.1 && (
+        <Alert variant="destructive" className="mt-2 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Hours exceed daily entries (over by {hoursVariance.toFixed(1)} hrs)
+          </AlertDescription>
+        </Alert>
+      )}
       
       {!hasEntries && interactive && (
         <Alert className="mt-2 bg-blue-50 border-blue-200 text-blue-800">
@@ -60,3 +70,4 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
 };
 
 export default WorkHoursAlerts;
+
