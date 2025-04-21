@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -120,6 +121,11 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 
   return (
     <div>
+      {/* Floating-style action bar above the header */}
+      <div className="flex justify-center">
+        <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
+      </div>
+
       <WorkHoursHeader
         hasEntries={hasEntries}
         actionStates={actionStates}
