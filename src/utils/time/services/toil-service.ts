@@ -36,85 +36,73 @@ export class TOILService {
         return null;
       }
 
-      // Create a unique key for this day to prevent duplicate processing
       const dateKey = `${userId}-${format(date, 'yyyy-MM-dd')}`;
-      
-      // Check if we've already processed this date recently
-      // This prevents duplicate TOIL records if this function is called multiple times
       if (this.processedDates.has(dateKey)) {
         logger.debug(`Already processed TOIL for ${dateKey}, skipping`);
         const monthYear = format(date, 'yyyy-MM');
         return this.getTOILSummary(userId, monthYear);
       }
-      
+
       const monthYear = format(date, 'yyyy-MM');
-      
-      // Fix: Get the correct week number (1 or 2) from the schedule
-      // Use the corrected getWeekDay and getFortnightWeek functions
       const weekNum = getFortnightWeek(date);
       const dayOfWeek = getWeekDay(date);
-      
-      logger.debug(`Calculating TOIL for date: ${format(date, 'yyyy-MM-dd')}, week: ${weekNum}, day: ${dayOfWeek}`);
-      
-      // Get scheduled hours for this day
+
+      logger.debug(`TOIL Calculation: userId=${userId} date=${format(date, 'yyyy-MM-dd')} week=${weekNum} day=${dayOfWeek}`);
+
       const daySchedule = workSchedule.weeks[weekNum][dayOfWeek];
-      
+
       if (!daySchedule?.startTime || !daySchedule?.endTime) {
-        logger.debug(`No schedule found for ${format(date, 'yyyy-MM-dd')}`);
+        logger.debug(`[TOIL Calc] No schedule found for ${format(date, 'yyyy-MM-dd')}`);
         return null;
       }
 
-      // Calculate scheduled hours including break deductions
+      // Calculate scheduled and worked hours
       const scheduledHours = calculateDayHours(
         daySchedule.startTime,
         daySchedule.endTime,
         daySchedule.breaks
       );
-      
-      logger.debug(`Scheduled hours for ${format(date, 'yyyy-MM-dd')}: ${scheduledHours}`);
-      
-      // Calculate total hours worked from timesheet entries
       const actualHours = entries.reduce((sum, entry) => sum + (isFinite(entry.hours) ? entry.hours : 0), 0);
-      logger.debug(`Actual hours worked: ${actualHours}`);
-      
-      // Calculate excess hours (TOIL to accrue), and validate
+
+      logger.debug(`[TOIL Calc] scheduledHours=${scheduledHours}, actualHours=${actualHours}`);
+
       let excessHours = Math.max(0, actualHours - scheduledHours);
 
-      // Validation safeguard: Clamp and validate excess hours before processing
+      // ENFORCE positive, valid, clamped TOIL hours
       if (!isValidTOILHours(excessHours)) {
         logger.error('[TOILService] Invalid TOIL hours attempted to be stored:', excessHours, getTOILHoursValidationMessage(excessHours));
         excessHours = 0;
       } else {
-        // Clamp for extra safety
         excessHours = getSanitizedTOILHours(excessHours);
       }
-      logger.debug(`Excess hours (TOIL, validated): ${excessHours}`);
-      
-      // First check if we already have a TOIL record for this date to prevent duplicates
+
+      logger.debug(`[TOIL Calc] Final excess hours to store (validated): ${excessHours}`);
+
+      // Look for previous TOIL record for this date
       const existingRecords = this.loadTOILRecords().filter(
         record => record.userId === userId && 
                  format(record.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
       );
-      
-      if (existingRecords.length > 0) {
-        logger.debug(`Found existing TOIL record for ${format(date, 'yyyy-MM-dd')}, updating instead of creating new`);
 
-        // Update record: only if new value is valid
+      // Guarantee CLAMP and VALIDATION before any update/create logic
+      if (existingRecords.length > 0) {
+        logger.debug(`[TOIL Calc] Found existing record: updating or removing if needed (id=${existingRecords[0].id})`);
         if (excessHours > 0) {
           const existingRecord = existingRecords[0];
           if (!isValidTOILHours(excessHours)) {
-            logger.error("[TOILService] Invalid TOIL hours during update, skipping record update.", excessHours);
+            logger.error("[TOILService] - Attempted to update record with invalid TOIL hours. Skipped.", excessHours);
           } else {
             existingRecord.hours = getSanitizedTOILHours(excessHours);
             await this.updateTOILRecord(existingRecord);
+            logger.debug(`[TOIL Calc] Updated TOIL record hours to ${existingRecord.hours}`);
           }
-        } else if (excessHours === 0) {
+        } else {
           await this.removeTOILRecord(existingRecords[0].id);
+          logger.debug('[TOIL Calc] Removed TOIL record as excessHours==0');
         }
       } else if (excessHours > 0) {
-        // Creation: initialize record defensively.
         if (!isValidTOILHours(excessHours)) {
-          logger.error('[TOILService] Refusing to store invalid TOIL excessHours in creation:', excessHours, getTOILHoursValidationMessage(excessHours));
+          logger.error('[TOILService] Refusing to store new invalid TOIL record:', excessHours, getTOILHoursValidationMessage(excessHours));
         } else {
           const record: TOILRecord = {
             id: uuidv4(),
@@ -126,20 +114,19 @@ export class TOILService {
             status: 'active'
           };
           await this.storeTOILRecord(record);
-          logger.debug(`Stored TOIL record: ${excessHours} hours for ${format(date, 'yyyy-MM-dd')}`);
+          logger.debug(`[TOIL Calc] Created new TOIL record: ${record.hours}h (id=${record.id})`);
         }
       }
-      
-      // Mark this date as processed to prevent duplicate calculations
+
       this.processedDates.set(dateKey, true);
-      
-      // Clear old entries from the processed dates cache every 100 entries to prevent memory leaks
+
+      // Roll off memory leaks
       if (this.processedDates.size > 100) {
         const keysToDelete = [...this.processedDates.keys()].slice(0, 50);
         keysToDelete.forEach(key => this.processedDates.delete(key));
       }
-      
-      // Return summary for the month
+
+      // Direct summary return for accurate UI updates
       return this.getTOILSummary(userId, monthYear);
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
