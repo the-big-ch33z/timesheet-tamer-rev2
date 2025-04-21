@@ -38,8 +38,9 @@ const TabContent: React.FC = () => {
   return (
     <>
       <TabsContent value="timesheet" className="mt-4">
-        <div className="flex flex-col xl:flex-row gap-6 w-full">
-          <div className="flex-1 w-full min-w-0">
+        <div className="flex flex-col xl:flex-row gap-8 w-full px-0">
+          {/* Work hours + calendar */}
+          <div className="flex-1 w-full min-w-0 xl:pr-6">
             <Suspense fallback={<LoadingComponent />}>
               <TimesheetCalendar 
                 currentMonth={currentMonth}
@@ -65,8 +66,8 @@ const TabContent: React.FC = () => {
               </div>
             )}
           </div>
-
-          <div className="w-full xl:w-[420px] max-w-full flex-shrink-0">
+          {/* Dashboards: Monthly/TOIL */}
+          <div className="w-full xl:w-[440px] max-w-full flex-shrink-0">
             <Suspense fallback={<LoadingComponent />}>
               <MonthlyHours 
                 user={viewedUser} 

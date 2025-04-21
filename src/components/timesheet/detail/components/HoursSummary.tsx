@@ -11,6 +11,11 @@ interface HoursSummaryProps {
   isComplete?: boolean;
 }
 
+/**
+ * HOURS SUMMARY:
+ * Only show Scheduled Hours (not Entered Hours).
+ * Show the progress bar above any completion/success message for better visual flow.
+ */
 export const HoursSummary: React.FC<HoursSummaryProps> = ({
   totalHours,
   calculatedHours,
@@ -37,7 +42,6 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
             className={`mb-2 h-2 ${isDone ? "bg-green-100" : "bg-blue-100"}`}
             indicatorColor={isDone ? "bg-green-500" : "bg-blue-500"}
           />
-          {/* Only show scheduled hours — always scheduled/target */}
           <div className={cn(
             "text-lg",
             isDone ? "text-green-600 font-medium" : !hasEntries && "text-gray-400"

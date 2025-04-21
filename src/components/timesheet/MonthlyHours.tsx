@@ -28,6 +28,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
 
   return (
     <div className="flex flex-col gap-8 w-full">
+      {/* 1. Monthly Summary card comes FIRST */}
       <div className="w-full max-w-full">
         <Card className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl hover:shadow-xl transition-shadow group">
           <CardHeader className="pb-2">
@@ -44,6 +45,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
           </CardContent>
         </Card>
       </div>
+      {/* 2. TOIL Summary card below */}
       <div className="w-full max-w-full">
         <TOILSummaryCard
           summary={toilSummary}
