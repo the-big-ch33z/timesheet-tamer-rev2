@@ -12,9 +12,7 @@ const TimesheetCalendar = lazy(() => import("./TimesheetCalendar"));
 const WorkHoursSection = lazy(() => import("./detail/WorkHoursSection"));
 const MonthlyHours = lazy(() => import("./MonthlyHours"));
 const RecentEntries = lazy(() => import("./RecentEntries"));
-// TOIL Management is loaded directly in TimesheetTabs
 
-// Loading component
 const LoadingComponent = () => (
   <div className="animate-pulse p-4 space-y-4">
     <div className="h-32 bg-gray-200 rounded"></div>
@@ -27,14 +25,12 @@ const TabContent: React.FC = () => {
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
   const logger = useLogger('TabContent');
   
-  // Log when selected day changes to track updates
   useEffect(() => {
     if (selectedDay) {
       logger.debug(`Selected day updated: ${selectedDay.toISOString()}`);
     }
   }, [selectedDay, logger]);
-  
-  // Ensure we have a user ID before rendering
+
   if (!viewedUser?.id) {
     return <div>No user selected</div>;
   }
@@ -42,8 +38,8 @@ const TabContent: React.FC = () => {
   return (
     <>
       <TabsContent value="timesheet" className="mt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="flex flex-col xl:flex-row gap-6 w-full">
+          <div className="flex-1 w-full min-w-0">
             <Suspense fallback={<LoadingComponent />}>
               <TimesheetCalendar 
                 currentMonth={currentMonth}
@@ -56,7 +52,7 @@ const TabContent: React.FC = () => {
             </Suspense>
             
             {selectedDay && (
-              <div className="mt-6">
+              <div className="mt-6 w-full">
                 <Suspense fallback={<LoadingComponent />}>
                   <WorkHoursSection 
                     date={selectedDay}
@@ -70,7 +66,7 @@ const TabContent: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="w-full xl:w-[420px] max-w-full flex-shrink-0">
             <Suspense fallback={<LoadingComponent />}>
               <MonthlyHours 
                 user={viewedUser} 
@@ -81,7 +77,6 @@ const TabContent: React.FC = () => {
           </div>
         </div>
       </TabsContent>
-
       <TabsContent value="recent">
         <div className="bg-gray-50 p-8 rounded-lg">
           <h3 className="text-xl font-medium mb-4">Recent Time Entries</h3>
@@ -90,8 +85,6 @@ const TabContent: React.FC = () => {
           </Suspense>
         </div>
       </TabsContent>
-      
-      {/* Note: TOIL Management tab content is defined in TimesheetTabs component */}
     </>
   );
 };

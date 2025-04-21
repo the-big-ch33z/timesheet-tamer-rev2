@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +25,7 @@ const HoursStats: React.FC<HoursStatsProps> = ({
     if (isUndertime) return "bg-amber-500";
     return "bg-blue-500"; // Over time
   };
-  return <Card className="shadow-sm">
+  return <Card className="shadow-sm w-full">
       <CardContent className="p-4 py-0 px-[10px] rounded-sm">
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-sm font-medium text-gray-700">Hours Status</h3>
@@ -32,12 +33,10 @@ const HoursStats: React.FC<HoursStatsProps> = ({
             {!hasEntries ? <>No Entries</> : hoursVariance === 0 ? <><Check className="h-3 w-3 mr-1" /> Complete</> : isUndertime ? <><AlertTriangle className="h-3 w-3 mr-1" /> Under Time</> : <><Clock className="h-3 w-3 mr-1" /> Over Time</>}
           </Badge>
         </div>
-
         {/* Progress Bar */}
-        <div className="mt-3">
-          <Progress value={percentComplete} className="h-2 bg-gray-100" />
+        <div className="mt-3 w-full">
+          <Progress value={percentComplete} className="h-2 bg-gray-100 w-full" />
         </div>
-
         {/* Hours Summary */}
         <div className="flex justify-between text-sm mt-2">
           <div>

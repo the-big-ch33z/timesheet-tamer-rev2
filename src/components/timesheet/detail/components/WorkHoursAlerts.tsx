@@ -1,6 +1,9 @@
+
 import React from "react";
-import { AlertTriangle, Calendar, CheckCircle, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+
 interface WorkHoursAlertsProps {
   hasEntries: boolean;
   isUndertime: boolean;
@@ -10,6 +13,7 @@ interface WorkHoursAlertsProps {
   date?: Date;
   isComplete?: boolean;
 }
+
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   hasEntries,
   isUndertime,
@@ -19,27 +23,61 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   date,
   isComplete = false
 }) => {
-  return <>
-      {hasEntries && isComplete && <Alert className="mt-3 bg-green-50 border-green-200 text-green-800">
+  // Show progress bar above the messages
+  const getPercent = () => {
+    // If completed, or if there's a variance, use calculated values
+    if (isComplete) return 100;
+    if (hasEntries && hoursVariance && hoursVariance < 0) {
+      // Under time, so show only entered percentage
+      const scheduled = Math.abs(hoursVariance) + (hoursVariance < 0 ? 0 : hoursVariance);
+      const entered = scheduled - Math.abs(hoursVariance);
+      return Math.round((entered / scheduled) * 100);
+    }
+    return 0;
+  };
+
+  const percent = getPercent();
+
+  return (
+    <>
+      {/* Progress bar is always above the message for visual flow */}
+      {(hasEntries || isComplete) && (
+        <Progress
+          value={isComplete ? 100 : percent}
+          color={isComplete ? "success" : isUndertime ? "warning" : "default"}
+          className={`mb-1 h-2 ${isComplete ? "bg-green-100" : isUndertime ? "bg-amber-100" : "bg-blue-100"}`}
+          indicatorColor={isComplete ? "bg-green-500" : isUndertime ? "bg-amber-500" : "bg-blue-500"}
+        />
+      )}
+        
+      {hasEntries && isComplete && (
+        <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
           <CheckCircle className="h-4 w-4 mr-2" />
           <AlertDescription>
             Your hours are complete for this day
           </AlertDescription>
-        </Alert>}
-    
-      {hasEntries && isUndertime && !isComplete && <Alert variant="destructive" className="mt-3 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
+        </Alert>
+      )}
+
+      {hasEntries && isUndertime && !isComplete && (
+        <Alert variant="destructive" className="mt-2 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>
             Hours don't match daily entries (under by {Math.abs(hoursVariance).toFixed(1)} hrs)
           </AlertDescription>
-        </Alert>}
+        </Alert>
+      )}
       
-      {!hasEntries && interactive && <Alert className="mt-3 bg-blue-50 border-blue-200 text-blue-800">
+      {!hasEntries && interactive && (
+        <Alert className="mt-2 bg-blue-50 border-blue-200 text-blue-800">
           <Info className="h-4 w-4 mr-2" />
           <AlertDescription>
             No time entries for this day. Add an entry to record your hours.
           </AlertDescription>
-        </Alert>}
-    </>;
+        </Alert>
+      )}
+    </>
+  );
 };
+
 export default WorkHoursAlerts;

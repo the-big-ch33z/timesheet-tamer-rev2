@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
@@ -70,8 +71,9 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       });
     }
   }, [onCreateEntry, userId, date]);
-  return <div className="space-y-6">
-      <Card className="p-4 mx-0 my-0 px-[22px] rounded-md">
+  // Adjust card and spacing for wider fit and flush layout
+  return <div className="space-y-6 w-full">
+      <Card className="p-6 mx-0 my-0 w-full rounded-lg shadow-sm">
         <WorkHoursInterface date={date} userId={userId} interactive={interactive} entries={dayEntries} workSchedule={workSchedule} />
       </Card>
       

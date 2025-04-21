@@ -27,19 +27,12 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   const monthName = format(currentMonth, 'MMMM yyyy');
 
   return (
-    <div className="flex flex-col sm:flex-row gap-8 sm:gap-6 w-full">
-      <div className="flex-1 min-w-[320px] max-w-xl">
-        <TOILSummaryCard
-          summary={toilSummary}
-          loading={toilLoading}
-          monthName={monthName}
-        />
-      </div>
-      <div className="flex-1 min-w-[320px] max-w-xl">
+    <div className="flex flex-col gap-8 w-full">
+      <div className="w-full max-w-full">
         <Card className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl hover:shadow-xl transition-shadow group">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl font-semibold text-blue-700 mb-2">
-              {/* The title is moved into MonthSummary for better alignment */}
+              {/* Monthly Summary title handled inside MonthSummary */}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -50,6 +43,13 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
             />
           </CardContent>
         </Card>
+      </div>
+      <div className="w-full max-w-full">
+        <TOILSummaryCard
+          summary={toilSummary}
+          loading={toilLoading}
+          monthName={monthName}
+        />
       </div>
     </div>
   );
