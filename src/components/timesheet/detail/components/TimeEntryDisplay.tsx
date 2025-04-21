@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { calculateHoursFromTimes } from "../../utils/timeCalculations";
+import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
 import { formatHours } from "@/utils/time/formatting/timeFormatting";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";

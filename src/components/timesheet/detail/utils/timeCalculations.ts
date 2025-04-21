@@ -1,10 +1,5 @@
 
 /**
- * Time calculations for the timesheet detail component
- * This file is kept for backward compatibility
- * New code should import from @/utils/time/calculations
+ * @deprecated Use `@/utils/time/calculations/timeCalculations` instead.
  */
-
-// Re-export all utility functions from the new centralized location
-export * from '@/utils/time/calculations/hoursCalculations';
-export * from '@/utils/time/calculations/varianceCalculations';
+export * from '@/utils/time/calculations/timeCalculations';

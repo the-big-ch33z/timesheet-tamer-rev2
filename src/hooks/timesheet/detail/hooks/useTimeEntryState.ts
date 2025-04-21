@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
-import { calculateHoursFromTimes } from "@/utils/time/calculations";
+import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
