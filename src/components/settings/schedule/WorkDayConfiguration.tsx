@@ -51,7 +51,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
 
           <div className="flex items-center gap-4 ml-4">
             <ToggleGroup type="multiple" variant="outline" size="sm">
-              <ToggleGroupItem value="lunch" aria-label="Toggle lunch break" data-state={breaks.lunch ? "on" : "off"} onClick={() => toggleBreak(day, 'lunch')} className="rounded-sm font-normal bg-neutral-50">
+              <ToggleGroupItem value="lunch" aria-label="Toggle lunch break" data-state={breaks.lunch ? "on" : "off"} onClick={() => toggleBreak(day, 'lunch')} className="rounded-sm font-normal bg-lime-100">
                 <Bell className="h-4 w-4 mr-1" />
                 <span className="text-xs">Lunch</span>
               </ToggleGroupItem>
