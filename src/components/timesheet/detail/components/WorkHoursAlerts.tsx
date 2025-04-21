@@ -2,7 +2,6 @@
 import React from "react";
 import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
 
 interface WorkHoursAlertsProps {
   hasEntries: boolean;
@@ -23,33 +22,13 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   date,
   isComplete = false
 }) => {
-  // Show progress bar above the messages
-  const getPercent = () => {
-    // If completed, or if there's a variance, use calculated values
-    if (isComplete) return 100;
-    if (hasEntries && hoursVariance && hoursVariance < 0) {
-      // Under time, so show only entered percentage
-      const scheduled = Math.abs(hoursVariance) + (hoursVariance < 0 ? 0 : hoursVariance);
-      const entered = scheduled - Math.abs(hoursVariance);
-      return Math.round((entered / scheduled) * 100);
-    }
-    return 0;
-  };
 
-  const percent = getPercent();
+  // Removed the horizontal progress bar rendering here entirely
 
   return (
     <>
-      {/* Progress bar is always above the message for visual flow */}
-      {(hasEntries || isComplete) && (
-        <Progress
-          value={isComplete ? 100 : percent}
-          color={isComplete ? "success" : isUndertime ? "warning" : "default"}
-          className={`mb-1 h-2 ${isComplete ? "bg-green-100" : isUndertime ? "bg-amber-100" : "bg-blue-100"}`}
-          indicatorColor={isComplete ? "bg-green-500" : isUndertime ? "bg-amber-500" : "bg-blue-500"}
-        />
-      )}
-        
+      {/* Removed the horizontal progress bar above the messages for a cleaner UI */}
+
       {hasEntries && isComplete && (
         <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
           <CheckCircle className="h-4 w-4 mr-2" />
