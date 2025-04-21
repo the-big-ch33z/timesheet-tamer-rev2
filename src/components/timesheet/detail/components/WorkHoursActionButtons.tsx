@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Palmtree, Utensils, Sick } from "lucide-react";
+import { Clock, Palmtree, Utensils, Syringe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch";
@@ -15,7 +15,7 @@ const ACTIONS: {
 }[] = [
   {
     type: "sick",
-    icon: Sick,
+    icon: Syringe,
     tooltip: "Mark as Sick Day",
     color: "text-[#ea384c]",
     activeBg: "bg-[#ea384c]/10",
