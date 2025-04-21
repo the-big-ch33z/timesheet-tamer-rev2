@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from "uuid";
 import { TOILRecord, TOILSummary, TOILUsage, TOIL_JOB_NUMBER } from "@/types/toil";
 import { TimeEntry, WorkSchedule } from "@/types";
@@ -7,6 +6,7 @@ import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'da
 import { calculateHoursFromTimes } from '../calculations';
 import { storageWriteLock } from './storage-operations';
 import { getFortnightWeek, getWeekDay, calculateDayHours } from '../scheduleUtils';
+import { isValidTOILHours, getSanitizedTOILHours, getTOILHoursValidationMessage } from '../validation/toilValidation';
 
 const logger = createTimeLogger('TOILService');
 
@@ -74,12 +74,21 @@ export class TOILService {
       logger.debug(`Scheduled hours for ${format(date, 'yyyy-MM-dd')}: ${scheduledHours}`);
       
       // Calculate total hours worked from timesheet entries
-      const actualHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
+      const actualHours = entries.reduce((sum, entry) => sum + (isFinite(entry.hours) ? entry.hours : 0), 0);
       logger.debug(`Actual hours worked: ${actualHours}`);
       
-      // Calculate excess hours (TOIL to accrue)
-      const excessHours = Math.max(0, actualHours - scheduledHours);
-      logger.debug(`Excess hours (TOIL): ${excessHours}`);
+      // Calculate excess hours (TOIL to accrue), and validate
+      let excessHours = Math.max(0, actualHours - scheduledHours);
+
+      // Validation safeguard: Clamp and validate excess hours before processing
+      if (!isValidTOILHours(excessHours)) {
+        logger.error('[TOILService] Invalid TOIL hours attempted to be stored:', excessHours, getTOILHoursValidationMessage(excessHours));
+        excessHours = 0;
+      } else {
+        // Clamp for extra safety
+        excessHours = getSanitizedTOILHours(excessHours);
+      }
+      logger.debug(`Excess hours (TOIL, validated): ${excessHours}`);
       
       // First check if we already have a TOIL record for this date to prevent duplicates
       const existingRecords = this.loadTOILRecords().filter(
@@ -89,31 +98,36 @@ export class TOILService {
       
       if (existingRecords.length > 0) {
         logger.debug(`Found existing TOIL record for ${format(date, 'yyyy-MM-dd')}, updating instead of creating new`);
-        
-        // Update the existing record instead of creating a new one
+
+        // Update record: only if new value is valid
         if (excessHours > 0) {
           const existingRecord = existingRecords[0];
-          existingRecord.hours = excessHours;
-          await this.updateTOILRecord(existingRecord);
-        } else if (excessHours === 0 && existingRecords.length > 0) {
-          // If there's no excess hours now but we have an existing record, remove it
+          if (!isValidTOILHours(excessHours)) {
+            logger.error("[TOILService] Invalid TOIL hours during update, skipping record update.", excessHours);
+          } else {
+            existingRecord.hours = getSanitizedTOILHours(excessHours);
+            await this.updateTOILRecord(existingRecord);
+          }
+        } else if (excessHours === 0) {
           await this.removeTOILRecord(existingRecords[0].id);
         }
       } else if (excessHours > 0) {
-        // Create new TOIL record only if we have excess hours
-        const record: TOILRecord = {
-          id: uuidv4(),
-          userId,
-          date,
-          hours: excessHours,
-          monthYear,
-          entryId: entries.length > 0 ? entries[0].id : undefined,
-          status: 'active'
-        };
-        
-        // Store TOIL record
-        await this.storeTOILRecord(record);
-        logger.debug(`Stored TOIL record: ${excessHours} hours for ${format(date, 'yyyy-MM-dd')}`);
+        // Creation: initialize record defensively.
+        if (!isValidTOILHours(excessHours)) {
+          logger.error('[TOILService] Refusing to store invalid TOIL excessHours in creation:', excessHours, getTOILHoursValidationMessage(excessHours));
+        } else {
+          const record: TOILRecord = {
+            id: uuidv4(),
+            userId,
+            date,
+            hours: getSanitizedTOILHours(excessHours),
+            monthYear,
+            entryId: entries.length > 0 ? entries[0].id : undefined,
+            status: 'active'
+          };
+          await this.storeTOILRecord(record);
+          logger.debug(`Stored TOIL record: ${excessHours} hours for ${format(date, 'yyyy-MM-dd')}`);
+        }
       }
       
       // Mark this date as processed to prevent duplicate calculations
@@ -170,16 +184,19 @@ export class TOILService {
       if (entry.jobNumber !== TOIL_JOB_NUMBER) {
         return false;
       }
-      
+      // Validation for TOIL usage hours
+      if (!isValidTOILHours(entry.hours)) {
+        logger.error('[TOILService] Refusing TOIL usage entry with invalid hours:', entry.hours, getTOILHoursValidationMessage(entry.hours));
+        return false;
+      }
       const usage: TOILUsage = {
         id: uuidv4(),
         userId: entry.userId,
         date: entry.date,
-        hours: entry.hours,
+        hours: getSanitizedTOILHours(entry.hours),
         entryId: entry.id,
         monthYear: format(entry.date, 'yyyy-MM')
       };
-      
       await this.storeTOILUsage(usage);
       return true;
     } catch (error) {
