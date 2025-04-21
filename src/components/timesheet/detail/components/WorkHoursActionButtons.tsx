@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, PalmTree, LunchPlate, SickFace } from "lucide-react";
+import { Clock, Palmtree, Utensils, Sick } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch";
@@ -15,14 +15,14 @@ const ACTIONS: {
 }[] = [
   {
     type: "sick",
-    icon: SickFace,
+    icon: Sick,
     tooltip: "Mark as Sick Day",
     color: "text-[#ea384c]",
     activeBg: "bg-[#ea384c]/10",
   },
   {
     type: "leave",
-    icon: PalmTree,
+    icon: Palmtree,
     tooltip: "Mark as Annual Leave",
     color: "text-[#1EAEDB]",
     activeBg: "bg-[#D3E4FD]",
@@ -36,7 +36,7 @@ const ACTIONS: {
   },
   {
     type: "lunch",
-    icon: LunchPlate,
+    icon: Utensils,
     tooltip: "Override Lunch (Worked Through Lunch)",
     color: "text-[#1EAEDB]",
     activeBg: "bg-blue-100",
@@ -86,3 +86,4 @@ const WorkHoursActionButtons: React.FC<WorkHoursActionButtonsProps> = ({ value, 
 );
 
 export default WorkHoursActionButtons;
+
