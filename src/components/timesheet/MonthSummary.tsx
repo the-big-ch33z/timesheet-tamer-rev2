@@ -5,6 +5,8 @@ import { User, WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { formatDisplayHours } from "@/utils/time/formatting";
 import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
+import { Progress } from "@/components/ui/progress";
+import { CirclePercent } from "lucide-react";
 
 interface MonthSummaryProps {
   userId: string;
@@ -12,62 +14,85 @@ interface MonthSummaryProps {
   workSchedule?: WorkSchedule;
 }
 
-const MonthSummary: React.FC<MonthSummaryProps> = ({ 
-  userId, 
-  date, 
-  workSchedule 
+const MonthSummary: React.FC<MonthSummaryProps> = ({
+  userId,
+  date,
+  workSchedule
 }) => {
   const [monthTotalHours, setMonthTotalHours] = useState(0);
   const [daysWorked, setDaysWorked] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const { getMonthEntries, calculateTotalHours } = useTimeEntryContext();
-  
+
   useEffect(() => {
     setIsLoading(true);
-    
+
     // Get entries for the month
     const monthEntries = getMonthEntries(date, userId);
-    
+
     // Calculate total hours
     const totalHours = calculateTotalHours(monthEntries);
     setMonthTotalHours(totalHours);
-    
+
     // Calculate days worked (unique dates with entries)
     const uniqueDates = new Set(
       monthEntries.map(entry => format(entry.date, 'yyyy-MM-dd'))
     );
     setDaysWorked(uniqueDates.size);
-    
+
     setIsLoading(false);
   }, [date, userId, getMonthEntries, calculateTotalHours]);
-  
+
   // Calculate workdays in month
   const workdaysInMonth = getWorkdaysInMonth(date);
-  
+
+  // Estimate monthly hours (assume 8 per workday)
+  const monthlyTarget = workdaysInMonth * 8;
+  const percent = monthlyTarget > 0 ? Math.min(100, Math.round((monthTotalHours / monthlyTarget) * 100)) : 0;
+  const hoursRemaining = monthlyTarget - monthTotalHours;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {isLoading ? (
-        <div className="animate-pulse space-y-2">
-          <div className="h-5 bg-gray-200 rounded w-1/2"></div>
-          <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+        <div className="flex flex-col gap-3">
+          <div className="h-7 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+          <div className="h-5 bg-gray-100 rounded w-2/3 animate-pulse"></div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-medium text-gray-500">Total Hours</div>
-              <div className="text-lg font-semibold">{formatDisplayHours(monthTotalHours)}</div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="rounded-full bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 border border-blue-200 p-4">
+              <CirclePercent className="w-7 h-7 text-blue-500" />
             </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Days Worked</div>
-              <div className="text-lg font-semibold">{daysWorked} / {workdaysInMonth}</div>
-            </div>
+            <h3 className="text-xl font-semibold text-gray-800">Monthly Hours</h3>
           </div>
-          
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <div className="text-sm font-medium text-gray-500">Month</div>
-            <div>{format(date, 'MMMM yyyy')}</div>
+          <div className="flex items-baseline gap-2 font-extrabold">
+            <span className="text-3xl text-blue-900">{monthTotalHours.toFixed(1)}</span>
+            <span className="text-lg text-gray-500 font-semibold">/ {monthlyTarget.toFixed(1)} hrs</span>
+            <span className="text-blue-500 font-bold ml-3">{percent}%</span>
+          </div>
+          <Progress
+            value={percent}
+            color={percent === 100 ? "success" : "default"}
+            className={`mt-3 h-2 ${percent === 100 ? "bg-green-100" : "bg-blue-100"}`}
+            indicatorColor={percent === 100 ? "bg-green-500" : "bg-blue-500"}
+          />
+          <div className="mt-3 text-sm text-gray-600">
+            {hoursRemaining > 0
+              ? (
+                <>
+                  <span className="font-medium text-blue-700">{hoursRemaining.toFixed(1)} hours</span> remaining to meet target
+                </>
+              )
+              : (
+                <span className="font-medium text-green-600">Target met!</span>
+              )
+            }
+          </div>
+          <div className="text-xs font-medium text-gray-400 mt-1">
+            Based on {workdaysInMonth.toFixed(1)} work days this month
           </div>
         </>
       )}

@@ -23,33 +23,35 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     userId: user.id,
     date: currentMonth
   });
-  
+
   const monthName = format(currentMonth, 'MMMM yyyy');
 
   return (
-    <>
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Month Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MonthSummary
-            userId={user.id}
-            date={currentMonth}
-            workSchedule={workSchedule}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Add TOIL Summary Card */}
-      <div className="mt-4">
+    <div className="flex flex-col sm:flex-row gap-8 sm:gap-6 w-full">
+      <div className="flex-1 min-w-[320px] max-w-xl">
         <TOILSummaryCard
           summary={toilSummary}
           loading={toilLoading}
           monthName={monthName}
         />
       </div>
-    </>
+      <div className="flex-1 min-w-[320px] max-w-xl">
+        <Card className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl hover:shadow-xl transition-shadow group">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl font-semibold text-blue-700 mb-2">
+              {/* The title is moved into MonthSummary for better alignment */}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MonthSummary
+              userId={user.id}
+              date={currentMonth}
+              workSchedule={workSchedule}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

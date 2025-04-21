@@ -3,7 +3,8 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
-import { Hourglass, Clock, CheckCheck, AlertCircle } from "lucide-react";
+import { Clock, CircleMinus, CirclePlus, CircleCheck } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -11,65 +12,107 @@ interface TOILSummaryCardProps {
   monthName?: string;
 }
 
-const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({ 
-  summary, 
+const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
+  summary,
   loading = false,
   monthName
 }) => {
-  // Set default values if no summary or loading
+  // If loading or no summary, use zero values for smooth animation.
   const accrued = summary?.accrued || 0;
   const used = summary?.used || 0;
   const remaining = summary?.remaining || 0;
+  const total = accrued + used || 1; // prevent division by zero
 
-  // Determine if there's no TOIL activity
-  const hasNoTOILActivity = accrued === 0 && used === 0;
+  // Color and icon map for columns
+  const box = [
+    {
+      label: "Earned",
+      value: accrued,
+      color: "text-blue-600",
+      border: "border-blue-100 bg-blue-50",
+      icon: <CirclePlus className="w-5 h-5 text-blue-400" />
+    },
+    {
+      label: "Used",
+      value: used,
+      color: "text-red-600",
+      border: "border-red-100 bg-red-50",
+      icon: <CircleMinus className="w-5 h-5 text-red-400" />
+    },
+    {
+      label: "Remaining",
+      value: remaining,
+      color: "text-green-600",
+      border: "border-green-100 bg-green-50",
+      icon: <CircleCheck className="w-5 h-5 text-green-400" />
+    }
+  ];
+
+  // No TOIL activity state
+  const hasNoTOILActivity = accrued === 0 && used === 0 && remaining === 0 && !loading;
 
   return (
-    <Card className="shadow-sm bg-amber-50/50 border-amber-200">
+    <Card
+      className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl transition-shadow hover:shadow-xl group"
+      style={{
+        minWidth: 300
+      }}
+    >
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg text-amber-800 flex items-center">
-          <Hourglass className="h-5 w-5 mr-2" />
-          TOIL Summary {monthName && `(${monthName})`}
+        <CardTitle className="text-xl font-semibold text-blue-700 tracking-tight flex items-center gap-2 mb-2">
+          <Clock className="w-6 h-6 text-blue-400" />
+          TOIL Summary {monthName && <span className="text-blue-400 ml-1 text-base">({monthName})</span>}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {loading ? (
-          <div className="animate-pulse space-y-2">
-            <div className="h-6 bg-amber-100 rounded w-1/2"></div>
-            <div className="h-6 bg-amber-100 rounded w-3/4"></div>
-            <div className="h-6 bg-amber-100 rounded w-2/3"></div>
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-3">
+              {[1,2,3].map(key =>
+                <div key={key} className="flex-1 rounded-lg border bg-blue-100/40 border-blue-100 px-4 py-3 animate-pulse">
+                  <div className="h-4 w-6 mb-3 rounded bg-blue-200/60"></div>
+                  <div className="h-6 w-14 mb-2 rounded bg-blue-200/60"></div>
+                  <div className="h-3 w-10 rounded bg-blue-100"></div>
+                </div>
+              )}
+            </div>
+            <div className="h-3 rounded bg-blue-100/70 mt-4 animate-pulse w-full"></div>
           </div>
         ) : hasNoTOILActivity ? (
-          <div className="flex flex-col items-center py-3 text-amber-600">
-            <AlertCircle className="h-8 w-8 mb-2 opacity-70" />
-            <p className="text-center">No TOIL activity recorded for this month.</p>
-            <p className="text-sm text-amber-700/70 mt-1">
-              Work overtime to accrue TOIL or use job number "TOIL" to claim time off.
-            </p>
+          <div className="flex flex-col items-center justify-center py-7 text-blue-500 opacity-70">
+            <CircleCheck className="w-10 h-10 mb-2 opacity-80" />
+            <p className="text-center text-base font-medium">No TOIL activity for this month.</p>
+            <span className="text-sm text-blue-500/70 mt-1">Earn TOIL by working overtime. Log TOIL time off as "TOIL".</span>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center text-sm text-amber-700">
-                <Clock className="h-4 w-4 mr-2" />
-                TOIL Accrued
-              </div>
-              <div className="font-medium text-amber-900">{formatDisplayHours(accrued)}</div>
+          <>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {box.map(({ label, value, color, border, icon }) => (
+                <div
+                  key={label}
+                  className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl border ${border} bg-white/80 shadow-sm 
+                    transition-transform group-hover:scale-105`}
+                >
+                  {icon}
+                  <span className={`text-[0.95rem] font-semibold tracking-tight ${color}`}>{label}</span>
+                  <span className={`text-2xl font-extrabold leading-none ${color}`}>
+                    {formatDisplayHours(value)}
+                  </span>
+                  <span className="text-xs text-gray-500 font-medium">hours</span>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center text-sm text-amber-700">
-                <CheckCheck className="h-4 w-4 mr-2" />
-                TOIL Used
-              </div>
-              <div className="font-medium text-amber-900">{formatDisplayHours(used)}</div>
+            <div className="mb-3 flex items-center justify-between text-xs font-medium text-gray-600 px-2">
+              <span>Balance</span>
+              <span className="font-bold tracking-tight">{formatDisplayHours(remaining)}</span>
             </div>
-            <div className="flex justify-between items-center border-t border-amber-200 pt-2">
-              <div className="flex items-center font-medium text-amber-800">
-                TOIL Remaining
-              </div>
-              <div className="font-semibold text-lg text-amber-900">{formatDisplayHours(remaining)}</div>
-            </div>
-          </div>
+            <Progress
+              value={total === 0 ? 0 : Math.max(0, Math.min(100, 100 * remaining / (accrued || 1)))}
+              color="success"
+              className="h-2 bg-green-100/60"
+              indicatorColor="bg-green-500"
+            />
+          </>
         )}
       </CardContent>
     </Card>
