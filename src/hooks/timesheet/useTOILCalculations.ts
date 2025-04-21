@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
 import { toilService, TOIL_JOB_NUMBER } from '@/utils/time/services/toil-service';
 import { TOILSummary } from '@/types/toil';
@@ -28,6 +28,11 @@ export const useTOILCalculations = ({
   const logger = useLogger('TOILCalculations');
   const [toilSummary, setToilSummary] = useState<TOILSummary | null>(null);
   
+  // Use refs to prevent unnecessary calculations
+  const entriesRef = useRef<TimeEntry[]>([]);
+  const calculationInProgressRef = useRef<boolean>(false);
+  const lastCalculationTimeRef = useRef<number>(0);
+  
   // Get the current month-year string
   const currentMonthYear = format(date, 'yyyy-MM');
   
@@ -36,16 +41,37 @@ export const useTOILCalculations = ({
     return entry.jobNumber === TOIL_JOB_NUMBER;
   }, []);
   
-  // Calculate TOIL for a specific day based on timesheet entries
+  // Debounced calculation function to prevent excessive calculations
   const calculateToilForDay = useCallback(async (): Promise<TOILSummary | null> => {
     try {
+      // Return early if missing required data
       if (!userId || !date || !workSchedule) {
         logger.debug('Missing required data for TOIL calculation');
         return null;
       }
       
+      // Prevent concurrent calculations
+      if (calculationInProgressRef.current) {
+        logger.debug('TOIL calculation already in progress, skipping');
+        return toilSummary;
+      }
+      
+      // Throttle calculations to at most once per second
+      const now = Date.now();
+      if (now - lastCalculationTimeRef.current < 1000) {
+        logger.debug('TOIL calculation throttled, skipping');
+        return toilSummary;
+      }
+      
+      // Track that we're calculating
+      calculationInProgressRef.current = true;
+      lastCalculationTimeRef.current = now;
+      
       // Filter out TOIL usage entries from accrual calculation
       const accrualEntries = entries.filter(entry => !isToilEntry(entry));
+      
+      // Store current entries in ref to compare later
+      entriesRef.current = [...entries];
       
       // Calculate and store TOIL
       const summary = await toilService.calculateAndStoreTOIL(
@@ -57,8 +83,10 @@ export const useTOILCalculations = ({
       
       // Process any TOIL usage entries
       const toilUsageEntries = entries.filter(isToilEntry);
-      for (const entry of toilUsageEntries) {
-        await toilService.recordTOILUsage(entry);
+      
+      // Use Promise.all for better performance with multiple entries
+      if (toilUsageEntries.length > 0) {
+        await Promise.all(toilUsageEntries.map(entry => toilService.recordTOILUsage(entry)));
       }
       
       // Get updated summary after recording usage
@@ -67,35 +95,62 @@ export const useTOILCalculations = ({
         : summary;
       
       setToilSummary(updatedSummary);
+      
+      // Calculation complete
+      calculationInProgressRef.current = false;
+      
       return updatedSummary;
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
+      calculationInProgressRef.current = false;
       return null;
     }
-  }, [userId, date, entries, workSchedule, isToilEntry, currentMonthYear, logger]);
+  }, [userId, date, entries, workSchedule, isToilEntry, currentMonthYear, toilSummary, logger]);
+  
+  // Memoize entries to detect changes
+  const entriesSignature = entries.map(e => e.id).join(',');
   
   // Load or calculate TOIL summary when dependencies change
   useEffect(() => {
+    // Skip if we're missing critical data
+    if (!userId || !date) return;
+    
+    // Skip if entries haven't changed
+    const previousEntriesSignature = entriesRef.current.map(e => e.id).join(',');
+    if (previousEntriesSignature === entriesSignature && toilSummary) {
+      return;
+    }
+    
     const loadSummary = async () => {
       try {
-        // Get current summary from storage first
+        // Get current summary from storage first - this is very fast
         const storedSummary = toilService.getTOILSummary(userId, currentMonthYear);
         
         if (storedSummary) {
           setToilSummary(storedSummary);
         }
         
-        // Then calculate to ensure it's up to date
-        await calculateToilForDay();
+        // Schedule TOIL calculation for the next frame to prevent UI blocking
+        if (typeof window !== 'undefined') {
+          window.requestAnimationFrame(() => {
+            // Using setTimeout to further defer heavy calculation
+            setTimeout(() => {
+              calculateToilForDay();
+            }, 100);
+          });
+        }
       } catch (error) {
         logger.error('Error loading TOIL summary:', error);
       }
     };
     
-    if (userId && date) {
-      loadSummary();
-    }
-  }, [userId, date, currentMonthYear, calculateToilForDay, logger]);
+    loadSummary();
+    
+    // Clean up on unmount or when dependencies change
+    return () => {
+      // No need for cleanup as we're using refs for state
+    };
+  }, [userId, date, currentMonthYear, calculateToilForDay, entriesSignature, toilSummary, logger]);
   
   return {
     toilSummary,

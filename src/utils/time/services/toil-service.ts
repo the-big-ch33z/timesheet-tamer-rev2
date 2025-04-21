@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from "uuid";
 import { TOILRecord, TOILSummary, TOILUsage, TOIL_JOB_NUMBER } from "@/types/toil";
 import { TimeEntry, WorkSchedule } from "@/types";
@@ -5,7 +6,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { calculateHoursFromTimes } from '../calculations';
 import { storageWriteLock } from './storage-operations';
-import { getFortnightWeek, calculateDayHours } from '../scheduleUtils';
+import { getFortnightWeek, getWeekDay, calculateDayHours } from '../scheduleUtils';
 
 const logger = createTimeLogger('TOILService');
 
@@ -17,6 +18,9 @@ const TOIL_USAGE_KEY = 'toilUsage';
  * Service to manage Time Off In Lieu (TOIL) records
  */
 export class TOILService {
+  // Cache to prevent duplicate TOIL records for the same day
+  private processedDates: Map<string, boolean> = new Map();
+  
   /**
    * Calculate and store TOIL accrual based on timesheet entries compared to schedule
    */
@@ -32,11 +36,25 @@ export class TOILService {
         return null;
       }
 
+      // Create a unique key for this day to prevent duplicate processing
+      const dateKey = `${userId}-${format(date, 'yyyy-MM-dd')}`;
+      
+      // Check if we've already processed this date recently
+      // This prevents duplicate TOIL records if this function is called multiple times
+      if (this.processedDates.has(dateKey)) {
+        logger.debug(`Already processed TOIL for ${dateKey}, skipping`);
+        const monthYear = format(date, 'yyyy-MM');
+        return this.getTOILSummary(userId, monthYear);
+      }
+      
       const monthYear = format(date, 'yyyy-MM');
       
-      // Get the correct week number (1 or 2) from the schedule
+      // Fix: Get the correct week number (1 or 2) from the schedule
+      // Use the corrected getWeekDay and getFortnightWeek functions
       const weekNum = getFortnightWeek(date);
-      const dayOfWeek = format(date, 'EEEE').toLowerCase() as keyof typeof workSchedule.weeks[1];
+      const dayOfWeek = getWeekDay(date);
+      
+      logger.debug(`Calculating TOIL for date: ${format(date, 'yyyy-MM-dd')}, week: ${weekNum}, day: ${dayOfWeek}`);
       
       // Get scheduled hours for this day
       const daySchedule = workSchedule.weeks[weekNum][dayOfWeek];
@@ -63,8 +81,26 @@ export class TOILService {
       const excessHours = Math.max(0, actualHours - scheduledHours);
       logger.debug(`Excess hours (TOIL): ${excessHours}`);
       
-      if (excessHours > 0) {
-        // Create TOIL record
+      // First check if we already have a TOIL record for this date to prevent duplicates
+      const existingRecords = this.loadTOILRecords().filter(
+        record => record.userId === userId && 
+                 format(record.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+      );
+      
+      if (existingRecords.length > 0) {
+        logger.debug(`Found existing TOIL record for ${format(date, 'yyyy-MM-dd')}, updating instead of creating new`);
+        
+        // Update the existing record instead of creating a new one
+        if (excessHours > 0) {
+          const existingRecord = existingRecords[0];
+          existingRecord.hours = excessHours;
+          await this.updateTOILRecord(existingRecord);
+        } else if (excessHours === 0 && existingRecords.length > 0) {
+          // If there's no excess hours now but we have an existing record, remove it
+          await this.removeTOILRecord(existingRecords[0].id);
+        }
+      } else if (excessHours > 0) {
+        // Create new TOIL record only if we have excess hours
         const record: TOILRecord = {
           id: uuidv4(),
           userId,
@@ -77,7 +113,16 @@ export class TOILService {
         
         // Store TOIL record
         await this.storeTOILRecord(record);
-        logger.debug(`Stored TOIL record: ${excessHours} hours`);
+        logger.debug(`Stored TOIL record: ${excessHours} hours for ${format(date, 'yyyy-MM-dd')}`);
+      }
+      
+      // Mark this date as processed to prevent duplicate calculations
+      this.processedDates.set(dateKey, true);
+      
+      // Clear old entries from the processed dates cache every 100 entries to prevent memory leaks
+      if (this.processedDates.size > 100) {
+        const keysToDelete = [...this.processedDates.keys()].slice(0, 50);
+        keysToDelete.forEach(key => this.processedDates.delete(key));
       }
       
       // Return summary for the month
@@ -93,8 +138,8 @@ export class TOILService {
    */
   private getScheduledHoursForDay(date: Date, workSchedule: WorkSchedule): number {
     try {
-      const dayOfWeek = format(date, 'EEEE').toLowerCase() as keyof typeof workSchedule.weeks[1];
-      const weekNumber = 1; // Default to week 1 for now
+      const dayOfWeek = getWeekDay(date);
+      const weekNumber = getFortnightWeek(date);
       
       const daySchedule = workSchedule.weeks[weekNumber]?.[dayOfWeek];
       
@@ -109,14 +154,8 @@ export class TOILService {
         return 0;
       }
       
-      let scheduledHours = calculateHoursFromTimes(startTime, endTime);
-      
-      // Subtract unpaid breaks (lunch = 30 min)
-      if (breaks?.lunch) {
-        scheduledHours -= 0.5; // 30 minutes for lunch
-      }
-      
-      return scheduledHours;
+      // Use calculateDayHours which handles breaks correctly
+      return calculateDayHours(startTime, endTime, breaks);
     } catch (error) {
       logger.error('Error calculating scheduled hours:', error);
       return 0;
@@ -175,6 +214,71 @@ export class TOILService {
       }
     } catch (error) {
       logger.error('Error storing TOIL record:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Update an existing TOIL record
+   */
+  private async updateTOILRecord(record: TOILRecord): Promise<boolean> {
+    try {
+      // Acquire lock
+      await storageWriteLock.acquire();
+      
+      try {
+        // Get existing records
+        const records = this.loadTOILRecords();
+        
+        // Find and update the record
+        const index = records.findIndex(r => r.id === record.id);
+        if (index >= 0) {
+          records[index] = record;
+          
+          // Save records
+          localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
+          
+          logger.debug(`Updated TOIL record: ${record.id}, ${record.hours} hours`);
+          return true;
+        }
+        
+        return false;
+      } finally {
+        // Release lock
+        storageWriteLock.release();
+      }
+    } catch (error) {
+      logger.error('Error updating TOIL record:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Remove a TOIL record
+   */
+  private async removeTOILRecord(recordId: string): Promise<boolean> {
+    try {
+      // Acquire lock
+      await storageWriteLock.acquire();
+      
+      try {
+        // Get existing records
+        const records = this.loadTOILRecords();
+        
+        // Filter out the record to remove
+        const updatedRecords = records.filter(r => r.id !== recordId);
+        
+        // Save records
+        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(updatedRecords));
+        
+        logger.debug(`Removed TOIL record: ${recordId}`);
+        return true;
+      } finally {
+        // Release lock
+        storageWriteLock.release();
+      }
+    } catch (error) {
+      logger.error('Error removing TOIL record:', error);
       return false;
     }
   }
@@ -326,6 +430,14 @@ export class TOILService {
       logger.error('Error getting all TOIL summaries:', error);
       return [];
     }
+  }
+  
+  /**
+   * Clear all TOIL cache
+   */
+  public clearCache(): void {
+    this.processedDates.clear();
+    logger.debug('TOIL cache cleared');
   }
 }
 

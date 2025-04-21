@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+
+import React, { useEffect, useCallback, memo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
@@ -36,8 +37,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   const {
     startTime,
     endTime,
-    scheduledHours, // Changed from calculatedHours
-    totalEnteredHours, // Changed from totalHours
+    scheduledHours,
+    totalEnteredHours,
     hasEntries,
     hoursVariance,
     isUndertime,
@@ -51,13 +52,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     userId
   });
   
-  // Use our unified stats hook
+  // Use our unified stats hook with memoization
   const stats = useTimeEntryStats({
     entries,
-    calculatedHours: scheduledHours // Pass scheduledHours as calculatedHours
+    calculatedHours: scheduledHours
   });
 
-  // Use TOIL calculations
+  // Use TOIL calculations with performance optimizations
   const { calculateToilForDay } = useTOILCalculations({
     userId,
     date,
@@ -65,45 +66,58 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     workSchedule
   });
 
-  // When entries change, ensure we're in sync
-  useEffect(() => {
-    logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
-    
-    // Call onHoursChange callback if provided
+  // When entries change, ensure we're in sync - use callback for stability
+  const notifyHoursChange = useCallback(() => {
     if (onHoursChange) {
       onHoursChange(stats.totalHours);
     }
-  }, [entries, date, stats.totalHours, onHoursChange]);
+  }, [onHoursChange, stats.totalHours]);
+  
+  // This effect runs when entries change
+  useEffect(() => {
+    logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
+    notifyHoursChange();
+  }, [entries, date, notifyHoursChange]);
 
   // Effect to update work hours when startTime or endTime changes
   useEffect(() => {
-    if (interactive && startTime && endTime) {
-      logger.debug(`Saving work hours: start=${startTime}, end=${endTime}`);
+    if (!interactive || !startTime || !endTime) return;
+    
+    logger.debug(`Saving work hours: start=${startTime}, end=${endTime}`);
+    
+    // Debounce saving to prevent excessive storage operations
+    const timeoutId = setTimeout(() => {
       saveWorkHoursForDate(date, startTime, endTime, userId);
-    }
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
 
-  const enhancedHandleTimeChange = (type: 'start' | 'end', value: string) => {
+  // Memoize the time change handler for better performance
+  const enhancedHandleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     logger.debug(`Time input changed: ${type}=${value}`);
     handleTimeChange(type, value);
-    
-    // Save immediately on change for immediate feedback
-    const updatedStartTime = type === 'start' ? value : startTime;
-    const updatedEndTime = type === 'end' ? value : endTime;
-    
-    if (updatedStartTime && updatedEndTime) {
-      logger.debug(`Immediately saving updated work hours: start=${updatedStartTime}, end=${updatedEndTime}`);
-      saveWorkHoursForDate(date, updatedStartTime, updatedEndTime, userId);
-    }
-  };
+  }, [handleTimeChange]);
 
-  // Calculate TOIL when entries are present and complete
+  // Calculate TOIL when entries are present and complete - with performance optimizations
   useEffect(() => {
-    if (hasEntries && totalEnteredHours > 0) {
-      // Calculate TOIL regardless of variance
-      calculateToilForDay();
+    if (!hasEntries || !isComplete) return;
+    
+    // Don't calculate TOIL on every render - use requestAnimationFrame to defer
+    if (typeof window !== 'undefined') {
+      const animationId = window.requestAnimationFrame(() => {
+        // Further delay with setTimeout to avoid blocking the main thread
+        setTimeout(() => {
+          calculateToilForDay();
+        }, 100);
+      });
+      
+      return () => {
+        // Cancel the animation frame if the component unmounts
+        window.cancelAnimationFrame(animationId);
+      };
     }
-  }, [hasEntries, totalEnteredHours, calculateToilForDay]);
+  }, [hasEntries, isComplete, calculateToilForDay]);
 
   return (
     <div className="space-y-4">
@@ -113,8 +127,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         <WorkHoursDisplay
           startTime={startTime}
           endTime={endTime}
-          totalHours={totalEnteredHours} // Changed from totalHours
-          calculatedHours={scheduledHours} // Changed from calculatedHours
+          totalHours={totalEnteredHours}
+          calculatedHours={scheduledHours}
           hasEntries={hasEntries}
           interactive={interactive}
           onTimeChange={enhancedHandleTimeChange}
@@ -132,7 +146,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       </div>
       
       <HoursStats 
-        calculatedHours={scheduledHours} // Changed from calculatedHours
+        calculatedHours={scheduledHours}
         totalHours={stats.totalHours}
         hasEntries={stats.hasEntries}
         hoursVariance={stats.hoursVariance}
@@ -142,4 +156,5 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   );
 };
 
-export default WorkHoursInterface;
+// Use memo to prevent unnecessary re-renders of the entire component
+export default memo(WorkHoursInterface);
