@@ -12,8 +12,8 @@ const WorkHoursHeader: React.FC<WorkHoursHeaderProps> = memo(({
   hasEntries
 }) => {
   return <div className="flex items-center mb-4">
-      <Clock className="h-5 w-5 mr-2 text-amber-700" />
-      <h3 className="text-lg font-medium text-amber-900">Work Hours</h3>
+      <Clock className="h-5 w-5 mr-2 text-amber-700 mx-[12px]" />
+      <h3 className="text-lg font-medium text-amber-900 mx-0">Work Hours</h3>
       {!hasEntries}
     </div>;
 });

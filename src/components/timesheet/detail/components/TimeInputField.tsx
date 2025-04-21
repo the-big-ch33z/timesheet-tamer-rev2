@@ -32,7 +32,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = ({
     }
   };
   return <div>
-      <div className="text-sm text-amber-700 mb-1">{label}</div>
+      <div className="text-sm text-amber-700 mb-1 mx-[9px]">{label}</div>
       <div className={cn("border rounded-md p-2 flex items-center", interactive ? "bg-white border-amber-200" : "bg-gray-50 border-gray-200")}>
         {interactive ? <input type="time" value={value} onChange={e => handleChange(e.target.value)} className="text-lg bg-transparent w-full outline-none" placeholder={placeholder || `Enter ${label.toLowerCase()}`} data-testid={testId} /> : <span className="text-lg">
             {value ? format(new Date(`2000-01-01T${value}`), "h:mm a") : "--:--"}
