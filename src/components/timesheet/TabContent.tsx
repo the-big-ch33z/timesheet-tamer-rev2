@@ -38,9 +38,10 @@ const TabContent: React.FC = () => {
   return (
     <>
       <TabsContent value="timesheet" className="mt-4">
-        <div className="flex flex-col xl:flex-row gap-8 w-full px-0">
-          {/* Work hours + calendar */}
-          <div className="flex-1 w-full min-w-0 xl:pr-6">
+        {/* Stretch across full width up to max page frame */}
+        <div className="flex flex-col xl:flex-row gap-8 w-full px-0 max-w-7xl mx-auto">
+          {/* Work hours + calendar: now fill full available width */}
+          <div className="flex-1 w-full min-w-0 xl:pr-0"> {/* Removed pr-6 */}
             <Suspense fallback={<LoadingComponent />}>
               <TimesheetCalendar 
                 currentMonth={currentMonth}
@@ -53,7 +54,7 @@ const TabContent: React.FC = () => {
             </Suspense>
             
             {selectedDay && (
-              <div className="mt-6 w-full">
+              <div className="mt-6 w-full"> {/* w-full to stretch */}
                 <Suspense fallback={<LoadingComponent />}>
                   <WorkHoursSection 
                     date={selectedDay}
@@ -91,3 +92,4 @@ const TabContent: React.FC = () => {
 };
 
 export default React.memo(TabContent);
+

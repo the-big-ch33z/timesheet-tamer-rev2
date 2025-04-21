@@ -113,8 +113,8 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
   }, [deleteEntry, isSubmitting, logger]);
 
   return (
-    <Card className="p-4">
-      <div className="flex justify-between items-center mb-4">
+    <Card className="p-0 m-0 w-full rounded-lg shadow-sm border border-gray-200">
+      <div className="flex justify-between items-center mb-4 px-4 pt-4">
         <h3 className="text-lg font-medium">Timesheet Entries</h3>
         {interactive && (
           <Button 
@@ -129,7 +129,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
         )}
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 px-4">
         <ExistingEntriesList
           entries={dayEntries}
           date={date}
@@ -139,18 +139,21 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
       </div>
 
       {showEntryForm && (
-        <EntryInterface 
-          date={date} 
-          userId={userId} 
-          onCreateEntry={handleEntrySubmit}
-          onDeleteEntry={handleDeleteEntry}
-          interactive={interactive} 
-          existingEntries={dayEntries}
-          isSubmitting={isSubmitting}
-        />
+        <div className="px-4 pb-4">
+          <EntryInterface 
+            date={date} 
+            userId={userId} 
+            onCreateEntry={handleEntrySubmit}
+            onDeleteEntry={handleDeleteEntry}
+            interactive={interactive} 
+            existingEntries={dayEntries}
+            isSubmitting={isSubmitting}
+          />
+        </div>
       )}
     </Card>
   );
 };
 
 export default React.memo(TimeEntryController);
+

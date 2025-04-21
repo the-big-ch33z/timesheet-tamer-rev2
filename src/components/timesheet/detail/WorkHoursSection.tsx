@@ -73,12 +73,17 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   }, [onCreateEntry, userId, date]);
   // Remove margin and padding from Card for flush layout
   return <div className="space-y-6 w-full">
-      <Card className="p-0 mx-0 my-0 w-full rounded-lg shadow-sm border border-gray-200">
+      {/* Card stretches to fill container, and has reduced or zero padding */}
+      <Card className="p-0 m-0 w-full rounded-lg shadow-sm border border-gray-200">
         <WorkHoursInterface date={date} userId={userId} interactive={interactive} entries={dayEntries} workSchedule={workSchedule} />
       </Card>
-      <Suspense fallback={<div className="text-center py-4">Loading entries...</div>}>
-        <TimeEntryController date={date} userId={userId} interactive={interactive} onCreateEntry={handleCreateEntry} />
-      </Suspense>
+      {/* Make entries section wide as well */}
+      <div className="w-full">
+        <Suspense fallback={<div className="text-center py-4">Loading entries...</div>}>
+          <TimeEntryController date={date} userId={userId} interactive={interactive} onCreateEntry={handleCreateEntry} />
+        </Suspense>
+      </div>
     </div>;
 };
 export default React.memo(WorkHoursSection);
+
