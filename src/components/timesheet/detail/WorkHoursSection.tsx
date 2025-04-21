@@ -1,14 +1,16 @@
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { WorkSchedule } from "@/types";
-import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/useTimeEntryContext";
 import TimeEntryController from "../entry-control/TimeEntryController";
 import { createTimeLogger } from "@/utils/time/errors";
 import WorkHoursInterface from "./WorkHoursInterface";
 import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import ExistingEntriesList from "./components/ExistingEntriesList";
+
 const logger = createTimeLogger('WorkHoursSection');
+
 interface WorkHoursSectionProps {
   date: Date;
   userId: string;
@@ -16,6 +18,7 @@ interface WorkHoursSectionProps {
   interactive?: boolean;
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
+
 const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   date,
   userId,
@@ -71,19 +74,34 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       });
     }
   }, [onCreateEntry, userId, date]);
+
   // Remove margin and padding from Card for flush layout
-  return <div className="space-y-6 w-full">
+  return (
+    <div className="space-y-6 w-full">
       {/* Card stretches to fill container, and has reduced or zero padding */}
       <Card className="p-0 m-0 w-full rounded-lg shadow-sm border border-gray-200">
-        <WorkHoursInterface date={date} userId={userId} interactive={interactive} entries={dayEntries} workSchedule={workSchedule} />
+        <WorkHoursInterface 
+          date={date} 
+          userId={userId} 
+          interactive={interactive} 
+          entries={dayEntries} 
+          workSchedule={workSchedule} 
+        />
       </Card>
+      
       {/* Make entries section wide as well */}
       <div className="w-full">
         <Suspense fallback={<div className="text-center py-4">Loading entries...</div>}>
-          <TimeEntryController date={date} userId={userId} interactive={interactive} onCreateEntry={handleCreateEntry} />
+          <TimeEntryController 
+            date={date} 
+            userId={userId} 
+            interactive={interactive} 
+            onCreateEntry={handleCreateEntry} 
+          />
         </Suspense>
       </div>
-    </div>;
+    </div>
+  );
 };
-export default React.memo(WorkHoursSection);
 
+export default React.memo(WorkHoursSection);

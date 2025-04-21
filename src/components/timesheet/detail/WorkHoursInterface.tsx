@@ -4,7 +4,7 @@ import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
-import WorkHoursActionButtons from "./components/WorkHoursActionButtons";
+import WorkHoursActionButtons, { WorkHoursActionType } from "./components/WorkHoursActionButtons";
 import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
@@ -57,14 +57,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     workSchedule
   });
 
-  const [actionStates, setActionStates] = useState<Record<"sick" | "leave" | "toil" | "lunch", boolean>>({
+  const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>({
     sick: false,
     leave: false,
     toil: false,
     lunch: false,
   });
 
-  const handleToggleAction = useCallback((type: "sick" | "leave" | "toil" | "lunch") => {
+  const handleToggleAction = useCallback((type: WorkHoursActionType) => {
     setActionStates((prev) => ({
       ...prev,
       [type]: !prev[type],

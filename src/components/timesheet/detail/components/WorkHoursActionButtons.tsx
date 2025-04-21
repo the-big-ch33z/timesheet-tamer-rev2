@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Clock, Plane, Syringe, Utensils, Coffee } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch";
+export type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch";
 type ActionConf = {
   type: WorkHoursActionType | "coffee";
   icon: React.ElementType;
@@ -53,7 +53,7 @@ const ACTIONS: ActionConf[] = [
   }
 ];
 
-interface WorkHoursActionButtonsProps {
+export interface WorkHoursActionButtonsProps {
   value: Record<WorkHoursActionType, boolean>;
   onToggle: (type: WorkHoursActionType) => void;
 }

@@ -1,11 +1,12 @@
 
 import React, { memo } from "react";
 import { Clock } from "lucide-react";
+import { WorkHoursActionType } from "./WorkHoursActionButtons";
 
 interface WorkHoursHeaderProps {
   hasEntries: boolean;
-  actionStates?: Record<"sick" | "leave" | "toil" | "lunch", boolean>;
-  onToggleAction?: (type: "sick" | "leave" | "toil" | "lunch") => void;
+  actionStates?: Record<WorkHoursActionType, boolean>;
+  onToggleAction?: (type: WorkHoursActionType) => void;
 }
 
 /**
