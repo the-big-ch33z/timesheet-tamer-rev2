@@ -1,10 +1,18 @@
-import React from "react";
+
+import React, { useMemo } from "react";
 import { format } from "date-fns";
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule } from "@/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CheckCircle2 } from "lucide-react";
+import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import { createTimeLogger } from "@/utils/time/errors";
+import { calculateCompletion } from "@/utils/timesheet/completionUtils";
+import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
+
+const logger = createTimeLogger('CalendarGrid');
 
 interface DayStatus {
   isWeekend: boolean;
@@ -42,7 +50,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   totalHours = 0
 }) => {
   const hasEntries = entries.length > 0;
-  const isShiftedRDO = status.isRDO && status.originalRdoDate &&
+  const isShiftedRDO =
+    status.isRDO && status.originalRdoDate &&
     status.originalRdoDate.toDateString() !== day.toDateString();
 
   return (
@@ -96,4 +105,90 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   );
 };
 
-export default CalendarDay;
+/** Unified CalendarGrid component (exported as default) */
+interface CalendarGridProps {
+  currentMonth: Date;
+  selectedDate: Date | null;
+  workSchedule?: WorkSchedule;
+  onDayClick: (day: Date) => void;
+  userId: string;
+}
+
+const CalendarGrid: React.FC<CalendarGridProps> = ({
+  currentMonth,
+  selectedDate,
+  workSchedule,
+  onDayClick,
+  userId
+}) => {
+  React.useEffect(() => {
+    if (workSchedule) {
+      logger.debug(`CalendarGrid received workSchedule: ${workSchedule.name || 'unnamed'}`);
+    } else {
+      logger.debug('CalendarGrid has no workSchedule');
+    }
+  }, [workSchedule]);
+
+  const { days } = useCalendarData(currentMonth, selectedDate, workSchedule, userId);
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
+
+  const processedDays = useMemo(() => {
+    logger.debug(`Processing ${days.length} days for month ${currentMonth.toISOString()}, userId: ${userId}`);
+
+    return days.map(day => {
+      const dateObj = new Date(day.date);
+      const workHours = getWorkHoursForDate(dateObj, userId);
+
+      if (!workHours) {
+        logger.debug(`No work hours found for date ${dateObj.toISOString()}, userId: ${userId}`);
+      }
+
+      const { isComplete } = calculateCompletion(
+        day.entries,
+        workHours?.startTime,
+        workHours?.endTime
+      );
+
+      const isRdo = workSchedule?.rdoDays?.[getFortnightWeek(dateObj)]?.includes(
+        getWeekDay(dateObj)
+      ) || false;
+
+      logger.debug(`Day ${dateObj.toISOString()}: entries=${day.entries?.length ?? 0}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
+
+      return {
+        ...day,
+        date: dateObj,
+        entries: day.entries ?? [],
+        isComplete,
+        isRdo
+      };
+    });
+  }, [days, getWorkHoursForDate, userId, workSchedule]);
+
+  return (
+    <div className="grid grid-cols-7 gap-1">
+      {processedDays.map(day => (
+        <CalendarDay
+          key={day.date.toISOString()}
+          day={day.date}
+          entries={day.entries} // ✅ explicitly pass entries to avoid runtime crash
+          isSelected={selectedDate ? day.date.toDateString() === selectedDate.toDateString() : false}
+          onClick={() => onDayClick(day.date)}
+          isToday={false} // or add logic for isToday if needed
+          status={{
+            isWeekend: false,
+            dayHoliday: false,
+            holidayName: null,
+            isRDO: day.isRdo,
+            workHours: null,
+            isWorkDay: true,
+            shiftReason: null
+          }}
+          isComplete={day.isComplete}
+        />
+      ))}
+    </div>
+  );
+};
+
+export default CalendarGrid;
