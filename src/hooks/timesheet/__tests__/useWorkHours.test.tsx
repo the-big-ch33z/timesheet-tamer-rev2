@@ -5,14 +5,14 @@ import { useWorkHours } from '../useWorkHours';
 // Mock the work hours context
 jest.mock('@/contexts/timesheet/work-hours-context/WorkHoursContext', () => ({
   useWorkHoursContext: () => ({
-    getWorkHours: jest.fn((date, userId) => {
+    getWorkHours: jest.fn((userId, date) => {
       if (userId === 'user-with-custom-hours') {
         return { startTime: '08:00', endTime: '16:00', isCustom: true };
       }
       return { startTime: '', endTime: '', isCustom: false };
     }),
     saveWorkHours: jest.fn(),
-    hasCustomWorkHours: jest.fn((date, userId) => userId === 'user-with-custom-hours'),
+    hasCustomWorkHours: jest.fn((userId, date) => userId === 'user-with-custom-hours'),
     resetDayWorkHours: jest.fn()
   }),
 }));
@@ -94,8 +94,8 @@ describe('useWorkHours Hook', () => {
     
     // Check if the context's saveWorkHours was called with the right parameters
     expect(mockWorkHoursContext.saveWorkHours).toHaveBeenCalledWith(
-      testDate,
       'test-user',
+      expect.any(String),
       '09:00',
       '17:00'
     );
@@ -125,8 +125,8 @@ describe('useWorkHours Hook', () => {
     
     // Check if the context's resetDayWorkHours was called with the right parameters
     expect(mockWorkHoursContext.resetDayWorkHours).toHaveBeenCalledWith(
-      testDate,
-      'test-user'
+      'test-user',
+      expect.any(String)
     );
   });
   

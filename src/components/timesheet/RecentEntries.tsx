@@ -33,8 +33,8 @@ const RecentEntries = () => {
       {sortedEntries.slice(0, 10).map(entry => {
       const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
       const workHours = getWorkHoursForDate(entryDate, entry.userId);
-      // Check for hasData properly with a fallback
-      const hasWorkHoursData = workHours && (workHours.hasData === true);
+      // Check for hasData safely - either explicitly true or both start and end times exist
+      const hasWorkHoursData = !!workHours && (workHours.hasData === true || (!!workHours.startTime && !!workHours.endTime));
       
       return <Card key={entry.id} className="p-4">
             <div className="flex justify-between items-start">

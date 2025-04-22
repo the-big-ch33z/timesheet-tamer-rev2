@@ -53,13 +53,28 @@ export const useWorkHours = (userId?: string) => {
     return 0;
   }, [enhancedHook, calculateAutoHours, userId]);
   
+  // Add a wrapper method that includes calculatedHours for test compatibility
+  const getWorkHoursForDateWithCalculated = useCallback((date: Date, userId?: string) => {
+    const hours = enhancedHook.getWorkHoursForDate(date, userId);
+    const calculatedHours = (hours.startTime && hours.endTime) 
+      ? calculateAutoHours(hours.startTime, hours.endTime) 
+      : 0;
+      
+    return {
+      ...hours,
+      calculatedHours,
+      isCustom: !!hours.hasData // For backward compatibility
+    };
+  }, [enhancedHook, calculateAutoHours]);
+  
   // Extend the hook with the additional methods needed for backward compatibility
   return {
     ...enhancedHook,
     calculateAutoHours,
     hasCustomHours,
     resetWorkHours,
-    calculateDayHours
+    calculateDayHours,
+    getWorkHoursForDate: getWorkHoursForDateWithCalculated
   };
 };
 

@@ -13,10 +13,24 @@ const logger = createTimeLogger('useTimesheetWorkHours');
 export const useTimesheetWorkHours = (defaultUserId?: string) => {
   const workHoursContext = useWorkHoursContext();
   
+  // Helper to ensure we have a Date object
+  const ensureDate = (date: Date | string): Date => {
+    if (typeof date === 'string') {
+      return new Date(date);
+    }
+    return date;
+  };
+  
+  // Helper to format date for storage
+  const formatDateForStorage = (date: Date | string): string => {
+    const dateObj = ensureDate(date);
+    return format(dateObj, 'yyyy-MM-dd');
+  };
+  
   // Get work hours for a specific date
-  const getWorkHoursForDate = useCallback((date: Date, userId?: string): { startTime: string, endTime: string, hasData?: boolean } => {
+  const getWorkHoursForDate = useCallback((date: Date | string, userId?: string): { startTime: string, endTime: string, hasData?: boolean } => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = format(date, 'yyyy-MM-dd');
+    const formattedDate = formatDateForStorage(date);
     
     if (!targetUserId) {
       logger.warn('No userId provided for getWorkHoursForDate');
@@ -34,9 +48,9 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   }, [workHoursContext, defaultUserId]);
   
   // Save work hours for a specific date with immediate feedback
-  const saveWorkHoursForDate = useCallback((date: Date, startTime: string, endTime: string, userId?: string): void => {
+  const saveWorkHoursForDate = useCallback((date: Date | string, startTime: string, endTime: string, userId?: string): void => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = format(date, 'yyyy-MM-dd');
+    const formattedDate = formatDateForStorage(date);
     
     if (!targetUserId) {
       logger.warn('No userId provided for saveWorkHoursForDate');
@@ -45,8 +59,7 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     
     logger.debug(`Saving work hours for ${formattedDate}, user ${targetUserId}:`, { startTime, endTime });
     
-    // Save work hours in context - convert formattedDate string to Date 
-    const dateObj = date;
+    // Save work hours in context
     workHoursContext.saveWorkHours(targetUserId, formattedDate, startTime, endTime);
     
     // Dispatch event to notify subscribers of the change
@@ -60,9 +73,9 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   }, [workHoursContext, defaultUserId]);
   
   // Reset work hours to defaults based on schedule
-  const resetWorkHoursForDate = useCallback((date: Date, userId?: string): void => {
+  const resetWorkHoursForDate = useCallback((date: Date | string, userId?: string): void => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = format(date, 'yyyy-MM-dd');
+    const formattedDate = formatDateForStorage(date);
     
     if (!targetUserId) {
       logger.warn('No userId provided for resetWorkHoursForDate');
