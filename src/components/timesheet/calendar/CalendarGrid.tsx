@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   startOfMonth, 
@@ -34,9 +33,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   userId
 }) => {
   const logger = useLogger("CalendarGrid");
-  const { getDayState } = useCalendarHelpers(workSchedule);
+  const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
   
-  // Generate all days that should appear in the calendar
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -44,7 +42,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-  // Group days by week for display
   const weeks: Date[][] = [];
   let week: Date[] = [];
 
@@ -56,20 +53,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
   });
 
-  // Render the calendar grid
   return (
     <div className="grid grid-cols-7 gap-2">
       {days.map((day, i) => {
-        // Get state for this day
-        const dayState = getDayState(day, selectedDate, monthStart);
-        const isCurrentMonth = isSameMonth(day, monthStart);
+        const dayState = getDayState(day, selectedDate, startOfMonth(currentMonth));
+        const isCurrentMonth = isSameMonth(day, startOfMonth(currentMonth));
         const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
-        
-        // Check if it's a holiday
-        const isPublicHoliday = isHoliday(day, defaultQueenslandHolidays);
+
+        const { startTime, endTime } = getStartAndEndTimeForDay
+          ? getStartAndEndTimeForDay(day)
+          : { startTime: undefined, endTime: undefined };
 
         if (!isCurrentMonth) {
-          // Render days from other months as disabled
           return (
             <div
               key={`empty-${i}`}
@@ -84,15 +79,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           <CalendarDay
             key={day.toString()}
             day={day}
-            entries={[]} // This would be populated from actual entries in a real implementation
+            entries={[]} // Real usage should pass real entries for this day!
             isSelected={isSelected}
             isToday={dateFnsIsToday(day)}
             onClick={onDayClick}
             isComplete={false} // This would be determined by actual entries
-            totalHours={0} // This would be calculated from actual entries
+            totalHours={0} // Calculated from actual entries
             isWeekend={dayState.isWeekend}
-            isRDO={false} // This would be determined by work schedule
+            isRDO={false} // Determined by work schedule
             isWorkDay={dayState.isWorkingDay}
+            expectedStartTime={startTime}
+            expectedEndTime={endTime}
           />
         );
       })}
