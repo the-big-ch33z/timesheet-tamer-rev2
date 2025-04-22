@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { TOILSummary } from '@/types/toil';
-import { toilService } from '@/utils/time/services/toil-service';
+import { toilService } from '@/utils/time/services/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
 
@@ -28,6 +28,11 @@ export const useTOILSummary = ({
   
   const monthYear = format(date, 'yyyy-MM');
   
+  // Clear caches when month changes to ensure we get fresh data
+  useEffect(() => {
+    toilService.clearCache();
+  }, [monthYear]);
+  
   const loadSummary = () => {
     try {
       setIsLoading(true);
@@ -41,10 +46,21 @@ export const useTOILSummary = ({
       
       const toilSummary = toilService.getTOILSummary(userId, monthYear);
       setSummary(toilSummary);
+      
+      logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading TOIL summary';
       logger.error(errorMessage);
       setError(errorMessage);
+      
+      // Set zeroed summary on error
+      setSummary({
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      });
     } finally {
       setIsLoading(false);
     }

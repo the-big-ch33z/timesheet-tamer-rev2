@@ -1,4 +1,5 @@
-import React, { memo } from "react";
+
+import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
@@ -22,24 +23,29 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
   used: number;
   remaining: number;
 }) => {
+  // Ensure we always have valid numbers
+  const safeAccrued = isFinite(accrued) ? accrued : 0;
+  const safeUsed = isFinite(used) ? used : 0;
+  const safeRemaining = isFinite(remaining) ? remaining : 0;
+
   const box = [
     {
       label: "Earned",
-      value: accrued,
+      value: safeAccrued,
       color: "text-blue-600",
       border: "border-blue-100 bg-blue-50",
       icon: <CirclePlus className="w-5 h-5 text-blue-400" />
     },
     {
       label: "Used",
-      value: used,
+      value: safeUsed,
       color: "text-red-600",
       border: "border-red-100 bg-red-50",
       icon: <CircleMinus className="w-5 h-5 text-red-400" />
     },
     {
       label: "Remaining",
-      value: remaining,
+      value: safeRemaining,
       color: "text-green-600",
       border: "border-green-100 bg-green-50",
       icon: <CircleCheck className="w-5 h-5 text-green-400" />
@@ -94,11 +100,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   loading = false,
   monthName
 }) => {
+  // Ensure we have valid and safe values to display
   const accrued = summary?.accrued ?? 0;
   const used = summary?.used ?? 0;
   const remaining = summary?.remaining ?? 0;
+  
+  // Prevent division by zero
   const total = Math.max(accrued + used, 1);
 
+  // Check if there's no TOIL activity - always show the empty state if all values are zero
   const hasNoTOILActivity = accrued === 0 && used === 0 && remaining === 0 && !loading;
 
   return (

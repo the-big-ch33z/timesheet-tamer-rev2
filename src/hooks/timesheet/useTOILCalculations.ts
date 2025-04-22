@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
-import { toilService, TOIL_JOB_NUMBER } from '@/utils/time/services/toil-service';
+import { toilService, TOIL_JOB_NUMBER } from '@/utils/time/services/toil';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
@@ -46,6 +46,11 @@ export const useTOILCalculations = ({
   // Get the current month-year string
   const currentMonthYear = format(date, 'yyyy-MM');
   
+  // Clear caches when month changes
+  useEffect(() => {
+    toilService.clearCache();
+  }, [currentMonthYear]);
+  
   // Check if an entry is a TOIL usage entry
   const isToilEntry = useCallback((entry: TimeEntry): boolean => {
     return entry.jobNumber === TOIL_JOB_NUMBER;
@@ -58,6 +63,24 @@ export const useTOILCalculations = ({
       if (!userId || !date || !workSchedule || !isMountedRef.current) {
         logger.debug('Missing required data for TOIL calculation or component unmounted');
         return null;
+      }
+      
+      // Return early if no entries
+      if (!entries || entries.length === 0) {
+        logger.debug('No entries for TOIL calculation, returning zero summary');
+        const zeroSummary = {
+          userId,
+          monthYear: format(date, 'yyyy-MM'),
+          accrued: 0,
+          used: 0,
+          remaining: 0
+        };
+        
+        if (isMountedRef.current) {
+          setToilSummary(zeroSummary);
+        }
+        
+        return zeroSummary;
       }
       
       if (isCalculating) {
@@ -113,7 +136,7 @@ export const useTOILCalculations = ({
   
   // Debounce TOIL calculation when entries change
   useEffect(() => {
-    if (!userId || !date || !entries.length) return;
+    if (!userId || !date) return;
     
     // Clear any existing timeout
     if (calculationRequestRef.current) {
@@ -125,6 +148,20 @@ export const useTOILCalculations = ({
     const dateKey = format(date, 'yyyy-MM-dd');
     const dateChanged = dateKey !== prevDateRef.current;
     prevDateRef.current = dateKey;
+    
+    // If no entries, set zero summary immediately
+    if (!entries || entries.length === 0) {
+      if (isMountedRef.current) {
+        setToilSummary({
+          userId,
+          monthYear: format(date, 'yyyy-MM'),
+          accrued: 0,
+          used: 0,
+          remaining: 0
+        });
+      }
+      return;
+    }
     
     // Setup debounced calculation
     const timeout = dateChanged ? 100 : 500; // Shorter delay when date changes
