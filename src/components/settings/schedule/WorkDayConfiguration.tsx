@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { WorkSchedule, WeekDay } from "@/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Coffee, Bell } from "lucide-react";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "react-tooltip";
 
 interface WorkDayConfigurationProps {
   day: WeekDay;
@@ -33,10 +33,22 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
     smoko: false
   };
   
-  // Use activeWeek specifically for displaying and tracking RDO days
   const isRdoDay = editingSchedule.rdoDays[activeWeek].includes(day);
 
-  return <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
+  const holidays = getHolidays();
+  const today = new Date();
+  while (getFortnightWeek(today) !== activeWeek) {
+    today.setDate(today.getDate() + 7);
+  }
+  while (getWeekDay(today) !== day) {
+    today.setDate(today.getDate() + 1);
+  }
+  
+  const dateStr = today.toISOString().split('T')[0];
+  const hasHoliday = holidays.some(h => h.date === dateStr);
+
+  return (
+    <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
       <div className="w-28 capitalize">{day}</div>
       <div className="flex items-center gap-2">
         <Switch checked={isWorkDay} onCheckedChange={checked => updateWorkDay(day, checked)} />
@@ -45,7 +57,8 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
         </span>
       </div>
 
-      {isWorkDay && <>
+      {isWorkDay && (
+        <>
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor={`start-${activeWeek}-${day}`} className="w-20 text-sm">Start Time</Label>
             <Input id={`start-${activeWeek}-${day}`} type="time" value={dayConfig?.startTime} onChange={e => updateWorkHours(day, 'startTime', e.target.value)} className="w-24" />
@@ -70,9 +83,31 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
           </div>
           
           <div className="flex items-center gap-2 ml-4">
-            <Label htmlFor={`rdo-${activeWeek}-${day}`} className="text-sm">RDO</Label>
-            <Switch id={`rdo-${activeWeek}-${day}`} checked={isRdoDay} onCheckedChange={() => toggleRdoDay(day)} />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center">
+                    <Label htmlFor={`rdo-${activeWeek}-${day}`} className="text-sm">
+                      RDO {hasHoliday && "⚠️"}
+                    </Label>
+                    <Switch
+                      id={`rdo-${activeWeek}-${day}`}
+                      checked={isRdoDay}
+                      onCheckedChange={() => toggleRdoDay(day)}
+                    />
+                  </div>
+                </TooltipTrigger>
+                {hasHoliday && (
+                  <TooltipContent>
+                    <p>This day has a public holiday.</p>
+                    <p>RDO will be automatically moved if assigned here.</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        </>}
-    </div>;
+        </>
+      )}
+    </div>
+  );
 };

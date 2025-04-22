@@ -1,116 +1,107 @@
+import { WorkSchedule } from "@/types";
+import { ToastType } from "@/hooks/use-toast";
+import { resolveRDOConflicts } from "@/utils/time/rdoUtils";
+import { getHolidays } from "@/lib/holidays";
+import { createTimeLogger } from "@/utils/time/errors";
 
-import { WorkSchedule } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import { WorkScheduleState } from './internal-types';
-
-interface ScheduleOperations {
-  updateDefaultSchedule: (schedule: WorkSchedule) => void;
-  createSchedule: (schedule: WorkSchedule) => void;
-  updateSchedule: (scheduleId: string, updates: Partial<WorkSchedule>) => void;
-  deleteSchedule: (scheduleId: string) => void;
-  getScheduleById: (scheduleId: string) => WorkSchedule | undefined;
-  getAllSchedules: () => WorkSchedule[];
-}
+const logger = createTimeLogger('scheduleOperations');
 
 export const createScheduleOperations = (
-  state: WorkScheduleState,
-  setState: React.Dispatch<React.SetStateAction<WorkScheduleState>>,
-  toast: ReturnType<typeof useToast>['toast']
-): ScheduleOperations => {
-  // Update the default schedule
-  const updateDefaultSchedule = (schedule: WorkSchedule) => {
-    const updatedSchedule = { ...schedule, isDefault: true };
-    
-    setState(prev => ({
+  state: any,
+  setState: any,
+  toast: ToastType
+) => {
+  const updateSchedule = (scheduleId: string, updates: Partial<WorkSchedule>) => {
+    // Check for holiday conflicts
+    const holidays = getHolidays();
+    const { schedule: resolvedSchedule, movements } = resolveRDOConflicts(
+      { ...state.schedules.find((s: WorkSchedule) => s.id === scheduleId), ...updates },
+      holidays
+    );
+
+    // Update the schedule with resolved RDOs
+    setState((prev: any) => ({
       ...prev,
-      defaultSchedule: updatedSchedule,
-      schedules: prev.schedules.map(s => 
-        s.id === 'default' ? updatedSchedule : s
+      schedules: prev.schedules.map((s: WorkSchedule) =>
+        s.id === scheduleId ? resolvedSchedule : s
       )
     }));
-    
-    toast({
-      title: 'Default schedule updated',
-      description: 'The default work schedule has been updated successfully',
-    });
-  };
 
-  // Create a new schedule
-  const createSchedule = (schedule: WorkSchedule) => {
-    if (!schedule.id) {
-      schedule.id = `schedule-${Date.now()}`;
-    }
-    
-    setState(prev => ({
-      ...prev,
-      schedules: [...prev.schedules, { ...schedule, isDefault: false }]
-    }));
-    
-    toast({
-      title: 'Schedule created',
-      description: `"${schedule.name}" has been created successfully`,
-    });
-  };
-
-  // Update an existing schedule
-  const updateSchedule = (scheduleId: string, updates: Partial<WorkSchedule>) => {
-    setState(prev => {
-      const updatedSchedules = prev.schedules.map(schedule => 
-        schedule.id === scheduleId 
-          ? { ...schedule, ...updates } 
-          : schedule
-      );
-      
-      return {
-        ...prev,
-        schedules: updatedSchedules,
-        defaultSchedule: scheduleId === 'default' 
-          ? { ...prev.defaultSchedule, ...updates }
-          : prev.defaultSchedule
-      };
-    });
-    
-    toast({
-      title: 'Schedule updated',
-      description: `Schedule has been updated successfully`,
-    });
-  };
-
-  // Delete a schedule
-  const deleteSchedule = (scheduleId: string) => {
-    if (scheduleId === 'default') {
-      toast({
-        title: 'Cannot delete default schedule',
-        description: 'The default schedule cannot be deleted',
-        variant: 'destructive',
+    // Notify about any RDO movements
+    if (movements.length > 0) {
+      movements.forEach(move => {
+        toast({
+          title: "RDO Automatically Moved",
+          description: `RDO moved from ${move.fromDay} to ${move.toDay} due to public holiday`,
+        });
+        logger.debug(`RDO moved: ${JSON.stringify(move)}`);
       });
-      return;
     }
-    
-    setState(prev => ({
+  };
+
+  const updateDefaultSchedule = (updates: Partial<WorkSchedule>) => {
+    // Check for holiday conflicts
+    const holidays = getHolidays();
+    const { schedule: resolvedSchedule, movements } = resolveRDOConflicts(
+      { ...state.defaultSchedule, ...updates },
+      holidays
+    );
+
+    // Update the default schedule with resolved RDOs
+    setState((prev: any) => ({
       ...prev,
-      schedules: prev.schedules.filter(s => s.id !== scheduleId),
+      defaultSchedule: resolvedSchedule
     }));
-    
-    toast({
-      title: 'Schedule deleted',
-      description: 'The schedule has been deleted successfully',
-    });
+
+    // Notify about any RDO movements
+    if (movements.length > 0) {
+      movements.forEach(move => {
+        toast({
+          title: "RDO Automatically Moved",
+          description: `RDO moved from ${move.fromDay} to ${move.toDay} due to public holiday`,
+        });
+        logger.debug(`RDO moved: ${JSON.stringify(move)}`);
+      });
+    }
   };
 
-  // Get a schedule by ID
+  const createSchedule = (newSchedule: WorkSchedule) => {
+    // Check for holiday conflicts
+    const holidays = getHolidays();
+    const { schedule: resolvedSchedule, movements } = resolveRDOConflicts(
+      newSchedule,
+      holidays
+    );
+
+    setState((prev: any) => ({
+      ...prev,
+      schedules: [...prev.schedules, resolvedSchedule]
+    }));
+
+    // Notify about any RDO movements
+    if (movements.length > 0) {
+      movements.forEach(move => {
+        toast({
+          title: "RDO Automatically Moved",
+          description: `RDO moved from ${move.fromDay} to ${move.toDay} due to public holiday`,
+        });
+        logger.debug(`RDO moved: ${JSON.stringify(move)}`);
+      });
+    }
+  };
+
   const getScheduleById = (scheduleId: string): WorkSchedule | undefined => {
-    return state.schedules.find(s => s.id === scheduleId);
+    return state.schedules.find((s: WorkSchedule) => s.id === scheduleId);
   };
 
-  // Get all available schedules
-  const getAllSchedules = () => state.schedules;
+  const getAllSchedules = (): WorkSchedule[] => {
+    return [...state.schedules];
+  };
 
   return {
     updateDefaultSchedule,
     createSchedule,
     updateSchedule,
-    deleteSchedule,
     getScheduleById,
     getAllSchedules
   };
