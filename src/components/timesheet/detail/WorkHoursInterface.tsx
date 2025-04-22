@@ -11,6 +11,9 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { useTimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 
+// Import helpers for getting day breaks config from schedule
+import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
+
 const logger = createTimeLogger('WorkHoursInterface');
 
 interface WorkHoursInterfaceProps {
@@ -31,11 +34,38 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   onHoursChange
 }) => {
   const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
-  
+
+  // State for current action (lunch override)
+  const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>({
+    sick: false,
+    leave: false,
+    toil: false,
+    lunch: false,
+  });
+
+  // Memoize action states to prevent unnecessary re-renders
+  const handleToggleAction = useCallback((type: WorkHoursActionType) => {
+    setActionStates((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  }, []);
+
+  // ===== CALCULATE if a lunch break is configured for the scheduled day =====
+  // Find out if this date (from workSchedule) normally has an unpaid lunch break
+  const hasLunchBreakInSchedule = useMemo(() => {
+    if (!workSchedule) return false;
+    const weekday = getWeekDay(date);
+    const fortnightWeek = getFortnightWeek(date);
+    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
+    return !!(dayConfig && dayConfig.breaks && dayConfig.breaks.lunch);
+  }, [workSchedule, date]);
+
+  // Use the main time entry state management hook
   const {
     startTime,
     endTime,
-    scheduledHours,
+    scheduledHours: baseScheduledHours,
     totalEnteredHours,
     hasEntries,
     hoursVariance,
@@ -51,6 +81,20 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
+  // "Lunch override" means: If user presses the button, they worked through lunch, so 30min is ADDED BACK to scheduled hours.
+  // If not pressed AND schedule says lunch is unpaid => subtract 0.5 as usual.
+  // If override pressed => do not subtract 0.5 or, equivalently, add it back.
+  const scheduledHours = useMemo(() => {
+    if (!hasLunchBreakInSchedule) return baseScheduledHours;
+    if (actionStates.lunch) {
+      // Normally would subtract 0.5, so add it back if user worked through lunch
+      return baseScheduledHours + 0.5;
+    }
+    // Lunch is unpaid as per schedule (no override): leave baseScheduledHours
+    return baseScheduledHours;
+  }, [baseScheduledHours, hasLunchBreakInSchedule, actionStates.lunch]);
+
+  // Trigger TOIL calculation when a completed timesheet has stabilized
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,
@@ -58,32 +102,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     workSchedule
   });
 
-  // Memoize action states to prevent unnecessary re-renders
-  const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>({
-    sick: false,
-    leave: false,
-    toil: false,
-    lunch: false,
-  });
-
-  const handleToggleAction = useCallback((type: WorkHoursActionType) => {
-    setActionStates((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
-  }, []);
-
-  // Trigger TOIL calculation when a completed timesheet has stabilized
   useEffect(() => {
     // Only calculate TOIL when entries are complete
     if (!hasEntries || !isComplete || !entries.length) return;
-    
     // Use a timeout to allow UI to settle first
     const timeoutId = setTimeout(() => {
       logger.debug('Initiating TOIL calculation based on completed timesheet');
       calculateToilForDay();
     }, 400); 
-    
     return () => clearTimeout(timeoutId);
   }, [hasEntries, isComplete, calculateToilForDay, entries.length]);
 
