@@ -26,7 +26,10 @@ export const useScheduleCalculation = (schedule?: WorkSchedule, fte: number = 1.
     schedule?.id,
     schedule?.weeks,
     schedule?.rdoDays,
-    fte
+    fte,
+    // Add deep dependencies to ensure recalculation on any schedule change
+    JSON.stringify(schedule?.weeks),
+    JSON.stringify(schedule?.rdoDays)
   ]);
 
   return {

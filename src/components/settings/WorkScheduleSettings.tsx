@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Save } from "lucide-react";
@@ -10,8 +11,10 @@ import { CreateScheduleDialog } from "./schedule/CreateScheduleDialog";
 import { useScheduleState } from "./schedule/useScheduleState";
 import { Badge } from "@/components/ui/badge";
 import { useScheduleCalculation } from "@/hooks/timesheet/useScheduleCalculation";
+import { useToast } from "@/hooks/use-toast";
 
 const WorkScheduleSettings: React.FC = () => {
+  const { toast } = useToast();
   const {
     activeWeek,
     setActiveWeek,
@@ -24,7 +27,7 @@ const WorkScheduleSettings: React.FC = () => {
     handleScheduleChange,
     handleNameChange,
     handleCreateSchedule,
-    saveSchedule,
+    saveSchedule: originalSaveSchedule,
     handleDeleteSchedule,
     updateWorkDay,
     updateWorkHours,
@@ -32,8 +35,18 @@ const WorkScheduleSettings: React.FC = () => {
     toggleBreak
   } = useScheduleState();
   
-  // Use our updated hook for live calculations
+  // Use our updated hook for live calculations with the editingSchedule
   const { fortnightHours } = useScheduleCalculation(editingSchedule);
+
+  // Wrap the save function to add toast notification
+  const handleSaveSchedule = () => {
+    originalSaveSchedule();
+    toast({
+      title: "Schedule saved",
+      description: "Your schedule has been saved successfully",
+      duration: 2000, // 2 seconds
+    });
+  };
 
   return (
     <Card>
@@ -66,7 +79,6 @@ const WorkScheduleSettings: React.FC = () => {
               onNameChange={handleNameChange}
             />
             
-            {/* Display the live-calculated fortnight hours */}
             <div className="flex items-center">
               <span className="text-sm text-muted-foreground mr-2">Fortnight Hours:</span>
               <Badge variant="outline" className="text-sm font-medium">
@@ -98,7 +110,7 @@ const WorkScheduleSettings: React.FC = () => {
                 <Trash2 className="h-4 w-4 mr-1" /> Delete Schedule
               </Button>
             )}
-            <Button onClick={saveSchedule}>
+            <Button onClick={handleSaveSchedule}>
               <Save className="h-4 w-4 mr-1" /> Save Schedule
             </Button>
           </div>
