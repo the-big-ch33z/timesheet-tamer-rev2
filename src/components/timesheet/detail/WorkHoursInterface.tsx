@@ -47,7 +47,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     date,
     workSchedule,
     interactive,
-    userId
+    userId,
+    onHoursChange
   });
 
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
@@ -72,50 +73,25 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }));
   }, []);
 
-  // Memoized version of notifyHoursChange to prevent excessive callbacks
-  const notifyHoursChange = useCallback(() => {
-    if (onHoursChange) {
-      onHoursChange(totalEnteredHours);
-    }
-  }, [onHoursChange, totalEnteredHours]);
-  
-  // Notify hours change when entries change
-  useEffect(() => {
-    logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
-    notifyHoursChange();
-  }, [entries, date, notifyHoursChange]);
-
-  // Debounce work hours saving to reduce localStorage operations
-  useEffect(() => {
-    if (!interactive || !startTime || !endTime) return;
-    
-    logger.debug(`Saving work hours: start=${startTime}, end=${endTime}`);
-    
-    const timeoutId = setTimeout(() => {
-      saveWorkHoursForDate(date, startTime, endTime, userId);
-    }, 300);
-    
-    return () => clearTimeout(timeoutId);
-  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
-
-  // Memoized handler for time changes
-  const enhancedHandleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
-    logger.debug(`Time input changed: ${type}=${value}`);
-    handleTimeChange(type, value);
-  }, [handleTimeChange]);
-
-  // Trigger TOIL calculation only when a completed timesheet has stabilized (debounced)
+  // Trigger TOIL calculation when a completed timesheet has stabilized
   useEffect(() => {
     // Only calculate TOIL when entries are complete
-    if (!hasEntries || !isComplete) return;
+    if (!hasEntries || !isComplete || !entries.length) return;
     
-    // Use a regular timeout instead of nested requestAnimationFrame + setTimeout
+    // Use a timeout to allow UI to settle first
     const timeoutId = setTimeout(() => {
+      logger.debug('Initiating TOIL calculation based on completed timesheet');
       calculateToilForDay();
-    }, 500); // Longer delay to allow UI to settle first
+    }, 400); 
     
     return () => clearTimeout(timeoutId);
-  }, [hasEntries, isComplete, calculateToilForDay]);
+  }, [hasEntries, isComplete, calculateToilForDay, entries.length]);
+
+  // A simplified, more direct time change handler
+  const timeChangeHandler = useCallback((type: 'start' | 'end', value: string) => {
+    logger.debug(`Direct time change: ${type}=${value}`);
+    handleTimeChange(type, value);
+  }, [handleTimeChange]);
 
   return (
     <div>
@@ -133,7 +109,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         calculatedHours={scheduledHours}
         hasEntries={hasEntries}
         interactive={interactive}
-        onTimeChange={enhancedHandleTimeChange}
+        onTimeChange={timeChangeHandler}
         isComplete={isComplete}
         hoursVariance={hoursVariance}
         isUndertime={isUndertime}
@@ -148,9 +124,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         isComplete={isComplete}
       />
 
-      {/* Optionally show loading indicator during TOIL calculation */}
+      {/* Show loading indicator during TOIL calculation with better UX */}
       {isCalculating && (
-        <div className="mt-2 text-xs text-blue-500 text-center animate-pulse">
+        <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
           Calculating time accruals...
         </div>
       )}

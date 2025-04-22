@@ -7,6 +7,7 @@ import { createTOILRecord, calculateTOILHours } from "./calculation";
 import { storeTOILRecord, getTOILSummary } from "./storage";
 import { createTimeLogger } from '@/utils/time/errors';
 import { format, isSameMonth } from 'date-fns';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('TOILBatchProcessor');
 
@@ -26,6 +27,14 @@ export function hasRecentlyProcessed(userId: string, date: Date): boolean {
   }
   
   return Date.now() - lastProcessed < RECENT_THRESHOLD_MS;
+}
+
+/**
+ * Clear the recent processing cache
+ */
+export function clearRecentProcessing(): void {
+  recentlyProcessed.clear();
+  logger.debug('Cleared recently processed cache');
 }
 
 /**
@@ -92,7 +101,16 @@ export async function performSingleCalculation(
     
     // Return the updated TOIL summary
     const monthYear = date.toISOString().slice(0, 7);
-    return getTOILSummary(userId, monthYear);
+    const summary = getTOILSummary(userId, monthYear);
+    
+    // Dispatch event to notify subscribers of TOIL update
+    timeEventsService.publish('toil-updated', {
+      userId,
+      date: date.toISOString(),
+      summary
+    });
+    
+    return summary;
   } catch (error) {
     logger.error('Error in TOIL calculation:', error);
     return null;
