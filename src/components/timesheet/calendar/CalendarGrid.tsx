@@ -61,7 +61,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       return {
         ...day,
         date: dateObj,
-        entries: day.entries ?? [], // ✅ fallback to empty array to prevent runtime error
+        entries: day.entries ?? [],
         isComplete,
         isRdo
       };
@@ -73,9 +73,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       {processedDays.map(day => (
         <CalendarDay
           key={day.date.toISOString()}
-          day={day}
+          day={day.date}
+          entries={day.entries} // ✅ explicitly pass entries to avoid runtime crash
           isSelected={selectedDate ? day.date.toDateString() === selectedDate.toDateString() : false}
           onClick={() => onDayClick(day.date)}
+          isToday={false} // or add logic for isToday if needed
+          status={{
+            isWeekend: false,
+            dayHoliday: false,
+            holidayName: null,
+            isRDO: day.isRdo,
+            workHours: null,
+            isWorkDay: true,
+            shiftReason: null
+          }}
+          isComplete={day.isComplete}
         />
       ))}
     </div>
