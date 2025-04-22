@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -11,13 +12,13 @@ interface DayStatus {
   dayHoliday: boolean;
   holidayName: string | null;
   isRDO: boolean;
-  shiftedRDODate: Date | null;
   workHours: {
     startTime: string;
     endTime: string;
   } | null;
   isWorkDay: boolean;
-  shiftReason: string;
+  shiftReason: string | null;
+  originalRdoDate?: Date; // Added to track original RDO date
 }
 
 interface CalendarDayProps {
@@ -43,9 +44,10 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
 }) => {
   const hasEntries = entries.length > 0;
   
-  const isShiftedRDO = status.isRDO && status.shiftedRDODate;
-  const isDisplayingShiftedRDO = status.shiftedRDODate?.toDateString() === day.toDateString();
-  
+  // Determine if this is a display of a shifted RDO
+  const isShiftedRDO = status.isRDO && status.originalRdoDate && 
+    status.originalRdoDate.toDateString() !== day.toDateString();
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -58,11 +60,11 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               isToday && "bg-blue-50",
               status.isWeekend && "bg-gray-50",
               status.dayHoliday && "bg-amber-50",
-              (status.isRDO || isDisplayingShiftedRDO) && "bg-purple-50",
+              (status.isRDO) && "bg-purple-50",
               hasEntries && isComplete && "bg-green-50 border-green-200",
               hasEntries && !isComplete && "bg-yellow-50 border-yellow-200",
               !status.isWorkDay && "cursor-default",
-              isShiftedRDO && "border-purple-300"
+              isShiftedRDO && "border-purple-300 border-dashed"
             )}
           >
             <div className="flex justify-between items-start">
@@ -84,16 +86,15 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </Badge>
             )}
 
-            {(status.isRDO || isDisplayingShiftedRDO) && (
+            {status.isRDO && (
               <Badge 
                 variant="secondary" 
                 className={cn(
                   "mt-1 text-xs",
-                  isShiftedRDO ? "bg-purple-200 text-purple-900" : "",
-                  isDisplayingShiftedRDO ? "bg-purple-100 text-purple-800 border-purple-300" : ""
+                  isShiftedRDO ? "bg-purple-200 text-purple-900 border-purple-300" : "bg-purple-100 text-purple-800"
                 )}
               >
-                {isDisplayingShiftedRDO ? "Shifted RDO" : "RDO"}
+                {isShiftedRDO ? "Shifted RDO" : "RDO"}
               </Badge>
             )}
 
@@ -122,9 +123,14 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 {isComplete ? " (Complete)" : " (In Progress)"}
               </div>
             )}
-            {isDisplayingShiftedRDO && status.shiftReason && (
+            {isShiftedRDO && status.shiftReason && (
               <div className="text-xs text-purple-600 mt-1">
                 {status.shiftReason}
+                {status.originalRdoDate && (
+                  <div className="text-xs italic">
+                    Original date: {format(status.originalRdoDate, 'MMM d, yyyy')}
+                  </div>
+                )}
               </div>
             )}
           </div>

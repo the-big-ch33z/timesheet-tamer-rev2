@@ -58,11 +58,20 @@ export const findNextBusinessDay = (date: Date, holidays: Holiday[]): Date => {
 
 /**
  * Get the shifted RDO date if it falls on a holiday or weekend
+ * Returns information about the shift including original date and reason
  */
-export const getShiftedRDODate = (originalDate: Date, holidays: Holiday[]): Date | null => {
+export const getShiftedRDODate = (originalDate: Date, holidays: Holiday[]): {
+  shifted: Date | null,
+  originalDate: Date,
+  reason: string | null
+} => {
   // Only shift if the date is a holiday or weekend
   if (!isWeekend(originalDate) && !isHoliday(originalDate, holidays)) {
-    return null;
+    return {
+      shifted: null,
+      originalDate,
+      reason: null
+    };
   }
   
   const shiftedDate = findNextBusinessDay(originalDate, holidays);
@@ -71,10 +80,21 @@ export const getShiftedRDODate = (originalDate: Date, holidays: Holiday[]): Date
   // Double check that the shifted date is valid
   if (isHoliday(shiftedDate, holidays) || isWeekend(shiftedDate)) {
     logger.error(`Invalid shifted date: ${shiftedDate.toISOString()} is still a holiday or weekend`);
-    return null;
+    return {
+      shifted: null,
+      originalDate,
+      reason: "Unable to find valid business day"
+    };
   }
   
-  return shiftedDate;
+  // Get the reason for the shift
+  const shiftReason = getRDOShiftReason(originalDate, shiftedDate, holidays);
+  
+  return {
+    shifted: shiftedDate,
+    originalDate,
+    reason: shiftReason
+  };
 };
 
 /**
