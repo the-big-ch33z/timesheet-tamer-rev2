@@ -4,6 +4,7 @@ import { WorkSchedule } from "@/types";
 import { isWeekend, isToday } from "date-fns";
 import { isWorkingDay } from "@/utils/time/scheduleUtils";
 import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
+import { format } from "date-fns";
 
 /**
  * Helper hook for calendar functionality
@@ -50,8 +51,44 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
     [workSchedule, checkIsWorkingDay]
   );
   
+  /**
+   * Get start and end time for a specific day from work schedule
+   */
+  const getStartAndEndTimeForDay = useMemo(() => 
+    (day: Date) => {
+      if (!workSchedule) {
+        return { startTime: undefined, endTime: undefined };
+      }
+
+      try {
+        const weekday = getWeekDay(day);
+        const fortnightWeek = getFortnightWeek(day);
+        
+        // Check if the day exists in the work schedule and is not an RDO
+        if (
+          workSchedule.weeks[fortnightWeek] && 
+          workSchedule.weeks[fortnightWeek][weekday] &&
+          !workSchedule.rdoDays[fortnightWeek].includes(weekday)
+        ) {
+          const dayConfig = workSchedule.weeks[fortnightWeek][weekday];
+          return {
+            startTime: dayConfig?.startTime,
+            endTime: dayConfig?.endTime
+          };
+        }
+        
+        return { startTime: undefined, endTime: undefined };
+      } catch (error) {
+        console.error(`Error getting schedule for ${format(day, 'yyyy-MM-dd')}:`, error);
+        return { startTime: undefined, endTime: undefined };
+      }
+    },
+    [workSchedule]
+  );
+  
   // For backward compatibility and to fix the current errors
   const getDayStatus = getDayState;
 
-  return { getDayState, getDayStatus, checkIsWorkingDay };
+  return { getDayState, getDayStatus, checkIsWorkingDay, getStartAndEndTimeForDay };
 };
+
