@@ -1,42 +1,24 @@
-
-import React, { useMemo } from "react";
+import React from "react";
 import { format } from "date-fns";
-import { TimeEntry, WorkSchedule } from "@/types";
+import { TimeEntry } from "@/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CheckCircle2 } from "lucide-react";
-import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
-import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
-import { createTimeLogger } from "@/utils/time/errors";
-import { calculateCompletion } from "@/utils/timesheet/completionUtils";
-import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
-
-const logger = createTimeLogger('CalendarGrid');
-
-interface DayStatus {
-  isWeekend: boolean;
-  dayHoliday: boolean;
-  holidayName: string | null;
-  isRDO: boolean;
-  workHours: {
-    startTime: string;
-    endTime: string;
-  } | null;
-  isWorkDay: boolean;
-  shiftReason: string | null;
-  originalRdoDate?: Date;
-}
+import { getHolidayForDate, defaultQueenslandHolidays } from "@/lib/holidays";
 
 interface CalendarDayProps {
   day: Date;
   entries: TimeEntry[];
   isSelected: boolean;
   isToday: boolean;
-  status: DayStatus;
   onClick: (day: Date) => void;
   isComplete?: boolean;
   totalHours?: number;
+  isWeekend?: boolean;
+  isRDO?: boolean;
+  originalRdoDate?: Date;
+  isWorkDay?: boolean;
 }
 
 const CalendarDay: React.FC<CalendarDayProps> = ({
@@ -44,15 +26,18 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   entries = [],
   isSelected,
   isToday,
-  status,
   onClick,
   isComplete = false,
-  totalHours = 0
+  totalHours = 0,
+  isWeekend = false,
+  isRDO = false,
+  originalRdoDate,
+  isWorkDay = true
 }) => {
   const hasEntries = entries.length > 0;
-  const isShiftedRDO =
-    status.isRDO && status.originalRdoDate &&
-    status.originalRdoDate.toDateString() !== day.toDateString();
+  const isShiftedRDO = isRDO && originalRdoDate && originalRdoDate.toDateString() !== day.toDateString();
+  const holiday = getHolidayForDate(day, defaultQueenslandHolidays);
+  const isHoliday = !!holiday;
 
   return (
     <TooltipProvider>
@@ -64,27 +49,27 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               "w-full min-h-[80px] p-2 border rounded text-left relative",
               isSelected && "ring-2 ring-blue-500",
               isToday && "bg-blue-50",
-              status.isWeekend && "bg-gray-50",
-              status.dayHoliday && "bg-amber-50",
-              status.isRDO && "bg-blue-50 border-blue-200",
+              isWeekend && "bg-gray-50",
+              isHoliday && "bg-amber-50",
+              isRDO && "bg-blue-50 border-blue-200",
               hasEntries && isComplete && "bg-green-50 border-green-200",
               hasEntries && !isComplete && "bg-yellow-50 border-yellow-200",
-              !status.isWorkDay && "cursor-default",
+              !isWorkDay && "cursor-default",
               isShiftedRDO && "border-blue-300 border-dashed"
             )}
           >
             <div className="flex justify-between items-start">
-              <span className={cn("font-medium", status.isWeekend && "text-gray-500")}>{format(day, 'd')}</span>
+              <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(day, 'd')}</span>
               {isComplete && hasEntries && <CheckCircle2 className="h-4 w-4 text-green-500" />}
             </div>
 
-            {status.dayHoliday && (
+            {isHoliday && (
               <Badge variant="secondary" className="mt-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-200">
-                {status.holidayName}
+                {holiday.name}
               </Badge>
             )}
 
-            {status.isRDO && (
+            {isRDO && (
               <Badge
                 variant="secondary"
                 className={cn(
@@ -105,90 +90,4 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   );
 };
 
-/** Unified CalendarGrid component (exported as default) */
-interface CalendarGridProps {
-  currentMonth: Date;
-  selectedDate: Date | null;
-  workSchedule?: WorkSchedule;
-  onDayClick: (day: Date) => void;
-  userId: string;
-}
-
-const CalendarGrid: React.FC<CalendarGridProps> = ({
-  currentMonth,
-  selectedDate,
-  workSchedule,
-  onDayClick,
-  userId
-}) => {
-  React.useEffect(() => {
-    if (workSchedule) {
-      logger.debug(`CalendarGrid received workSchedule: ${workSchedule.name || 'unnamed'}`);
-    } else {
-      logger.debug('CalendarGrid has no workSchedule');
-    }
-  }, [workSchedule]);
-
-  const { days } = useCalendarData(currentMonth, selectedDate, workSchedule, userId);
-  const { getWorkHoursForDate } = useTimesheetWorkHours();
-
-  const processedDays = useMemo(() => {
-    logger.debug(`Processing ${days.length} days for month ${currentMonth.toISOString()}, userId: ${userId}`);
-
-    return days.map(day => {
-      const dateObj = new Date(day.date);
-      const workHours = getWorkHoursForDate(dateObj, userId);
-
-      if (!workHours) {
-        logger.debug(`No work hours found for date ${dateObj.toISOString()}, userId: ${userId}`);
-      }
-
-      const { isComplete } = calculateCompletion(
-        day.entries,
-        workHours?.startTime,
-        workHours?.endTime
-      );
-
-      const isRdo = workSchedule?.rdoDays?.[getFortnightWeek(dateObj)]?.includes(
-        getWeekDay(dateObj)
-      ) || false;
-
-      logger.debug(`Day ${dateObj.toISOString()}: entries=${day.entries?.length ?? 0}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
-
-      return {
-        ...day,
-        date: dateObj,
-        entries: day.entries ?? [],
-        isComplete,
-        isRdo
-      };
-    });
-  }, [days, getWorkHoursForDate, userId, workSchedule]);
-
-  return (
-    <div className="grid grid-cols-7 gap-1">
-      {processedDays.map(day => (
-        <CalendarDay
-          key={day.date.toISOString()}
-          day={day.date}
-          entries={day.entries} // ✅ explicitly pass entries to avoid runtime crash
-          isSelected={selectedDate ? day.date.toDateString() === selectedDate.toDateString() : false}
-          onClick={() => onDayClick(day.date)}
-          isToday={false} // or add logic for isToday if needed
-          status={{
-            isWeekend: false,
-            dayHoliday: false,
-            holidayName: null,
-            isRDO: day.isRdo,
-            workHours: null,
-            isWorkDay: true,
-            shiftReason: null
-          }}
-          isComplete={day.isComplete}
-        />
-      ))}
-    </div>
-  );
-};
-
-export default CalendarGrid;
+export default CalendarDay;
