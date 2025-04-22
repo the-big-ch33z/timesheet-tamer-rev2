@@ -1,10 +1,16 @@
+
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
 import { Clock, CircleMinus, CirclePlus, CircleCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "react-tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
