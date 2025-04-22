@@ -6,7 +6,7 @@ import { WorkSchedule } from "@/types";
 import CalendarHeader from "./calendar/CalendarHeader";
 import CalendarLegend from "./calendar/CalendarLegend";
 import CalendarWeekdayHeader from "./calendar/CalendarWeekdayHeader";
-import CalendarGrid from "./calendar/CalendarDay"; // Change import to CalendarDay
+import CalendarGrid from "./calendar/CalendarGrid";
 import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors";

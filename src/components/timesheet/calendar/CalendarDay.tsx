@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
@@ -6,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CheckCircle2 } from "lucide-react";
 import { getHolidayForDate, defaultQueenslandHolidays } from "@/lib/holidays";
+import { toDate } from "@/utils/date/dateConversions";
 
 interface CalendarDayProps {
   day: Date;
@@ -37,26 +39,22 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   const safeEntries = Array.isArray(entries) ? entries : [];
   const hasEntries = safeEntries.length > 0;
   const isShiftedRDO = isRDO && originalRdoDate instanceof Date && !isNaN(originalRdoDate.getTime()) && originalRdoDate.toDateString() !== day.toDateString();
-  let dateObj: Date | null = null;
-  let holiday = null;
-
-  try {
-    dateObj = new Date(day);
-    if (isNaN(dateObj.getTime())) throw new Error("Invalid Date");
-    holiday = getHolidayForDate(day, defaultQueenslandHolidays);
-  } else {
-    try {
-      dateObj = new Date(day);
-      if (!isNaN(dateObj.getTime())) {
-        holiday = dateObj ? getHolidayForDate(dateObj, defaultQueenslandHolidays) : null;
-      }
-    } catch (err) {
-    console.warn("Invalid or unparsable date in CalendarDay:", day, err);
-    dateObj = null;
-    holiday = null;
-  }
-  }
+  
+  // Safely convert the day to a Date object
+  const safeDate = toDate(day);
+  
+  // Get holiday information if we have a valid date
+  const holiday = safeDate ? getHolidayForDate(safeDate, defaultQueenslandHolidays) : undefined;
   const isHoliday = !!holiday;
+
+  // If we don't have a valid date, render a placeholder with an error state
+  if (!safeDate) {
+    return (
+      <div className="w-full min-h-[80px] p-2 border rounded bg-red-50 border-red-300 text-red-700 flex items-center justify-center text-sm">
+        Invalid date
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -78,7 +76,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             )}
           >
             <div className="flex justify-between items-start">
-              <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(day, 'd')}</span>
+              <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(safeDate, 'd')}</span>
               {isComplete && hasEntries && <CheckCircle2 className="h-4 w-4 text-green-500" />}
             </div>
 
