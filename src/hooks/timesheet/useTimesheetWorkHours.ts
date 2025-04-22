@@ -35,7 +35,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   // Get work hours for a specific date
   const getWorkHoursForDate = useCallback((date: Date | string, userId?: string): { startTime: string, endTime: string, hasData?: boolean } => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = formatDateForStorage(date);
+    const dateObj = ensureDate(date);
+    const formattedDate = format(dateObj, 'yyyy-MM-dd');
     
     if (!targetUserId) {
       logger.warn('No userId provided for getWorkHoursForDate');
@@ -45,7 +46,6 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     const hours = workHoursContext.getWorkHours(targetUserId, formattedDate);
     logger.debug(`Retrieved work hours for ${formattedDate}, user ${targetUserId}:`, hours);
     
-    // Add hasData property
     return {
       ...hours,
       hasData: !!(hours.startTime && hours.endTime)
@@ -55,7 +55,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   // Save work hours for a specific date with immediate feedback
   const saveWorkHoursForDate = useCallback((date: Date | string, startTime: string, endTime: string, userId?: string): void => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = formatDateForStorage(date);
+    const dateObj = ensureDate(date);
+    const formattedDate = format(dateObj, 'yyyy-MM-dd');
     
     if (!targetUserId) {
       logger.warn('No userId provided for saveWorkHoursForDate');
@@ -64,10 +65,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     
     logger.debug(`Saving work hours for ${formattedDate}, user ${targetUserId}:`, { startTime, endTime });
     
-    // Save work hours in context
     workHoursContext.saveWorkHours(targetUserId, formattedDate, startTime, endTime);
     
-    // Dispatch event to notify subscribers of the change
     timeEventsService.publish('work-hours-updated', {
       date: formattedDate,
       userId: targetUserId,
@@ -80,7 +79,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   // Reset work hours to defaults based on schedule
   const resetWorkHoursForDate = useCallback((date: Date | string, userId?: string): void => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = formatDateForStorage(date);
+    const dateObj = ensureDate(date);
+    const formattedDate = format(dateObj, 'yyyy-MM-dd');
     
     if (!targetUserId) {
       logger.warn('No userId provided for resetWorkHoursForDate');
@@ -89,13 +89,10 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     
     logger.debug(`Resetting work hours for ${formattedDate}, user ${targetUserId}`);
     
-    // Reset work hours in context
     workHoursContext.resetDayWorkHours(targetUserId, formattedDate);
     
-    // Get the new hours after reset
     const newHours = workHoursContext.getWorkHours(targetUserId, formattedDate);
     
-    // Dispatch event to notify subscribers of the change
     timeEventsService.publish('work-hours-reset', {
       date: formattedDate,
       userId: targetUserId,
@@ -108,7 +105,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   // Refresh work hours from storage/context
   const refreshWorkHours = useCallback((date?: Date | string, userId?: string): void => {
     const targetUserId = userId || defaultUserId || '';
-    const formattedDate = date ? formatDateForStorage(date) : format(new Date(), 'yyyy-MM-dd');
+    const dateObj = date ? ensureDate(date) : new Date();
+    const formattedDate = format(dateObj, 'yyyy-MM-dd');
     
     logger.debug(`Refreshing work hours from context for ${formattedDate}, user ${targetUserId}`);
     workHoursContext.refreshTimesForDate(targetUserId, formattedDate);
@@ -118,7 +116,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     getWorkHoursForDate,
     saveWorkHoursForDate,
     resetWorkHoursForDate,
-    refreshWorkHours
+    refreshWorkHours,
+    ensureDate // Expose the helper for external use
   };
 };
 
