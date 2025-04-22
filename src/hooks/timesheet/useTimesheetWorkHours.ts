@@ -1,9 +1,10 @@
 
 import { useCallback } from 'react';
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { toDate } from '@/utils/date/dateConversions';
 
 const logger = createTimeLogger('useTimesheetWorkHours');
 
@@ -16,7 +17,11 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   // Helper to ensure we have a Date object
   const ensureDate = (date: Date | string): Date => {
     if (typeof date === 'string') {
-      return new Date(date);
+      const convertedDate = toDate(date);
+      if (!convertedDate) {
+        throw new Error(`Invalid date string: ${date}`);
+      }
+      return convertedDate;
     }
     return date;
   };
@@ -101,10 +106,13 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   }, [workHoursContext, defaultUserId]);
   
   // Refresh work hours from storage/context
-  const refreshWorkHours = useCallback((): void => {
-    logger.debug('Refreshing work hours from context');
-    workHoursContext.refreshTimesForDate();
-  }, [workHoursContext]);
+  const refreshWorkHours = useCallback((date?: Date | string, userId?: string): void => {
+    const targetUserId = userId || defaultUserId || '';
+    const formattedDate = date ? formatDateForStorage(date) : format(new Date(), 'yyyy-MM-dd');
+    
+    logger.debug(`Refreshing work hours from context for ${formattedDate}, user ${targetUserId}`);
+    workHoursContext.refreshTimesForDate(targetUserId, formattedDate);
+  }, [workHoursContext, defaultUserId]);
   
   return {
     getWorkHoursForDate,
