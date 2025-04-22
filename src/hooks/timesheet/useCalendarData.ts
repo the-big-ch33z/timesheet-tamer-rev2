@@ -1,3 +1,4 @@
+
 import { useMemo } from "react";
 import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -5,7 +6,7 @@ import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { Holiday, getHolidays } from "@/lib/holidays";
 import { WorkSchedule } from "@/types";
 import { createTimeLogger } from "@/utils/time/errors";
-import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
+import { areSameDates } from "@/utils/time/validation";
 import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
 import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
@@ -52,36 +53,54 @@ export function useCalendarData(
     const holidays = getHolidays();
     const today = new Date();
     
+    // Track which dates have already been used as shifted RDOs to prevent conflicts
+    const shiftedDates = new Set<string>();
+    
     const days = daysInMonth.map(day => {
       const dayEntries = getDayEntries(day);
       const workHours = userId ? getWorkHoursForDate(day, userId) : null;
       
       if (!workHours && userId) {
-        logger.debug(`No work hours found for ${formatDateForComparison(day)} — userId: ${userId}`);
+        logger.debug(`No work hours found for date: ${day.toISOString()}, userId: ${userId}`);
       }
       
       const totalHours = dayEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-      
       const baseState = getDayState(day, selectedDate, monthStart);
-      
       const holiday = holidays.find(h => areSameDates(new Date(h.date), day));
       
       let isRDO = false;
       let shiftedRDODate: Date | null = null;
       let dayWorkHours = null;
+      let shiftReason: string | null = null;
       
       if (workSchedule) {
-        const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
+        const weekdayName = getWeekDay(day);
         const fortnightWeek = getFortnightWeek(day);
         
-        isRDO = workSchedule.rdoDays[fortnightWeek].includes(weekdayName as any);
+        isRDO = workSchedule.rdoDays[fortnightWeek].includes(weekdayName);
         
-        if (isRDO && holiday) {
+        if (isRDO) {
+          // Check if this date needs to be shifted (holiday or weekend)
           shiftedRDODate = getShiftedRDODate(day, holidays);
+          
+          if (shiftedRDODate) {
+            const shiftedKey = shiftedRDODate.toISOString().split('T')[0];
+            
+            // If this shifted date is already taken, try to find the next available date
+            while (shiftedDates.has(shiftedKey)) {
+              shiftedRDODate = getShiftedRDODate(new Date(shiftedRDODate.setDate(shiftedRDODate.getDate() + 1)), holidays);
+              if (!shiftedRDODate) break;
+            }
+            
+            if (shiftedRDODate) {
+              shiftedDates.add(shiftedKey);
+              shiftReason = getRDOShiftReason(day, shiftedRDODate, holidays);
+            }
+          }
         }
         
-        if (workSchedule.weeks[fortnightWeek] && workSchedule.weeks[fortnightWeek][weekdayName as any]) {
-          dayWorkHours = workSchedule.weeks[fortnightWeek][weekdayName as any];
+        if (workSchedule.weeks[fortnightWeek]?.[weekdayName]) {
+          dayWorkHours = workSchedule.weeks[fortnightWeek][weekdayName];
         }
       }
 
@@ -103,7 +122,7 @@ export function useCalendarData(
           shiftedRDODate,
           workHours: dayWorkHours,
           isWorkDay: baseState.isWorkingDay && !isRDO && !holiday,
-          shiftReason: getRDOShiftReason(day, shiftedRDODate, holidays)
+          shiftReason
         },
         entries: dayEntries,
         isComplete,

@@ -1,3 +1,4 @@
+
 import { Holiday } from "@/lib/holidays";
 import { isWeekend, addDays, isSameDay } from "date-fns";
 import { createTimeLogger } from "./errors";
@@ -18,20 +19,24 @@ const isHoliday = (date: Date, holidays: Holiday[]): boolean => {
 
 /**
  * Find the next available business day (not weekend, not holiday)
- * Now handles consecutive holidays and weekends correctly
+ * Now checks the current day first before moving to next days
  */
 export const findNextBusinessDay = (date: Date, holidays: Holiday[]): Date => {
-  let currentDate = date;
+  let currentDate = new Date(date);
   let iterations = 0;
   
   // Keep track of processed dates to detect cycles
   const processedDates = new Set<string>();
   
+  // First check if current date is already valid
+  if (!isWeekend(currentDate) && !isHoliday(currentDate, holidays)) {
+    return currentDate;
+  }
+  
   while (iterations < MAX_ITERATIONS) {
     currentDate = addDays(currentDate, 1);
     const dateKey = currentDate.toISOString();
     
-    // Check for cycles
     if (processedDates.has(dateKey)) {
       logger.warn(`Cycle detected while finding next business day after ${date.toISOString()}`);
       break;
@@ -39,7 +44,6 @@ export const findNextBusinessDay = (date: Date, holidays: Holiday[]): Date => {
     
     processedDates.add(dateKey);
     
-    // Check if current date is valid
     if (!isWeekend(currentDate) && !isHoliday(currentDate, holidays)) {
       logger.debug(`Found next business day: ${currentDate.toISOString()} for date: ${date.toISOString()}`);
       return currentDate;
@@ -53,18 +57,18 @@ export const findNextBusinessDay = (date: Date, holidays: Holiday[]): Date => {
 };
 
 /**
- * Get the shifted RDO date if it falls on a holiday
- * Enhanced with better logging and validation
+ * Get the shifted RDO date if it falls on a holiday or weekend
  */
 export const getShiftedRDODate = (originalDate: Date, holidays: Holiday[]): Date | null => {
-  if (!isHoliday(originalDate, holidays)) {
+  // Only shift if the date is a holiday or weekend
+  if (!isWeekend(originalDate) && !isHoliday(originalDate, holidays)) {
     return null;
   }
   
   const shiftedDate = findNextBusinessDay(originalDate, holidays);
   logger.debug(`Shifting RDO from ${originalDate.toISOString()} to ${shiftedDate.toISOString()}`);
   
-  // Validate the shifted date
+  // Double check that the shifted date is valid
   if (isHoliday(shiftedDate, holidays) || isWeekend(shiftedDate)) {
     logger.error(`Invalid shifted date: ${shiftedDate.toISOString()} is still a holiday or weekend`);
     return null;
@@ -79,9 +83,19 @@ export const getShiftedRDODate = (originalDate: Date, holidays: Holiday[]): Date
 export const getRDOShiftReason = (originalDate: Date, shiftedDate: Date | null, holidays: Holiday[]): string => {
   if (!shiftedDate) return '';
   
+  const reasons: string[] = [];
+  
+  if (isWeekend(originalDate)) {
+    reasons.push('weekend');
+  }
+  
   const holiday = holidays.find(h => isSameDay(new Date(h.date), originalDate));
-  if (!holiday) return '';
+  if (holiday) {
+    reasons.push(holiday.name);
+  }
+  
+  if (reasons.length === 0) return '';
   
   const daysDiff = Math.round((shiftedDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24));
-  return `RDO shifted ${daysDiff} day${daysDiff > 1 ? 's' : ''} due to ${holiday.name}`;
+  return `RDO shifted ${daysDiff} day${daysDiff > 1 ? 's' : ''} due to ${reasons.join(' and ')}`;
 };
