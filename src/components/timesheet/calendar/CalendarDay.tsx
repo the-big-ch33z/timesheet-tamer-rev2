@@ -36,14 +36,23 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
 }) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   const hasEntries = safeEntries.length > 0;
-  const isShiftedRDO =
-    isRDO &&
-    originalRdoDate instanceof Date &&
-    !isNaN(originalRdoDate.getTime()) &&
-    originalRdoDate.toDateString() !== day.toDateString();
+  const isShiftedRDO = isRDO && originalRdoDate instanceof Date && !isNaN(originalRdoDate.getTime()) && originalRdoDate.toDateString() !== day.toDateString();
+  let dateObj: Date | null = null;
+  let holiday = null;
 
-  const dateObj = new Date(day);
-  const holiday = isNaN(dateObj.getTime()) ? null : getHolidayForDate(dateObj, defaultQueenslandHolidays);
+  if (day instanceof Date && !isNaN(day.getTime())) {
+    dateObj = day;
+    holiday = getHolidayForDate(day, defaultQueenslandHolidays);
+  } else {
+    try {
+      dateObj = new Date(day);
+      if (!isNaN(dateObj.getTime())) {
+        holiday = getHolidayForDate(dateObj, defaultQueenslandHolidays);
+      }
+    } catch (err) {
+      console.warn("Invalid day passed to CalendarDay:", day);
+    }
+  }
   const isHoliday = !!holiday;
 
   return (
@@ -66,9 +75,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             )}
           >
             <div className="flex justify-between items-start">
-              <span className={cn("font-medium", isWeekend && "text-gray-500")}>
-                {format(day, "d")}
-              </span>
+              <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(day, 'd')}</span>
               {isComplete && hasEntries && <CheckCircle2 className="h-4 w-4 text-green-500" />}
             </div>
 
