@@ -47,7 +47,7 @@ const CalendarLegend: React.FC<CalendarLegendProps> = ({ hasWorkSchedule }) => {
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p className="text-xs max-w-xs">
-              Working days are based on your schedule. RDOs are rostered days off.
+              Working days are based on your schedule. RDOs (marked in blue) are rostered days off.
               Hover over days to see more details.
             </p>
           </TooltipContent>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -18,7 +17,7 @@ interface DayStatus {
   } | null;
   isWorkDay: boolean;
   shiftReason: string | null;
-  originalRdoDate?: Date; // Added to track original RDO date
+  originalRdoDate?: Date;
 }
 
 interface CalendarDayProps {
@@ -44,7 +43,6 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
 }) => {
   const hasEntries = entries.length > 0;
   
-  // Determine if this is a display of a shifted RDO
   const isShiftedRDO = status.isRDO && status.originalRdoDate && 
     status.originalRdoDate.toDateString() !== day.toDateString();
 
@@ -60,11 +58,11 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               isToday && "bg-blue-50",
               status.isWeekend && "bg-gray-50",
               status.dayHoliday && "bg-amber-50",
-              (status.isRDO) && "bg-purple-50",
+              (status.isRDO) && "bg-blue-50 border-blue-200",
               hasEntries && isComplete && "bg-green-50 border-green-200",
               hasEntries && !isComplete && "bg-yellow-50 border-yellow-200",
               !status.isWorkDay && "cursor-default",
-              isShiftedRDO && "border-purple-300 border-dashed"
+              isShiftedRDO && "border-blue-300 border-dashed"
             )}
           >
             <div className="flex justify-between items-start">
@@ -91,7 +89,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 variant="secondary" 
                 className={cn(
                   "mt-1 text-xs",
-                  isShiftedRDO ? "bg-purple-200 text-purple-900 border-purple-300" : "bg-purple-100 text-purple-800"
+                  isShiftedRDO ? "bg-blue-200 text-blue-900 border-blue-300" : "bg-blue-100 text-blue-800"
                 )}
               >
                 {isShiftedRDO ? "Shifted RDO" : "RDO"}
