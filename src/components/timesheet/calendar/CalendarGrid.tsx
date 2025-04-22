@@ -56,11 +56,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         getWeekDay(dateObj)
       ) || false;
 
-      logger.debug(`Day ${dateObj.toISOString()}: entries=${day.entries.length}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
+      logger.debug(`Day ${dateObj.toISOString()}: entries=${day.entries?.length ?? 0}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
 
       return {
         ...day,
         date: dateObj,
+        entries: day.entries ?? [], // ✅ fallback to empty array to prevent runtime error
         isComplete,
         isRdo
       };
