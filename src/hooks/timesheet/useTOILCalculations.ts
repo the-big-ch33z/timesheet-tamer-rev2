@@ -59,6 +59,11 @@ export const useTOILCalculations = ({
   // Debounced calculator for TOIL updates
   const calculateToilForDay = useCallback(async (): Promise<TOILSummary | null> => {
     try {
+      // Set calculating state at the beginning
+      if (isMountedRef.current) {
+        setIsCalculating(true);
+      }
+      
       // Return early if missing required data or component unmounted
       if (!userId || !date || !workSchedule || !isMountedRef.current) {
         logger.debug('Missing required data for TOIL calculation or component unmounted');
@@ -83,16 +88,6 @@ export const useTOILCalculations = ({
         return zeroSummary;
       }
       
-      if (isCalculating) {
-        logger.debug('TOIL calculation already in progress, skipping duplicate request');
-        return toilSummary;
-      }
-      
-      // Update calculation state
-      if (isMountedRef.current) {
-        setIsCalculating(true);
-      }
-      
       // Store current entries in ref to compare later
       entriesRef.current = [...entries];
       
@@ -109,7 +104,7 @@ export const useTOILCalculations = ({
         await toilService.recordTOILUsage(entry);
       }
       
-      // Calculate and store TOIL accrual with holidays - this uses the new optimized service
+      // Calculate and store TOIL accrual with holidays - this uses the optimized service
       const summary = await toilService.calculateAndStoreTOIL(
         nonToilEntries,
         date,
@@ -121,18 +116,19 @@ export const useTOILCalculations = ({
       // Update internal state if component still mounted
       if (isMountedRef.current) {
         setToilSummary(summary);
-        setIsCalculating(false);
       }
       
       return summary;
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
+      return null;
+    } finally {
+      // Always reset calculating state if component is mounted
       if (isMountedRef.current) {
         setIsCalculating(false);
       }
-      return null;
     }
-  }, [userId, date, entries, workSchedule, isCalculating, toilSummary, logger, holidays, isToilEntry]);
+  }, [userId, date, entries, workSchedule, logger, holidays, isToilEntry]);
   
   // Debounce TOIL calculation when entries change
   useEffect(() => {
@@ -168,7 +164,12 @@ export const useTOILCalculations = ({
     
     calculationRequestRef.current = setTimeout(() => {
       if (isMountedRef.current) {
-        calculateToilForDay();
+        calculateToilForDay().catch(error => {
+          logger.error('Calculation request failed:', error);
+          if (isMountedRef.current) {
+            setIsCalculating(false); // Ensure we reset state even on error
+          }
+        });
       }
       calculationRequestRef.current = null;
     }, timeout);
@@ -179,7 +180,7 @@ export const useTOILCalculations = ({
         calculationRequestRef.current = null;
       }
     };
-  }, [userId, date, entries, calculateToilForDay]);
+  }, [userId, date, entries, calculateToilForDay, logger]);
   
   // Cleanup on unmount
   useEffect(() => {

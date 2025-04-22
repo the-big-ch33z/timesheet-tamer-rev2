@@ -3,12 +3,65 @@ import { TOILRecord, TOILSummary, TOILUsage } from "@/types/toil";
 import { storageWriteLock } from '../storage-operations';
 import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY } from './types';
 import { createTimeLogger } from '@/utils/time/errors';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 const logger = createTimeLogger('TOILStorage');
 
 // Cache for TOIL summaries
 const summaryCache = new Map<string, TOILSummary>();
+
+/**
+ * Validate a TOIL record
+ */
+function isValidRecord(record: any): record is TOILRecord {
+  return (
+    record &&
+    typeof record.id === 'string' &&
+    typeof record.userId === 'string' &&
+    isValid(new Date(record.date)) &&
+    typeof record.hours === 'number' &&
+    record.hours >= 0 &&
+    record.hours <= 24 &&
+    typeof record.monthYear === 'string' &&
+    /^\d{4}-\d{2}$/.test(record.monthYear)
+  );
+}
+
+/**
+ * Clear all TOIL data for a specific month
+ */
+export function clearTOILStorageForMonth(userId: string, monthYear: string): void {
+  try {
+    logger.debug(`Clearing TOIL data for ${userId}, month ${monthYear}`);
+    
+    // Clear caches for this month
+    clearSummaryCache(userId, monthYear);
+    
+    // Filter records
+    const allRecords = loadTOILRecords();
+    const filteredRecords = allRecords.filter(
+      record => !(record.userId === userId && record.monthYear === monthYear)
+    );
+    
+    if (filteredRecords.length !== allRecords.length) {
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+      logger.debug(`Removed ${allRecords.length - filteredRecords.length} records`);
+    }
+    
+    // Filter usage
+    const allUsage = loadTOILUsage();
+    const filteredUsage = allUsage.filter(
+      usage => !(usage.userId === userId && usage.monthYear === monthYear)
+    );
+    
+    if (filteredUsage.length !== allUsage.length) {
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsage));
+      logger.debug(`Removed ${allUsage.length - filteredUsage.length} usage records`);
+    }
+  } catch (error) {
+    logger.error('Error clearing TOIL storage for month:', error);
+  }
+}
 
 /**
  * Load TOIL records from storage
@@ -21,10 +74,20 @@ export function loadTOILRecords(): TOILRecord[] {
       return [];
     }
     
-    const records: TOILRecord[] = JSON.parse(storedRecords).map((record: any) => ({
-      ...record,
-      date: new Date(record.date)
-    }));
+    const parsedRecords = JSON.parse(storedRecords);
+    
+    // Validate and filter records
+    const records: TOILRecord[] = parsedRecords
+      .filter(isValidRecord)
+      .map((record: any) => ({
+        ...record,
+        date: new Date(record.date)
+      }));
+    
+    const invalidCount = parsedRecords.length - records.length;
+    if (invalidCount > 0) {
+      logger.warn(`Filtered out ${invalidCount} invalid TOIL records`);
+    }
     
     return records;
   } catch (error) {
@@ -44,10 +107,28 @@ export function loadTOILUsage(): TOILUsage[] {
       return [];
     }
     
-    const usage: TOILUsage[] = JSON.parse(storedUsage).map((usage: any) => ({
-      ...usage,
-      date: new Date(usage.date)
-    }));
+    const parsedUsage = JSON.parse(storedUsage);
+    
+    // Validate and filter usage records
+    const usage: TOILUsage[] = parsedUsage
+      .filter((u: any) => 
+        u && 
+        typeof u.id === 'string' && 
+        typeof u.userId === 'string' && 
+        isValid(new Date(u.date)) &&
+        typeof u.hours === 'number' &&
+        u.hours >= 0 &&
+        u.hours <= 24
+      )
+      .map((u: any) => ({
+        ...u,
+        date: new Date(u.date)
+      }));
+      
+    const invalidCount = parsedUsage.length - usage.length;
+    if (invalidCount > 0) {
+      logger.warn(`Filtered out ${invalidCount} invalid TOIL usage records`);
+    }
     
     return usage;
   } catch (error) {
@@ -68,16 +149,28 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
       // Get existing records
       const records = loadTOILRecords();
       
-      // Add new record
-      records.push(record);
+      // Check for duplicate
+      const existingIndex = records.findIndex(r => 
+        r.userId === record.userId && 
+        format(r.date, 'yyyy-MM-dd') === format(record.date, 'yyyy-MM-dd')
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing record
+        records[existingIndex] = record;
+        logger.debug(`Updated existing TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      } else {
+        // Add new record
+        records.push(record);
+        logger.debug(`Added new TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      }
       
       // Save records
       localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
       
       // Clear summary cache
-      clearSummaryCache();
+      clearSummaryCache(record.userId, record.monthYear);
       
-      logger.debug(`Stored TOIL record: ${record.id}, ${record.hours} hours`);
       return true;
     } finally {
       // Release lock
@@ -139,14 +232,22 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
       // Get existing usage records
       const usageRecords = loadTOILUsage();
       
-      // Add new usage record
-      usageRecords.push(usage);
+      // Check for existing usage record with same id
+      const existingIndex = usageRecords.findIndex(r => r.id === usage.id);
+      
+      if (existingIndex >= 0) {
+        // Update existing record
+        usageRecords[existingIndex] = usage;
+      } else {
+        // Add new usage record
+        usageRecords.push(usage);
+      }
       
       // Save usage records
       localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usageRecords));
       
       // Clear summary cache
-      clearSummaryCache();
+      clearSummaryCache(usage.userId, usage.monthYear);
       
       logger.debug(`Stored TOIL usage: ${usage.id}, ${usage.hours} hours`);
       return true;
@@ -203,6 +304,18 @@ export async function updateTOILUsage(usage: TOILUsage): Promise<boolean> {
  */
 export function getTOILSummary(userId: string, monthYear: string): TOILSummary {
   try {
+    // Validate inputs
+    if (!userId || !monthYear || !/^\d{4}-\d{2}$/.test(monthYear)) {
+      logger.warn(`Invalid inputs for getTOILSummary: userId=${userId}, monthYear=${monthYear}`);
+      return {
+        userId: userId || '',
+        monthYear: monthYear || format(new Date(), 'yyyy-MM'),
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
+    }
+    
     // Check cache first
     const cacheKey = `${userId}-${monthYear}`;
     if (summaryCache.has(cacheKey)) {
@@ -260,15 +373,23 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary {
 }
 
 /**
- * Clear summary cache
+ * Clear summary cache for a specific user and month
  */
-export function clearSummaryCache(): void {
-  summaryCache.clear();
-  logger.debug('TOIL summary cache cleared');
+export function clearSummaryCache(userId?: string, monthYear?: string): void {
+  if (userId && monthYear) {
+    // Clear specific cache entry
+    const cacheKey = `${userId}-${monthYear}`;
+    summaryCache.delete(cacheKey);
+    logger.debug(`Cleared TOIL summary cache for ${userId}, month=${monthYear}`);
+  } else {
+    // Clear all cache
+    summaryCache.clear();
+    logger.debug('TOIL summary cache cleared');
+  }
 }
 
 /**
- * Clear all TOIL caches
+ * Clear all TOIL caches and localStorage
  */
 export function clearAllTOILCaches(): void {
   clearSummaryCache();

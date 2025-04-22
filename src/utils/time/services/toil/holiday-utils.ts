@@ -1,36 +1,38 @@
 
 import { Holiday } from "@/lib/holidays";
-import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
+import { format } from 'date-fns';
 
-const logger = createTimeLogger('TOILHolidayUtils');
+const logger = createTimeLogger('TOILHolidays');
 
-// Cache for holidays to avoid redundant date comparisons
-const holidayCache = new Map<string, boolean>();
+// Holiday cache for quick lookups
+const holidayDateCache = new Map<string, boolean>();
 
 /**
- * Efficiently check if a date is a holiday
+ * Check if a date is a holiday
  */
-export function isDateHoliday(date: Date, holidays: Holiday[]): boolean {
-  const dateKey = format(date, 'yyyy-MM-dd');
+export function isHoliday(date: Date, holidays: Holiday[] = []): boolean {
+  // Create a cache key from the date
+  const dateString = format(date, 'yyyy-MM-dd');
   
-  if (holidayCache.has(dateKey)) {
-    return holidayCache.get(dateKey) || false;
+  // Check cache first
+  if (holidayDateCache.has(dateString)) {
+    return holidayDateCache.get(dateString)!;
   }
   
-  // Check if it's a holiday
-  const isHoliday = holidays.some(holiday => holiday.date === dateKey);
+  // Check for holiday match
+  const isHoliday = holidays.some(holiday => holiday.date === dateString);
   
   // Cache result
-  holidayCache.set(dateKey, isHoliday);
+  holidayDateCache.set(dateString, isHoliday);
   
   return isHoliday;
 }
 
 /**
- * Clear holiday cache - should be called when month changes
+ * Clear holiday cache
  */
 export function clearHolidayCache(): void {
-  holidayCache.clear();
+  holidayDateCache.clear();
   logger.debug('Holiday cache cleared');
 }

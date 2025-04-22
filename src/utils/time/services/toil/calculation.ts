@@ -33,12 +33,22 @@ export function calculateTOILHours(
       return 0;
     }
 
-    // Calculate actual hours from entries
-    const actualHours = entries.reduce((sum, entry) => {
-      // Validate hours before adding
-      const hours = isFinite(entry.hours) ? entry.hours : 0;
-      return hours > 0 ? sum + hours : sum;
-    }, 0);
+    // First step: check if the date is a non-working day
+    // This optimization prevents unnecessary calculations
+    const isNonWorking = isNonWorkingDay(date, workSchedule, holidays);
+
+    // Calculate actual hours from entries, but only count entries for the same date
+    const actualHours = entries
+      .filter(entry => {
+        if (!entry.date) return false;
+        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+        return format(entryDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+      })
+      .reduce((sum, entry) => {
+        // Validate hours before adding
+        const hours = isFinite(entry.hours) ? entry.hours : 0;
+        return hours > 0 ? sum + hours : sum;
+      }, 0);
 
     // Guard against zero actual hours
     if (actualHours <= 0) {
@@ -49,7 +59,7 @@ export function calculateTOILHours(
     let toilHours = 0;
     
     // If it's a non-working day, all hours count as TOIL
-    if (isNonWorkingDay(date, workSchedule, holidays)) {
+    if (isNonWorking) {
       toilHours = actualHours;
       logger.debug(`[TOILCalc] Non-working day detected, all ${actualHours}h count as TOIL`);
     } else {
@@ -71,7 +81,7 @@ export function calculateTOILHours(
 
     // ENFORCE positive, valid, clamped TOIL hours
     if (!isValidTOILHours(toilHours)) {
-      logger.error('[TOILCalc] Invalid TOIL hours calculated:', toilHours);
+      logger.debug('[TOILCalc] Invalid TOIL hours calculated:', toilHours);
       toilHours = 0;
     } else {
       toilHours = getSanitizedTOILHours(toilHours);

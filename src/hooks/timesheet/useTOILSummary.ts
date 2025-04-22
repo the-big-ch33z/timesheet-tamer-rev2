@@ -4,7 +4,7 @@ import { TOILSummary } from '@/types/toil';
 import { toilService } from '@/utils/time/services/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
-import { getTOILSummary } from '@/utils/time/services/toil/storage';
+import { getTOILSummary, clearTOILStorageForMonth } from '@/utils/time/services/toil/storage';
 
 export interface UseTOILSummaryProps {
   userId: string;
@@ -72,6 +72,23 @@ export const useTOILSummary = ({
   useEffect(() => {
     loadSummary();
   }, [userId, monthYear]);
+  
+  // Listen for TOIL update events to refresh the summary
+  useEffect(() => {
+    const handleTOILUpdate = (event: CustomEvent) => {
+      const updatedSummary = event.detail as TOILSummary;
+      if (updatedSummary.userId === userId && updatedSummary.monthYear === monthYear) {
+        logger.debug('Received TOIL update event, refreshing summary');
+        setSummary(updatedSummary);
+      }
+    };
+    
+    window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+    };
+  }, [userId, monthYear, logger]);
   
   return {
     summary,
