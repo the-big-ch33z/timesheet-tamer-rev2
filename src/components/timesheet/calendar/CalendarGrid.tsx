@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
@@ -5,6 +6,7 @@ import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 import { WorkSchedule } from "@/types";
+import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
 
 const logger = createTimeLogger('CalendarGrid');
 

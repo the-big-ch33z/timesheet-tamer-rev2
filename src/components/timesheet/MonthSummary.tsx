@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { User, WorkSchedule } from "@/types";
@@ -8,6 +9,7 @@ import { CirclePercent } from "lucide-react";
 import { useScheduleCalculation } from "@/hooks/timesheet/useScheduleCalculation";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
 import { createTimeLogger } from "@/utils/time/errors";
+import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 
 const logger = createTimeLogger('MonthSummary');
 
@@ -34,6 +36,11 @@ const MonthSummary: React.FC<MonthSummaryProps> = ({
     logger.debug(`Calculated monthly target: ${target} hours from fortnight hours: ${fortnightHours}`);
     return target;
   }, [fortnightHours, date, workSchedule]);
+
+  // Calculate workdays in month for display
+  const workdaysInMonth = useMemo(() => {
+    return getWorkdaysInMonth(date);
+  }, [date]);
 
   useEffect(() => {
     setIsLoading(true);

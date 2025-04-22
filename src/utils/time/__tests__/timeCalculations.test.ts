@@ -39,14 +39,32 @@ describe('Time Calculations', () => {
     });
 
     it('handles direct workdays input', () => {
-      expect(calculateMonthlyTargetHours(70, 22)).toBe(154.0); // 70 * (22/10)
-      expect(calculateMonthlyTargetHours(38, 19)).toBe(72.2); // 38 * (19/10) = 72.2
+      // Create actual date objects instead of using numbers
+      const mockDate1 = new Date('2023-03-01'); // March with ~22 workdays
+      const mockDate2 = new Date('2023-02-01'); // February with ~19 workdays
+      jest.spyOn(require('../../time/scheduleUtils'), 'getWorkdaysInMonth')
+        .mockReturnValueOnce(22)  // First call returns 22
+        .mockReturnValueOnce(19); // Second call returns 19
+      
+      expect(calculateMonthlyTargetHours(70, mockDate1)).toBe(154.0); // 70 * (22/10) = 154
+      expect(calculateMonthlyTargetHours(38, mockDate2)).toBe(72.2); // 38 * (19/10) = 72.2
     });
 
     it('throws error for invalid inputs', () => {
-      expect(() => calculateMonthlyTargetHours(-5, 20)).toThrow(TimeCalculationError);
-      expect(() => calculateMonthlyTargetHours(70, -1)).toThrow(TimeCalculationError);
-      expect(() => calculateMonthlyTargetHours(70, 32)).toThrow(TimeCalculationError);
+      const mockDate = new Date('2023-01-01');
+      expect(() => calculateMonthlyTargetHours(-5, mockDate)).toThrow(TimeCalculationError);
+      
+      // Use actual Date objects for these too
+      const invalidDate1 = new Date('2000-01-01'); // Using actual dates instead of numbers
+      const invalidDate2 = new Date('2000-01-01');
+      
+      // Mock getWorkdaysInMonth to return -1 and 32 for these cases
+      jest.spyOn(require('../../time/scheduleUtils'), 'getWorkdaysInMonth')
+        .mockReturnValueOnce(-1)  // First call returns invalid -1
+        .mockReturnValueOnce(32); // Second call returns invalid 32
+      
+      expect(() => calculateMonthlyTargetHours(70, invalidDate1)).toThrow(TimeCalculationError);
+      expect(() => calculateMonthlyTargetHours(70, invalidDate2)).toThrow(TimeCalculationError);
     });
   });
 
