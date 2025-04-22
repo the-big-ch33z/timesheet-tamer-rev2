@@ -1,3 +1,4 @@
+
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -34,8 +35,32 @@ export const useWorkHours = (userId?: string) => {
     }
   }, [calculateHours]);
   
+  // Add compatibility methods for tests
+  const hasCustomHours = useCallback((date: Date, userId?: string): boolean => {
+    const hours = enhancedHook.getWorkHoursForDate(date, userId);
+    return !!hours.startTime && !!hours.endTime;
+  }, [enhancedHook]);
+  
+  const resetWorkHours = useCallback((date: Date, userId?: string): void => {
+    enhancedHook.resetWorkHoursForDate(date, userId);
+  }, [enhancedHook]);
+  
+  const calculateDayHours = useCallback((date: Date): number => {
+    const hours = enhancedHook.getWorkHoursForDate(date, userId);
+    if (hours.startTime && hours.endTime) {
+      return calculateAutoHours(hours.startTime, hours.endTime);
+    }
+    return 0;
+  }, [enhancedHook, calculateAutoHours, userId]);
+  
+  // Extend the hook with the additional methods needed for backward compatibility
   return {
     ...enhancedHook,
-    calculateAutoHours
+    calculateAutoHours,
+    hasCustomHours,
+    resetWorkHours,
+    calculateDayHours
   };
 };
+
+export default useWorkHours;

@@ -13,6 +13,8 @@ type TimeEventType =
   | 'work-hours-reset'
   | 'work-hours-cleared'
   | 'schedules-updated'
+  | 'user-schedules-updated' // Add this event type
+  | 'user-schedule-changed' // Add this event type
   | 'toil-calculated'
   | 'toil-updated'
   | 'timesheet-entry-saved'

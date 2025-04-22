@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
@@ -14,19 +14,23 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
   const workHoursContext = useWorkHoursContext();
   
   // Get work hours for a specific date
-  const getWorkHoursForDate = useCallback((date: Date, userId?: string): { startTime: string, endTime: string } => {
+  const getWorkHoursForDate = useCallback((date: Date, userId?: string): { startTime: string, endTime: string, hasData?: boolean } => {
     const targetUserId = userId || defaultUserId || '';
     const formattedDate = format(date, 'yyyy-MM-dd');
     
     if (!targetUserId) {
       logger.warn('No userId provided for getWorkHoursForDate');
-      return { startTime: '', endTime: '' };
+      return { startTime: '', endTime: '', hasData: false };
     }
     
     const hours = workHoursContext.getWorkHours(targetUserId, formattedDate);
     logger.debug(`Retrieved work hours for ${formattedDate}, user ${targetUserId}:`, hours);
     
-    return hours;
+    // Add hasData property
+    return {
+      ...hours,
+      hasData: !!(hours.startTime && hours.endTime)
+    };
   }, [workHoursContext, defaultUserId]);
   
   // Save work hours for a specific date with immediate feedback
@@ -41,7 +45,8 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     
     logger.debug(`Saving work hours for ${formattedDate}, user ${targetUserId}:`, { startTime, endTime });
     
-    // Save work hours in context
+    // Save work hours in context - convert formattedDate string to Date 
+    const dateObj = date;
     workHoursContext.saveWorkHours(targetUserId, formattedDate, startTime, endTime);
     
     // Dispatch event to notify subscribers of the change
