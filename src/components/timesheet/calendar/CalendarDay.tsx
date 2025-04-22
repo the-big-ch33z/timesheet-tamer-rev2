@@ -17,6 +17,7 @@ interface DayStatus {
     endTime: string;
   } | null;
   isWorkDay: boolean;
+  shiftReason: string;
 }
 
 interface CalendarDayProps {
@@ -60,7 +61,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               (status.isRDO || isDisplayingShiftedRDO) && "bg-purple-50",
               hasEntries && isComplete && "bg-green-50 border-green-200",
               hasEntries && !isComplete && "bg-yellow-50 border-yellow-200",
-              !status.isWorkDay && "cursor-default"
+              !status.isWorkDay && "cursor-default",
+              isShiftedRDO && "border-purple-300"
             )}
           >
             <div className="flex justify-between items-start">
@@ -95,7 +97,6 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </Badge>
             )}
 
-            {/* Status indicators */}
             {hasEntries && (
               <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <div className={cn(
@@ -121,9 +122,9 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 {isComplete ? " (Complete)" : " (In Progress)"}
               </div>
             )}
-            {isDisplayingShiftedRDO && (
+            {isDisplayingShiftedRDO && status.shiftReason && (
               <div className="text-xs text-purple-600 mt-1">
-                RDO shifted from {format(status.shiftedRDODate!, 'MMM d')} (Holiday)
+                {status.shiftReason}
               </div>
             )}
           </div>

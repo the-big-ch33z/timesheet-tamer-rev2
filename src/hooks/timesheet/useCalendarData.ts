@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -25,6 +24,7 @@ export interface DayCellData {
     isRDO: boolean;
     workHours: { startTime: string; endTime: string } | null;
     isWorkDay: boolean;
+    shiftReason: string | null;
   };
   entries: any[];
   isComplete: boolean;
@@ -74,13 +74,10 @@ export function useCalendarData(
         const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
         const fortnightWeek = getFortnightWeek(day);
         
-        // Check if this day is an RDO in the schedule
         isRDO = workSchedule.rdoDays[fortnightWeek].includes(weekdayName as any);
         
-        // If it's an RDO and falls on a holiday, calculate shifted date
         if (isRDO && holiday) {
           shiftedRDODate = getShiftedRDODate(day, holidays);
-          logger.debug(`RDO on holiday detected: ${formatDateForComparison(day)}, shifted to: ${shiftedRDODate ? formatDateForComparison(shiftedRDODate) : 'none'}`);
         }
         
         if (workSchedule.weeks[fortnightWeek] && workSchedule.weeks[fortnightWeek][weekdayName as any]) {
@@ -105,7 +102,8 @@ export function useCalendarData(
           isRDO,
           shiftedRDODate,
           workHours: dayWorkHours,
-          isWorkDay: baseState.isWorkingDay && !isRDO && !holiday
+          isWorkDay: baseState.isWorkingDay && !isRDO && !holiday,
+          shiftReason: getRDOShiftReason(day, shiftedRDODate, holidays)
         },
         entries: dayEntries,
         isComplete,
