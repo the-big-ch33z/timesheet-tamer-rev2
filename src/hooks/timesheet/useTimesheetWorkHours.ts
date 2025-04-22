@@ -43,7 +43,7 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
       return { startTime: '', endTime: '', hasData: false };
     }
     
-    const hours = workHoursContext.getWorkHours(targetUserId, dateObj);
+    const hours = workHoursContext.getWorkHours(targetUserId, dateObj); // ✅ Use dateObj
     logger.debug(`Retrieved work hours for ${formattedDate}, user ${targetUserId}:`, hours);
     
     return {
@@ -65,7 +65,7 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     
     logger.debug(`Saving work hours for ${formattedDate}, user ${targetUserId}:`, { startTime, endTime });
     
-    workHoursContext.saveWorkHours(targetUserId, dateObj, startTime, endTime);
+    workHoursContext.saveWorkHours(targetUserId, dateObj, startTime, endTime); // ✅ Use dateObj
     
     timeEventsService.publish('work-hours-updated', {
       date: formattedDate,
@@ -89,9 +89,9 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     
     logger.debug(`Resetting work hours for ${formattedDate}, user ${targetUserId}`);
     
-    workHoursContext.resetDayWorkHours(targetUserId, dateObj);
+    workHoursContext.resetDayWorkHours(targetUserId, dateObj); // ✅ Use dateObj
     
-    const newHours = workHoursContext.getWorkHours(targetUserId, dateObj);
+    const newHours = workHoursContext.getWorkHours(targetUserId, dateObj); // ✅ Use dateObj
     
     timeEventsService.publish('work-hours-reset', {
       date: formattedDate,
@@ -109,7 +109,7 @@ export const useTimesheetWorkHours = (defaultUserId?: string) => {
     const formattedDate = format(dateObj, 'yyyy-MM-dd');
     
     logger.debug(`Refreshing work hours from context for ${formattedDate}, user ${targetUserId}`);
-    workHoursContext.refreshTimesForDate(targetUserId, dateObj);
+    workHoursContext.refreshTimesForDate(targetUserId, dateObj); // ✅ Use dateObj
   }, [workHoursContext, defaultUserId]);
   
   return {
