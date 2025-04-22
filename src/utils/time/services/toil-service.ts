@@ -8,7 +8,7 @@ import { storageWriteLock } from './storage-operations';
 import { getFortnightWeek, getWeekDay, calculateDayHours } from '../scheduleUtils';
 import { isValidTOILHours, getSanitizedTOILHours, getTOILHoursValidationMessage } from '../validation/toilValidation';
 import { isNonWorkingDay } from '../scheduleUtils';
-import { Holiday } from '@/types';
+import { Holiday } from '@/lib/holidays';
 
 const logger = createTimeLogger('TOILService');
 
