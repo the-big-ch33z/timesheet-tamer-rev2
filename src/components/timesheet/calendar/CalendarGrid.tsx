@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
@@ -25,7 +24,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onDayClick,
   userId
 }) => {
-  // Log when workSchedule changes
   React.useEffect(() => {
     if (workSchedule) {
       logger.debug(`CalendarGrid received workSchedule: ${workSchedule.name || 'unnamed'}`);
@@ -39,74 +37,48 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const processedDays = useMemo(() => {
     logger.debug(`Processing ${days.length} days for month ${currentMonth.toISOString()}, userId: ${userId}`);
-    
+
     return days.map(day => {
-      const workHours = getWorkHoursForDate(day.date, userId);
-      
+      const dateObj = new Date(day.date);
+      const workHours = getWorkHoursForDate(dateObj, userId);
+
       if (!workHours) {
-        logger.debug(`No work hours found for date ${day.date.toISOString()}, userId: ${userId}`);
+        logger.debug(`No work hours found for date ${dateObj.toISOString()}, userId: ${userId}`);
       }
-      
+
       const { isComplete } = calculateCompletion(
         day.entries,
         workHours?.startTime,
         workHours?.endTime
       );
 
-      // Check if it's an RDO based on the fortnight week
-      const isRdo = workSchedule?.rdoDays?.[getFortnightWeek(day.date)]?.includes(
-        getWeekDay(day.date)
+      const isRdo = workSchedule?.rdoDays?.[getFortnightWeek(dateObj)]?.includes(
+        getWeekDay(dateObj)
       ) || false;
 
-      logger.debug(`Day ${day.date.toISOString()}: entries=${day.entries.length}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
+      logger.debug(`Day ${dateObj.toISOString()}: entries=${day.entries.length}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
 
       return {
         ...day,
+        date: dateObj,
         isComplete,
         isRdo
       };
     });
   }, [days, getWorkHoursForDate, userId, workSchedule]);
 
-  React.useEffect(() => {
-    logger.debug(`Calendar grid updated with ${processedDays.length} days, using workSchedule: ${workSchedule?.id || 'none'}`);
-    
-    // Log days with special status
-    const specialDays = processedDays.filter(day => day.status.isRDO || day.status.dayHoliday);
-    if (specialDays.length > 0) {
-      logger.debug(`Found ${specialDays.length} special days in the month`);
-      specialDays.forEach(day => {
-        if (day.status.isRDO) {
-          logger.debug(`Day ${day.date.toISOString()} is marked as RDO`);
-        }
-        if (day.status.dayHoliday) {
-          logger.debug(`Day ${day.date.toISOString()} is marked as holiday: ${day.status.holidayName}`);
-        }
-      });
-    }
-  }, [processedDays, workSchedule]);
-
   return (
-    <div className="grid grid-cols-7 gap-2">
-      {Array.from({ length: monthStartDay }).map((_, i) => (
-        <div key={`empty-${i}`} className="p-3 min-h-[80px] bg-gray-100 border border-gray-200 rounded" />
-      ))}
-
-      {processedDays.map((day) => (
+    <div className="grid grid-cols-7 gap-1">
+      {processedDays.map(day => (
         <CalendarDay
-          key={day.date.toString()}
-          day={day.date}
-          entries={day.entries}
-          isSelected={day.isSelected}
-          isToday={day.isToday}
-          status={day.status}
-          onDayClick={onDayClick}
-          isComplete={day.isComplete}
-          totalHours={day.totalHours}
+          key={day.date.toISOString()}
+          day={day}
+          isSelected={selectedDate ? day.date.toDateString() === selectedDate.toDateString() : false}
+          onClick={() => onDayClick(day.date)}
         />
       ))}
     </div>
   );
 };
 
-export default React.memo(CalendarGrid);
+export default CalendarGrid;
