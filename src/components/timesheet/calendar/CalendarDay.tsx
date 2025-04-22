@@ -40,18 +40,21 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   let dateObj: Date | null = null;
   let holiday = null;
 
-  if (day instanceof Date && !isNaN(day.getTime())) {
-    dateObj = day;
+  try {
+    dateObj = new Date(day);
+    if (isNaN(dateObj.getTime())) throw new Error("Invalid Date");
     holiday = getHolidayForDate(day, defaultQueenslandHolidays);
   } else {
     try {
       dateObj = new Date(day);
       if (!isNaN(dateObj.getTime())) {
-        holiday = getHolidayForDate(dateObj, defaultQueenslandHolidays);
+        holiday = dateObj ? getHolidayForDate(dateObj, defaultQueenslandHolidays) : null;
       }
     } catch (err) {
-      console.warn("Invalid day passed to CalendarDay:", day);
-    }
+    console.warn("Invalid or unparsable date in CalendarDay:", day, err);
+    dateObj = null;
+    holiday = null;
+  }
   }
   const isHoliday = !!holiday;
 
