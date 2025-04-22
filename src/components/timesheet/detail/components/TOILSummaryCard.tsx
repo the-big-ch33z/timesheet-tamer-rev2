@@ -1,10 +1,10 @@
-
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
 import { Clock, CircleMinus, CirclePlus, CircleCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "react-tooltip";
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -17,13 +17,11 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
   loading = false,
   monthName
 }) => {
-  // If loading or no summary, use zero values for smooth animation.
   const accrued = summary?.accrued || 0;
   const used = summary?.used || 0;
   const remaining = summary?.remaining || 0;
-  const total = accrued + used || 1; // prevent division by zero
+  const total = accrued + used || 1;
 
-  // Color and icon map for columns
   const box = [
     {
       label: "Earned",
@@ -48,7 +46,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
     }
   ];
 
-  // No TOIL activity state
   const hasNoTOILActivity = accrued === 0 && used === 0 && remaining === 0 && !loading;
 
   return (
@@ -99,6 +96,29 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
                     {formatDisplayHours(value)}
                   </span>
                   <span className="text-xs text-gray-500 font-medium">hours</span>
+                  
+                  {label === "Earned" && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="text-xs text-gray-500 mt-1 cursor-help">
+                            Click for details
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-xs space-y-1">
+                            <p>TOIL is earned by working:</p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                              <li>On RDOs</li>
+                              <li>On weekends</li>
+                              <li>On public holidays</li>
+                              <li>Over scheduled hours</li>
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               ))}
             </div>

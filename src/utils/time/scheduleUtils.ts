@@ -96,6 +96,31 @@ export const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean =>
 };
 
 /**
+ * Check if a day is a non-working day according to the schedule
+ * @param day The day to check
+ * @param workSchedule The work schedule
+ * @returns True if it's a non-working day
+ */
+export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule): boolean => {
+  if (!workSchedule) return false;
+  
+  // Check if it's a weekend
+  if (isWeekend(date)) return true;
+  
+  const weekDay = getWeekDay(date);
+  const weekNum = getFortnightWeek(date);
+  
+  // Check if it's an RDO
+  if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
+    return true;
+  }
+  
+  // Get scheduled work hours for this day
+  const scheduledHours = workSchedule.weeks[weekNum][weekDay];
+  return !scheduledHours;
+};
+
+/**
  * Calculate hours for a work day accounting for breaks
  */
 export const calculateDayHours = (startTime: string, endTime: string, breaks?: { lunch?: boolean; smoko?: boolean }): number => {
