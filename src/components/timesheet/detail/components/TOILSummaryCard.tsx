@@ -1,4 +1,3 @@
-
 import React, { memo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
@@ -18,7 +17,6 @@ interface TOILSummaryCardProps {
   monthName?: string;
 }
 
-// Memoizing the summary boxes to prevent unnecessary re-rendering
 const TOILSummaryBoxes = memo(({ accrued, used, remaining }: { 
   accrued: number;
   used: number;
@@ -91,15 +89,15 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
   );
 });
 
-const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
+const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   summary,
   loading = false,
   monthName
 }) => {
-  const accrued = summary?.accrued || 0;
-  const used = summary?.used || 0;
-  const remaining = summary?.remaining || 0;
-  const total = accrued + used || 1;
+  const accrued = summary?.accrued ?? 0;
+  const used = summary?.used ?? 0;
+  const remaining = summary?.remaining ?? 0;
+  const total = Math.max(accrued + used, 1);
 
   const hasNoTOILActivity = accrued === 0 && used === 0 && remaining === 0 && !loading;
 
@@ -155,6 +153,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 export default memo(TOILSummaryCard);

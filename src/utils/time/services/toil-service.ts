@@ -182,32 +182,64 @@ export class TOILService {
     holidays: Holiday[] = []
   ): Promise<TOILSummary | null> {
     try {
+      // Guard against empty entries
+      if (!entries || entries.length === 0) {
+        logger.debug('[TOILService] No entries found, skipping TOIL calculation');
+        return {
+          userId,
+          monthYear: format(date, 'yyyy-MM'),
+          accrued: 0,
+          used: 0,
+          remaining: 0
+        };
+      }
+
       const monthYear = format(date, 'yyyy-MM');
       
       // Filter out TOIL usage entries before calculating actual hours
       const nonToilEntries = entries.filter(entry => entry.jobNumber !== TOIL_JOB_NUMBER);
-      const actualHours = nonToilEntries.reduce((sum, entry) => sum + (isFinite(entry.hours) ? entry.hours : 0), 0);
+      
+      // Guard against no valid entries
+      if (nonToilEntries.length === 0) {
+        logger.debug('[TOILService] No non-TOIL entries found');
+        return {
+          userId,
+          monthYear,
+          accrued: 0,
+          used: 0,
+          remaining: 0
+        };
+      }
+
+      const actualHours = nonToilEntries.reduce((sum, entry) => {
+        // Validate hours before adding
+        const hours = isFinite(entry.hours) ? entry.hours : 0;
+        return hours > 0 ? sum + hours : sum;
+      }, 0);
 
       let toilHours = 0;
       
-      // If it's a non-working day, all hours count as TOIL
-      if (isNonWorkingDay(date, workSchedule, holidays)) {
-        toilHours = actualHours;
-        logger.debug(`[TOIL Calc] Non-working day detected (holiday/RDO/weekend), all ${actualHours}h count as TOIL`);
-      } else {
-        // For working days, calculate excess hours as before
-        const weekDay = getWeekDay(date);
-        const weekNum = getFortnightWeek(date);
-        const daySchedule = workSchedule?.weeks[weekNum][weekDay];
-        
-        if (daySchedule?.startTime && daySchedule?.endTime) {
-          const scheduledHours = calculateDayHours(
-            daySchedule.startTime,
-            daySchedule.endTime,
-            daySchedule.breaks
-          );
-          toilHours = Math.max(0, actualHours - scheduledHours);
-          logger.debug(`[TOIL Calc] Working day: actual=${actualHours}h, scheduled=${scheduledHours}h, TOIL=${toilHours}h`);
+      // Only calculate TOIL if we have actual hours
+      if (actualHours > 0) {
+        // If it's a non-working day, all hours count as TOIL
+        if (isNonWorkingDay(date, workSchedule, holidays)) {
+          toilHours = actualHours;
+          logger.debug(`[TOIL Calc] Non-working day detected, all ${actualHours}h count as TOIL`);
+        } else {
+          // For working days, calculate excess hours as before
+          const weekDay = getWeekDay(date);
+          const weekNum = getFortnightWeek(date);
+          const daySchedule = workSchedule?.weeks[weekNum][weekDay];
+          
+          if (daySchedule?.startTime && daySchedule?.endTime) {
+            const scheduledHours = calculateDayHours(
+              daySchedule.startTime,
+              daySchedule.endTime,
+              daySchedule.breaks
+            );
+            toilHours = Math.max(0, actualHours - scheduledHours);
+            logger.debug(`[TOIL Calc] Working day: actual=${actualHours}h, scheduled=${scheduledHours}h, TOIL=${toilHours}h`);
+          }
         }
       }
 
