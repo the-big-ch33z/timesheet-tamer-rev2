@@ -1,7 +1,9 @@
-import { Holiday, WorkSchedule, WeekDay } from "@/types";
+
+import { WorkSchedule, WeekDay } from "@/types";
 import { getWeekDay, getFortnightWeek } from "./scheduleUtils";
 import { createTimeLogger } from "./errors";
 import { isWeekend } from "date-fns";
+import { Holiday } from "@/lib/holidays";
 
 const logger = createTimeLogger('rdoUtils');
 

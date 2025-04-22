@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { WorkSchedule, WeekDay } from "@/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Coffee, Bell } from "lucide-react";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "react-tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getHolidays } from "@/lib/holidays";
+import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 
 interface WorkDayConfigurationProps {
   day: WeekDay;

@@ -1,8 +1,11 @@
 import { WorkSchedule } from "@/types";
-import { ToastType } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { resolveRDOConflicts } from "@/utils/time/rdoUtils";
 import { getHolidays } from "@/lib/holidays";
 import { createTimeLogger } from "@/utils/time/errors";
+
+// Define ToastType for compatibility
+type ToastType = ReturnType<typeof useToast>["toast"];
 
 const logger = createTimeLogger('scheduleOperations');
 
