@@ -34,9 +34,16 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   originalRdoDate,
   isWorkDay = true
 }) => {
-  const hasEntries = entries.length > 0;
-  const isShiftedRDO = isRDO && originalRdoDate && originalRdoDate.toDateString() !== day.toDateString();
-  const holiday = getHolidayForDate(day, defaultQueenslandHolidays);
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  const hasEntries = safeEntries.length > 0;
+  const isShiftedRDO =
+    isRDO &&
+    originalRdoDate instanceof Date &&
+    !isNaN(originalRdoDate.getTime()) &&
+    originalRdoDate.toDateString() !== day.toDateString();
+
+  const dateObj = new Date(day);
+  const holiday = isNaN(dateObj.getTime()) ? null : getHolidayForDate(dateObj, defaultQueenslandHolidays);
   const isHoliday = !!holiday;
 
   return (
@@ -59,7 +66,9 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             )}
           >
             <div className="flex justify-between items-start">
-              <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(day, 'd')}</span>
+              <span className={cn("font-medium", isWeekend && "text-gray-500")}>
+                {format(day, "d")}
+              </span>
               {isComplete && hasEntries && <CheckCircle2 className="h-4 w-4 text-green-500" />}
             </div>
 
@@ -83,7 +92,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
           </button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{totalHours} hrs logged</p>
+          <p>{!isNaN(totalHours) ? totalHours : 0} hrs logged</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
