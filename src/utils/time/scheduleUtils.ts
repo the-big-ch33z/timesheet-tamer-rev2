@@ -4,6 +4,7 @@
  */
 import { WeekDay, WorkSchedule } from "@/types";
 import { getDaysInMonth, isWeekend } from "date-fns";
+import { Holiday } from "@/lib/holidays";
 
 // Helper function to get weekday from date
 export const getWeekDay = (date: Date): WeekDay => {
@@ -96,22 +97,40 @@ export const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean =>
 };
 
 /**
- * Check if a day is a non-working day according to the schedule
+ * Check if a day is a non-working day according to the schedule and holidays
  * @param day The day to check
  * @param workSchedule The work schedule
+ * @param holidays Holiday list to check against
  * @returns True if it's a non-working day
  */
-export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule): boolean => {
+export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule, holidays: Holiday[] = []): boolean => {
   if (!workSchedule) return false;
   
   // Check if it's a weekend
-  if (isWeekend(date)) return true;
+  if (isWeekend(date)) {
+    console.debug(`[scheduleUtils] ${date.toISOString()} is a weekend`);
+    return true;
+  }
+  
+  // Check if it's a holiday
+  const isHolidayDate = holidays.some(holiday => {
+    const holidayDate = new Date(holiday.date);
+    return holidayDate.getDate() === date.getDate() &&
+           holidayDate.getMonth() === date.getMonth() &&
+           holidayDate.getFullYear() === date.getFullYear();
+  });
+  
+  if (isHolidayDate) {
+    console.debug(`[scheduleUtils] ${date.toISOString()} is a holiday`);
+    return true;
+  }
   
   const weekDay = getWeekDay(date);
   const weekNum = getFortnightWeek(date);
   
   // Check if it's an RDO
   if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
+    console.debug(`[scheduleUtils] ${date.toISOString()} is an RDO`);
     return true;
   }
   

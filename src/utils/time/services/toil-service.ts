@@ -8,6 +8,7 @@ import { storageWriteLock } from './storage-operations';
 import { getFortnightWeek, getWeekDay, calculateDayHours } from '../scheduleUtils';
 import { isValidTOILHours, getSanitizedTOILHours, getTOILHoursValidationMessage } from '../validation/toilValidation';
 import { isNonWorkingDay } from '../scheduleUtils';
+import { Holiday } from '@/types';
 
 const logger = createTimeLogger('TOILService');
 
@@ -20,7 +21,7 @@ const TOIL_USAGE_KEY = 'toilUsage';
  */
 export class TOILService {
   // Cache to prevent duplicate TOIL records for the same day
-  private processedDates: Map<string, boolean> = new Map();
+  private processedDates: Map<string, number> = new Map();
   
   /**
    * Calculate and store TOIL accrual based on timesheet entries compared to schedule
@@ -29,7 +30,8 @@ export class TOILService {
     entries: TimeEntry[],
     date: Date,
     userId: string,
-    workSchedule?: WorkSchedule
+    workSchedule?: WorkSchedule,
+    holidays: Holiday[] = []
   ): Promise<TOILSummary | null> {
     try {
       if (!workSchedule) {
@@ -37,11 +39,12 @@ export class TOILService {
         return null;
       }
 
+      // Reduce throttle time for more responsive updates
       const dateKey = `${userId}-${format(date, 'yyyy-MM-dd')}`;
-      if (this.processedDates.has(dateKey)) {
-        logger.debug(`Already processed TOIL for ${dateKey}, skipping`);
-        const monthYear = format(date, 'yyyy-MM');
-        return this.getTOILSummary(userId, monthYear);
+      const now = Date.now();
+      if (this.processedDates.has(dateKey) && now - this.processedDates.get(dateKey)! < 300) {
+        logger.debug(`Recently processed TOIL for ${dateKey}, waiting for throttle`);
+        return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
       }
 
       const monthYear = format(date, 'yyyy-MM');
@@ -53,9 +56,9 @@ export class TOILService {
       let toilHours = 0;
       
       // If it's a non-working day, all hours count as TOIL
-      if (isNonWorkingDay(date, workSchedule)) {
+      if (isNonWorkingDay(date, workSchedule, holidays)) {
         toilHours = actualHours;
-        logger.debug(`[TOIL Calc] Non-working day detected, all ${actualHours}h count as TOIL`);
+        logger.debug(`[TOIL Calc] Non-working day detected (holiday/RDO/weekend), all ${actualHours}h count as TOIL`);
       } else {
         // For working days, calculate excess hours as before
         const weekDay = getWeekDay(date);
@@ -69,6 +72,7 @@ export class TOILService {
             daySchedule.breaks
           );
           toilHours = Math.max(0, actualHours - scheduledHours);
+          logger.debug(`[TOIL Calc] Working day: actual=${actualHours}h, scheduled=${scheduledHours}h, TOIL=${toilHours}h`);
         }
       }
 
@@ -96,7 +100,7 @@ export class TOILService {
         logger.debug(`[TOIL Calc] Created new TOIL record: ${toilHours}h (id=${record.id})`);
       }
 
-      this.processedDates.set(dateKey, true);
+      this.processedDates.set(dateKey, now);
 
       // Roll off memory leaks
       if (this.processedDates.size > 100) {
@@ -104,7 +108,7 @@ export class TOILService {
         keysToDelete.forEach(key => this.processedDates.delete(key));
       }
 
-      // Return updated summary
+      // Return updated summary immediately
       return this.getTOILSummary(userId, monthYear);
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
