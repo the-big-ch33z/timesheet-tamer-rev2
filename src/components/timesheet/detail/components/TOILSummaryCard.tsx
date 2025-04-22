@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { formatDisplayHours } from "@/utils/time/formatting";
@@ -18,16 +18,12 @@ interface TOILSummaryCardProps {
   monthName?: string;
 }
 
-const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
-  summary,
-  loading = false,
-  monthName
+// Memoizing the summary boxes to prevent unnecessary re-rendering
+const TOILSummaryBoxes = memo(({ accrued, used, remaining }: { 
+  accrued: number;
+  used: number;
+  remaining: number;
 }) => {
-  const accrued = summary?.accrued || 0;
-  const used = summary?.used || 0;
-  const remaining = summary?.remaining || 0;
-  const total = accrued + used || 1;
-
   const box = [
     {
       label: "Earned",
@@ -51,6 +47,59 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
       icon: <CircleCheck className="w-5 h-5 text-green-400" />
     }
   ];
+
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-6">
+      {box.map(({ label, value, color, border, icon }) => (
+        <div
+          key={label}
+          className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl border ${border} bg-white/80 shadow-sm 
+            transition-transform group-hover:scale-105`}
+        >
+          {icon}
+          <span className={`text-[0.95rem] font-semibold tracking-tight ${color}`}>{label}</span>
+          <span className={`text-2xl font-extrabold leading-none ${color}`}>
+            {formatDisplayHours(value)}
+          </span>
+          <span className="text-xs text-gray-500 font-medium">hours</span>
+          
+          {label === "Earned" && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-xs text-gray-500 mt-1 cursor-help">
+                    Click for details
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-xs space-y-1">
+                    <p>TOIL is earned by working:</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>On RDOs</li>
+                      <li>On weekends</li>
+                      <li>On public holidays</li>
+                      <li>Over scheduled hours</li>
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+});
+
+const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
+  summary,
+  loading = false,
+  monthName
+}) => {
+  const accrued = summary?.accrued || 0;
+  const used = summary?.used || 0;
+  const remaining = summary?.remaining || 0;
+  const total = accrued + used || 1;
 
   const hasNoTOILActivity = accrued === 0 && used === 0 && remaining === 0 && !loading;
 
@@ -89,45 +138,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              {box.map(({ label, value, color, border, icon }) => (
-                <div
-                  key={label}
-                  className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl border ${border} bg-white/80 shadow-sm 
-                    transition-transform group-hover:scale-105`}
-                >
-                  {icon}
-                  <span className={`text-[0.95rem] font-semibold tracking-tight ${color}`}>{label}</span>
-                  <span className={`text-2xl font-extrabold leading-none ${color}`}>
-                    {formatDisplayHours(value)}
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium">hours</span>
-                  
-                  {label === "Earned" && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="text-xs text-gray-500 mt-1 cursor-help">
-                            Click for details
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-xs space-y-1">
-                            <p>TOIL is earned by working:</p>
-                            <ul className="list-disc pl-4 space-y-0.5">
-                              <li>On RDOs</li>
-                              <li>On weekends</li>
-                              <li>On public holidays</li>
-                              <li>Over scheduled hours</li>
-                            </ul>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-              ))}
-            </div>
+            <TOILSummaryBoxes accrued={accrued} used={used} remaining={remaining} />
+            
             <div className="mb-3 flex items-center justify-between text-xs font-medium text-gray-600 px-2">
               <span>Balance</span>
               <span className="font-bold tracking-tight">{formatDisplayHours(remaining)}</span>
@@ -145,4 +157,4 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
   );
 };
 
-export default TOILSummaryCard;
+export default memo(TOILSummaryCard);

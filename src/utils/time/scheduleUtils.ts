@@ -1,3 +1,4 @@
+
 /**
  * Schedule utility functions
  * Functions for working with work schedules and calendar data
@@ -5,6 +6,10 @@
 import { WeekDay, WorkSchedule } from "@/types";
 import { getDaysInMonth, isWeekend } from "date-fns";
 import { Holiday } from "@/lib/holidays";
+import { format } from "date-fns";
+
+// Holiday cache for quick lookups
+const holidayDateCache = new Map<string, boolean>();
 
 // Helper function to get weekday from date
 export const getWeekDay = (date: Date): WeekDay => {
@@ -97,8 +102,32 @@ export const isWorkingDay = (day: Date, workSchedule?: WorkSchedule): boolean =>
 };
 
 /**
+ * Efficient holiday lookup 
+ * @param date Date to check
+ * @param holidays List of holidays
+ * @returns True if the date is a holiday
+ */
+export const isHolidayDate = (date: Date, holidays: Holiday[] = []): boolean => {
+  // Create a cache key from the date
+  const dateString = format(date, 'yyyy-MM-dd');
+  
+  // Check cache first
+  if (holidayDateCache.has(dateString)) {
+    return holidayDateCache.get(dateString)!;
+  }
+  
+  // Check for holiday match
+  const isHoliday = holidays.some(holiday => holiday.date === dateString);
+  
+  // Cache result
+  holidayDateCache.set(dateString, isHoliday);
+  
+  return isHoliday;
+};
+
+/**
  * Check if a day is a non-working day according to the schedule and holidays
- * @param day The day to check
+ * @param date The day to check
  * @param workSchedule The work schedule
  * @param holidays Holiday list to check against
  * @returns True if it's a non-working day
@@ -108,20 +137,11 @@ export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule, holiday
   
   // Check if it's a weekend
   if (isWeekend(date)) {
-    console.debug(`[scheduleUtils] ${date.toISOString()} is a weekend`);
     return true;
   }
   
-  // Check if it's a holiday
-  const isHolidayDate = holidays.some(holiday => {
-    const holidayDate = new Date(holiday.date);
-    return holidayDate.getDate() === date.getDate() &&
-           holidayDate.getMonth() === date.getMonth() &&
-           holidayDate.getFullYear() === date.getFullYear();
-  });
-  
-  if (isHolidayDate) {
-    console.debug(`[scheduleUtils] ${date.toISOString()} is a holiday`);
+  // Check if it's a holiday - use optimized lookup
+  if (isHolidayDate(date, holidays)) {
     return true;
   }
   
@@ -130,7 +150,6 @@ export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule, holiday
   
   // Check if it's an RDO
   if (workSchedule.rdoDays[weekNum].includes(weekDay)) {
-    console.debug(`[scheduleUtils] ${date.toISOString()} is an RDO`);
     return true;
   }
   
@@ -205,4 +224,11 @@ export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule):
   });
   
   return totalHours;
+};
+
+/**
+ * Clear any cached holiday data
+ */
+export const clearHolidayCache = () => {
+  holidayDateCache.clear();
 };

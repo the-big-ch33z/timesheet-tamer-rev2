@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
@@ -50,13 +50,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     userId
   });
 
-  const { calculateToilForDay } = useTOILCalculations({
+  const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,
     entries,
     workSchedule
   });
 
+  // Memoize action states to prevent unnecessary re-renders
   const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>({
     sick: false,
     leave: false,
@@ -71,21 +72,20 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }));
   }, []);
 
-  useEffect(() => {
-    console.log("[WorkHoursInterface] Action States:", actionStates);
-  }, [actionStates]);
-
+  // Memoized version of notifyHoursChange to prevent excessive callbacks
   const notifyHoursChange = useCallback(() => {
     if (onHoursChange) {
       onHoursChange(totalEnteredHours);
     }
   }, [onHoursChange, totalEnteredHours]);
   
+  // Notify hours change when entries change
   useEffect(() => {
     logger.debug(`Entries changed for date ${date.toISOString()}, count: ${entries.length}`);
     notifyHoursChange();
   }, [entries, date, notifyHoursChange]);
 
+  // Debounce work hours saving to reduce localStorage operations
   useEffect(() => {
     if (!interactive || !startTime || !endTime) return;
     
@@ -98,25 +98,23 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return () => clearTimeout(timeoutId);
   }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
 
+  // Memoized handler for time changes
   const enhancedHandleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     logger.debug(`Time input changed: ${type}=${value}`);
     handleTimeChange(type, value);
   }, [handleTimeChange]);
 
+  // Trigger TOIL calculation only when a completed timesheet has stabilized (debounced)
   useEffect(() => {
+    // Only calculate TOIL when entries are complete
     if (!hasEntries || !isComplete) return;
     
-    if (typeof window !== 'undefined') {
-      const animationId = window.requestAnimationFrame(() => {
-        setTimeout(() => {
-          calculateToilForDay();
-        }, 100);
-      });
-      
-      return () => {
-        window.cancelAnimationFrame(animationId);
-      };
-    }
+    // Use a regular timeout instead of nested requestAnimationFrame + setTimeout
+    const timeoutId = setTimeout(() => {
+      calculateToilForDay();
+    }, 500); // Longer delay to allow UI to settle first
+    
+    return () => clearTimeout(timeoutId);
   }, [hasEntries, isComplete, calculateToilForDay]);
 
   return (
@@ -135,7 +133,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         calculatedHours={scheduledHours}
         hasEntries={hasEntries}
         interactive={interactive}
-        onTimeChange={handleTimeChange}
+        onTimeChange={enhancedHandleTimeChange}
         isComplete={isComplete}
         hoursVariance={hoursVariance}
         isUndertime={isUndertime}
@@ -149,8 +147,15 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         date={date}
         isComplete={isComplete}
       />
+
+      {/* Optionally show loading indicator during TOIL calculation */}
+      {isCalculating && (
+        <div className="mt-2 text-xs text-blue-500 text-center animate-pulse">
+          Calculating time accruals...
+        </div>
+      )}
     </div>
   );
 };
 
-export default WorkHoursInterface;
+export default React.memo(WorkHoursInterface);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
 import { toilService, TOIL_JOB_NUMBER } from '@/utils/time/services/toil-service';
@@ -5,6 +6,7 @@ import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
 import { getHolidays } from '@/lib/holidays';
+import { useMemo } from 'react';
 
 export interface UseTOILCalculationsProps {
   userId: string;
@@ -17,6 +19,7 @@ export interface UseTOILCalculationsResult {
   toilSummary: TOILSummary | null;
   isToilEntry: (entry: TimeEntry) => boolean;
   calculateToilForDay: () => Promise<TOILSummary | null>;
+  isCalculating: boolean;
 }
 
 export const useTOILCalculations = ({
@@ -27,13 +30,18 @@ export const useTOILCalculations = ({
 }: UseTOILCalculationsProps): UseTOILCalculationsResult => {
   const logger = useLogger('TOILCalculations');
   const [toilSummary, setToilSummary] = useState<TOILSummary | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
   
-  // Get holidays from the lib
-  const holidays = getHolidays();
+  // Memoize holidays to prevent recreation on every render
+  const holidays = useMemo(() => getHolidays(), []);
   
-  // Use refs to prevent unnecessary calculations
+  // Use refs to prevent unnecessary calculations and track calculation state
   const entriesRef = useRef<TimeEntry[]>([]);
-  const calculationInProgressRef = useRef<boolean>(false);
+  const calculationRequestRef = useRef<NodeJS.Timeout | null>(null);
+  const prevDateRef = useRef<string>("");
+  
+  // Track if this is mounted to avoid state updates after unmount
+  const isMountedRef = useRef(true);
   
   // Get the current month-year string
   const currentMonthYear = format(date, 'yyyy-MM');
@@ -43,40 +51,42 @@ export const useTOILCalculations = ({
     return entry.jobNumber === TOIL_JOB_NUMBER;
   }, []);
   
-  // Calculate TOIL immediately when entries change
+  // Debounced calculator for TOIL updates
   const calculateToilForDay = useCallback(async (): Promise<TOILSummary | null> => {
     try {
-      // Return early if missing required data
-      if (!userId || !date || !workSchedule) {
-        logger.debug('Missing required data for TOIL calculation');
+      // Return early if missing required data or component unmounted
+      if (!userId || !date || !workSchedule || !isMountedRef.current) {
+        logger.debug('Missing required data for TOIL calculation or component unmounted');
         return null;
       }
       
-      // Prevent concurrent calculations
-      if (calculationInProgressRef.current) {
-        logger.debug('TOIL calculation already in progress, skipping');
+      if (isCalculating) {
+        logger.debug('TOIL calculation already in progress, skipping duplicate request');
         return toilSummary;
       }
       
-      // Track that we're calculating
-      calculationInProgressRef.current = true;
+      // Update calculation state
+      if (isMountedRef.current) {
+        setIsCalculating(true);
+      }
       
       // Store current entries in ref to compare later
       entriesRef.current = [...entries];
+      
+      // Filter entries for efficiency
+      const dateKey = format(date, 'yyyy-MM-dd');
+      logger.debug(`[TOILCalc] Processing day ${dateKey} with ${entries.length} entries`);
       
       // Process TOIL usage entries first
       const toilUsageEntries = entries.filter(isToilEntry);
       const nonToilEntries = entries.filter(entry => !isToilEntry(entry));
       
-      logger.debug(`[TOILCalc] Starting calculation with ${nonToilEntries.length} regular entries and ${toilUsageEntries.length} TOIL usage entries`);
-      
       // Process each TOIL usage entry
       for (const entry of toilUsageEntries) {
-        const result = await toilService.recordTOILUsage(entry);
-        logger.debug(`[TOILCalc] TOIL usage recording ${result ? 'succeeded' : 'failed'} for ${entry.hours}h`);
+        await toilService.recordTOILUsage(entry);
       }
       
-      // Calculate and store TOIL accrual with holidays
+      // Calculate and store TOIL accrual with holidays - this uses the new optimized service
       const summary = await toilService.calculateAndStoreTOIL(
         nonToilEntries,
         date,
@@ -85,30 +95,69 @@ export const useTOILCalculations = ({
         holidays
       );
       
-      // Update internal state
-      setToilSummary(summary);
-      
-      // Calculation complete
-      calculationInProgressRef.current = false;
+      // Update internal state if component still mounted
+      if (isMountedRef.current) {
+        setToilSummary(summary);
+        setIsCalculating(false);
+      }
       
       return summary;
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
-      calculationInProgressRef.current = false;
+      if (isMountedRef.current) {
+        setIsCalculating(false);
+      }
       return null;
     }
-  }, [userId, date, entries, workSchedule, isToilEntry, currentMonthYear, toilSummary, logger, holidays]);
+  }, [userId, date, entries, workSchedule, isCalculating, toilSummary, logger, holidays, isToilEntry]);
   
-  // Calculate TOIL whenever entries change
+  // Debounce TOIL calculation when entries change
   useEffect(() => {
     if (!userId || !date || !entries.length) return;
     
-    calculateToilForDay();
+    // Clear any existing timeout
+    if (calculationRequestRef.current) {
+      clearTimeout(calculationRequestRef.current);
+      calculationRequestRef.current = null;
+    }
+    
+    // Check if date changed - this requires immediate calculation
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const dateChanged = dateKey !== prevDateRef.current;
+    prevDateRef.current = dateKey;
+    
+    // Setup debounced calculation
+    const timeout = dateChanged ? 100 : 500; // Shorter delay when date changes
+    
+    calculationRequestRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        calculateToilForDay();
+      }
+      calculationRequestRef.current = null;
+    }, timeout);
+    
+    return () => {
+      if (calculationRequestRef.current) {
+        clearTimeout(calculationRequestRef.current);
+        calculationRequestRef.current = null;
+      }
+    };
   }, [userId, date, entries, calculateToilForDay]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (calculationRequestRef.current) {
+        clearTimeout(calculationRequestRef.current);
+      }
+    };
+  }, []);
   
   return {
     toilSummary,
     isToilEntry,
-    calculateToilForDay
+    calculateToilForDay,
+    isCalculating
   };
 };

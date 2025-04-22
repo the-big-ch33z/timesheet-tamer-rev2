@@ -16,12 +16,50 @@ const logger = createTimeLogger('TOILService');
 const TOIL_RECORDS_KEY = 'toilRecords';
 const TOIL_USAGE_KEY = 'toilUsage';
 
+// Cache for holidays to avoid redundant date comparisons
+const holidayCache = new Map<string, boolean>();
+
+/**
+ * Efficiently check if a date is a holiday
+ */
+function isDateHoliday(date: Date, holidays: Holiday[]): boolean {
+  const dateKey = format(date, 'yyyy-MM-dd');
+  
+  if (holidayCache.has(dateKey)) {
+    return holidayCache.get(dateKey) || false;
+  }
+  
+  // Check if it's a holiday
+  const isHoliday = holidays.some(holiday => holiday.date === dateKey);
+  
+  // Cache result
+  holidayCache.set(dateKey, isHoliday);
+  
+  return isHoliday;
+}
+
+// Batching mechanism for TOIL calculations
+type PendingTOILCalculation = {
+  userId: string;
+  date: Date;
+  entries: TimeEntry[];
+  workSchedule?: WorkSchedule;
+  holidays: Holiday[];
+  resolve: (summary: TOILSummary | null) => void;
+};
+
 /**
  * Service to manage Time Off In Lieu (TOIL) records
  */
 export class TOILService {
   // Cache to prevent duplicate TOIL records for the same day
   private processedDates: Map<string, number> = new Map();
+  private pendingCalculations: Map<string, PendingTOILCalculation> = new Map();
+  private calculationTimer: number | null = null;
+  private isProcessing = false;
+  
+  // Cache for results to prevent redundant storage operations
+  private summaryCache: Map<string, TOILSummary> = new Map();
   
   /**
    * Calculate and store TOIL accrual based on timesheet entries compared to schedule
@@ -33,20 +71,117 @@ export class TOILService {
     workSchedule?: WorkSchedule,
     holidays: Holiday[] = []
   ): Promise<TOILSummary | null> {
+    return new Promise<TOILSummary | null>((resolve) => {
+      try {
+        if (!workSchedule) {
+          logger.debug('No work schedule provided, cannot calculate TOIL');
+          resolve(null);
+          return;
+        }
+  
+        // Generate a unique key for this calculation request
+        const dateKey = `${userId}-${format(date, 'yyyy-MM-dd')}`;
+        
+        // Check if we've recently processed this exact data
+        const now = Date.now();
+        if (this.processedDates.has(dateKey) && now - this.processedDates.get(dateKey)! < 300) {
+          logger.debug(`Recently processed TOIL for ${dateKey}, using cached result`);
+          
+          // Return cached summary
+          const monthYear = format(date, 'yyyy-MM');
+          const cachedSummary = this.getTOILSummary(userId, monthYear);
+          resolve(cachedSummary);
+          return;
+        }
+  
+        // Queue this calculation request
+        this.pendingCalculations.set(dateKey, {
+          userId,
+          date,
+          entries: [...entries], // Clone the entries array to avoid mutation issues
+          workSchedule,
+          holidays,
+          resolve
+        });
+        
+        // Schedule processing if not already scheduled
+        this.scheduleBatchProcessing();
+      } catch (error) {
+        logger.error('Error scheduling TOIL calculation:', error);
+        resolve(null);
+      }
+    });
+  }
+  
+  /**
+   * Schedule batch processing of pending calculations
+   */
+  private scheduleBatchProcessing() {
+    // Skip if already scheduled or processing
+    if (this.calculationTimer !== null || this.isProcessing) {
+      return;
+    }
+    
+    // Schedule for next frame to not block UI
+    this.calculationTimer = window.setTimeout(() => {
+      this.processPendingCalculations();
+    }, 100); // Small delay to allow batching of multiple requests
+  }
+  
+  /**
+   * Process all pending TOIL calculations in batch
+   */
+  private async processPendingCalculations() {
+    if (this.isProcessing || this.pendingCalculations.size === 0) {
+      this.calculationTimer = null;
+      return;
+    }
+    
     try {
-      if (!workSchedule) {
-        logger.debug('No work schedule provided, cannot calculate TOIL');
-        return null;
+      this.isProcessing = true;
+      
+      // Take a snapshot of current pending calculations
+      const calculations = Array.from(this.pendingCalculations.values());
+      
+      // Clear pending queue
+      this.pendingCalculations.clear();
+      this.calculationTimer = null;
+      
+      logger.debug(`[TOILService] Processing batch of ${calculations.length} TOIL calculations`);
+      
+      // Process each calculation
+      for (const calc of calculations) {
+        const { userId, date, entries, workSchedule, holidays, resolve } = calc;
+        
+        try {
+          const result = await this.performSingleCalculation(entries, date, userId, workSchedule, holidays);
+          resolve(result);
+        } catch (error) {
+          logger.error('Error in TOIL calculation:', error);
+          resolve(null);
+        }
       }
-
-      // Reduce throttle time for more responsive updates
-      const dateKey = `${userId}-${format(date, 'yyyy-MM-dd')}`;
-      const now = Date.now();
-      if (this.processedDates.has(dateKey) && now - this.processedDates.get(dateKey)! < 300) {
-        logger.debug(`Recently processed TOIL for ${dateKey}, waiting for throttle`);
-        return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
+    } finally {
+      this.isProcessing = false;
+      
+      // Check if new calculations were added during processing
+      if (this.pendingCalculations.size > 0) {
+        this.scheduleBatchProcessing();
       }
-
+    }
+  }
+  
+  /**
+   * Perform a single TOIL calculation
+   */
+  private async performSingleCalculation(
+    entries: TimeEntry[],
+    date: Date,
+    userId: string,
+    workSchedule?: WorkSchedule,
+    holidays: Holiday[] = []
+  ): Promise<TOILSummary | null> {
+    try {
       const monthYear = format(date, 'yyyy-MM');
       
       // Filter out TOIL usage entries before calculating actual hours
@@ -63,7 +198,7 @@ export class TOILService {
         // For working days, calculate excess hours as before
         const weekDay = getWeekDay(date);
         const weekNum = getFortnightWeek(date);
-        const daySchedule = workSchedule.weeks[weekNum][weekDay];
+        const daySchedule = workSchedule?.weeks[weekNum][weekDay];
         
         if (daySchedule?.startTime && daySchedule?.endTime) {
           const scheduledHours = calculateDayHours(
@@ -100,15 +235,19 @@ export class TOILService {
         logger.debug(`[TOIL Calc] Created new TOIL record: ${toilHours}h (id=${record.id})`);
       }
 
-      this.processedDates.set(dateKey, now);
+      const dateKey = `${userId}-${format(date, 'yyyy-MM-dd')}`;
+      this.processedDates.set(dateKey, Date.now());
 
-      // Roll off memory leaks
+      // Cleanup old entries from processedDates when it gets too large
       if (this.processedDates.size > 100) {
-        const keysToDelete = [...this.processedDates.keys()].slice(0, 50);
+        const keysToDelete = Array.from(this.processedDates.keys())
+          .sort((a, b) => (this.processedDates.get(a) || 0) - (this.processedDates.get(b) || 0))
+          .slice(0, 50);
+        
         keysToDelete.forEach(key => this.processedDates.delete(key));
       }
 
-      // Return updated summary immediately
+      // Return updated summary
       return this.getTOILSummary(userId, monthYear);
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
@@ -183,6 +322,10 @@ export class TOILService {
       
       const result = await this.storeTOILUsage(usage);
       logger.debug(`[TOILService] TOIL usage ${result ? 'successfully' : 'failed to be'} recorded: ${usage.hours}h`);
+      
+      // Clear summary cache when usage changes
+      this.summaryCache.clear();
+      
       return result;
     } catch (error) {
       logger.error('Error recording TOIL usage:', error);
@@ -401,12 +544,18 @@ export class TOILService {
    */
   public getTOILSummary(userId: string, monthYear: string): TOILSummary {
     try {
+      // Check cache first
+      const cacheKey = `${userId}-${monthYear}`;
+      if (this.summaryCache.has(cacheKey)) {
+        return { ...this.summaryCache.get(cacheKey)! };
+      }
+      
       const records = this.loadTOILRecords();
       const usage = this.loadTOILUsage();
       
       logger.debug(`[TOILService] Getting summary for user=${userId}, month=${monthYear}, records=${records.length}, usage=${usage.length}`);
       
-      // Filter records for this user and month
+      // Filter records for this user and month - optimize by doing a single pass
       const userRecords = records.filter(
         record => record.userId === userId && record.monthYear === monthYear
       );
@@ -427,13 +576,18 @@ export class TOILService {
       
       logger.debug(`[TOILService] Summary: accrued=${accrued}, used=${used}, remaining=${remaining}`);
       
-      return {
+      const summary = {
         userId,
         monthYear,
         accrued,
         used,
         remaining
       };
+      
+      // Cache the result
+      this.summaryCache.set(cacheKey, summary);
+      
+      return summary;
     } catch (error) {
       logger.error('Error getting TOIL summary:', error);
       return {
@@ -478,6 +632,8 @@ export class TOILService {
    */
   public clearCache(): void {
     this.processedDates.clear();
+    this.summaryCache.clear();
+    holidayCache.clear();
     logger.debug('TOIL cache cleared');
   }
 }
