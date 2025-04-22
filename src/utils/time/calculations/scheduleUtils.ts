@@ -1,5 +1,8 @@
 
 import { WorkSchedule } from '@/types';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('scheduleUtils');
 
 export const calculateAdjustedFortnightHours = (schedule: WorkSchedule, fte: number = 1.0): number => {
   const baseHours = calculateFortnightHoursFromSchedule(schedule);
@@ -7,22 +10,32 @@ export const calculateAdjustedFortnightHours = (schedule: WorkSchedule, fte: num
 };
 
 export const calculateFortnightHoursFromSchedule = (schedule: WorkSchedule): number => {
+  if (!schedule) return 0;
+  
   let totalHours = 0;
   
   // Loop through each week in the schedule
-  Object.values(schedule.weeks).forEach(week => {
+  Object.entries(schedule.weeks).forEach(([weekNum, week]) => {
+    const weekNumber = parseInt(weekNum) as 1 | 2;
+    
     // Loop through each day in the week
-    Object.values(week).forEach(day => {
-      if (day) {
-        const startTime = new Date(`1970-01-01T${day.startTime}`);
-        const endTime = new Date(`1970-01-01T${day.endTime}`);
-        
-        // Calculate hours difference
-        const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-        totalHours += hours;
+    Object.entries(week).forEach(([day, dayConfig]) => {
+      // Skip if it's a non-working day or an RDO
+      if (!dayConfig || schedule.rdoDays[weekNumber].includes(day)) {
+        return;
       }
+      
+      const startTime = new Date(`1970-01-01T${dayConfig.startTime}`);
+      const endTime = new Date(`1970-01-01T${dayConfig.endTime}`);
+      
+      // Calculate hours difference
+      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      totalHours += hours;
+      
+      logger.debug(`Day ${day} in week ${weekNum}: +${hours} hours`);
     });
   });
   
+  logger.debug(`Total fortnight hours calculated: ${totalHours}`);
   return totalHours;
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { WeekConfiguration } from "./schedule/WeekConfiguration";
 import { CreateScheduleDialog } from "./schedule/CreateScheduleDialog";
 import { useScheduleState } from "./schedule/useScheduleState";
 import { Badge } from "@/components/ui/badge";
-import { calculateFortnightHoursFromSchedule } from "@/utils/time/scheduleUtils";
+import { useScheduleCalculation } from "@/hooks/timesheet/useScheduleCalculation";
 
 const WorkScheduleSettings: React.FC = () => {
   const {
@@ -33,16 +32,8 @@ const WorkScheduleSettings: React.FC = () => {
     toggleBreak
   } = useScheduleState();
   
-  // Calculate fortnight hours based on the current editing schedule
-  const [fortnightHours, setFortnightHours] = useState(0);
-  
-  // Update fortnight hours whenever the schedule changes
-  useEffect(() => {
-    if (editingSchedule) {
-      const hours = calculateFortnightHoursFromSchedule(editingSchedule);
-      setFortnightHours(hours);
-    }
-  }, [editingSchedule]);
+  // Use our updated hook for live calculations
+  const { fortnightHours } = useScheduleCalculation(editingSchedule);
 
   return (
     <Card>
@@ -75,7 +66,7 @@ const WorkScheduleSettings: React.FC = () => {
               onNameChange={handleNameChange}
             />
             
-            {/* Display the calculated fortnight hours */}
+            {/* Display the live-calculated fortnight hours */}
             <div className="flex items-center">
               <span className="text-sm text-muted-foreground mr-2">Fortnight Hours:</span>
               <Badge variant="outline" className="text-sm font-medium">
