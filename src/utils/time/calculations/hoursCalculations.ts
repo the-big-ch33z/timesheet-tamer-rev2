@@ -1,4 +1,3 @@
-
 import { calculateFortnightHoursFromSchedule } from "../scheduleUtils";
 import { TimeCalculationError } from "../errors/timeErrorHandling";
 import { getWorkdaysInMonth, getFortnightWeek } from "../scheduleUtils";
@@ -33,9 +32,6 @@ export const calculateHoursFromTimes = (start: string, end: string): number => {
 
 /**
  * Count RDO days in a given month based on the work schedule
- * @param month Date in the target month
- * @param workSchedule The work schedule to check
- * @returns Number of RDO days in the month
  */
 export const countRdoDaysInMonth = (month: Date, workSchedule?: WorkSchedule): number => {
   if (!workSchedule) return 0;
@@ -46,12 +42,10 @@ export const countRdoDaysInMonth = (month: Date, workSchedule?: WorkSchedule): n
   
   let rdoCount = 0;
   
-  // Check each day in the month
   daysInMonth.forEach(day => {
     const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()] as WeekDay;
     const fortnightWeek = getFortnightWeek(day);
     
-    // Count as RDO if it's in the RDO days for this fortnight week
     if (workSchedule.rdoDays[fortnightWeek].includes(weekdayName)) {
       rdoCount++;
     }
@@ -63,69 +57,39 @@ export const countRdoDaysInMonth = (month: Date, workSchedule?: WorkSchedule): n
 /**
  * Calculate monthly target hours based on fortnightly hours 
  * @param fortnightHours Hours per fortnight (10 working days)
- * @param dateOrWorkdays Date or number of workdays in month
+ * @param month Date in the target month
  * @param workSchedule Optional work schedule to consider RDO days
  * @returns Target hours for the month
  */
 export const calculateMonthlyTargetHours = (
   fortnightHours: number, 
-  dateOrWorkdays: Date | number,
+  month: Date,
   workSchedule?: WorkSchedule
 ): number => {
   try {
-    // Validate fortnightly hours
     if (fortnightHours < 0) {
-      throw new TimeCalculationError(`Invalid fortnight hours: ${fortnightHours}. Must be a positive number.`);
+      throw new TimeCalculationError(`Invalid fortnight hours: ${fortnightHours}`);
     }
 
-    // Calculate number of workdays
-    let workdaysInMonth: number;
-    let month: Date | null = null;
+    let workdaysInMonth = getWorkdaysInMonth(month);
     
-    if (dateOrWorkdays instanceof Date) {
-      // If we were given a date, calculate workdays in that month
-      workdaysInMonth = getWorkdaysInMonth(dateOrWorkdays);
-      month = dateOrWorkdays;
-    } else if (typeof dateOrWorkdays === 'number') {
-      // If we were given a number directly, use that
-      workdaysInMonth = dateOrWorkdays;
-    } else {
-      throw new TimeCalculationError('Invalid date or workdays parameter');
-    }
-    
-    // Validate workdays
-    if (workdaysInMonth < 1) {
-      throw new TimeCalculationError(`Invalid number of workdays: ${workdaysInMonth}`);
-    }
-
-    if (workdaysInMonth > 31) {
-      throw new TimeCalculationError(`Too many workdays specified: ${workdaysInMonth}`);
-    }
-    
-    // Deduct RDO days if we have a work schedule and a month date
-    let rdoDays = 0;
-    if (workSchedule && month) {
-      rdoDays = countRdoDaysInMonth(month, workSchedule);
-      
-      // Deduct RDO days from workdays count
-      if (rdoDays > 0) {
-        workdaysInMonth = Math.max(0, workdaysInMonth - rdoDays);
-      }
+    // Deduct RDO days if we have a work schedule
+    if (workSchedule) {
+      const rdoDays = countRdoDaysInMonth(month, workSchedule);
+      workdaysInMonth = Math.max(0, workdaysInMonth - rdoDays);
     }
     
     // Standard fortnight has 10 workdays
     const standardFortnightDays = 10;
     
-    // Calculate based on ratio between actual workdays and standard fortnight
+    // Calculate based on ratio of actual workdays to standard fortnight
     const targetHours = fortnightHours * (workdaysInMonth / standardFortnightDays);
     
-    // Round to single decimal place
-    return Math.round(targetHours * 10) / 10;
+    return Math.round(targetHours * 10) / 10; // Round to 1 decimal place
   } catch (error) {
     if (error instanceof TimeCalculationError) {
       throw error;
     }
-    
     throw new TimeCalculationError(
       `Failed to calculate monthly target hours: ${error instanceof Error ? error.message : String(error)}`
     );

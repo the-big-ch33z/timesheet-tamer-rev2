@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
@@ -52,14 +51,20 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         workHours?.endTime
       );
 
-      logger.debug(`Day ${day.date.toISOString()}: entries=${day.entries.length}, complete=${isComplete}, userId: ${userId}`);
+      // Check if it's an RDO based on the fortnight week
+      const isRdo = workSchedule?.rdoDays?.[getFortnightWeek(day.date)]?.includes(
+        getWeekDay(day.date)
+      ) || false;
+
+      logger.debug(`Day ${day.date.toISOString()}: entries=${day.entries.length}, complete=${isComplete}, isRdo=${isRdo}, userId: ${userId}`);
 
       return {
         ...day,
-        isComplete
+        isComplete,
+        isRdo
       };
     });
-  }, [days, getWorkHoursForDate, userId]);
+  }, [days, getWorkHoursForDate, userId, workSchedule]);
 
   React.useEffect(() => {
     logger.debug(`Calendar grid updated with ${processedDays.length} days, using workSchedule: ${workSchedule?.id || 'none'}`);

@@ -1,12 +1,15 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { User, WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { formatDisplayHours } from "@/utils/time/formatting";
-import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 import { Progress } from "@/components/ui/progress";
 import { CirclePercent } from "lucide-react";
+import { useScheduleCalculation } from "@/hooks/timesheet/useScheduleCalculation";
+import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('MonthSummary');
 
 interface MonthSummaryProps {
   userId: string;
@@ -20,35 +23,28 @@ const MonthSummary: React.FC<MonthSummaryProps> = ({
   workSchedule
 }) => {
   const [monthTotalHours, setMonthTotalHours] = useState(0);
-  const [daysWorked, setDaysWorked] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-
+  
   const { getMonthEntries, calculateTotalHours } = useTimeEntryContext();
+  const { fortnightHours } = useScheduleCalculation(workSchedule);
+
+  // Calculate monthly target hours considering RDOs
+  const monthlyTarget = useMemo(() => {
+    const target = calculateMonthlyTargetHours(fortnightHours, date, workSchedule);
+    logger.debug(`Calculated monthly target: ${target} hours from fortnight hours: ${fortnightHours}`);
+    return target;
+  }, [fortnightHours, date, workSchedule]);
 
   useEffect(() => {
     setIsLoading(true);
-
-    // Get entries for the month
     const monthEntries = getMonthEntries(date, userId);
-
-    // Calculate total hours
     const totalHours = calculateTotalHours(monthEntries);
+    
+    logger.debug(`Month total hours: ${totalHours} from ${monthEntries.length} entries`);
     setMonthTotalHours(totalHours);
-
-    // Calculate days worked (unique dates with entries)
-    const uniqueDates = new Set(
-      monthEntries.map(entry => format(entry.date, 'yyyy-MM-dd'))
-    );
-    setDaysWorked(uniqueDates.size);
-
     setIsLoading(false);
   }, [date, userId, getMonthEntries, calculateTotalHours]);
 
-  // Calculate workdays in month
-  const workdaysInMonth = getWorkdaysInMonth(date);
-
-  // Estimate monthly hours (assume 8 per workday)
-  const monthlyTarget = workdaysInMonth * 8;
   const percent = monthlyTarget > 0 ? Math.min(100, Math.round((monthTotalHours / monthlyTarget) * 100)) : 0;
   const hoursRemaining = monthlyTarget - monthTotalHours;
 
