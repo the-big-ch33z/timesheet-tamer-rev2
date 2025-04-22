@@ -1,5 +1,5 @@
 
-import { Holiday } from "@/types";
+import { Holiday } from "@/lib/holidays";
 import { isWeekend } from "date-fns";
 import { addDays } from "date-fns";
 import { createTimeLogger } from "./errors";
