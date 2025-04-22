@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from "react";
+
+import React, { useState, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { WorkSchedule } from "@/types";
@@ -8,6 +9,9 @@ import CalendarWeekdayHeader from "./calendar/CalendarWeekdayHeader";
 import CalendarGrid from "./calendar/CalendarGrid";
 import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 import { useToast } from "@/hooks/use-toast";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('TimesheetCalendar');
 
 interface TimesheetCalendarProps {
   currentMonth: Date;
@@ -28,6 +32,15 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { toast } = useToast();
+  
+  // Log when workSchedule changes
+  useEffect(() => {
+    if (workSchedule) {
+      logger.debug(`[TimesheetCalendar] Using work schedule: ${workSchedule.name || 'unnamed'} (id: ${workSchedule.id})`);
+    } else {
+      logger.debug(`[TimesheetCalendar] No work schedule available`);
+    }
+  }, [workSchedule]);
   
   const handlePrevMonth = useCallback(() => {
     console.debug("[TimesheetCalendar] Moving to previous month, saving pending changes");

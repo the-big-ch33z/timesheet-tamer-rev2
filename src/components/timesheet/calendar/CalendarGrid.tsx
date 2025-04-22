@@ -1,16 +1,18 @@
+
 import React, { useMemo } from "react";
 import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
+import { WorkSchedule } from "@/types";
 
 const logger = createTimeLogger('CalendarGrid');
 
 interface CalendarGridProps {
   currentMonth: Date;
   selectedDate: Date | null;
-  workSchedule?: any;
+  workSchedule?: WorkSchedule;
   onDayClick: (day: Date) => void;
   userId: string;
 }
@@ -22,6 +24,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onDayClick,
   userId
 }) => {
+  // Log when workSchedule changes
+  React.useEffect(() => {
+    if (workSchedule) {
+      logger.debug(`CalendarGrid received workSchedule: ${workSchedule.name || 'unnamed'}`);
+    } else {
+      logger.debug('CalendarGrid has no workSchedule');
+    }
+  }, [workSchedule]);
+
   const { days, monthStartDay } = useCalendarData(currentMonth, selectedDate, workSchedule, userId);
   const { getWorkHoursForDate } = useTimesheetWorkHours();
 
@@ -51,13 +62,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }, [days, getWorkHoursForDate, userId]);
 
   React.useEffect(() => {
-    logger.debug(`Calendar grid updated with ${processedDays.length} days`);
-    processedDays.forEach(day => {
-      if (day.entries.length > 0) {
-        logger.debug(`Day ${day.date.toISOString()} has ${day.entries.length} entries, complete: ${day.isComplete}`);
-      }
-    });
-  }, [processedDays]);
+    logger.debug(`Calendar grid updated with ${processedDays.length} days, using workSchedule: ${workSchedule?.id || 'none'}`);
+    
+    // Log days with special status
+    const specialDays = processedDays.filter(day => day.status.isRDO || day.status.dayHoliday);
+    if (specialDays.length > 0) {
+      logger.debug(`Found ${specialDays.length} special days in the month`);
+      specialDays.forEach(day => {
+        if (day.status.isRDO) {
+          logger.debug(`Day ${day.date.toISOString()} is marked as RDO`);
+        }
+        if (day.status.dayHoliday) {
+          logger.debug(`Day ${day.date.toISOString()} is marked as holiday: ${day.status.holidayName}`);
+        }
+      });
+    }
+  }, [processedDays, workSchedule]);
 
   return (
     <div className="grid grid-cols-7 gap-2">

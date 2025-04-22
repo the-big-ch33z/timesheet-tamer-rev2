@@ -7,7 +7,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import WorkHoursInterface from "./WorkHoursInterface";
 import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
-import ExistingEntriesList from "./components/ExistingEntriesList";
+import { useUserTimesheetContext } from "@/contexts/timesheet/user-context/UserTimesheetContext";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -31,6 +31,19 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     getDayEntries,
     dayEntries: contextDayEntries
   } = useTimeEntryContext();
+
+  // Get the user's work schedule from context if not provided
+  const userContext = useUserTimesheetContext();
+  const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
+  
+  // Log when schedule changes
+  useEffect(() => {
+    if (effectiveWorkSchedule) {
+      logger.debug(`[WorkHoursSection] Using work schedule: ${effectiveWorkSchedule.name || 'unnamed'}`);
+    } else {
+      logger.debug(`[WorkHoursSection] No work schedule available`);
+    }
+  }, [effectiveWorkSchedule]);
 
   // Get entries for the current day
   const dayEntries = getDayEntries(date);
@@ -85,7 +98,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
           userId={userId} 
           interactive={interactive} 
           entries={dayEntries} 
-          workSchedule={workSchedule} 
+          workSchedule={effectiveWorkSchedule} 
         />
       </Card>
       

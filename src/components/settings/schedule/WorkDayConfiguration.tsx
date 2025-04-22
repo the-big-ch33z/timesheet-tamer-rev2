@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { WorkSchedule, WeekDay } from "@/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Coffee, Bell } from "lucide-react";
+
 interface WorkDayConfigurationProps {
   day: WeekDay;
   activeWeek: 1 | 2;
@@ -14,6 +16,7 @@ interface WorkDayConfigurationProps {
   toggleRdoDay: (day: WeekDay) => void;
   toggleBreak: (day: WeekDay, breakType: 'lunch' | 'smoko') => void;
 }
+
 export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
   day,
   activeWeek,
@@ -29,6 +32,10 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
     lunch: false,
     smoko: false
   };
+  
+  // Use activeWeek specifically for displaying and tracking RDO days
+  const isRdoDay = editingSchedule.rdoDays[activeWeek].includes(day);
+
   return <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
       <div className="w-28 capitalize">{day}</div>
       <div className="flex items-center gap-2">
@@ -64,7 +71,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
           
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor={`rdo-${activeWeek}-${day}`} className="text-sm">RDO</Label>
-            <Switch id={`rdo-${activeWeek}-${day}`} checked={editingSchedule.rdoDays[activeWeek].includes(day)} onCheckedChange={() => toggleRdoDay(day)} />
+            <Switch id={`rdo-${activeWeek}-${day}`} checked={isRdoDay} onCheckedChange={() => toggleRdoDay(day)} />
           </div>
         </>}
     </div>;

@@ -1,3 +1,4 @@
+
 import { useMemo } from "react";
 import { eachDayOfInterval, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -8,6 +9,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
 import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
 import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
+import { getFortnightWeek } from "@/utils/time/scheduleUtils";
 
 const logger = createTimeLogger('useCalendarData');
 
@@ -70,12 +72,15 @@ export function useCalendarData(
       
       if (workSchedule) {
         const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
-        isRDO = workSchedule.rdoDays[1].includes(weekdayName as any) || 
-                workSchedule.rdoDays[2].includes(weekdayName as any);
+        // Get the correct fortnight week for this day
+        const fortnightWeek = getFortnightWeek(day);
         
-        const week = 1;
-        if (workSchedule.weeks[week] && workSchedule.weeks[week][weekdayName as any]) {
-          dayWorkHours = workSchedule.weeks[week][weekdayName as any];
+        // Check if this day is an RDO in the correct fortnight week
+        isRDO = workSchedule.rdoDays[fortnightWeek].includes(weekdayName as any);
+        
+        // Get work hours for the correct fortnight week
+        if (workSchedule.weeks[fortnightWeek] && workSchedule.weeks[fortnightWeek][weekdayName as any]) {
+          dayWorkHours = workSchedule.weeks[fortnightWeek][weekdayName as any];
         }
       }
 
