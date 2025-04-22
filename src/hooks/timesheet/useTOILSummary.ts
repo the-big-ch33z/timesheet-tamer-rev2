@@ -4,6 +4,7 @@ import { TOILSummary } from '@/types/toil';
 import { toilService } from '@/utils/time/services/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
+import { getTOILSummary } from '@/utils/time/services/toil/storage';
 
 export interface UseTOILSummaryProps {
   userId: string;
@@ -44,7 +45,8 @@ export const useTOILSummary = ({
         return;
       }
       
-      const toilSummary = toilService.getTOILSummary(userId, monthYear);
+      // Use the imported getTOILSummary function instead of accessing it through toilService
+      const toilSummary = getTOILSummary(userId, monthYear);
       setSummary(toilSummary);
       
       logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
