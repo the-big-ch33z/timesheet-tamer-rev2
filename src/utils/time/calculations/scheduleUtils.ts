@@ -29,8 +29,18 @@ export const calculateFortnightHoursFromSchedule = (schedule: WorkSchedule): num
       const endTime = new Date(`1970-01-01T${dayConfig.endTime}`);
       
       // Calculate hours difference
-      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-      totalHours += hours;
+      let hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      
+      // Subtract breaks if configured
+      if (dayConfig.breaks?.lunch) {
+        hours -= 0.5; // 30 min lunch break
+      }
+      
+      if (dayConfig.breaks?.smoko) {
+        hours -= 0.25; // 15 min smoko break
+      }
+      
+      totalHours += Math.max(0, hours);
       
       logger.debug(`Day ${day} in week ${weekNum}: +${hours} hours`);
     });

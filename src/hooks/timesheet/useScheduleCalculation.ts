@@ -1,5 +1,5 @@
 
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { WorkSchedule } from "@/types";
 import { calculateFortnightHoursFromSchedule } from "@/utils/time/scheduleUtils";
 import { createTimeLogger } from "@/utils/time/errors";
@@ -7,10 +7,13 @@ import { createTimeLogger } from "@/utils/time/errors";
 const logger = createTimeLogger('useScheduleCalculation');
 
 export const useScheduleCalculation = (schedule?: WorkSchedule, fte: number = 1.0) => {
-  const fortnightHours = useMemo(() => {
+  const [fortnightHours, setFortnightHours] = useState<number>(0);
+  
+  useEffect(() => {
     if (!schedule) {
-      logger.debug('No schedule provided, returning 0 hours');
-      return 0;
+      logger.debug('No schedule provided, setting 0 hours');
+      setFortnightHours(0);
+      return;
     }
     
     // Calculate base hours from schedule taking into account RDOs
@@ -21,13 +24,12 @@ export const useScheduleCalculation = (schedule?: WorkSchedule, fte: number = 1.
     const adjustedHours = Math.round((baseHours * fte) * 2) / 2;
     logger.debug(`Adjusted hours with FTE ${fte}: ${adjustedHours}`);
     
-    return adjustedHours;
+    setFortnightHours(adjustedHours);
+    
   }, [
-    schedule?.id,
-    schedule?.weeks,
-    schedule?.rdoDays,
+    schedule?.id, 
     fte,
-    // Add deep dependencies to ensure recalculation on any schedule change
+    // Deep dependencies to ensure reactivity to any schedule changes
     JSON.stringify(schedule?.weeks),
     JSON.stringify(schedule?.rdoDays)
   ]);

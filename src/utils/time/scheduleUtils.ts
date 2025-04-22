@@ -119,18 +119,46 @@ export const calculateDayHours = (startTime: string, endTime: string, breaks?: {
  * @returns Total hours in the fortnight
  */
 export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule): number => {
+  if (!workSchedule) return 0;
+  
   let totalHours = 0;
   
-  // Loop through each week in the schedule
-  Object.values(workSchedule.weeks).forEach(week => {
-    // Loop through each day in the week
-    Object.values(week).forEach(day => {
-      if (day) {
-        const hours = calculateDayHours(day.startTime, day.endTime, day.breaks);
-        totalHours += hours;
+  // Process each week in the schedule
+  Object.entries(workSchedule.weeks).forEach(([weekNum, week]) => {
+    const weekNumber = parseInt(weekNum) as 1 | 2;
+    const rdoDaysForWeek = workSchedule.rdoDays[weekNumber];
+    
+    // Process each day in the week
+    Object.entries(week).forEach(([day, dayConfig]) => {
+      // Skip if it's a non-working day
+      if (!dayConfig) {
+        return;
       }
+      
+      // Skip if it's an RDO day
+      if (rdoDaysForWeek.includes(day as WeekDay)) {
+        return;
+      }
+      
+      // Calculate hours for this day
+      const startTime = new Date(`1970-01-01T${dayConfig.startTime}`);
+      const endTime = new Date(`1970-01-01T${dayConfig.endTime}`);
+      
+      // Calculate hours difference
+      let hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      
+      // Subtract breaks if configured
+      if (dayConfig.breaks?.lunch) {
+        hours -= 0.5; // 30 min lunch break
+      }
+      
+      if (dayConfig.breaks?.smoko) {
+        hours -= 0.25; // 15 min smoko break
+      }
+      
+      totalHours += Math.max(0, hours);
     });
   });
   
-  return Math.round(totalHours * 2) / 2; // Round to nearest 0.5
+  return totalHours;
 };
