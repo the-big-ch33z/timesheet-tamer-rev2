@@ -9,7 +9,8 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
 import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
 import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
-import { getFortnightWeek } from "@/utils/time/scheduleUtils";
+import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
+import { getShiftedRDODate } from "@/utils/time/rdoDisplay";
 
 const logger = createTimeLogger('useCalendarData');
 
@@ -56,10 +57,8 @@ export function useCalendarData(
       const workHours = userId ? getWorkHoursForDate(day, userId) : null;
       
       if (!workHours && userId) {
-        logger.warn(`No work hours found for ${formatDateForComparison(day)} — userId: ${userId}`);
+        logger.debug(`No work hours found for ${formatDateForComparison(day)} — userId: ${userId}`);
       }
-      
-      logger.debug(`Processing ${formatDateForComparison(day)}: found ${dayEntries.length} entries`);
       
       const totalHours = dayEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
       
@@ -68,17 +67,22 @@ export function useCalendarData(
       const holiday = holidays.find(h => areSameDates(new Date(h.date), day));
       
       let isRDO = false;
+      let shiftedRDODate: Date | null = null;
       let dayWorkHours = null;
       
       if (workSchedule) {
         const weekdayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.getDay()];
-        // Get the correct fortnight week for this day
         const fortnightWeek = getFortnightWeek(day);
         
-        // Check if this day is an RDO in the correct fortnight week
+        // Check if this day is an RDO in the schedule
         isRDO = workSchedule.rdoDays[fortnightWeek].includes(weekdayName as any);
         
-        // Get work hours for the correct fortnight week
+        // If it's an RDO and falls on a holiday, calculate shifted date
+        if (isRDO && holiday) {
+          shiftedRDODate = getShiftedRDODate(day, holidays);
+          logger.debug(`RDO on holiday detected: ${formatDateForComparison(day)}, shifted to: ${shiftedRDODate ? formatDateForComparison(shiftedRDODate) : 'none'}`);
+        }
+        
         if (workSchedule.weeks[fortnightWeek] && workSchedule.weeks[fortnightWeek][weekdayName as any]) {
           dayWorkHours = workSchedule.weeks[fortnightWeek][weekdayName as any];
         }
@@ -99,6 +103,7 @@ export function useCalendarData(
           dayHoliday: !!holiday,
           holidayName: holiday ? holiday.name : null,
           isRDO,
+          shiftedRDODate,
           workHours: dayWorkHours,
           isWorkDay: baseState.isWorkingDay && !isRDO && !holiday
         },
@@ -107,8 +112,6 @@ export function useCalendarData(
         totalHours
       };
     });
-    
-    logger.debug(`Calendar data calculation complete. Month has ${days.length} days, userId: ${userId}`);
     
     return {
       days,
