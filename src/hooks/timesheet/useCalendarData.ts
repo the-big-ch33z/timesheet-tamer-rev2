@@ -9,7 +9,7 @@ import { areSameDates, formatDateForComparison } from "@/utils/time/validation";
 import { useCalendarHelpers } from "@/components/timesheet/calendar/useCalendarHelpers";
 import { useTimeCompletion } from "@/hooks/timesheet/useTimeCompletion";
 import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
-import { getShiftedRDODate } from "@/utils/time/rdoDisplay";
+import { getShiftedRDODate, getRDOShiftReason } from "@/utils/time/rdoDisplay";
 
 const logger = createTimeLogger('useCalendarData');
 
