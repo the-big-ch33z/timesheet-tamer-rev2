@@ -1,6 +1,7 @@
 
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
+import { TOILSummary, TOILUsage } from "@/types/toil";
 import { createTimeLogger } from '@/utils/time/errors';
 import { performSingleCalculation, hasRecentlyProcessed } from './batch-processing';
 import { PendingTOILCalculation } from './types';
@@ -56,6 +57,42 @@ export class TOILService {
 
       this.scheduleBatchProcessing();
     });
+  }
+
+  /**
+   * Record TOIL usage from a timesheet entry
+   */
+  public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
+    if (!entry || !entry.id || !entry.userId) {
+      logger.error('Invalid entry for TOIL usage');
+      return false;
+    }
+
+    try {
+      // Create a TOIL usage record from the entry
+      const usage: TOILUsage = {
+        id: entry.id,
+        userId: entry.userId,
+        date: entry.date,
+        hours: entry.hours,
+        entryId: entry.id,
+        monthYear: entry.date.toISOString().slice(0, 7)
+      };
+      
+      // Store the usage record
+      const result = await storeTOILUsage(usage);
+      
+      if (result) {
+        logger.debug(`Recorded TOIL usage: ${entry.hours} hours (id=${entry.id})`);
+        // Trigger an update event
+        triggerTOILSave();
+      }
+      
+      return result;
+    } catch (error) {
+      logger.error('Error recording TOIL usage:', error);
+      return false;
+    }
   }
 
   private scheduleBatchProcessing() {
