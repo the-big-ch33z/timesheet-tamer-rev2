@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -119,81 +120,83 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [handleTimeChange]);
 
   return (
-    <div className="relative flex flex-row">
-      <div className="flex-1 pr-7">
-        <div className="flex justify-center mb-1">
-          <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
-        </div>
-        <WorkHoursHeader hasEntries={hasEntries} />
-        <WorkHoursDisplay
-          startTime={startTime}
-          endTime={endTime}
-          totalHours={totalEnteredHours}
-          calculatedHours={scheduledHours}
-          hasEntries={hasEntries}
-          interactive={interactive}
-          onTimeChange={timeChangeHandler}
-          isComplete={isComplete}
-          hoursVariance={hoursVariance}
-          isUndertime={isUndertime}
-          breaksIncluded={{
-            lunch: hasLunchBreakInSchedule,
-            smoko: hasSmokoBreakInSchedule
-          }}
-          overrideStates={{
-            lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
-          }}
-        />
-
-        <WorkHoursAlerts
-          hasEntries={hasEntries}
-          isUndertime={isUndertime}
-          hoursVariance={hoursVariance}
-          interactive={interactive}
-          date={date}
-          isComplete={isComplete}
-        />
-
-        {isCalculating && (
-          <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
-            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Calculating time accruals...
-          </div>
-        )}
+    <div>
+      <div className="flex justify-center mb-1">
+        <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
       </div>
-      <div className="flex flex-col justify-center items-center pl-4 pr-2 min-w-[38px]">
-        <div className="flex flex-col items-center">
-          <div className="mb-2 text-xs text-gray-400 rotate-180" style={{ writingMode: "vertical-lr" }}>
-            Used
-          </div>
-          <div className="flex flex-col items-center">
-            <Progress
-              value={progressPercent}
-              color={isComplete ? "success" : isUndertime ? "warning" : (scheduledHours > 0 && totalEnteredHours > scheduledHours) ? "danger" : "info"}
-              indicatorColor={
-                isComplete
-                  ? "bg-green-500"
-                  : isUndertime
-                  ? "bg-amber-500"
-                  : scheduledHours > 0 && totalEnteredHours > scheduledHours
-                  ? "bg-red-500"
-                  : "bg-blue-500"
-              }
-              className="w-3 h-20 bg-blue-100 rounded-full transition-all duration-300"
-              style={{ writingMode: "vertical-lr", rotate: "180deg" }}
-            />
-            <div className="text-[11px] mt-1 text-gray-700 font-semibold w-8 text-center select-none">{progressPercent}%</div>
-          </div>
-          <div className="mt-2 text-xs text-gray-400" style={{ writingMode: "vertical-lr" }}>
-            / {scheduledHours.toFixed(2)}
-          </div>
-        </div>
+
+      <WorkHoursHeader hasEntries={hasEntries} />
+
+      <WorkHoursDisplay
+        startTime={startTime}
+        endTime={endTime}
+        totalHours={totalEnteredHours}
+        calculatedHours={scheduledHours}
+        hasEntries={hasEntries}
+        interactive={interactive}
+        onTimeChange={timeChangeHandler}
+        isComplete={isComplete}
+        hoursVariance={hoursVariance}
+        isUndertime={isUndertime}
+        breaksIncluded={{
+          lunch: hasLunchBreakInSchedule,
+          smoko: hasSmokoBreakInSchedule
+        }}
+        overrideStates={{
+          lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
+        }}
+      />
+
+      {/* Reinstated styled horizontal progress bar */}
+      <div className="mt-2 w-full flex items-center gap-3">
+        <Progress
+          value={progressPercent}
+          color={
+            isComplete
+              ? "success"
+              : isUndertime
+              ? "warning"
+              : scheduledHours > 0 && totalEnteredHours > scheduledHours
+              ? "danger"
+              : "info"
+          }
+          indicatorColor={
+            isComplete
+              ? "bg-green-500"
+              : isUndertime
+              ? "bg-amber-500"
+              : scheduledHours > 0 && totalEnteredHours > scheduledHours
+              ? "bg-red-500"
+              : "bg-blue-500"
+          }
+          className="w-full h-3"
+        />
+        <span className="text-xs text-gray-700 font-semibold w-12 text-right">
+          {progressPercent}%
+        </span>
       </div>
+
+      <WorkHoursAlerts
+        hasEntries={hasEntries}
+        isUndertime={isUndertime}
+        hoursVariance={hoursVariance}
+        interactive={interactive}
+        date={date}
+        isComplete={isComplete}
+      />
+
+      {isCalculating && (
+        <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Calculating time accruals...
+        </div>
+      )}
     </div>
   );
 };
 
 export default React.memo(WorkHoursInterface);
+
