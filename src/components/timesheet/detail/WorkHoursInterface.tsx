@@ -45,6 +45,20 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }));
   }, []);
 
+  const breakConfig = useMemo(() => {
+    if (!workSchedule) return { lunch: false, smoko: false };
+    const weekday = getWeekDay(date);
+    const fortnightWeek = getFortnightWeek(date);
+    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
+    return {
+      lunch: !!(dayConfig?.breaks?.lunch),
+      smoko: !!(dayConfig?.breaks?.smoko),
+    };
+  }, [workSchedule, date]);
+
+  const hasLunchBreakInSchedule = breakConfig.lunch;
+  const hasSmokoBreakInSchedule = breakConfig.smoko;
+
   const {
     startTime,
     endTime,
@@ -64,34 +78,17 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
+  // ✅ NEW: Accurately recalculate scheduled hours with break config
+  const scheduledHours = useMemo(() => {
+    return calculateDayHoursWithBreaks(startTime, endTime, breakConfig);
+  }, [startTime, endTime, breakConfig]);
+
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,
     entries,
     workSchedule
   });
-
-  const breakConfig = useMemo(() => {
-    if (!workSchedule) return { lunch: false, smoko: false };
-    const weekday = getWeekDay(date);
-    const fortnightWeek = getFortnightWeek(date);
-    const dayConfig = workSchedule.weeks?.[fortnightWeek]?.[weekday];
-    return {
-      lunch: !!dayConfig?.breaks?.lunch,
-      smoko: !!dayConfig?.breaks?.smoko,
-    };
-  }, [workSchedule?.weeks, date]);
-
-  const hasLunchBreakInSchedule = breakConfig.lunch;
-  const hasSmokoBreakInSchedule = breakConfig.smoko;
-
-  const scheduledHours = useMemo(() => {
-    if (!startTime || !endTime) return 0;
-    return calculateDayHoursWithBreaks(startTime, endTime, {
-      lunch: hasLunchBreakInSchedule && !actionStates.lunch,
-      smoko: hasSmokoBreakInSchedule
-    });
-  }, [startTime, endTime, hasLunchBreakInSchedule, hasSmokoBreakInSchedule, actionStates.lunch]);
 
   useEffect(() => {
     if (!hasEntries || !isComplete || !entries.length) return;
@@ -127,7 +124,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         hoursVariance={hoursVariance}
         isUndertime={isUndertime}
         breaksIncluded={{
-          lunch: hasLunchBreakInSchedule && !actionStates.lunch,
+          lunch: hasLunchBreakInSchedule,
           smoko: hasSmokoBreakInSchedule
         }}
         overrideStates={{
