@@ -10,6 +10,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { getWeekDay, getFortnightWeek, calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
 import { Progress } from "@/components/ui/progress";
+import { VerticalProgressBar } from "@/components/ui/VerticalProgressBar";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
