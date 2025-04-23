@@ -160,6 +160,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       entryType: "auto",
       description: `${entryTypeMap[type as keyof typeof entryTypeMap]} - Automatically generated`,
       jobNumber: type === "toil" ? "TOIL-USED" : type === "leave" ? "LEAVE" : "SICK",
+      project: "General" // Add this to fix the TypeScript error
     };
     
     logger.debug(`Creating synthetic entry for ${type}:`, entryData);
@@ -225,13 +226,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     const fortnightWeek = getFortnightWeek(date);
     const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
     
-    if (!dayConfig || !dayConfig.start || !dayConfig.end) {
+    if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime) {
       return 7.6; // Default if day not in schedule
     }
     
     return calculateDayHoursWithBreaks(
-      dayConfig.start, 
-      dayConfig.end, 
+      dayConfig.startTime, 
+      dayConfig.endTime, 
       { 
         lunch: !!dayConfig.breaks?.lunch, 
         smoko: !!dayConfig.breaks?.smoko 
