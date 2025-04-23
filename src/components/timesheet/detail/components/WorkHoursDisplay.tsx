@@ -62,7 +62,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           onChange={handleTimeChange}
         />
         <div className="flex items-stretch w-full flex-col justify-end">
-          {/* NEW: Notification flags for included breaks */}
+          {/* Notification flags for included breaks */}
           <BreakInfoFlags breaksIncluded={breaksIncluded} overrideStates={overrideStates} />
           <div className="flex items-stretch w-full justify-end">
             <HoursSummary
@@ -73,7 +73,6 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
               isComplete={isComplete}
               hoursVariance={hoursVariance}
               isUndertime={isUndertime}
-              // Optionally add notification to the summary in the future
             />
           </div>
         </div>
@@ -83,3 +82,4 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
 };
 
 export default WorkHoursDisplay;
+

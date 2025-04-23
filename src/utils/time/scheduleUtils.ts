@@ -1,4 +1,3 @@
-
 /**
  * Schedule utility functions
  * Functions for working with work schedules and calendar data
@@ -159,21 +158,38 @@ export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule, holiday
 };
 
 /**
- * Calculate hours for a work day accounting for breaks
+ * Calculate hours for a work day accounting for breaks (lunch and smoko)
  */
-export const calculateDayHours = (startTime: string, endTime: string, breaks?: { lunch?: boolean; smoko?: boolean }): number => {
+export const calculateDayHoursWithBreaks = (
+  startTime: string,
+  endTime: string,
+  breaks?: { lunch?: boolean; smoko?: boolean }
+): number => {
+  if (!startTime || !endTime) return 0;
   const [startHour, startMinute] = startTime.split(':').map(Number);
   const [endHour, endMinute] = endTime.split(':').map(Number);
-  
+
   // Calculate base hours
   let hours = (endHour + endMinute/60) - (startHour + startMinute/60);
-  
+
   // Subtract unpaid lunch break if enabled
   if (breaks?.lunch) {
     hours -= 0.5; // 30 minutes
   }
-  
+
+  // Subtract unpaid smoko break if enabled
+  if (breaks?.smoko) {
+    hours -= 0.25; // 15 minutes
+  }
+
   return Math.max(0, hours);
+};
+
+/**
+ * Calculate hours for a work day accounting for lunch only
+ */
+export const calculateDayHours = (startTime: string, endTime: string, breaks?: { lunch?: boolean; smoko?: boolean }): number => {
+  return calculateDayHoursWithBreaks(startTime, endTime, breaks);
 };
 
 /**
@@ -203,23 +219,13 @@ export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule):
         return;
       }
       
-      // Calculate hours for this day
-      const startTime = new Date(`1970-01-01T${dayConfig.startTime}`);
-      const endTime = new Date(`1970-01-01T${dayConfig.endTime}`);
-      
-      // Calculate hours difference
-      let hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-      
-      // Subtract breaks if configured
-      if (dayConfig.breaks?.lunch) {
-        hours -= 0.5; // 30 min lunch break
-      }
-      
-      if (dayConfig.breaks?.smoko) {
-        hours -= 0.25; // 15 min smoko break
-      }
-      
-      totalHours += Math.max(0, hours);
+      // ---- Use break-aware day hours utility ----
+      const hours = calculateDayHoursWithBreaks(
+        dayConfig.startTime,
+        dayConfig.endTime,
+        dayConfig.breaks
+      );
+      totalHours += hours;
     });
   });
   

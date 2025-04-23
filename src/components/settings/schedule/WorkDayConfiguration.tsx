@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { WorkSchedule, WeekDay } from "@/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Coffee, Bell } from "lucide-react";
+import { calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
 
 interface WorkDayConfigurationProps {
   day: WeekDay;
@@ -35,6 +36,12 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
   
   // Use activeWeek specifically for displaying and tracking RDO days
   const isRdoDay = editingSchedule.rdoDays[activeWeek].includes(day);
+
+  // --- Show daily summary hours with break info as a chip ---
+  let dailyHours: number | null = null;
+  if (isWorkDay && dayConfig?.startTime && dayConfig?.endTime) {
+    dailyHours = calculateDayHoursWithBreaks(dayConfig.startTime, dayConfig.endTime, breaks);
+  }
 
   return <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
       <div className="w-28 capitalize">{day}</div>
@@ -73,6 +80,31 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
             <Label htmlFor={`rdo-${activeWeek}-${day}`} className="text-sm">RDO</Label>
             <Switch id={`rdo-${activeWeek}-${day}`} checked={isRdoDay} onCheckedChange={() => toggleRdoDay(day)} />
           </div>
+          {/* ---- Daily hours summary & break notice ---- */}
+          {dailyHours !== null && (
+            <div className="ml-4 flex items-center gap-2">
+              <span className="text-xs rounded-full border px-2 py-0.5 font-medium bg-gray-100 text-gray-700">
+                {dailyHours.toFixed(2)} hrs
+              </span>
+              {/* Lunch/subtraction chip */}
+              {(breaks.lunch || breaks.smoko) && (
+                <span className="flex items-center gap-1 text-xs">
+                  {breaks.lunch && (
+                    <span className="flex items-center px-[0.35em] py-[0.1em] rounded-full bg-lime-50 border border-lime-200 text-lime-600">
+                      <Bell className="h-3 w-3 mr-0.5" />
+                      Lunch subtracted
+                    </span>
+                  )}
+                  {breaks.smoko && (
+                    <span className="flex items-center px-[0.35em] py-[0.1em] rounded-full bg-yellow-50 border border-yellow-200 text-yellow-700 ml-1">
+                      <Coffee className="h-3 w-3 mr-0.5" />
+                      Smoko subtracted
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
         </>}
     </div>;
 };
