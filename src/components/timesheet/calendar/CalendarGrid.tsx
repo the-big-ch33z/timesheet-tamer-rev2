@@ -1,171 +1,112 @@
-
-import React, { useMemo, memo } from "react";
-import { 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  format, 
-  isSameMonth, 
-  isSameDay, 
-  isToday as dateFnsIsToday 
-} from "date-fns";
-import CalendarDay from "./CalendarDay";
-import { TimeEntry, WorkSchedule } from "@/types";
-import { useCalendarHelpers } from "./useCalendarHelpers";
-import { isHoliday } from "@/utils/time/services/toil/holiday-utils";
-import { defaultQueenslandHolidays, getHolidays } from "@/lib/holidays";
-import { useLogger } from "@/hooks/useLogger";
+import React, { useCallback, useEffect, useState } from "react";
+import { format, isSameMonth, isSameDay, isToday } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { WorkSchedule } from "@/types";
+import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
-import { calculateCompletion } from "@/utils/timesheet/completionUtils";
-import { getShiftedRDOsForMonth } from "@/utils/time/rdoDisplay";
 
 interface CalendarGridProps {
   currentMonth: Date;
   selectedDate: Date | null;
-  workSchedule?: WorkSchedule;
   onDayClick: (day: Date) => void;
+  workSchedule?: WorkSchedule;
   userId: string;
 }
+
+// Utility to check if a day is a scheduled work day
+const isScheduledWorkDay = (date: Date, workSchedule?: WorkSchedule): boolean => {
+  if (!workSchedule) return false;
+
+  const weekDay = getWeekDay(date);
+  const fortnightWeek = getFortnightWeek(date);
+  const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekDay];
+
+  return !!dayConfig && dayConfig.startTime !== null && dayConfig.endTime !== null;
+};
+
+// Utility to check if a day contains a synthetic leave entry
+function getSyntheticLeaveType(dayEntries: any) {
+  // Find a synthetic leave/sick/toil entry (entryType: "auto", and description matches)
+  if (!Array.isArray(dayEntries)) return null;
+  for (const entry of dayEntries) {
+    if (entry.entryType === "auto" && typeof entry.description === "string") {
+      if (entry.description.startsWith("Annual Leave")) return "annual";
+      if (entry.description.startsWith("Sick Leave")) return "sick";
+      if (entry.description.startsWith("TOIL")) return "toil";
+    }
+  }
+  return null;
+}
+
+const dayBgColors = {
+  annual: "#D3E4FD", // Soft Blue for Annual Leave
+  sick: "#ea384c",   // Red for Sick Leave
+  toil: "#9b87f5"    // Purple for TOIL
+};
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   currentMonth,
   selectedDate,
-  workSchedule,
   onDayClick,
+  workSchedule,
   userId
 }) => {
-  const logger = useLogger("CalendarGrid");
   const { getDayEntries } = useTimeEntryContext();
-  const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
-  const holidays = useMemo(() => getHolidays(), []);
+  const [days, setDays] = useState<Date[]>([]);
 
-  // Memoize days calculation to prevent recalculation on each render
-  const days = useMemo(() => {
-    logger.debug("Calculating calendar grid days");
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
-    return eachDayOfInterval({ start: startDate, end: endDate });
-  }, [currentMonth, logger]);
+  useEffect(() => {
+    const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
-  // Get RDO shift mappings for the month
-  const shiftedRDOMap = useMemo(() => {
-    return getShiftedRDOsForMonth(days, workSchedule, holidays);
-  }, [days, workSchedule, holidays]);
+    const newDays: Date[] = [];
+    let currentDay = firstDayOfMonth;
 
-  // Memoized calendar day data
-  const daysData = useMemo(() => {
-    logger.debug("Pre-calculating calendar days data");
-    const monthStart = startOfMonth(currentMonth);
+    while (currentDay <= lastDayOfMonth) {
+      newDays.push(new Date(currentDay));
+      currentDay.setDate(currentDay.getDate() + 1);
+    }
 
-    return days.map(day => {
-      const isCurrentMonth = isSameMonth(day, monthStart);
+    setDays(newDays);
+  }, [currentMonth]);
 
-      if (!isCurrentMonth) {
-        return {
-          day,
-          isCurrentMonth: false,
-        };
-      }
-
-      const dayState = getDayState(day, selectedDate, monthStart);
-      const { startTime, endTime } = getStartAndEndTimeForDay(day);
-      const entries = getDayEntries(day);
-      const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-
-      const { isComplete } = calculateCompletion(entries, startTime, endTime, 0.01);
-
-      // Check if this day is a shifted RDO target
-      const dateKey = day.toISOString().split('T')[0];
-      const isShiftedRDOTarget = shiftedRDOMap.has(dateKey);
-      let isRDO = dayState.isRDO;
-      let isShiftedRDO = false;
-      let originalRdoDate = undefined;
-      let shiftReason = null;
-      
-      // If this is a shifted RDO target day
-      if (isShiftedRDOTarget) {
-        const shiftedInfo = shiftedRDOMap.get(dateKey)!;
-        isRDO = true; // This day becomes an RDO
-        isShiftedRDO = true; // It's specifically a shifted RDO
-        originalRdoDate = shiftedInfo.originalDate; // Store the original date
-        shiftReason = shiftedInfo.reason; // Store the reason
-      }
-
-      return {
-        day,
-        isCurrentMonth: true,
-        entries,
-        isSelected: selectedDate ? isSameDay(day, selectedDate) : false,
-        isToday: dateFnsIsToday(day),
-        isComplete,
-        totalHours,
-        isWeekend: dayState.isWeekend,
-        isWorkDay: dayState.isWorkingDay,
-        expectedStartTime: startTime,
-        expectedEndTime: endTime,
-        isRDO,
-        isShiftedRDO,
-        originalRdoDate,
-        shiftReason
-      };
-    });
-  }, [
-    days,
-    selectedDate,
-    getDayEntries,
-    getDayState,
-    getStartAndEndTimeForDay,
-    currentMonth,
-    shiftedRDOMap
-  ]);
+  const handleDayClick = useCallback((day: Date) => {
+    onDayClick(day);
+  }, [onDayClick]);
 
   return (
-    <div className="grid grid-cols-7 gap-2">
-      {daysData.map((dayData, i) => {
-        const { day, isCurrentMonth } = dayData;
-
-        if (!isCurrentMonth) {
-          return (
-            <div
-              key={`empty-${i}`}
-              className="w-full min-h-[80px] p-2 bg-gray-50 text-gray-300 rounded border border-gray-100"
-            >
-              <span className="text-sm">{format(day, "d")}</span>
-            </div>
-          );
-        }
+    <div className="grid grid-cols-7 gap-0.5 mt-2">
+      {days.map((day) => {
+        const dayEntries = getDayEntries(day, userId);
+        const leaveType = getSyntheticLeaveType(dayEntries);
+        const dayBg = leaveType ? dayBgColors[leaveType] : "transparent";
+        const isScheduled = isScheduledWorkDay(day, workSchedule);
 
         return (
-          <MemoizedCalendarDay
-            key={day.toString()}
-            day={day}
-            entries={dayData.entries}
-            isSelected={dayData.isSelected}
-            isToday={dayData.isToday}
-            onClick={onDayClick}
-            isComplete={dayData.isComplete}
-            totalHours={dayData.totalHours}
-            isWeekend={dayData.isWeekend}
-            isRDO={dayData.isRDO}
-            isShiftedRDO={dayData.isShiftedRDO}
-            originalRdoDate={dayData.originalRdoDate}
-            isWorkDay={dayData.isWorkDay}
-            expectedStartTime={dayData.expectedStartTime}
-            expectedEndTime={dayData.expectedEndTime}
-            shiftReason={dayData.shiftReason}
-          />
+          <Button
+            key={day.toISOString()}
+            className={cn(
+              "flex flex-col items-center justify-center w-full h-12 p-0 rounded-none border-0 shadow-none",
+              isSameDay(day, selectedDate) && "bg-blue-500 text-white hover:bg-blue-500",
+              !isSameMonth(day, currentMonth) && "text-gray-400 hover:bg-transparent",
+              isToday(day) && "font-semibold",
+              isScheduled && "font-medium",
+              "hover:bg-gray-100 focus-visible:bg-gray-100 active:bg-gray-100",
+            )}
+            style={{
+              backgroundColor: dayBg,
+            }}
+            onClick={() => handleDayClick(day)}
+            disabled={!isSameMonth(day, currentMonth)}
+          >
+            <time dateTime={format(day, "yyyy-MM-dd")}>
+              {format(day, "d")}
+            </time>
+          </Button>
         );
       })}
     </div>
   );
 };
 
-// Memoize CalendarDay component for performance optimization
-const MemoizedCalendarDay = memo(CalendarDay);
-
-// Memoize entire CalendarGrid component
-export default memo(CalendarGrid);
+export default CalendarGrid;

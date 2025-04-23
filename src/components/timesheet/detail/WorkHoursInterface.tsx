@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -72,6 +71,11 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     sick: false, leave: false, toil: false, lunch: false, smoko: false
   });
 
+  // Track created synthetic entry IDs for auto-leave entries
+  const [syntheticEntryIds, setSyntheticEntryIds] = useState<Record<WorkHoursActionType, string | null>>({
+    sick: null, leave: null, toil: null, lunch: null, smoko: null
+  });
+
   // Persist actionStates to localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -93,66 +97,62 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }
   }, [actionStates.leave, actionStates.sick]);
 
-  // Slim logic for exclusivity between leave/sick/toil
-  const handleToggleAction = useCallback((type: WorkHoursActionType) => {
-    setActionStates(prev => {
-      let next = { ...prev, [type]: !prev[type] };
-      
-      // Mutual exclusivity logic
-      if (type === "leave" && next.leave) {
-        next.sick = false;
-        next.toil = false;
+  // Remove previously created synthetic entry if toggled off
+  const removeSyntheticEntry = useCallback((type: WorkHoursActionType) => {
+    const syntheticId = syntheticEntryIds[type];
+    if (syntheticId) {
+      // Only delete the synthetic entry, not manual entries
+      // Should handle async for consistency
+      if (typeof syntheticId === "string" && syntheticId.length > 0) {
+        // Get deleteEntry from createEntry context
+        if (typeof window !== "undefined" && createEntry && createEntry.deleteEntry) {
+          // unlikely branch, back compat: skip
+        }
       }
-      if (type === "sick" && next.sick) {
-        next.leave = false;
-        next.toil = false;
+      if (typeof syntheticId === "string" && syntheticId.length > 0) {
+        // Use entries-context: useTimeEntryContext() gives createEntry(), deleteEntry()
+        // Find and call matching deleteEntry from context:
+        if (typeof createEntry === "function" && "deleteEntry" in createEntry) {
+          // For legacy, but context provides delete in v2 API
+          // fallback to next
+        }
       }
-      if (type === "toil" && next.toil) {
-        next.leave = false;
-        next.sick = false;
+      // Use deleteEntry from context:
+      if ("deleteEntry" in useTimeEntryContext()) {
+        const { deleteEntry } = useTimeEntryContext();
+        deleteEntry(syntheticId);
       }
-      
-      // Create or remove synthetic entries for leave/sick/toil buttons
-      if ((type === "leave" || type === "sick" || type === "toil") && next[type] !== prev[type]) {
-        setTimeout(() => {
-          createSyntheticEntry(type, next[type]);
-        }, 0);
-      }
-      
-      return next;
-    });
-  }, []);
+      // Clean up reference regardless
+      setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+      setCreatedEntries(prev => ({ ...prev, [type]: false }));
+    }
+  }, [syntheticEntryIds]);
 
-  // Create synthetic time entries for leave/sick/toil
+  // Enhanced to create and remove synthetic time entries for leave/sick/toil
   const createSyntheticEntry = useCallback((type: WorkHoursActionType, isActive: boolean) => {
     if (!isActive) {
-      // Reset state when toggled off - we'd want to actually delete the entry here
-      // in a full implementation, but for simplicity we'll just mark as not created
-      setCreatedEntries(prev => ({ ...prev, [type]: false }));
+      // Remove synthetic entry if toggled off
+      removeSyntheticEntry(type);
       return;
     }
 
     if (createdEntries[type]) {
-      // Entry was already created
+      // Entry was already created, skip
       return;
     }
 
     // Get scheduled hours for the day
     const dayHours = calculateDayHours();
-    
-    if (!dayHours || dayHours <= 0) {
-      logger.debug(`No valid hours for this day, using default 7.6 hours`);
-    }
-    
     const hoursToRecord = dayHours > 0 ? dayHours : 7.6; // Use default if no schedule
-    
+
     // Create the entry based on type
     const entryTypeMap = {
       leave: "Annual Leave",
       sick: "Sick Leave", 
       toil: "TOIL"
     };
-    
+
+    // All these should have a fixed project for consistency
     const entryData = {
       userId,
       date,
@@ -160,17 +160,18 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       entryType: "auto",
       description: `${entryTypeMap[type as keyof typeof entryTypeMap]} - Automatically generated`,
       jobNumber: type === "toil" ? "TOIL-USED" : type === "leave" ? "LEAVE" : "SICK",
-      project: "General" // Add this to fix the TypeScript error
+      project: "General"
     };
     
     logger.debug(`Creating synthetic entry for ${type}:`, entryData);
-    
+
     const newEntryId = createEntry(entryData);
-    
+
     if (newEntryId) {
       logger.debug(`Created synthetic ${type} entry with ID: ${newEntryId}`);
       setCreatedEntries(prev => ({ ...prev, [type]: true }));
-      
+      setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
+
       toast({
         title: `${entryTypeMap[type as keyof typeof entryTypeMap]} Recorded`,
         description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
@@ -183,7 +184,45 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         variant: "destructive"
       });
     }
-  }, [userId, date, createEntry, toast, createdEntries]);
+  }, [userId, date, createEntry, toast, createdEntries, calculateDayHours, removeSyntheticEntry]);
+
+  // Updated toggle logic to call removeSyntheticEntry for toggling OFF
+  const handleToggleAction = useCallback((type: WorkHoursActionType) => {
+    setActionStates(prev => {
+      let next = { ...prev, [type]: !prev[type] };
+
+      // Mutual exclusivity for leave/sick/toil
+      if (type === "leave" && next.leave) {
+        next.sick = false;
+        next.toil = false;
+      }
+      if (type === "sick" && next.sick) {
+        next.leave = false;
+        next.toil = false;
+      }
+      if (type === "toil" && next.toil) {
+        next.leave = false;
+        next.sick = false;
+      }
+
+      // Manage synthetic entries creation/removal for leave/sick/toil
+      if (
+        (type === "leave" || type === "sick" || type === "toil") &&
+        next[type] !== prev[type]
+      ) {
+        setTimeout(() => {
+          createSyntheticEntry(type, next[type]);
+        }, 0);
+      }
+
+      // When toggling OFF, remove any existing synthetic entry for that type immediately
+      if ((type === "leave" || type === "sick" || type === "toil") && !next[type]) {
+        removeSyntheticEntry(type);
+      }
+
+      return next;
+    });
+  }, [createSyntheticEntry, removeSyntheticEntry]);
 
   const breakConfig = useMemo(() => {
     if (!workSchedule) return { lunch: false, smoko: false };
