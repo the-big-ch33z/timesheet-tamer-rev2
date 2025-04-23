@@ -1,4 +1,3 @@
-
 import React, { createContext, useEffect } from 'react';
 import { TimeEntryContextValue, TimeEntryProviderProps } from './types';
 import { useInitialEntries } from './hooks/useInitialEntries';
@@ -6,6 +5,8 @@ import { useEntryOperations } from './hooks/useEntryOperations';
 import { useEntryQueries } from './hooks/useEntryQueries';
 import { useStorageSync } from './hooks/useStorageSync';
 import { createTimeLogger } from '@/utils/time/errors';
+import { EntryDataContext } from './EntryDataContext';
+import { EntryOperationsContext } from './EntryOperationsContext';
 
 const logger = createTimeLogger('TimeEntryProvider');
 
@@ -19,17 +20,9 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
 }) => {
   // Load initial entries and get state management
   const { entries, setEntries, isLoading, isInitialized } = useInitialEntries();
-
-  // Set up storage synchronization
   useStorageSync(entries, isInitialized, isLoading);
-
-  // Get entry manipulation operations
   const { addEntry, updateEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
-
-  // Set up query functions
   const { getDayEntries, getMonthEntries, calculateTotalHours } = useEntryQueries(entries, userId);
-
-  // Get entries for the currently selected day
   const dayEntries = selectedDate ? getDayEntries(selectedDate) : [];
   
   // Log when selectedDate changes to track updates
@@ -39,23 +32,29 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
     }
   }, [selectedDate, dayEntries.length]);
 
-  // Prepare context value
-  const value: TimeEntryContextValue = {
+  // Split value for the two new contexts
+  const dataValue = {
     entries,
     dayEntries,
+    isLoading,
+    getDayEntries,
+    getMonthEntries,
+    calculateTotalHours
+  };
+
+  const operationsValue = {
     addEntry,
     updateEntry,
     deleteEntry,
-    calculateTotalHours,
-    isLoading,
-    createEntry,
-    getDayEntries,
-    getMonthEntries
+    createEntry
   };
 
+  // Wrap both context providers
   return (
-    <TimeEntryContext.Provider value={value}>
-      {children}
-    </TimeEntryContext.Provider>
+    <EntryDataContext.Provider value={dataValue}>
+      <EntryOperationsContext.Provider value={operationsValue}>
+        {children}
+      </EntryOperationsContext.Provider>
+    </EntryDataContext.Provider>
   );
 };
