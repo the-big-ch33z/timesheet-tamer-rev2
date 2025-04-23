@@ -88,6 +88,11 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return rounded;
   }, [startTime, endTime, breakConfig]);
 
+  const progressPercent = useMemo(() => {
+    if (!scheduledHours || scheduledHours === 0) return 0;
+    return Math.min(100, Math.round((totalEnteredHours / scheduledHours) * 100));
+  }, [totalEnteredHours, scheduledHours]);
+
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,
@@ -136,6 +141,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
         }}
       />
+
+      <div className="mt-2 w-full h-2 bg-gray-200 rounded">
+        <div
+          className="h-2 bg-amber-500 rounded"
+          style={{ width: `${progressPercent}%`, transition: 'width 0.3s ease-in-out' }}
+        />
+      </div>
 
       <WorkHoursAlerts
         hasEntries={hasEntries}
