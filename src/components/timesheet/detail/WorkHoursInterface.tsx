@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
-import WorkHoursActionButtons from "./components/WorkHoursActionButtons";
+import WorkHoursActionButtons, { WorkHoursActionType } from "./components/WorkHoursActionButtons";
 import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
@@ -92,11 +91,10 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return rounded;
   }, [startTime, endTime, breakConfig]);
 
-  // Update the completion check logic to use a tighter tolerance
   const isActuallyComplete = useMemo(() => {
     if (!hasEntries || !entries.length) return false;
     const variance = Math.abs(roundToQuarter(totalEnteredHours) - scheduledHours);
-    return variance <= 0.01; // Use a much tighter tolerance for completion
+    return variance <= 0.01;
   }, [totalEnteredHours, scheduledHours, hasEntries, entries.length]);
 
   const verticalProgressValue = useMemo(() => {
