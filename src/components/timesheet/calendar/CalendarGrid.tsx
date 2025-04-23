@@ -1,12 +1,11 @@
 
 import React, { useCallback, useEffect, useState } from "react";
-import { format, isSameMonth, startOfMonth } from "date-fns";
+import { format, isSameMonth, isSameDay, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { WorkSchedule } from "@/types";
 import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
-import CalendarDay from "./CalendarDay";
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -15,6 +14,37 @@ interface CalendarGridProps {
   workSchedule?: WorkSchedule;
   userId: string;
 }
+
+// Utility to check if a day is a scheduled work day
+const isScheduledWorkDay = (date: Date, workSchedule?: WorkSchedule): boolean => {
+  if (!workSchedule) return false;
+
+  const weekDay = getWeekDay(date);
+  const fortnightWeek = getFortnightWeek(date);
+  const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekDay];
+
+  return !!dayConfig && dayConfig.startTime !== null && dayConfig.endTime !== null;
+};
+
+// Utility to check if a day contains a synthetic leave entry
+function getSyntheticLeaveType(dayEntries: any) {
+  // Find a synthetic leave/sick/toil entry (entryType: "auto", and description matches)
+  if (!Array.isArray(dayEntries)) return null;
+  for (const entry of dayEntries) {
+    if (entry.entryType === "auto" && typeof entry.description === "string") {
+      if (entry.description.startsWith("Annual Leave")) return "annual";
+      if (entry.description.startsWith("Sick Leave")) return "sick";
+      if (entry.description.startsWith("TOIL")) return "toil";
+    }
+  }
+  return null;
+}
+
+const dayBgColors = {
+  annual: "#D3E4FD", // Soft Blue for Annual Leave
+  sick: "#ffd5d9",   // Soft Red for Sick Leave
+  toil: "#e8e3fc"    // Soft Purple for TOIL
+};
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   currentMonth,
@@ -26,61 +56,54 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const { getDayEntries } = useTimeEntryContext();
   const [days, setDays] = useState<Date[]>([]);
 
-  // Generate calendar days
   useEffect(() => {
-    const firstDayOfMonth = startOfMonth(currentMonth);
+    const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    
-    // Calculate padding days for the start of the month
-    const startPadding = firstDayOfMonth.getDay();
-    const paddingStart = new Date(firstDayOfMonth);
-    paddingStart.setDate(paddingStart.getDate() - startPadding);
 
     const newDays: Date[] = [];
-    
-    // Add padding days from previous month
-    for (let i = 0; i < startPadding; i++) {
-      const paddingDate = new Date(paddingStart);
-      paddingDate.setDate(paddingDate.getDate() + i);
-      newDays.push(paddingDate);
-    }
+    let currentDay = firstDayOfMonth;
 
-    // Add days of the current month
-    let currentDay = new Date(firstDayOfMonth);
     while (currentDay <= lastDayOfMonth) {
       newDays.push(new Date(currentDay));
       currentDay.setDate(currentDay.getDate() + 1);
     }
 
-    // Add padding days for the end of the month to complete the grid
-    const endPadding = 42 - newDays.length; // 6 rows * 7 days = 42
-    let lastDate = new Date(lastDayOfMonth);
-    for (let i = 1; i <= endPadding; i++) {
-      lastDate.setDate(lastDate.getDate() + 1);
-      newDays.push(new Date(lastDate));
-    }
-
     setDays(newDays);
-    console.log("Calendar days generated:", newDays.length, "for month:", currentMonth.toString());
   }, [currentMonth]);
+
+  const handleDayClick = useCallback((day: Date) => {
+    onDayClick(day);
+  }, [onDayClick]);
 
   return (
     <div className="grid grid-cols-7 gap-0.5 mt-2">
       {days.map((day) => {
-        const isWorkDay = true; // This will be determined by the CalendarDay component
         const dayEntries = getDayEntries(day, userId);
+        const leaveType = getSyntheticLeaveType(dayEntries);
+        const dayBg = leaveType ? dayBgColors[leaveType] : "transparent";
+        const isScheduled = isScheduledWorkDay(day, workSchedule);
 
         return (
-          <CalendarDay
+          <Button
             key={day.toISOString()}
-            day={day}
-            entries={dayEntries}
-            isSelected={selectedDate ? format(selectedDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd') : false}
-            isToday={format(new Date(), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')}
-            onClick={() => onDayClick(day)}
-            isWorkDay={isWorkDay}
-            totalHours={dayEntries.reduce((sum, entry) => sum + entry.hours, 0)}
-          />
+            className={cn(
+              "flex flex-col items-center justify-center w-full h-12 p-0 rounded-none border-0 shadow-none",
+              isSameDay(day, selectedDate) && "bg-blue-500 text-white hover:bg-blue-500",
+              !isSameMonth(day, currentMonth) && "text-gray-400 hover:bg-transparent",
+              isToday(day) && "font-semibold",
+              isScheduled && "font-medium",
+              "hover:bg-gray-100 focus-visible:bg-gray-100 active:bg-gray-100",
+            )}
+            style={{
+              backgroundColor: dayBg,
+            }}
+            onClick={() => handleDayClick(day)}
+            disabled={!isSameMonth(day, currentMonth)}
+          >
+            <time dateTime={format(day, "yyyy-MM-dd")}>
+              {format(day, "d")}
+            </time>
+          </Button>
         );
       })}
     </div>
