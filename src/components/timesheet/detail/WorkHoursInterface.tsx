@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -8,9 +7,8 @@ import WorkHoursActionButtons, { WorkHoursActionType } from "./components/WorkHo
 import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
-import { useTimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
-import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
+import { getWeekDay, getFortnightWeek, calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -33,7 +31,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 }) => {
   const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
 
-  // State for current action (lunch override)
   const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>({
     sick: false,
     leave: false,
@@ -48,22 +45,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }));
   }, []);
 
-  // Get break config for this day from schedule
-  const breakConfig = useMemo(() => {
-    if (!workSchedule) return { lunch: false, smoko: false };
-    const weekday = getWeekDay(date);
-    const fortnightWeek = getFortnightWeek(date);
-    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
-    return {
-      lunch: !!(dayConfig && dayConfig.breaks && dayConfig.breaks.lunch),
-      smoko: !!(dayConfig && dayConfig.breaks && dayConfig.breaks.smoko),
-    };
-  }, [workSchedule, date]);
-
-  const hasLunchBreakInSchedule = breakConfig.lunch;
-  const hasSmokoBreakInSchedule = breakConfig.smoko;
-
-  // Use the main time entry state management hook
   const {
     startTime,
     endTime,
@@ -83,17 +64,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
-  // Calculate scheduled hours considering lunch override
-  const scheduledHours = useMemo(() => {
-    let hours = baseScheduledHours;
-    if (hasLunchBreakInSchedule && actionStates.lunch) {
-      // Lunch override: add 0.5h back to schedule
-      hours += 0.5;
-    }
-    return hours;
-  }, [baseScheduledHours, hasLunchBreakInSchedule, actionStates.lunch]);
-
-  // Trigger TOIL calculation when a completed timesheet has stabilized
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,
@@ -101,23 +71,42 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     workSchedule
   });
 
+  const breakConfig = useMemo(() => {
+    if (!workSchedule) return { lunch: false, smoko: false };
+    const weekday = getWeekDay(date);
+    const fortnightWeek = getFortnightWeek(date);
+    const dayConfig = workSchedule.weeks?.[fortnightWeek]?.[weekday];
+    return {
+      lunch: !!dayConfig?.breaks?.lunch,
+      smoko: !!dayConfig?.breaks?.smoko,
+    };
+  }, [workSchedule?.weeks, date]);
+
+  const hasLunchBreakInSchedule = breakConfig.lunch;
+  const hasSmokoBreakInSchedule = breakConfig.smoko;
+
+  const scheduledHours = useMemo(() => {
+    if (!startTime || !endTime) return 0;
+    return calculateDayHoursWithBreaks(startTime, endTime, {
+      lunch: hasLunchBreakInSchedule && !actionStates.lunch,
+      smoko: hasSmokoBreakInSchedule
+    });
+  }, [startTime, endTime, hasLunchBreakInSchedule, hasSmokoBreakInSchedule, actionStates.lunch]);
+
   useEffect(() => {
-    // Only calculate TOIL when entries are complete
     if (!hasEntries || !isComplete || !entries.length) return;
     const timeoutId = setTimeout(() => {
       logger.debug('Initiating TOIL calculation based on completed timesheet');
       calculateToilForDay();
-    }, 400); 
+    }, 400);
     return () => clearTimeout(timeoutId);
   }, [hasEntries, isComplete, calculateToilForDay, entries.length]);
 
-  // A simplified, more direct time change handler
   const timeChangeHandler = useCallback((type: 'start' | 'end', value: string) => {
     logger.debug(`Direct time change: ${type}=${value}`);
     handleTimeChange(type, value);
   }, [handleTimeChange]);
 
-  // Pass info about break config and any overrides to WorkHoursDisplay to show notification flags
   return (
     <div>
       <div className="flex justify-center mb-1">
@@ -139,7 +128,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         isUndertime={isUndertime}
         breaksIncluded={{
           lunch: hasLunchBreakInSchedule && !actionStates.lunch,
-          smoko: hasSmokoBreakInSchedule // Only based on config, no override for smoko
+          smoko: hasSmokoBreakInSchedule
         }}
         overrideStates={{
           lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
@@ -155,7 +144,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         isComplete={isComplete}
       />
 
-      {/* Show loading indicator during TOIL calculation with better UX */}
       {isCalculating && (
         <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
           <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
