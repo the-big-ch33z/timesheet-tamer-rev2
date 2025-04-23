@@ -83,8 +83,9 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     console.log('[DEBUG] endTime:', endTime);
     console.log('[DEBUG] breakConfig:', breakConfig);
     const result = calculateDayHoursWithBreaks(startTime, endTime, breakConfig);
-    console.log('[DEBUG] calculated scheduled hours:', result);
-    return result;
+    const rounded = Math.round(result * 100) / 100;
+    console.log('[DEBUG] calculated scheduled hours (rounded):', rounded);
+    return rounded;
   }, [startTime, endTime, breakConfig]);
 
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
