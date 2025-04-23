@@ -78,9 +78,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
-  // ✅ NEW: Accurately recalculate scheduled hours with break config
   const scheduledHours = useMemo(() => {
-    return calculateDayHoursWithBreaks(startTime, endTime, breakConfig);
+    console.log('[DEBUG] startTime:', startTime);
+    console.log('[DEBUG] endTime:', endTime);
+    console.log('[DEBUG] breakConfig:', breakConfig);
+    const result = calculateDayHoursWithBreaks(startTime, endTime, breakConfig);
+    console.log('[DEBUG] calculated scheduled hours:', result);
+    return result;
   }, [startTime, endTime, breakConfig]);
 
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
