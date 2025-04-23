@@ -76,7 +76,6 @@ const WorkHoursActionButtons: React.FC<WorkHoursActionButtonsProps> = ({ value, 
     <div
       className={cn(
         "flex items-center gap-2 px-4 py-2 rounded-full bg-white mx-auto w-fit mb-4 animate-fade-in"
-        // Border and shadow intentionally removed here!
       )}
       data-testid="work-hours-action-bar"
     >
