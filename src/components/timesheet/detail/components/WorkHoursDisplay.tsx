@@ -1,9 +1,6 @@
-
-import React, { memo } from "react";
-import { TimeInputField } from "./TimeInputField";
-import { HoursSummary } from "./HoursSummary";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import BreakInfoFlags from "./BreakInfoFlags";
+import React from "react";
+import { Input } from "@/components/ui/input";
+import { Bell, Coffee } from "lucide-react";
 
 interface WorkHoursDisplayProps {
   startTime: string;
@@ -13,16 +10,15 @@ interface WorkHoursDisplayProps {
   hasEntries: boolean;
   interactive: boolean;
   onTimeChange: (type: 'start' | 'end', value: string) => void;
-  isComplete?: boolean;
-  hoursVariance?: number;
-  isUndertime?: boolean;
-  // NEW: flags for breaks included and overrides
-  breaksIncluded?: {
-    lunch?: boolean;
-    smoko?: boolean;
+  isComplete: boolean;
+  hoursVariance: number;
+  isUndertime: boolean;
+  breaksIncluded: {
+    lunch: boolean;
+    smoko: boolean;
   };
-  overrideStates?: {
-    lunch?: boolean;
+  overrideStates: {
+    lunch: boolean;
   };
 }
 
@@ -35,85 +31,62 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   interactive,
   onTimeChange,
   isComplete,
-  hoursVariance = 0,
-  isUndertime = false,
+  hoursVariance,
+  isUndertime,
   breaksIncluded,
   overrideStates
 }) => {
-  const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    onTimeChange(type, value);
-  };
-
   return (
-    <TooltipProvider>
-      <div className="grid grid-cols-3 gap-4 mb-3 items-stretch w-full max-w-full">
-        <TimeInputField
-          label="Start Time"
-          value={startTime}
-          type="start"
-          interactive={interactive}
-          onChange={handleTimeChange}
-        />
-        <TimeInputField
-          label="End Time"
-          value={endTime}
-          type="end"
-          interactive={interactive}
-          onChange={handleTimeChange}
-        />
-        <div className="flex items-stretch w-full flex-col justify-end">
-          {/* Notification flags for included breaks */}
-          <BreakInfoFlags breaksIncluded={breaksIncluded} overrideStates={overrideStates} />
-          <div className="flex items-stretch w-full justify-end">
-            <HoursSummary
-              totalHours={totalHours}
-              calculatedHours={calculatedHours}
-              hasEntries={hasEntries}
-              hasTime={!!(startTime && endTime)}
-              isComplete={isComplete}
-              hoursVariance={hoursVariance}
-              isUndertime={isUndertime}
-            />
+    <div className="w-full p-4 bg-white border-t border-gray-200 rounded-b-md">
+      <div className="flex items-center justify-start gap-6 mb-2">
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600">Start Time</label>
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => onTimeChange("start", e.target.value)}
+            disabled={!interactive}
+            className="w-32"
+          />
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600">End Time</label>
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => onTimeChange("end", e.target.value)}
+            disabled={!interactive}
+            className="w-32"
+          />
+        </div>
+
+        {/* Scheduled hours summary */}
+        <div className="flex flex-col justify-center">
+          <div className="text-xs text-gray-500">Hours Summary</div>
+          <div className="text-sm font-semibold text-gray-800">
+            {totalHours.toFixed(1)} / {calculatedHours.toFixed(1)} hours
           </div>
         </div>
+
+        {/* Break chips */}
+        <div className="flex items-center gap-2 ml-4">
+          {breaksIncluded.lunch && (
+            <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-lime-50 border border-lime-200 text-lime-700 text-xs">
+              <Bell className="h-3 w-3 mr-1" />
+              Lunch subtracted
+            </span>
+          )}
+          {breaksIncluded.smoko && (
+            <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs">
+              <Coffee className="h-3 w-3 mr-1" />
+              Smoko subtracted
+            </span>
+          )}
+        </div>
       </div>
-    </TooltipProvider>
+    </div>
   );
 };
 
-// Use custom equality check for memoization
-function workHoursDisplayPropsAreEqual(prevProps: WorkHoursDisplayProps, nextProps: WorkHoursDisplayProps) {
-  // Check basic equality for primitive props
-  if (
-    prevProps.startTime !== nextProps.startTime ||
-    prevProps.endTime !== nextProps.endTime ||
-    prevProps.totalHours !== nextProps.totalHours ||
-    prevProps.calculatedHours !== nextProps.calculatedHours ||
-    prevProps.hasEntries !== nextProps.hasEntries ||
-    prevProps.interactive !== nextProps.interactive ||
-    prevProps.isComplete !== nextProps.isComplete ||
-    prevProps.hoursVariance !== nextProps.hoursVariance ||
-    prevProps.isUndertime !== nextProps.isUndertime
-  ) {
-    return false;
-  }
-  
-  // Deep check for breaksIncluded
-  const prevBreaks = prevProps.breaksIncluded || {};
-  const nextBreaks = nextProps.breaksIncluded || {};
-  if (prevBreaks.lunch !== nextBreaks.lunch || prevBreaks.smoko !== nextBreaks.smoko) {
-    return false;
-  }
-  
-  // Deep check for overrideStates
-  const prevOverrides = prevProps.overrideStates || {};
-  const nextOverrides = nextProps.overrideStates || {};
-  if (prevOverrides.lunch !== nextOverrides.lunch) {
-    return false;
-  }
-  
-  // The props are equal, so the component doesn't need to re-render
-  return true;
-}
-
-export default memo(WorkHoursDisplay, workHoursDisplayPropsAreEqual);
+export default React.memo(WorkHoursDisplay);
