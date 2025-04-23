@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
@@ -108,7 +107,18 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     };
   }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
 
-  // Determine if hours exceed scheduled
+  const handleHoursInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newValue = e.target.value;
+    let numValue = parseFloat(newValue);
+    if (!isNaN(numValue)) {
+      numValue = Math.round(numValue * 4) / 4;
+      if (numValue < 0.25) numValue = 0.25;
+      if (numValue > 24) numValue = 24;
+      newValue = numValue.toString();
+    }
+    handleFieldChangeCallback(FIELD_TYPES.HOURS, newValue);
+  };
+
   const hourValue = parseFloat(formState.fields.hours.value || "0");
   const scheduled = typeof scheduledHours === "number" && !isNaN(scheduledHours) ? scheduledHours : undefined;
   const overLimit = scheduled !== undefined && hourValue > scheduled;
@@ -119,10 +129,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     }
   }, [disabled, validateForm, handleSubmit, formState, overLimit]);
 
-  // Memo for warning tooltip/warning message
   const hoursWarnMsg = useMemo(() => {
-    if (!overLimit && !isNaN(hourValue)) return null;
-    if (overLimit)
+    if (overLimit && !isNaN(hourValue))
       return `You entered more hours (${hourValue}) than are scheduled (${scheduled}). Please reduce.`;
     return null;
   }, [overLimit, hourValue, scheduled]);
@@ -158,7 +166,6 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(() => {
-            // Custom render for hours field when validation applies
             const warning = overLimit;
             return (
               <TooltipProvider>
@@ -169,7 +176,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
                         id={`hours-${entryId}`}
                         type="number"
                         value={formState.fields.hours.value}
-                        onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.HOURS, e.target.value)}
+                        onChange={handleHoursInput}
                         disabled={disabled}
                         placeholder="Hours"
                         className={
@@ -178,8 +185,9 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
                             ? "border-red-500 !ring-red-400 focus:!ring-red-400 focus:border-red-500 bg-red-50"
                             : "")
                         }
-                        step="0.01"
-                        min="0"
+                        step="0.25"
+                        min="0.25"
+                        max="24"
                         aria-invalid={warning}
                         aria-describedby={warning ? `hours-tooltip-${entryId}` : undefined}
                         style={warning ? { boxShadow: "0 0 0 2px #f87171" } : undefined}

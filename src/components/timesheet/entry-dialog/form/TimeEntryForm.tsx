@@ -58,7 +58,9 @@ const renderFormField = (fieldType: string, value: string, onChange: (value: str
   const config = fieldConfig[fieldType];
   if (config) {
     return <div className="w-full">
-        <EntryField id={fieldType} name={config.name} value={value} onChange={onChange} placeholder={config.placeholder} required={required} />
+        <EntryField id={fieldType} name={config.name} value={value} onChange={onChange} placeholder={config.placeholder} required={required} 
+        {...(fieldType === FIELD_TYPES.HOURS ? { type: "number", min: "0.25", step: "0.25" } : {})}
+        />
         {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       </div>;
   }
@@ -132,8 +134,17 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
             <div className="w-full md:w-24">
               <HoursField 
                 id="hours" 
-                value={formState.fields.hours.value} 
-                onChange={value => setFieldValue(FIELD_TYPES.HOURS, value)} 
+                value={formState.fields.hours.value}
+                onChange={value => {
+                  let numValue = parseFloat(value);
+                  if (!isNaN(numValue)) {
+                    numValue = Math.round(numValue * 4) / 4;
+                    if (numValue < 0.25) numValue = 0.25;
+                    if (numValue > 24) numValue = 24;
+                    value = numValue.toString();
+                  }
+                  setFieldValue(FIELD_TYPES.HOURS, value);
+                }} 
                 required={true} 
               />
               {formState.fields.hours.error && (

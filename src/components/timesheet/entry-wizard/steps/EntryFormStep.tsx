@@ -12,20 +12,15 @@ const FIELD_TYPES = {
   DESCRIPTION: "description"
 };
 
-interface EntryFormStepProps {
-  values: Partial<TimeEntry>;
-  onFieldChange: (field: string, value: string | number) => void;
-}
-
-// Reusable field configuration with proper type definitions
+// Updated: use step 0.25 and min 0.25 for hours!
 const FIELD_CONFIG = {
   [FIELD_TYPES.HOURS]: {
     name: "Hours",
     type: "number" as EntryFieldType,
     placeholder: "Enter hours",
     required: true,
-    min: "0",
-    step: "0.1"
+    min: "0.25",
+    step: "0.25"
   },
   [FIELD_TYPES.JOB_NUMBER]: {
     name: "Job Number",
@@ -49,33 +44,28 @@ const FIELD_CONFIG = {
   }
 };
 
-const EntryFormStep: React.FC<EntryFormStepProps> = ({
+const EntryFormStep: React.FC<any> = ({
   values,
   onFieldChange
 }) => {
-  // Handle changes for each field with consistent processing
   const handleFieldChange = (field: string, value: string) => {
-    console.debug(`[EntryFormStep] Field change: ${field}=${value}`);
-    
-    // Special handling for numeric fields
     if (field === FIELD_TYPES.HOURS) {
-      const numValue = parseFloat(value) || 0;
-      onFieldChange(field, numValue);
+      // Snap to quarter hour
+      const parsed = parseFloat(value) || 0;
+      const snapped = Math.round(parsed * 4) / 4;
+      onFieldChange(field, snapped);
     } else {
       onFieldChange(field, value);
     }
   };
-  
-  // Helper to ensure string values for display
+
   const ensureString = (value: any): string => {
     return value !== undefined && value !== null ? String(value) : '';
   };
 
-  // Render a standard field based on configuration
   const renderField = (fieldType: string) => {
     const config = FIELD_CONFIG[fieldType];
     if (!config) return null;
-    
     return (
       <div>
         <EntryField
@@ -100,12 +90,10 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
         {renderField(FIELD_TYPES.HOURS)}
         {renderField(FIELD_TYPES.JOB_NUMBER)}
       </div>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {renderField(FIELD_TYPES.REGO)}
         {renderField(FIELD_TYPES.TASK_NUMBER)}
       </div>
-      
       <div>
         {renderField(FIELD_TYPES.DESCRIPTION)}
       </div>
@@ -114,3 +102,4 @@ const EntryFormStep: React.FC<EntryFormStepProps> = ({
 };
 
 export default EntryFormStep;
+
