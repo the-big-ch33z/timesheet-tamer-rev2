@@ -154,13 +154,23 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
 const clearAllListeners = (): void => {
   // Also clear timeouts and queues
   eventListeners.clear();
-  eventBatchTimeouts.forEach((timeouts, handler) => {
-    for (const [, timeoutId] of timeouts.entries()) {
-      clearTimeout(timeoutId as any);
-    }
+  
+  // Fixed code: WeakMap doesn't have forEach method
+  // Instead, we need to iterate through the eventListeners and clear associated timeouts
+  eventListeners.forEach((handlers) => {
+    handlers.forEach((handler) => {
+      const timeouts = eventBatchTimeouts.get(handler);
+      if (timeouts) {
+        for (const [, timeoutId] of timeouts.entries()) {
+          clearTimeout(timeoutId as any);
+        }
+        // Delete from WeakMap
+        eventBatchTimeouts.delete(handler);
+      }
+      // Delete from queue WeakMap too
+      eventBatchQueues.delete(handler);
+    });
   });
-  eventBatchTimeouts.clear();
-  eventBatchQueues.clear();
 };
 
 export const timeEventsService = {
@@ -168,4 +178,3 @@ export const timeEventsService = {
   publish,
   clearAllListeners
 };
-
