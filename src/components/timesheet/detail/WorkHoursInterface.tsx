@@ -10,8 +10,6 @@ import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useTimeEntryStats } from "@/hooks/timesheet/useTimeEntryStats";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
-
-// Import helpers for getting day breaks config from schedule
 import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 
 const logger = createTimeLogger('WorkHoursInterface');
@@ -43,7 +41,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     lunch: false,
   });
 
-  // Memoize action states to prevent unnecessary re-renders
   const handleToggleAction = useCallback((type: WorkHoursActionType) => {
     setActionStates((prev) => ({
       ...prev,
@@ -51,15 +48,20 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }));
   }, []);
 
-  // ===== CALCULATE if a lunch break is configured for the scheduled day =====
-  // Find out if this date (from workSchedule) normally has an unpaid lunch break
-  const hasLunchBreakInSchedule = useMemo(() => {
-    if (!workSchedule) return false;
+  // Get break config for this day from schedule
+  const breakConfig = useMemo(() => {
+    if (!workSchedule) return { lunch: false, smoko: false };
     const weekday = getWeekDay(date);
     const fortnightWeek = getFortnightWeek(date);
     const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
-    return !!(dayConfig && dayConfig.breaks && dayConfig.breaks.lunch);
+    return {
+      lunch: !!(dayConfig && dayConfig.breaks && dayConfig.breaks.lunch),
+      smoko: !!(dayConfig && dayConfig.breaks && dayConfig.breaks.smoko),
+    };
   }, [workSchedule, date]);
+
+  const hasLunchBreakInSchedule = breakConfig.lunch;
+  const hasSmokoBreakInSchedule = breakConfig.smoko;
 
   // Use the main time entry state management hook
   const {
@@ -81,17 +83,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
-  // "Lunch override" means: If user presses the button, they worked through lunch, so 30min is ADDED BACK to scheduled hours.
-  // If not pressed AND schedule says lunch is unpaid => subtract 0.5 as usual.
-  // If override pressed => do not subtract 0.5 or, equivalently, add it back.
+  // Calculate scheduled hours considering lunch override
   const scheduledHours = useMemo(() => {
-    if (!hasLunchBreakInSchedule) return baseScheduledHours;
-    if (actionStates.lunch) {
-      // Normally would subtract 0.5, so add it back if user worked through lunch
-      return baseScheduledHours + 0.5;
+    let hours = baseScheduledHours;
+    if (hasLunchBreakInSchedule && actionStates.lunch) {
+      // Lunch override: add 0.5h back to schedule
+      hours += 0.5;
     }
-    // Lunch is unpaid as per schedule (no override): leave baseScheduledHours
-    return baseScheduledHours;
+    return hours;
   }, [baseScheduledHours, hasLunchBreakInSchedule, actionStates.lunch]);
 
   // Trigger TOIL calculation when a completed timesheet has stabilized
@@ -105,7 +104,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   useEffect(() => {
     // Only calculate TOIL when entries are complete
     if (!hasEntries || !isComplete || !entries.length) return;
-    // Use a timeout to allow UI to settle first
     const timeoutId = setTimeout(() => {
       logger.debug('Initiating TOIL calculation based on completed timesheet');
       calculateToilForDay();
@@ -119,9 +117,9 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     handleTimeChange(type, value);
   }, [handleTimeChange]);
 
+  // Pass info about break config and any overrides to WorkHoursDisplay to show notification flags
   return (
     <div>
-      {/* Floating action buttons above header */}
       <div className="flex justify-center mb-1">
         <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
       </div>
@@ -139,6 +137,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         isComplete={isComplete}
         hoursVariance={hoursVariance}
         isUndertime={isUndertime}
+        breaksIncluded={{
+          lunch: hasLunchBreakInSchedule && !actionStates.lunch,
+          smoko: hasSmokoBreakInSchedule // Only based on config, no override for smoko
+        }}
+        overrideStates={{
+          lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
+        }}
       />
 
       <WorkHoursAlerts

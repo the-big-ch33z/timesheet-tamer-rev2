@@ -3,6 +3,7 @@ import React from "react";
 import { TimeInputField } from "./TimeInputField";
 import { HoursSummary } from "./HoursSummary";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import BreakInfoFlags from "./BreakInfoFlags";
 
 interface WorkHoursDisplayProps {
   startTime: string;
@@ -13,9 +14,16 @@ interface WorkHoursDisplayProps {
   interactive: boolean;
   onTimeChange: (type: 'start' | 'end', value: string) => void;
   isComplete?: boolean;
-  // New props for status
   hoursVariance?: number;
   isUndertime?: boolean;
+  // NEW: flags for breaks included and overrides
+  breaksIncluded?: {
+    lunch?: boolean;
+    smoko?: boolean;
+  };
+  overrideStates?: {
+    lunch?: boolean;
+  };
 }
 
 const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
@@ -28,11 +36,11 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   onTimeChange,
   isComplete,
   hoursVariance = 0,
-  isUndertime = false
+  isUndertime = false,
+  breaksIncluded,
+  overrideStates
 }) => {
-  // Handle time changes without local state
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    console.log(`WorkHoursDisplay: Time changed: ${type} = ${value}`);
     onTimeChange(type, value);
   };
 
@@ -46,7 +54,6 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           interactive={interactive}
           onChange={handleTimeChange}
         />
-
         <TimeInputField
           label="End Time"
           value={endTime}
@@ -54,18 +61,21 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           interactive={interactive}
           onChange={handleTimeChange}
         />
-
-        <div className="flex items-stretch w-full justify-end">
-          <HoursSummary
-            totalHours={totalHours}
-            calculatedHours={calculatedHours}
-            hasEntries={hasEntries}
-            hasTime={!!(startTime && endTime)}
-            isComplete={isComplete}
-            // Propagate new status props
-            hoursVariance={hoursVariance}
-            isUndertime={isUndertime}
-          />
+        <div className="flex items-stretch w-full flex-col justify-end">
+          {/* NEW: Notification flags for included breaks */}
+          <BreakInfoFlags breaksIncluded={breaksIncluded} overrideStates={overrideStates} />
+          <div className="flex items-stretch w-full justify-end">
+            <HoursSummary
+              totalHours={totalHours}
+              calculatedHours={calculatedHours}
+              hasEntries={hasEntries}
+              hasTime={!!(startTime && endTime)}
+              isComplete={isComplete}
+              hoursVariance={hoursVariance}
+              isUndertime={isUndertime}
+              // Optionally add notification to the summary in the future
+            />
+          </div>
         </div>
       </div>
     </TooltipProvider>
@@ -73,4 +83,3 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
 };
 
 export default WorkHoursDisplay;
-

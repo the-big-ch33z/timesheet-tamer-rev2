@@ -1,4 +1,3 @@
-
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -10,7 +9,6 @@ interface HoursSummaryProps {
   hasEntries: boolean;
   hasTime: boolean;
   isComplete?: boolean;
-  // New props for status/variance
   hoursVariance?: number;
   isUndertime?: boolean;
 }
@@ -46,7 +44,6 @@ const getStatusDisplay = (
   }
 
   if (typeof hoursVariance === "number" && hoursVariance > 0.1) {
-    // Over time
     return {
       text: `${Math.abs(hoursVariance).toFixed(1)} hours over`,
       icon: <Info className="w-4 h-4 mr-1 text-blue-500" />,
@@ -69,7 +66,6 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
   hoursVariance = 0,
   isUndertime = false
 }) => {
-  // Use entered/scheduled for fraction/progress
   const percent =
     calculatedHours > 0
       ? Math.min(100, Math.round((totalHours / calculatedHours) * 100))
@@ -98,7 +94,6 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
             {status.text}
           </div>
         </div>
-        {/* Progress bar vertical, right-aligned */}
         <div className="flex items-center h-full">
           <div className="flex flex-col justify-center h-full">
             <Progress
@@ -112,7 +107,6 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
                     ? "bg-amber-500"
                     : "bg-blue-500"
               }
-              // orient vertical for progress bar
               style={{ writingMode: "vertical-lr", rotate: "180deg" }}
             />
             <div className="text-[10px] mt-1 mx-auto text-gray-500 text-center font-medium">{percent}%</div>
@@ -122,4 +116,3 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
     </div>
   );
 };
-
