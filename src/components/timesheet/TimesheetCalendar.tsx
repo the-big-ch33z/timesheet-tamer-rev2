@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, memo } from "react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { WorkSchedule } from "@/types";
@@ -43,7 +43,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   }, [workSchedule]);
   
   const handlePrevMonth = useCallback(() => {
-    console.debug("[TimesheetCalendar] Moving to previous month, saving pending changes");
+    logger.debug("[TimesheetCalendar] Moving to previous month, saving pending changes");
     const saved = triggerGlobalSave();
     onPrevMonth();
     
@@ -56,7 +56,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   }, [onPrevMonth, toast]);
   
   const handleNextMonth = useCallback(() => {
-    console.debug("[TimesheetCalendar] Moving to next month, saving pending changes");
+    logger.debug("[TimesheetCalendar] Moving to next month, saving pending changes");
     const saved = triggerGlobalSave();
     onNextMonth();
     
@@ -69,9 +69,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   }, [onNextMonth, toast]);
 
   const handleDayClick = useCallback((day: Date) => {
-    console.debug("[TimesheetCalendar] Day clicked:", format(day, "yyyy-MM-dd"));
+    logger.debug("[TimesheetCalendar] Day clicked:", format(day, "yyyy-MM-dd"));
     if (selectedDate?.getTime() !== day.getTime()) {
-      console.debug("[TimesheetCalendar] Date changing, triggering global save");
+      logger.debug("[TimesheetCalendar] Date changing, triggering global save");
       triggerGlobalSave();
     }
     
@@ -104,4 +104,4 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
   );
 };
 
-export default TimesheetCalendar;
+export default memo(TimesheetCalendar);

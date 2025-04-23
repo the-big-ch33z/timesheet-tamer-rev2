@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo, memo } from "react";
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -36,33 +36,60 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   userId
 }) => {
   const logger = useLogger("CalendarGrid");
-  // Use time entry context to get entries for each day
   const { getDayEntries } = useTimeEntryContext();
   const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
   
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart);
-  const endDate = endOfWeek(monthEnd);
+  // Memoize days calculation to prevent recalculation on each render
+  const days = useMemo(() => {
+    logger.debug("Calculating calendar grid days");
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart);
+    const endDate = endOfWeek(monthEnd);
+    return eachDayOfInterval({ start: startDate, end: endDate });
+  }, [currentMonth, logger]);
 
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  // Pre-calculate data for all days in the visible calendar to avoid per-cell calculations
+  const daysData = useMemo(() => {
+    logger.debug("Pre-calculating calendar days data");
+    const monthStart = startOfMonth(currentMonth);
+    
+    return days.map(day => {
+      const isCurrentMonth = isSameMonth(day, monthStart);
+      
+      if (!isCurrentMonth) {
+        return { 
+          day, 
+          isCurrentMonth: false 
+        };
+      }
+      
+      const dayState = getDayState(day, selectedDate, monthStart);
+      const { startTime, endTime } = getStartAndEndTimeForDay(day);
+      const entries = getDayEntries(day);
+      const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+      const { isComplete } = calculateCompletion(entries, startTime, endTime);
+      
+      return {
+        day,
+        isCurrentMonth: true,
+        entries,
+        isSelected: selectedDate ? isSameDay(day, selectedDate) : false,
+        isToday: dateFnsIsToday(day),
+        isComplete,
+        totalHours,
+        isWeekend: dayState.isWeekend,
+        isWorkDay: dayState.isWorkingDay,
+        expectedStartTime: startTime,
+        expectedEndTime: endTime
+      };
+    });
+  }, [days, selectedDate, getDayEntries, getDayState, getStartAndEndTimeForDay, currentMonth]);
 
   return (
     <div className="grid grid-cols-7 gap-2">
-      {days.map((day, i) => {
-        const dayState = getDayState(day, selectedDate, startOfMonth(currentMonth));
-        const isCurrentMonth = isSameMonth(day, startOfMonth(currentMonth));
-        const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
-
-        // Get start and end time for the day from work schedule
-        const { startTime, endTime } = getStartAndEndTimeForDay(day);
-
-        // Get all entries for this day and calculate total hours
-        const entries = getDayEntries(day);
-        const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-        
-        // Calculate if day is complete (hours match expected)
-        const { isComplete } = calculateCompletion(entries, startTime, endTime);
+      {daysData.map((dayData, i) => {
+        const { day, isCurrentMonth } = dayData;
 
         if (!isCurrentMonth) {
           return (
@@ -76,20 +103,20 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         }
 
         return (
-          <CalendarDay
+          <MemoizedCalendarDay
             key={day.toString()}
             day={day}
-            entries={entries}
-            isSelected={isSelected}
-            isToday={dateFnsIsToday(day)}
+            entries={dayData.entries}
+            isSelected={dayData.isSelected}
+            isToday={dayData.isToday}
             onClick={onDayClick}
-            isComplete={isComplete}
-            totalHours={totalHours}
-            isWeekend={dayState.isWeekend}
+            isComplete={dayData.isComplete}
+            totalHours={dayData.totalHours}
+            isWeekend={dayData.isWeekend}
             isRDO={false} // This would be determined by work schedule
-            isWorkDay={dayState.isWorkingDay}
-            expectedStartTime={startTime}
-            expectedEndTime={endTime}
+            isWorkDay={dayData.isWorkDay}
+            expectedStartTime={dayData.expectedStartTime}
+            expectedEndTime={dayData.expectedEndTime}
           />
         );
       })}
@@ -97,5 +124,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   );
 };
 
-export default CalendarGrid;
+// Memoize CalendarDay component for performance optimization
+const MemoizedCalendarDay = memo(CalendarDay);
 
+// Memoize entire CalendarGrid component
+export default memo(CalendarGrid);

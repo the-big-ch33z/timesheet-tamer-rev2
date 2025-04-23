@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { TimeInputField } from "./TimeInputField";
 import { HoursSummary } from "./HoursSummary";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -81,5 +81,39 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   );
 };
 
-export default WorkHoursDisplay;
+// Use custom equality check for memoization
+function workHoursDisplayPropsAreEqual(prevProps: WorkHoursDisplayProps, nextProps: WorkHoursDisplayProps) {
+  // Check basic equality for primitive props
+  if (
+    prevProps.startTime !== nextProps.startTime ||
+    prevProps.endTime !== nextProps.endTime ||
+    prevProps.totalHours !== nextProps.totalHours ||
+    prevProps.calculatedHours !== nextProps.calculatedHours ||
+    prevProps.hasEntries !== nextProps.hasEntries ||
+    prevProps.interactive !== nextProps.interactive ||
+    prevProps.isComplete !== nextProps.isComplete ||
+    prevProps.hoursVariance !== nextProps.hoursVariance ||
+    prevProps.isUndertime !== nextProps.isUndertime
+  ) {
+    return false;
+  }
+  
+  // Deep check for breaksIncluded
+  const prevBreaks = prevProps.breaksIncluded || {};
+  const nextBreaks = nextProps.breaksIncluded || {};
+  if (prevBreaks.lunch !== nextBreaks.lunch || prevBreaks.smoko !== nextBreaks.smoko) {
+    return false;
+  }
+  
+  // Deep check for overrideStates
+  const prevOverrides = prevProps.overrideStates || {};
+  const nextOverrides = nextProps.overrideStates || {};
+  if (prevOverrides.lunch !== nextOverrides.lunch) {
+    return false;
+  }
+  
+  // The props are equal, so the component doesn't need to re-render
+  return true;
+}
 
+export default memo(WorkHoursDisplay, workHoursDisplayPropsAreEqual);
