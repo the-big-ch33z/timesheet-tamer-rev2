@@ -10,6 +10,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { getWeekDay, getFortnightWeek, calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
 import { VerticalProgressBar } from "@/components/ui/VerticalProgressBar";
+import { formatDisplayHours } from '@/utils/time/formatting/timeFormatting';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -123,6 +124,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     handleTimeChange(type, value);
   }, [handleTimeChange]);
 
+  const isOverScheduled = totalEnteredHours > scheduledHours + 0.01;
+
   return (
     <div className="flex w-full">
       <div className="flex-1">
@@ -178,12 +181,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
               height={90}
               width={13}
               barColor={
-                isActuallyComplete
+                isOverScheduled
+                  ? "bg-red-500"
+                  : isActuallyComplete
                   ? "bg-green-500"
                   : isUndertime
                   ? "bg-amber-500"
-                  : scheduledHours > 0 && totalEnteredHours > scheduledHours
-                  ? "bg-red-500"
                   : "bg-blue-500"
               }
               bgColor="bg-gray-100"

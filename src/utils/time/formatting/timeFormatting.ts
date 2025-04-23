@@ -1,12 +1,14 @@
-
 import { format } from 'date-fns';
 
 /**
- * Format hours for display (e.g. "8.5" -> "8.5h")
+ * Format hours for display (e.g. "8.5" -> "8.5h"), preserving up to two decimals without unnecessary rounding.
  */
 export const formatHours = (hours: number): string => {
   if (isNaN(hours)) return '0h';
-  return `${Math.round(hours * 10) / 10}h`;
+  // Always display up to 2 decimals, but strip trailing zeros (e.g. 0.25, 1.5, 2)
+  // Use toFixed(2) then remove trailing .00 or .0
+  let s = hours.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  return `${s}h`;
 };
 
 /**
@@ -15,7 +17,7 @@ export const formatHours = (hours: number): string => {
 export const formatDisplayHours = (hours: number): string => {
   if (isNaN(hours)) return '0h';
   const sign = hours >= 0 ? '+' : '';
-  return `${sign}${formatHours(hours)}`;
+  return `${sign}${formatHours(hours).replace('h','')}h`;
 };
 
 /**

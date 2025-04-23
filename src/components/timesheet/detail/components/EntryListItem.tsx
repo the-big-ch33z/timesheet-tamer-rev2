@@ -1,9 +1,8 @@
-
 import React from "react";
 import { TimeEntry } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { formatDisplayHours } from "@/utils/time/formatting";
+import { formatDisplayHours } from "@/utils/time/formatting/timeFormatting";
 import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil-service";
 import { cn } from "@/lib/utils";
 
