@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from "react";
+
+import React, { useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
 import { useFormSubmission } from "@/hooks/form/useFormSubmission";
@@ -6,6 +7,7 @@ import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Loader2, Trash2 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const FIELD_TYPES = {
   HOURS: "hours",
@@ -34,6 +36,7 @@ interface EntryFormItemProps {
   onDelete: () => void;
   entryId: string;
   disabled?: boolean;
+  scheduledHours?: number; // The cap for entered hours
 }
 
 const renderFormField = (
@@ -44,7 +47,8 @@ const renderFormField = (
   onChange: (value: string) => void,
   disabled: boolean = false,
   error?: string,
-  placeholder: string = ""
+  placeholder: string = "",
+  inputExtraProps: Record<string, any> = {}
 ) => {
   return (
     <div>
@@ -55,6 +59,7 @@ const renderFormField = (
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder || label}
+        {...inputExtraProps}
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
@@ -67,7 +72,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   handleSave,
   onDelete,
   entryId,
-  disabled = false
+  disabled = false,
+  scheduledHours = undefined
 }) => {
   const { formState, setFieldValue, validateForm } = useFormState(`entry-${entryId}`, {
     hours: initialFormState.hours || '',
@@ -79,7 +85,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
 
   const { isSubmitting, handleSubmit } = useFormSubmission({
     onSubmit: async () => {
-      if (validateForm()) {
+      if (validateForm() && !overLimit) {
         handleSave();
       }
     }
@@ -102,11 +108,24 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     };
   }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
 
+  // Determine if hours exceed scheduled
+  const hourValue = parseFloat(formState.fields.hours.value || "0");
+  const scheduled = typeof scheduledHours === "number" && !isNaN(scheduledHours) ? scheduledHours : undefined;
+  const overLimit = scheduled !== undefined && hourValue > scheduled;
+
   const onSaveCallback = useCallback(() => {
-    if (!disabled && validateForm()) {
+    if (!disabled && validateForm() && !overLimit) {
       handleSubmit(formState);
     }
-  }, [disabled, validateForm, handleSubmit, formState]);
+  }, [disabled, validateForm, handleSubmit, formState, overLimit]);
+
+  // Memo for warning tooltip/warning message
+  const hoursWarnMsg = useMemo(() => {
+    if (!overLimit && !isNaN(hourValue)) return null;
+    if (overLimit)
+      return `You entered more hours (${hourValue}) than are scheduled (${scheduled}). Please reduce.`;
+    return null;
+  }, [overLimit, hourValue, scheduled]);
 
   return (
     <div 
@@ -138,6 +157,48 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(() => {
+            // Custom render for hours field when validation applies
+            const warning = overLimit;
+            return (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="relative">
+                      <Input
+                        id={`hours-${entryId}`}
+                        type="number"
+                        value={formState.fields.hours.value}
+                        onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.HOURS, e.target.value)}
+                        disabled={disabled}
+                        placeholder="Hours"
+                        className={
+                          "peer " +
+                          (warning
+                            ? "border-red-500 !ring-red-400 focus:!ring-red-400 focus:border-red-500 bg-red-50"
+                            : "")
+                        }
+                        step="0.01"
+                        min="0"
+                        aria-invalid={warning}
+                        aria-describedby={warning ? `hours-tooltip-${entryId}` : undefined}
+                        style={warning ? { boxShadow: "0 0 0 2px #f87171" } : undefined}
+                      />
+                      {warning && (
+                        <div className="absolute top-full left-0 w-max text-xs text-red-600 mt-0.5 bg-white border border-red-200 rounded p-1 shadow-sm z-10">
+                          {hoursWarnMsg}
+                        </div>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" id={`hours-tooltip-${entryId}`}>
+                    {overLimit && hoursWarnMsg}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })()}
+
           {renderFormField(
             `rego-${entryId}`, 
             FIELD_TYPES.REGO,
@@ -146,16 +207,6 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
             (value) => handleFieldChangeCallback(FIELD_TYPES.REGO, value),
             disabled,
             formState.fields.rego.error
-          )}
-          
-          {renderFormField(
-            `hours-${entryId}`, 
-            FIELD_TYPES.HOURS,
-            "Hours", 
-            formState.fields.hours.value,
-            (value) => handleFieldChangeCallback(FIELD_TYPES.HOURS, value),
-            disabled,
-            formState.fields.hours.error
           )}
         </div>
         
@@ -187,8 +238,13 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
         <Button 
           size="sm" 
           onClick={onSaveCallback}
-          className={`${formState.isValid ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
-          disabled={disabled || !formState.formEdited || !formState.isValid || isSubmitting}
+          className={
+            (formState.isValid && !overLimit
+              ? 'bg-green-500 hover:bg-green-600'
+              : 'bg-gray-300') +
+            " text-white"
+          }
+          disabled={disabled || !formState.formEdited || !formState.isValid || isSubmitting || overLimit}
           data-testid={`save-button-${entryId}`}
         >
           {isSubmitting ? (

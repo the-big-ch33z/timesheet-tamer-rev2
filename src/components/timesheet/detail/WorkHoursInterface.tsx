@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -80,7 +79,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
-  // Round scheduled and entered hours to nearest 0.25 for progress
   const roundToQuarter = (val: number) => Math.round(val * 4) / 4;
 
   const scheduledHours = useMemo(() => {
@@ -93,9 +91,9 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return rounded;
   }, [startTime, endTime, breakConfig]);
 
-  const progressPercent = useMemo(() => {
+  const verticalProgressValue = useMemo(() => {
     if (!scheduledHours || scheduledHours === 0) return 0;
-    return Math.min(100, Math.round((roundToQuarter(totalEnteredHours) / scheduledHours) * 100));
+    return Math.min(100, (roundToQuarter(totalEnteredHours) / scheduledHours) * 100);
   }, [totalEnteredHours, scheduledHours]);
 
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
@@ -120,47 +118,59 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [handleTimeChange]);
 
   return (
-    <div>
-      <div className="flex justify-center mb-1">
-        <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
+    <div className="flex w-full">
+      <div className="flex-1">
+        <div className="flex justify-center mb-1">
+          <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
+        </div>
+
+        <WorkHoursHeader hasEntries={hasEntries} />
+
+        <WorkHoursDisplay
+          startTime={startTime}
+          endTime={endTime}
+          totalHours={totalEnteredHours}
+          calculatedHours={scheduledHours}
+          hasEntries={hasEntries}
+          interactive={interactive}
+          onTimeChange={timeChangeHandler}
+          isComplete={isComplete}
+          hoursVariance={hoursVariance}
+          isUndertime={isUndertime}
+          breaksIncluded={{
+            lunch: hasLunchBreakInSchedule,
+            smoko: hasSmokoBreakInSchedule
+          }}
+          overrideStates={{
+            lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
+          }}
+        />
+
+        <WorkHoursAlerts
+          hasEntries={hasEntries}
+          isUndertime={isUndertime}
+          hoursVariance={hoursVariance}
+          interactive={interactive}
+          date={date}
+          isComplete={isComplete}
+        />
+
+        {isCalculating && (
+          <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
+            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Calculating time accruals...
+          </div>
+        )}
       </div>
-
-      <WorkHoursHeader hasEntries={hasEntries} />
-
-      <WorkHoursDisplay
-        startTime={startTime}
-        endTime={endTime}
-        totalHours={totalEnteredHours}
-        calculatedHours={scheduledHours}
-        hasEntries={hasEntries}
-        interactive={interactive}
-        onTimeChange={timeChangeHandler}
-        isComplete={isComplete}
-        hoursVariance={hoursVariance}
-        isUndertime={isUndertime}
-        breaksIncluded={{
-          lunch: hasLunchBreakInSchedule,
-          smoko: hasSmokoBreakInSchedule
-        }}
-        overrideStates={{
-          lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
-        }}
-      />
-
-      {/* Reinstated styled horizontal progress bar */}
-      <div className="mt-2 w-full flex items-center gap-3">
-        <Progress
-          value={progressPercent}
-          color={
-            isComplete
-              ? "success"
-              : isUndertime
-              ? "warning"
-              : scheduledHours > 0 && totalEnteredHours > scheduledHours
-              ? "danger"
-              : "info"
-          }
-          indicatorColor={
+      <div className="flex flex-col items-center justify-center ml-2 min-h-[210px]">
+        <VerticalProgressBar
+          value={verticalProgressValue}
+          height={90}
+          width={13}
+          barColor={
             isComplete
               ? "bg-green-500"
               : isUndertime
@@ -169,34 +179,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
               ? "bg-red-500"
               : "bg-blue-500"
           }
-          className="w-full h-3"
+          bgColor="bg-gray-100"
         />
-        <span className="text-xs text-gray-700 font-semibold w-12 text-right">
-          {progressPercent}%
+        <span className="text-[0.70rem] mt-1 text-gray-700 font-medium">
+          {verticalProgressValue.toFixed(0)}%
         </span>
       </div>
-
-      <WorkHoursAlerts
-        hasEntries={hasEntries}
-        isUndertime={isUndertime}
-        hoursVariance={hoursVariance}
-        interactive={interactive}
-        date={date}
-        isComplete={isComplete}
-      />
-
-      {isCalculating && (
-        <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Calculating time accruals...
-        </div>
-      )}
     </div>
   );
 };
 
 export default React.memo(WorkHoursInterface);
-
