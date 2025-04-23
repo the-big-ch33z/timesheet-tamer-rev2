@@ -4,8 +4,8 @@ import { TimeEntry } from '@/types';
 
 export interface EntryOperationsContextValue {
   addEntry: (entry: Omit<TimeEntry, "id">) => void;
-  updateEntry: (id: string, updates: Partial<TimeEntry>) => boolean;
-  deleteEntry: (id: string) => boolean;
+  updateEntry: (id: string, updates: Partial<TimeEntry>) => void;
+  deleteEntry: (id: string) => Promise<boolean>;
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
 }
 

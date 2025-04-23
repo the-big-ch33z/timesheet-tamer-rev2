@@ -1,20 +1,28 @@
 
 import { useContext } from 'react';
-import { TimeEntryContext } from './TimeEntryProvider';
+import { EntryDataContext } from './EntryDataContext';
+import { EntryOperationsContext } from './EntryOperationsContext';
 import { TimeEntryContextValue } from './types';
-import { createTimeLogger } from '@/utils/time/errors';
 
-const logger = createTimeLogger('useTimeEntryContext');
-
+/**
+ * A unified hook that combines data and operations from the split contexts
+ * for backward compatibility with existing components.
+ */
 export const useTimeEntryContext = (): TimeEntryContextValue => {
-  const context = useContext(TimeEntryContext);
+  const dataContext = useContext(EntryDataContext);
+  const operationsContext = useContext(EntryOperationsContext);
   
-  if (!context) {
-    logger.error('useTimeEntryContext was called outside of a TimeEntryProvider');
-    throw new Error('useTimeEntryContext must be used within a TimeEntryProvider');
+  if (!dataContext) {
+    throw new Error('useTimeEntryContext must be used within an EntryDataContext.Provider');
   }
   
-  logger.debug('TimeEntryContext accessed, entries count:', context.entries.length);
+  if (!operationsContext) {
+    throw new Error('useTimeEntryContext must be used within an EntryOperationsContext.Provider');
+  }
   
-  return context;
+  // Combine both contexts into one value for backward compatibility
+  return {
+    ...dataContext,
+    ...operationsContext
+  };
 };

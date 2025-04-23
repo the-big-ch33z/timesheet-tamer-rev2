@@ -51,7 +51,7 @@ export const useEntryOperations = (
     });
   }, [setEntries, toast]);
 
-  // Update an existing entry
+  // Update an existing entry - return void to match the interface
   const updateEntry = useCallback((entryId: string, updates: Partial<TimeEntry>) => {
     console.debug("[TimeEntryProvider] Updating entry:", entryId, "with updates:", updates);
     
