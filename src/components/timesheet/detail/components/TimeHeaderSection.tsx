@@ -25,7 +25,9 @@ const TimeHeaderSection: React.FC<TimeHeaderSectionProps> = ({
 }) => {
   return (
     <>
-      <WorkHoursHeader hasEntries={hasEntries} />
+      <div className="flex justify-between items-center mb-2">
+        <WorkHoursHeader hasEntries={hasEntries} />
+      </div>
       
       <TimeDisplay
         startTime={startTime}
@@ -37,7 +39,7 @@ const TimeHeaderSection: React.FC<TimeHeaderSectionProps> = ({
         onTimeChange={onTimeChange}
       />
       
-      <div className="flex justify-end">
+      <div className="flex justify-end mt-2">
         <div className="text-right">
           <div className="text-sm text-amber-700">Daily Target:</div>
           <div className="text-xl font-semibold text-amber-900">{formatDisplayHours(calculatedHours)}</div>
