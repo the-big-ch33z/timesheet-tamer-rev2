@@ -1,56 +1,69 @@
 
 import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Plane, Syringe, Utensils, Coffee } from "lucide-react";
+import { Utensils, Coffee, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch";
+export type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch" | "smoko";
 type ActionConf = {
-  type: WorkHoursActionType | "coffee";
+  type: WorkHoursActionType;
   icon: React.ElementType;
   tooltip: string;
-  color: string;
+  adjustment?: number;
+  activeColor: string;
   activeBg: string;
-  disabled?: boolean;
+  baseColor?: string;
+  isLeave?: boolean;
 };
 
 const ACTIONS: ActionConf[] = [
   {
     type: "leave",
-    icon: Plane,
+    icon: Square,
     tooltip: "Mark as Annual Leave",
-    color: "text-sky-500",
+    adjustment: 0,
+    activeColor: "text-sky-600",
     activeBg: "bg-sky-100",
+    baseColor: "text-gray-500",
+    isLeave: true,
   },
   {
     type: "sick",
-    icon: Syringe,
+    icon: Square,
     tooltip: "Mark as Sick Day",
-    color: "text-[#ea384c]",
+    adjustment: 0,
+    activeColor: "text-[#ea384c]",
     activeBg: "bg-[#ea384c]/10",
+    baseColor: "text-gray-500",
+    isLeave: true,
   },
   {
     type: "toil",
-    icon: Clock,
+    icon: Square,
     tooltip: "Mark as TOIL (Time Off in Lieu)",
-    color: "text-purple-500",
+    adjustment: 0,
+    activeColor: "text-purple-600",
     activeBg: "bg-purple-100",
+    baseColor: "text-gray-500",
   },
   {
     type: "lunch",
     icon: Utensils,
-    tooltip: "Override Lunch (Worked Through Lunch)",
-    color: "text-blue-500",
+    tooltip: "Worked Through Lunch (add 0.5h)",
+    adjustment: 0.5,
+    activeColor: "text-blue-600",
     activeBg: "bg-blue-100",
+    baseColor: "text-gray-500",
   },
   {
-    type: "coffee",
+    type: "smoko",
     icon: Coffee,
-    tooltip: "Coffee break (no action)",
-    color: "text-amber-500",
-    activeBg: "bg-amber-100",
-    disabled: true,
-  }
+    tooltip: "Worked Through Smoko (add 0.25h)",
+    adjustment: 0.25,
+    activeColor: "text-orange-500",
+    activeBg: "bg-orange-100",
+    baseColor: "text-gray-500",
+  },
 ];
 
 export interface WorkHoursActionButtonsProps {
@@ -62,50 +75,36 @@ const WorkHoursActionButtons: React.FC<WorkHoursActionButtonsProps> = ({ value, 
   <TooltipProvider>
     <div
       className={cn(
-        "flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-white border border-gray-200 mx-auto",
-        "w-fit mb-4",
-        "animate-fade-in"
+        "flex items-center gap-2 px-4 py-2 rounded-full bg-white mx-auto w-fit mb-4 animate-fade-in"
+        // Border and shadow intentionally removed here!
       )}
       data-testid="work-hours-action-bar"
     >
       {ACTIONS.map(
-        ({ type, icon: Icon, tooltip, color, activeBg, disabled }) => {
-          const isActive = type !== "coffee" ? value[type as WorkHoursActionType] : false;
+        ({ type, icon: Icon, tooltip, activeColor, activeBg, baseColor }) => {
+          const isActive = value[type];
           return (
             <Tooltip key={type}>
               <TooltipTrigger asChild>
-                {type !== "coffee" ? (
-                  <button
-                    type="button"
-                    aria-label={tooltip}
-                    onClick={() => onToggle(type as WorkHoursActionType)}
-                    className={cn(
-                      "rounded-md flex items-center justify-center focus-visible:ring-2 focus:outline-none transition-colors",
-                      "border border-gray-100",
-                      "bg-gray-50 hover:bg-gray-100",
-                      color,
-                      isActive && activeBg,
-                      "w-9 h-9"
-                    )}
-                    tabIndex={0}
-                    data-testid={`hours-action-${type}`}
-                  >
-                    <Icon className={cn("w-5 h-5", isActive && "scale-110")} strokeWidth={2} />
-                  </button>
-                ) : (
-                  <span
-                    className={cn(
-                      "rounded-md flex items-center justify-center",
-                      "border border-gray-100",
-                      "bg-gray-50",
-                      "w-9 h-9 cursor-default",
-                      color,
-                    )}
-                    aria-label={tooltip}
-                  >
-                    <Icon className="w-5 h-5" strokeWidth={2} />
-                  </span>
-                )}
+                <button
+                  type="button"
+                  aria-label={tooltip}
+                  onClick={() => onToggle(type)}
+                  className={cn(
+                    "rounded-md flex items-center justify-center transition-colors",
+                    "border border-transparent",
+                    "bg-gray-50 hover:bg-gray-100",
+                    isActive ? [activeColor, activeBg] : baseColor || "text-gray-500",
+                    "w-9 h-9"
+                  )}
+                  tabIndex={0}
+                  data-testid={`hours-action-${type}`}
+                >
+                  <Icon
+                    className={cn("w-5 h-5", isActive && "scale-110")}
+                    strokeWidth={2}
+                  />
+                </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="shadow-sm px-3 py-1 bg-white text-gray-800 border border-gray-100 text-xs">
                 {tooltip}
