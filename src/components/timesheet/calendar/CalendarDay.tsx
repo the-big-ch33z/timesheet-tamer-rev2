@@ -14,6 +14,15 @@ import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 const COMPLETION_BG = "#F2FCE2";
 const INCOMPLETE_BG = "#FEF7CD";
 
+// RDO colors
+const RDO_BG = "bg-blue-100";
+const RDO_BORDER = "border-blue-200";
+const RDO_TEXT = "text-blue-800";
+
+const SHIFTED_RDO_BG = "bg-blue-200";
+const SHIFTED_RDO_BORDER = "border-blue-300 border-dashed";
+const SHIFTED_RDO_TEXT = "text-blue-900";
+
 interface CalendarDayProps {
   day: Date;
   entries: TimeEntry[];
@@ -24,10 +33,12 @@ interface CalendarDayProps {
   totalHours?: number;
   isWeekend?: boolean;
   isRDO?: boolean;
+  isShiftedRDO?: boolean;
   originalRdoDate?: Date;
   isWorkDay?: boolean;
   expectedStartTime?: string | null;
   expectedEndTime?: string | null;
+  shiftReason?: string | null;
 }
 
 const CalendarDay: React.FC<CalendarDayProps> = ({
@@ -40,15 +51,15 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   totalHours = 0,
   isWeekend = false,
   isRDO = false,
+  isShiftedRDO = false,
   originalRdoDate,
   isWorkDay = true,
   expectedStartTime,
-  expectedEndTime
+  expectedEndTime,
+  shiftReason = null
 }) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   const hasEntries = safeEntries.length > 0;
-  // Fix: mark day as shifted RDO if it has an originalRdoDate different from itself
-  const isShiftedRDO = isRDO && originalRdoDate instanceof Date && !isNaN(originalRdoDate.getTime()) && originalRdoDate.toDateString() !== day.toDateString();
 
   // Safely convert the day to a Date object - memoized
   const safeDate = useMemo(() => toDate(day), [day]);
@@ -91,9 +102,10 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       isToday && "bg-blue-50",
       isWeekend && !holidayInfo.isHoliday && !isRDO && "bg-gray-50",
       holidayInfo.isHoliday && "bg-amber-50",
-      // RDO Blue backgrounds:
-      isRDO && !isShiftedRDO && "bg-blue-100 border-blue-200",
-      isShiftedRDO && "bg-blue-200 border-blue-300 border-dashed",
+      // RDO Blue backgrounds - with separate styling for shifted RDOs
+      isRDO && !isShiftedRDO && RDO_BG + " " + RDO_BORDER,
+      isShiftedRDO && SHIFTED_RDO_BG + " " + SHIFTED_RDO_BORDER,
+      // Completion status colors take precedence over RDO colors
       hasEntries && completionStatus.status === "nomatch" && "!bg-[#FEF7CD] !border-yellow-300",
       hasEntries && completionStatus.status === "match" && "!bg-[#F2FCE2] !border-green-300",
       hasEntries && !isComplete && "border-yellow-200",
@@ -168,15 +180,15 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </Badge>
             )}
 
-            {/* Restore clear blue RDO display */}
+            {/* RDO display with different styling for shifted vs regular RDOs */}
             {isRDO && (
               <Badge
                 variant="secondary"
                 className={cn(
                   "mt-1 text-xs",
                   isShiftedRDO
-                    ? "bg-blue-200 text-blue-900 border-blue-300"
-                    : "bg-blue-100 text-blue-800 border-blue-200"
+                    ? SHIFTED_RDO_BG + " " + SHIFTED_RDO_TEXT + " border " + SHIFTED_RDO_BORDER
+                    : RDO_BG + " " + RDO_TEXT + " border " + RDO_BORDER
                 )}
               >
                 {isShiftedRDO ? "Shifted RDO" : "RDO"}
@@ -186,25 +198,38 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
         </TooltipTrigger>
         <TooltipContent>
           <p>{!isNaN(totalHours) ? totalHours : 0} hrs logged</p>
+          
           {completionStatus.status === "nomatch" && (
             <div className="flex items-center gap-1 mt-1 text-yellow-900">
               <AlertTriangle size={16} className="text-yellow-500" />{" "}
               <span>Logged hours are less/more than expected</span>
             </div>
           )}
+          
           {completionStatus.status === "match" && (
             <div className="flex items-center gap-1 mt-1 text-green-800">
               <Check size={16} className="text-green-500" />{" "}
               <span>Hours match expected</span>
             </div>
           )}
+          
           {isRDO && (
-            <div className="flex items-center gap-1 mt-2 text-blue-800">
+            <div className="flex flex-col gap-1 mt-2 text-blue-800 text-sm">
               <span>
                 {isShiftedRDO
-                  ? "This is a shifted RDO (Rostered Day Off) assigned from a different week."
+                  ? "This is a shifted RDO (Rostered Day Off) moved from its original date."
                   : "This is an RDO (Rostered Day Off) according to your work schedule."}
               </span>
+              
+              {isShiftedRDO && shiftReason && (
+                <span className="mt-1 text-blue-600 text-xs italic">{shiftReason}</span>
+              )}
+              
+              {isShiftedRDO && originalRdoDate && (
+                <span className="text-blue-600 text-xs">
+                  Original date: {format(originalRdoDate, "MMMM d, yyyy")}
+                </span>
+              )}
             </div>
           )}
         </TooltipContent>
@@ -222,9 +247,11 @@ function calendarDayPropsAreEqual(prevProps: CalendarDayProps, nextProps: Calend
       prevProps.totalHours !== nextProps.totalHours ||
       prevProps.isWeekend !== nextProps.isWeekend ||
       prevProps.isRDO !== nextProps.isRDO ||
+      prevProps.isShiftedRDO !== nextProps.isShiftedRDO ||
       prevProps.isWorkDay !== nextProps.isWorkDay ||
       prevProps.expectedStartTime !== nextProps.expectedStartTime ||
-      prevProps.expectedEndTime !== nextProps.expectedEndTime) {
+      prevProps.expectedEndTime !== nextProps.expectedEndTime ||
+      prevProps.shiftReason !== nextProps.shiftReason) {
     return false;
   }
   
@@ -234,7 +261,12 @@ function calendarDayPropsAreEqual(prevProps: CalendarDayProps, nextProps: Calend
   }
   
   // Compare original RDO dates
-  if (prevProps.originalRdoDate?.getTime() !== nextProps.originalRdoDate?.getTime()) {
+  if (
+    (prevProps.originalRdoDate && !nextProps.originalRdoDate) ||
+    (!prevProps.originalRdoDate && nextProps.originalRdoDate) ||
+    (prevProps.originalRdoDate && nextProps.originalRdoDate && 
+     prevProps.originalRdoDate.getTime() !== nextProps.originalRdoDate.getTime())
+  ) {
     return false;
   }
   

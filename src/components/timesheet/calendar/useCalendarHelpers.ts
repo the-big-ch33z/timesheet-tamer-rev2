@@ -2,20 +2,38 @@
 import { useMemo, useCallback } from "react";
 import { WorkSchedule } from "@/types";
 import { isWeekend, isToday } from "date-fns";
-import { isWorkingDay } from "@/utils/time/scheduleUtils";
+import { isWorkingDay, isRDODay } from "@/utils/time/scheduleUtils";
 import { getWeekDay, getFortnightWeek } from "@/utils/time/scheduleUtils";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
+import { Holiday, getHolidays } from "@/lib/holidays";
+import { getShiftedRDODate } from "@/utils/time/rdoDisplay";
 
 const logger = createTimeLogger('useCalendarHelpers');
 
 // Cache for start and end times based on date
 const startEndTimeCache = new Map<string, { startTime?: string, endTime?: string }>();
 
+interface DayStateResult {
+  isToday: boolean;
+  isSelected: boolean;
+  isCurrentMonth: boolean;
+  isWeekend: boolean;
+  isWorkingDay: boolean;
+  isRDO: boolean;
+  isShiftedRDO: boolean;
+  weekday: string;
+  fortnightWeek: 1 | 2;
+  originalRdoDate?: Date;
+  shiftReason?: string | null;
+}
+
 /**
  * Helper hook for calendar functionality with improved performance
  */
 export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
+  const holidays = useMemo(() => getHolidays(), []);
+
   /**
    * Memoized function to check if a date is a working day
    */
@@ -24,27 +42,62 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
   }, [workSchedule]);
 
   /**
+   * Check if a day is an RDO with enhanced caching
+   */
+  const checkIsRDO = useCallback((day: Date) => {
+    // Use the isRDODay utility function for consistent RDO detection
+    return workSchedule ? isRDODay(day, workSchedule) : false;
+  }, [workSchedule]);
+
+  /**
+   * Get RDO shift information for a date if needed
+   */
+  const getRDOShiftInfo = useCallback(
+    (day: Date): { isShifted: boolean; originalDate?: Date; reason?: string } => {
+      if (!workSchedule || !checkIsRDO(day)) {
+        return { isShifted: false };
+      }
+
+      // Check if this RDO needs to be shifted due to holiday or weekend
+      const shiftInfo = getShiftedRDODate(day, holidays);
+      if (shiftInfo.shifted) {
+        return {
+          isShifted: true,
+          originalDate: day, // This is the original date when checking the source day
+          reason: shiftInfo.reason || undefined,
+        };
+      }
+
+      return { isShifted: false };
+    },
+    [workSchedule, checkIsRDO, holidays]
+  );
+
+  /**
    * Optimized version that gets various calendar state information for a day
    */
-  const getDayState = useCallback((
-    day: Date, 
-    selectedDay: Date | null, 
-    monthStart: Date
-  ) => {
-    // Don't calculate these values every time if they're static properties of the date
-    const cacheKey = `${day.getTime()}-${workSchedule?.id || 'no-schedule'}`;
-    
-    // Create result
-    return {
-      isToday: isToday(day),
-      isSelected: selectedDay ? day.toDateString() === selectedDay.toDateString() : false,
-      isCurrentMonth: day.getMonth() === monthStart.getMonth(),
-      isWeekend: isWeekend(day),
-      isWorkingDay: checkIsWorkingDay(day),
-      weekday: getWeekDay(day),
-      fortnightWeek: getFortnightWeek(day)
-    };
-  }, [workSchedule, checkIsWorkingDay]);
+  const getDayState = useCallback(
+    (day: Date, selectedDay: Date | null, monthStart: Date): DayStateResult => {
+      const isRDO = checkIsRDO(day);
+      const shiftInfo = isRDO ? getRDOShiftInfo(day) : { isShifted: false };
+      
+      // Create result
+      return {
+        isToday: isToday(day),
+        isSelected: selectedDay ? day.toDateString() === selectedDay.toDateString() : false,
+        isCurrentMonth: day.getMonth() === monthStart.getMonth(),
+        isWeekend: isWeekend(day),
+        isWorkingDay: checkIsWorkingDay(day),
+        isRDO,
+        isShiftedRDO: shiftInfo.isShifted,
+        weekday: getWeekDay(day),
+        fortnightWeek: getFortnightWeek(day),
+        originalRdoDate: shiftInfo.isShifted ? shiftInfo.originalDate : undefined,
+        shiftReason: shiftInfo.reason || null
+      };
+    },
+    [workSchedule, checkIsWorkingDay, checkIsRDO, getRDOShiftInfo]
+  );
   
   /**
    * Optimized function to get start and end time from work schedule with caching
@@ -109,7 +162,9 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
   return { 
     getDayState, 
     getDayStatus, 
-    checkIsWorkingDay, 
+    checkIsWorkingDay,
+    checkIsRDO,
+    getRDOShiftInfo,
     getStartAndEndTimeForDay 
   };
 };

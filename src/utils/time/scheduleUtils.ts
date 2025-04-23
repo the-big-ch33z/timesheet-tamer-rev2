@@ -3,9 +3,12 @@
  * Functions for working with work schedules and calendar data
  */
 import { WeekDay, WorkSchedule } from "@/types";
-import { getDaysInMonth, isWeekend } from "date-fns";
+import { getDaysInMonth, isWeekend, differenceInWeeks } from "date-fns";
 import { Holiday } from "@/lib/holidays";
 import { format } from "date-fns";
+
+// Reference date for fortnight week calculation (first Monday of 2023)
+const DEFAULT_REFERENCE_DATE = new Date(2023, 0, 2); // January 2, 2023 (Monday)
 
 // Holiday cache for quick lookups
 const holidayDateCache = new Map<string, boolean>();
@@ -17,11 +20,14 @@ export const getWeekDay = (date: Date): WeekDay => {
 };
 
 // Helper function to determine fortnight week (1 or 2)
-export const getFortnightWeek = (date: Date): 1 | 2 => {
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const daysSinceStart = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-  const weekNumber = Math.floor(daysSinceStart / 7);
-  return ((weekNumber % 2) + 1) as 1 | 2;
+// Uses reference date for more accurate week calculation
+export const getFortnightWeek = (date: Date, referenceDate: Date = DEFAULT_REFERENCE_DATE): 1 | 2 => {
+  // Calculate weeks difference between the reference date and current date
+  const weeksDiff = differenceInWeeks(date, referenceDate);
+  
+  // For odd number of weeks difference, it's week 1 of fortnight
+  // For even number of weeks difference, it's week 2 of fortnight
+  return ((weeksDiff % 2) + 1) as 1 | 2;
 };
 
 /**
@@ -237,4 +243,19 @@ export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule):
  */
 export const clearHolidayCache = () => {
   holidayDateCache.clear();
+};
+
+/**
+ * Check if a day is an RDO according to the work schedule
+ * @param date The date to check
+ * @param workSchedule The work schedule
+ * @returns True if the date is an RDO
+ */
+export const isRDODay = (date: Date, workSchedule?: WorkSchedule): boolean => {
+  if (!workSchedule) return false;
+  
+  const weekDay = getWeekDay(date);
+  const weekNum = getFortnightWeek(date);
+  
+  return workSchedule.rdoDays[weekNum].includes(weekDay);
 };

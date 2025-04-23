@@ -2,6 +2,8 @@
 import { Holiday } from "@/lib/holidays";
 import { isWeekend, addDays, isSameDay } from "date-fns";
 import { createTimeLogger } from "./errors";
+import { getWeekDay, getFortnightWeek } from "./scheduleUtils";
+import { WorkSchedule } from "@/types";
 
 const logger = createTimeLogger('rdoDisplay');
 
@@ -57,6 +59,13 @@ export const findNextBusinessDay = (date: Date, holidays: Holiday[]): Date => {
 };
 
 /**
+ * Check if this day needs RDO shifting (due to weekend or holiday)
+ */
+export const needsRdoShift = (date: Date, holidays: Holiday[]): boolean => {
+  return isWeekend(date) || isHoliday(date, holidays);
+};
+
+/**
  * Get the shifted RDO date if it falls on a holiday or weekend
  * Returns information about the shift including original date and reason
  */
@@ -66,7 +75,7 @@ export const getShiftedRDODate = (originalDate: Date, holidays: Holiday[]): {
   reason: string | null
 } => {
   // Only shift if the date is a holiday or weekend
-  if (!isWeekend(originalDate) && !isHoliday(originalDate, holidays)) {
+  if (!needsRdoShift(originalDate, holidays)) {
     return {
       shifted: null,
       originalDate,
@@ -118,4 +127,66 @@ export const getRDOShiftReason = (originalDate: Date, shiftedDate: Date | null, 
   
   const daysDiff = Math.round((shiftedDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24));
   return `RDO shifted ${daysDiff} day${daysDiff > 1 ? 's' : ''} due to ${reasons.join(' and ')}`;
+};
+
+/**
+ * Check if any RDOs need to be shifted for a month, and return the mapping
+ */
+export const getShiftedRDOsForMonth = (
+  daysInMonth: Date[],
+  workSchedule: WorkSchedule | undefined,
+  holidays: Holiday[]
+): Map<string, { originalDate: Date, reason: string | null }> => {
+  const shiftedRDOMap = new Map<string, { originalDate: Date, reason: string | null }>();
+  const shiftedDates = new Set<string>();
+  
+  // Skip if no work schedule
+  if (!workSchedule) return shiftedRDOMap;
+  
+  // First pass: identify all RDOs and their potential shifts
+  daysInMonth.forEach(day => {
+    const weekdayName = getWeekDay(day);
+    const fortnightWeek = getFortnightWeek(day);
+    
+    // Check if this is an RDO
+    const isRDO = workSchedule.rdoDays[fortnightWeek].includes(weekdayName);
+    
+    if (isRDO) {
+      // Get shift information
+      const shiftInfo = getShiftedRDODate(day, holidays);
+      
+      if (shiftInfo.shifted) {
+        const shiftedKey = shiftInfo.shifted.toISOString().split('T')[0];
+        
+        // If this shifted date is already taken, try to find the next available date
+        let currentShiftedDate = shiftInfo.shifted;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (shiftedDates.has(shiftedKey) && attempts < maxAttempts) {
+          attempts++;
+          const newShiftInfo = getShiftedRDODate(
+            new Date(currentShiftedDate.setDate(currentShiftedDate.getDate() + 1)), 
+            holidays
+          );
+          if (!newShiftInfo.shifted) break;
+          currentShiftedDate = newShiftInfo.shifted;
+        }
+        
+        const finalShiftedKey = currentShiftedDate.toISOString().split('T')[0];
+        
+        // Add to our tracking maps
+        shiftedDates.add(finalShiftedKey);
+        
+        shiftedRDOMap.set(finalShiftedKey, {
+          originalDate: day,
+          reason: shiftInfo.reason
+        });
+        
+        logger.debug(`RDO mapped: ${day.toISOString()} → ${currentShiftedDate.toISOString()}, reason: ${shiftInfo.reason}`);
+      }
+    }
+  });
+  
+  return shiftedRDOMap;
 };

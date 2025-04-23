@@ -15,10 +15,11 @@ import CalendarDay from "./CalendarDay";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { useCalendarHelpers } from "./useCalendarHelpers";
 import { isHoliday } from "@/utils/time/services/toil/holiday-utils";
-import { defaultQueenslandHolidays } from "@/lib/holidays";
+import { defaultQueenslandHolidays, getHolidays } from "@/lib/holidays";
 import { useLogger } from "@/hooks/useLogger";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
+import { getShiftedRDOsForMonth } from "@/utils/time/rdoDisplay";
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -38,6 +39,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const logger = useLogger("CalendarGrid");
   const { getDayEntries } = useTimeEntryContext();
   const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
+  const holidays = useMemo(() => getHolidays(), []);
 
   // Memoize days calculation to prevent recalculation on each render
   const days = useMemo(() => {
@@ -49,28 +51,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return eachDayOfInterval({ start: startDate, end: endDate });
   }, [currentMonth, logger]);
 
-  // Helper functions for RDO/Shifted RDO logic
-  const getWeekDay = (date: Date) => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    return days[date.getDay()];
-  };
-  const getFortnightWeek = (date: Date) => {
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const daysSinceStart = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-    const weekNumber = Math.floor(daysSinceStart / 7);
-    return ((weekNumber % 2) + 1);
-  };
+  // Get RDO shift mappings for the month
+  const shiftedRDOMap = useMemo(() => {
+    return getShiftedRDOsForMonth(days, workSchedule, holidays);
+  }, [days, workSchedule, holidays]);
 
-  // Memoized RDO/Shifted RDO detection - basic implementation, may be improved if backend logic changes
+  // Memoized calendar day data
   const daysData = useMemo(() => {
     logger.debug("Pre-calculating calendar days data");
     const monthStart = startOfMonth(currentMonth);
-
-    // Shifted RDOs map (dateString -> { originalDate, reason }), if that logic is ever added to workSchedule, here is where you'd wire it in
-    const shiftedRdoMap: Record<string, { originalDate: Date; reason?: string }> = {};
-
-    // Build shifted RDOs for this month if present
-    // Expand this logic in the future as needed for advanced RDO policies
 
     return days.map(day => {
       const isCurrentMonth = isSameMonth(day, monthStart);
@@ -89,27 +78,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
       const { isComplete } = calculateCompletion(entries, startTime, endTime, 0.01);
 
-      // --- Detect if this is an RDO ---
-      let isRDO = false;
+      // Check if this day is a shifted RDO target
+      const dateKey = day.toISOString().split('T')[0];
+      const isShiftedRDOTarget = shiftedRDOMap.has(dateKey);
+      let isRDO = dayState.isRDO;
       let isShiftedRDO = false;
-      let originalRdoDate: Date | undefined = undefined;
-
-      if (workSchedule) {
-        const weekNum = getFortnightWeek(day);
-        const weekDay = getWeekDay(day);
-
-        // Standard RDO day
-        if (workSchedule.rdoDays && workSchedule.rdoDays[weekNum]?.includes(weekDay)) {
-          isRDO = true;
-        }
-
-        // Detect shifted RDO (needs business logic for shift, here: simple placeholder)
-        const dateKey = day.toISOString().split("T")[0];
-        if (shiftedRdoMap[dateKey]) {
-          isRDO = true;
-          isShiftedRDO = true;
-          originalRdoDate = shiftedRdoMap[dateKey].originalDate;
-        }
+      let originalRdoDate = undefined;
+      let shiftReason = null;
+      
+      // If this is a shifted RDO target day
+      if (isShiftedRDOTarget) {
+        const shiftedInfo = shiftedRDOMap.get(dateKey)!;
+        isRDO = true; // This day becomes an RDO
+        isShiftedRDO = true; // It's specifically a shifted RDO
+        originalRdoDate = shiftedInfo.originalDate; // Store the original date
+        shiftReason = shiftedInfo.reason; // Store the reason
       }
 
       return {
@@ -127,6 +110,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         isRDO,
         isShiftedRDO,
         originalRdoDate,
+        shiftReason
       };
     });
   }, [
@@ -136,7 +120,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     getDayState,
     getStartAndEndTimeForDay,
     currentMonth,
-    workSchedule,
+    shiftedRDOMap
   ]);
 
   return (
@@ -167,10 +151,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             totalHours={dayData.totalHours}
             isWeekend={dayData.isWeekend}
             isRDO={dayData.isRDO}
+            isShiftedRDO={dayData.isShiftedRDO}
             originalRdoDate={dayData.originalRdoDate}
             isWorkDay={dayData.isWorkDay}
             expectedStartTime={dayData.expectedStartTime}
             expectedEndTime={dayData.expectedEndTime}
+            shiftReason={dayData.shiftReason}
           />
         );
       })}
