@@ -1,6 +1,12 @@
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Bell, Coffee } from "lucide-react";
+
+// Helper to round to nearest 0.25 for summary display
+function roundToQuarter(value: number) {
+  return Math.round(value * 4) / 4;
+}
 
 interface WorkHoursDisplayProps {
   startTime: string;
@@ -61,11 +67,11 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           />
         </div>
 
-        {/* Scheduled hours summary */}
+        {/* Scheduled hours summary, now rounded to 0.25 */}
         <div className="flex flex-col justify-center">
           <div className="text-xs text-gray-500">Hours Summary</div>
           <div className="text-sm font-semibold text-gray-800">
-            {totalHours.toFixed(1)} / {calculatedHours.toFixed(1)} hours
+            {roundToQuarter(totalHours).toFixed(2)} / {roundToQuarter(calculatedHours).toFixed(2)} hours
           </div>
         </div>
 
@@ -90,3 +96,4 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
 };
 
 export default React.memo(WorkHoursDisplay);
+

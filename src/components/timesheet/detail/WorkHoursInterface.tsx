@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -9,6 +10,7 @@ import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { getWeekDay, getFortnightWeek, calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
+import { Progress } from "@/components/ui/progress";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -78,19 +80,22 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
+  // Round scheduled and entered hours to nearest 0.25 for progress
+  const roundToQuarter = (val: number) => Math.round(val * 4) / 4;
+
   const scheduledHours = useMemo(() => {
     console.log('[DEBUG] startTime:', startTime);
     console.log('[DEBUG] endTime:', endTime);
     console.log('[DEBUG] breakConfig:', breakConfig);
     const result = calculateDayHoursWithBreaks(startTime, endTime, breakConfig);
-    const rounded = Math.round(result * 100) / 100;
-    console.log('[DEBUG] calculated scheduled hours (rounded):', rounded);
+    const rounded = roundToQuarter(result);
+    console.log('[DEBUG] calculated scheduled hours (rounded to 0.25):', rounded);
     return rounded;
   }, [startTime, endTime, breakConfig]);
 
   const progressPercent = useMemo(() => {
     if (!scheduledHours || scheduledHours === 0) return 0;
-    return Math.min(100, Math.round((totalEnteredHours / scheduledHours) * 100));
+    return Math.min(100, Math.round((roundToQuarter(totalEnteredHours) / scheduledHours) * 100));
   }, [totalEnteredHours, scheduledHours]);
 
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
@@ -142,11 +147,33 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         }}
       />
 
-      <div className="mt-2 w-full h-2 bg-gray-200 rounded">
-        <div
-          className="h-2 bg-amber-500 rounded"
-          style={{ width: `${progressPercent}%`, transition: 'width 0.3s ease-in-out' }}
+      {/* Reinstated styled horizontal progress bar */}
+      <div className="mt-2 w-full flex items-center gap-3">
+        <Progress
+          value={progressPercent}
+          color={
+            isComplete
+              ? "success"
+              : isUndertime
+              ? "warning"
+              : scheduledHours > 0 && totalEnteredHours > scheduledHours
+              ? "danger"
+              : "info"
+          }
+          indicatorColor={
+            isComplete
+              ? "bg-green-500"
+              : isUndertime
+              ? "bg-amber-500"
+              : scheduledHours > 0 && totalEnteredHours > scheduledHours
+              ? "bg-red-500"
+              : "bg-blue-500"
+          }
+          className="w-full h-3"
         />
+        <span className="text-xs text-gray-700 font-semibold w-12 text-right">
+          {progressPercent}%
+        </span>
       </div>
 
       <WorkHoursAlerts
@@ -172,3 +199,4 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 };
 
 export default React.memo(WorkHoursInterface);
+
