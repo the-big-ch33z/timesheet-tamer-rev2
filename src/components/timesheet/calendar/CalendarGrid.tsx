@@ -1,24 +1,13 @@
-
-import React, { useMemo, memo } from "react";
-import { 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  format, 
-  isSameMonth, 
-  isSameDay, 
-  isToday as dateFnsIsToday 
-} from "date-fns";
+import React, { useMemo } from "react";
+import { useCalendarData } from "@/hooks/timesheet/useCalendarData";
 import CalendarDay from "./CalendarDay";
-import { TimeEntry, WorkSchedule } from "@/types";
-import { useCalendarHelpers } from "./useCalendarHelpers";
-import { isHoliday } from "@/utils/time/services/toil/holiday-utils";
-import { defaultQueenslandHolidays } from "@/lib/holidays";
-import { useLogger } from "@/hooks/useLogger";
-import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
+import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import { createTimeLogger } from "@/utils/time/errors";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
+import { WorkSchedule } from "@/types";
+import { getFortnightWeek, getWeekDay } from "@/utils/time/scheduleUtils";
+
+const logger = createTimeLogger("CalendarGrid");
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -33,99 +22,73 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   selectedDate,
   workSchedule,
   onDayClick,
-  userId
+  userId,
 }) => {
-  const logger = useLogger("CalendarGrid");
-  const { getDayEntries } = useTimeEntryContext();
-  const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
-  
-  // Memoize days calculation to prevent recalculation on each render
-  const days = useMemo(() => {
-    logger.debug("Calculating calendar grid days");
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
-    return eachDayOfInterval({ start: startDate, end: endDate });
-  }, [currentMonth, logger]);
+  const { days } = useCalendarData(
+    currentMonth,
+    selectedDate,
+    workSchedule,
+    userId
+  );
+  const { getWorkHoursForDate } = useTimesheetWorkHours();
 
-  // Pre-calculate data for all days in the visible calendar to avoid per-cell calculations
-  const daysData = useMemo(() => {
-    logger.debug("Pre-calculating calendar days data");
-    const monthStart = startOfMonth(currentMonth);
-    
-    return days.map(day => {
-      const isCurrentMonth = isSameMonth(day, monthStart);
-      
-      if (!isCurrentMonth) {
-        return { 
-          day, 
-          isCurrentMonth: false 
-        };
-      }
-      
-      const dayState = getDayState(day, selectedDate, monthStart);
-      const { startTime, endTime } = getStartAndEndTimeForDay(day);
-      const entries = getDayEntries(day);
-      const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-      const { isComplete } = calculateCompletion(entries, startTime, endTime);
-      
+  const processedDays = useMemo(() => {
+    return days.map((day) => {
+      const dateObj = new Date(day.date);
+
+      // Get scheduled hours for this day
+      const workHours = getWorkHoursForDate(dateObj, userId);
+      const weekday = getWeekDay(dateObj);
+      const fortnightWeek = getFortnightWeek(dateObj);
+
+      // Determine if it's an RDO
+      const isRdo =
+        workSchedule?.rdoDays?.[fortnightWeek]?.includes(weekday) || false;
+
+      const { isComplete } = calculateCompletion(
+        day.entries ?? [],
+        workHours?.startTime,
+        workHours?.endTime
+      );
+
       return {
-        day,
-        isCurrentMonth: true,
-        entries,
-        isSelected: selectedDate ? isSameDay(day, selectedDate) : false,
-        isToday: dateFnsIsToday(day),
+        ...day,
+        date: dateObj,
+        entries: day.entries ?? [],
         isComplete,
-        totalHours,
-        isWeekend: dayState.isWeekend,
-        isWorkDay: dayState.isWorkingDay,
-        expectedStartTime: startTime,
-        expectedEndTime: endTime
+        isRdo,
       };
     });
-  }, [days, selectedDate, getDayEntries, getDayState, getStartAndEndTimeForDay, currentMonth]);
+  }, [days, getWorkHoursForDate, userId, workSchedule]);
 
   return (
-    <div className="grid grid-cols-7 gap-2">
-      {daysData.map((dayData, i) => {
-        const { day, isCurrentMonth } = dayData;
-
-        if (!isCurrentMonth) {
-          return (
-            <div
-              key={`empty-${i}`}
-              className="w-full min-h-[80px] p-2 bg-gray-50 text-gray-300 rounded border border-gray-100"
-            >
-              <span className="text-sm">{format(day, 'd')}</span>
-            </div>
-          );
-        }
-
-        return (
-          <MemoizedCalendarDay
-            key={day.toString()}
-            day={day}
-            entries={dayData.entries}
-            isSelected={dayData.isSelected}
-            isToday={dayData.isToday}
-            onClick={onDayClick}
-            isComplete={dayData.isComplete}
-            totalHours={dayData.totalHours}
-            isWeekend={dayData.isWeekend}
-            isRDO={false} // This would be determined by work schedule
-            isWorkDay={dayData.isWorkDay}
-            expectedStartTime={dayData.expectedStartTime}
-            expectedEndTime={dayData.expectedEndTime}
-          />
-        );
-      })}
+    <div className="grid grid-cols-7 gap-1">
+      {processedDays.map((day) => (
+        <CalendarDay
+          key={day.date.toISOString()}
+          day={day.date}
+          entries={day.entries}
+          isSelected={
+            selectedDate
+              ? day.date.toDateString() === selectedDate.toDateString()
+              : false
+          }
+          onClick={() => onDayClick(day.date)}
+          isToday={false}
+          status={{
+            isWeekend: false,
+            dayHoliday: false,
+            holidayName: null,
+            isRDO: day.isRdo,
+            workHours: null,
+            isWorkDay: true,
+            shiftReason: null,
+          }}
+          isComplete={day.isComplete}
+        />
+      ))}
     </div>
   );
 };
 
-// Memoize CalendarDay component for performance optimization
-const MemoizedCalendarDay = memo(CalendarDay);
-
-// Memoize entire CalendarGrid component
-export default memo(CalendarGrid);
+export default CalendarGrid;
