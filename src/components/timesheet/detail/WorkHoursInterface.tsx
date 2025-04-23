@@ -49,6 +49,27 @@ const getInitialActionState = (date: Date, userId: string): Record<WorkHoursActi
   return { sick: false, leave: false, toil: false, lunch: false, smoko: false };
 };
 
+const calculateDayHours = (workSchedule: WorkSchedule | undefined, date: Date): number => {
+  if (!workSchedule) return 7.6; // Default if no schedule
+  
+  const weekday = getWeekDay(date);
+  const fortnightWeek = getFortnightWeek(date);
+  const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
+  
+  if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime) {
+    return 7.6; // Default if day not in schedule
+  }
+  
+  return calculateDayHoursWithBreaks(
+    dayConfig.startTime, 
+    dayConfig.endTime, 
+    { 
+      lunch: !!dayConfig.breaks?.lunch, 
+      smoko: !!dayConfig.breaks?.smoko 
+    }
+  );
+};
+
 const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   date,
   userId,
@@ -58,25 +79,21 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   onHoursChange
 }) => {
   const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
-  const { createEntry } = useTimeEntryContext();
+  const { createEntry, deleteEntry } = useTimeEntryContext();
   const { toast } = useToast();
 
-  // Add 'smoko' to state
   const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>(() =>
     getInitialActionState(date, userId)
   );
 
-  // Track if we've created synthetic entries
   const [createdEntries, setCreatedEntries] = useState<Record<WorkHoursActionType, boolean>>({
     sick: false, leave: false, toil: false, lunch: false, smoko: false
   });
 
-  // Track created synthetic entry IDs for auto-leave entries
   const [syntheticEntryIds, setSyntheticEntryIds] = useState<Record<WorkHoursActionType, string | null>>({
     sick: null, leave: null, toil: null, lunch: null, smoko: null
   });
 
-  // Persist actionStates to localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -84,75 +101,47 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     } catch {}
   }, [actionStates, date, userId]);
 
-  // Restore states when date or userId changes
   useEffect(() => {
     setActionStates(getInitialActionState(date, userId));
     setCreatedEntries({ sick: false, leave: false, toil: false, lunch: false, smoko: false });
   }, [date, userId]);
 
-  // Remove both leaves if both selected (mutual exclusion)
   useEffect(() => {
     if (actionStates.leave && actionStates.sick) {
       setActionStates((prev) => ({ ...prev, leave: false, sick: false }));
     }
   }, [actionStates.leave, actionStates.sick]);
 
-  // Remove previously created synthetic entry if toggled off
   const removeSyntheticEntry = useCallback((type: WorkHoursActionType) => {
     const syntheticId = syntheticEntryIds[type];
     if (syntheticId) {
-      // Only delete the synthetic entry, not manual entries
-      // Should handle async for consistency
-      if (typeof syntheticId === "string" && syntheticId.length > 0) {
-        // Get deleteEntry from createEntry context
-        if (typeof window !== "undefined" && createEntry && createEntry.deleteEntry) {
-          // unlikely branch, back compat: skip
-        }
-      }
-      if (typeof syntheticId === "string" && syntheticId.length > 0) {
-        // Use entries-context: useTimeEntryContext() gives createEntry(), deleteEntry()
-        // Find and call matching deleteEntry from context:
-        if (typeof createEntry === "function" && "deleteEntry" in createEntry) {
-          // For legacy, but context provides delete in v2 API
-          // fallback to next
-        }
-      }
-      // Use deleteEntry from context:
-      if ("deleteEntry" in useTimeEntryContext()) {
-        const { deleteEntry } = useTimeEntryContext();
+      if (typeof syntheticId === "string" && syntheticId.length > 0 && deleteEntry) {
         deleteEntry(syntheticId);
       }
-      // Clean up reference regardless
       setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
       setCreatedEntries(prev => ({ ...prev, [type]: false }));
     }
-  }, [syntheticEntryIds]);
+  }, [syntheticEntryIds, deleteEntry]);
 
-  // Enhanced to create and remove synthetic time entries for leave/sick/toil
   const createSyntheticEntry = useCallback((type: WorkHoursActionType, isActive: boolean) => {
     if (!isActive) {
-      // Remove synthetic entry if toggled off
       removeSyntheticEntry(type);
       return;
     }
 
     if (createdEntries[type]) {
-      // Entry was already created, skip
       return;
     }
 
-    // Get scheduled hours for the day
-    const dayHours = calculateDayHours();
-    const hoursToRecord = dayHours > 0 ? dayHours : 7.6; // Use default if no schedule
+    const dayHours = calculateDayHours(workSchedule, date);
+    const hoursToRecord = dayHours > 0 ? dayHours : 7.6;
 
-    // Create the entry based on type
     const entryTypeMap = {
       leave: "Annual Leave",
       sick: "Sick Leave", 
       toil: "TOIL"
     };
 
-    // All these should have a fixed project for consistency
     const entryData = {
       userId,
       date,
@@ -184,14 +173,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         variant: "destructive"
       });
     }
-  }, [userId, date, createEntry, toast, createdEntries, calculateDayHours, removeSyntheticEntry]);
+  }, [userId, date, createEntry, toast, createdEntries, removeSyntheticEntry, workSchedule]);
 
-  // Updated toggle logic to call removeSyntheticEntry for toggling OFF
   const handleToggleAction = useCallback((type: WorkHoursActionType) => {
     setActionStates(prev => {
       let next = { ...prev, [type]: !prev[type] };
 
-      // Mutual exclusivity for leave/sick/toil
       if (type === "leave" && next.leave) {
         next.sick = false;
         next.toil = false;
@@ -205,7 +192,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         next.sick = false;
       }
 
-      // Manage synthetic entries creation/removal for leave/sick/toil
       if (
         (type === "leave" || type === "sick" || type === "toil") &&
         next[type] !== prev[type]
@@ -215,7 +201,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         }, 0);
       }
 
-      // When toggling OFF, remove any existing synthetic entry for that type immediately
       if ((type === "leave" || type === "sick" || type === "toil") && !next[type]) {
         removeSyntheticEntry(type);
       }
@@ -257,41 +242,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
-  // Calculate day hours from schedule or default
-  const calculateDayHours = useCallback(() => {
-    if (!workSchedule) return 7.6; // Default if no schedule
-    
-    const weekday = getWeekDay(date);
-    const fortnightWeek = getFortnightWeek(date);
-    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
-    
-    if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime) {
-      return 7.6; // Default if day not in schedule
-    }
-    
-    return calculateDayHoursWithBreaks(
-      dayConfig.startTime, 
-      dayConfig.endTime, 
-      { 
-        lunch: !!dayConfig.breaks?.lunch, 
-        smoko: !!dayConfig.breaks?.smoko 
-      }
-    );
-  }, [workSchedule, date]);
-
-  // Calculate adjusted hours according to toggles
   const calculateAdjustedHours = useCallback(() => {
     let adjustment = 0;
-    // Lunch: add 0.5h if toggled and lunch break is in schedule (meaning you are claiming NOT to have taken lunch and want +0.5h)
     if (actionStates.lunch && hasLunchBreakInSchedule) adjustment += 0.5;
-    // Smoko: add 0.25h if toggled and smoko break is in schedule
     if (actionStates.smoko && hasSmokoBreakInSchedule) adjustment += 0.25;
-    // Annual Leave and Sick: treat as if full scheduled hours entered (used below)
-    // TOIL: visual/state only here
     return adjustment;
   }, [actionStates.lunch, actionStates.smoko, hasLunchBreakInSchedule, hasSmokoBreakInSchedule]);
 
-  // Main scheduled hours logic
   const roundToQuarter = (val: number) => Math.round(val * 4) / 4;
 
   const scheduledHours = useMemo(() => {
@@ -300,17 +257,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return rounded;
   }, [startTime, endTime, breakConfig]);
 
-  // Are we marking this day as leave/sick/toil?
   const leaveActive = actionStates.leave || actionStates.sick;
   const toilActive = actionStates.toil;
 
-  // How many hours to display as "entered" for progress and summary?
   const effectiveTotalHours = useMemo(() => {
-    // If leave or sick, treat as "completed full day" for calculations/progress.
     if (actionStates.leave || actionStates.sick) {
       return scheduledHours + calculateAdjustedHours();
     }
-    // Else normal entry with toggled break overrides
     return roundToQuarter(totalEnteredHours + calculateAdjustedHours());
   }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, calculateAdjustedHours]);
 
@@ -331,7 +284,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   const isDayLeave = actionStates.leave;
   const isDayToil = actionStates.toil;
 
-  // Color background highlight according to "leave" or "sick" or "toil"
   const highlightBg = isDaySick
     ? "bg-[#fff6f6]"
     : isDayLeave
@@ -340,7 +292,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         ? "bg-purple-50"
         : "bg-white";
 
-  // TOIL logic - no effect on day total, just highlight and passes to display/summary
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,

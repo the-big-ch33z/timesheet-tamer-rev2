@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from "react";
 import { format, isSameMonth, isSameDay, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -41,8 +42,8 @@ function getSyntheticLeaveType(dayEntries: any) {
 
 const dayBgColors = {
   annual: "#D3E4FD", // Soft Blue for Annual Leave
-  sick: "#ea384c",   // Red for Sick Leave
-  toil: "#9b87f5"    // Purple for TOIL
+  sick: "#ffd5d9",   // Soft Red for Sick Leave
+  toil: "#e8e3fc"    // Soft Purple for TOIL
 };
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
