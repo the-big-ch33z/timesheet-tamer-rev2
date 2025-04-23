@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { WeekDay, WorkSchedule } from "@/types";
@@ -124,15 +125,31 @@ export const useScheduleState = () => {
     setEditingSchedule(updatedSchedule);
   };
 
+  // FIX: Use deep copy for proper reactivity
   const toggleBreak = (day: WeekDay, breakType: 'lunch' | 'smoko') => {
-    const updatedSchedule = {...editingSchedule};
-    const dayConfig = updatedSchedule.weeks[activeWeek][day];
-    
-    if (dayConfig) {
-      dayConfig.breaks = dayConfig.breaks || { lunch: false, smoko: false };
-      dayConfig.breaks[breakType] = !dayConfig.breaks[breakType];
-      setEditingSchedule(updatedSchedule);
-    }
+    // Clone weeks and target day config for immutability
+    const weeksCopy = {
+      ...editingSchedule.weeks,
+      [activeWeek]: {
+        ...editingSchedule.weeks[activeWeek],
+        [day]: editingSchedule.weeks[activeWeek][day]
+          ? {
+              ...editingSchedule.weeks[activeWeek][day],
+              breaks: {
+                ...(editingSchedule.weeks[activeWeek][day]?.breaks || { lunch: false, smoko: false }),
+                [breakType]: !(
+                  editingSchedule.weeks[activeWeek][day]?.breaks?.[breakType] || false
+                )
+              }
+            }
+          : null
+      }
+    };
+
+    setEditingSchedule({
+      ...editingSchedule,
+      weeks: weeksCopy
+    });
   };
 
   const updateWorkHours = (day: WeekDay, field: 'startTime' | 'endTime', value: string) => {
