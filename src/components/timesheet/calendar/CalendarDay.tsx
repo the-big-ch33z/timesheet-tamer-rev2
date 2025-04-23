@@ -23,11 +23,20 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   isWorkDay = true,
   totalHours
 }) => {
-  // Check for leave types
-  const leaveType = entries.find(entry => 
-    entry.entryType === "auto" && entry.description?.toLowerCase().includes("leave")
-  )?.description?.toLowerCase().includes("annual") ? "annual" : 
-    entries.find(entry => entry.description?.toLowerCase().includes("sick"))?.description?.toLowerCase().includes("sick") ? "sick" : null;
+  // Check for leave types without relying on entryType which doesn't exist
+  // Instead, we'll look at description and job numbers to determine leave types
+  const annualLeaveEntry = entries.find(entry => 
+    entry.description?.toLowerCase().includes("annual leave") || 
+    (entry.jobNumber === "LEAVE" && entry.description?.toLowerCase().includes("annual"))
+  );
+  
+  const sickLeaveEntry = entries.find(entry => 
+    entry.description?.toLowerCase().includes("sick leave") || 
+    (entry.jobNumber === "SICK" || entry.description?.toLowerCase().includes("sick"))
+  );
+  
+  const leaveType = annualLeaveEntry ? "annual" : 
+                    sickLeaveEntry ? "sick" : null;
 
   const dayBg = leaveType === "annual" ? "bg-blue-50" : 
                 leaveType === "sick" ? "bg-red-50" : 
