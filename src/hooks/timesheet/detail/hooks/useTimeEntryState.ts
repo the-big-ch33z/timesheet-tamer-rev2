@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
@@ -62,8 +63,10 @@ export const useTimeEntryState = ({
   
   // Calculate hours variance and completion status
   const hoursVariance = scheduledHours - totalEnteredHours;
+  
+  // Use a smaller tolerance for isComplete calculation
   const isUndertime = hoursVariance > 0.1;
-  const isComplete = hasEntries && Math.abs(hoursVariance) < 0.1;
+  const isComplete = hasEntries && Math.abs(hoursVariance) <= 0.01;
   
   // Update internal refs when state changes
   useEffect(() => {

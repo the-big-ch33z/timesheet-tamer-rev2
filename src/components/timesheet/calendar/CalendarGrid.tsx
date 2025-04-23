@@ -68,7 +68,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       const { startTime, endTime } = getStartAndEndTimeForDay(day);
       const entries = getDayEntries(day);
       const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-      const { isComplete } = calculateCompletion(entries, startTime, endTime);
+      
+      // Use tighter tolerance for completion check (0.01 hours)
+      const { isComplete } = calculateCompletion(entries, startTime, endTime, 0.01);
       
       return {
         day,

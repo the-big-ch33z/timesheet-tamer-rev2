@@ -1,6 +1,8 @@
+
 import React from "react";
 import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
 interface WorkHoursAlertsProps {
   hasEntries: boolean;
   isUndertime: boolean;
@@ -10,6 +12,7 @@ interface WorkHoursAlertsProps {
   date?: Date;
   isComplete?: boolean;
 }
+
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   hasEntries,
   isUndertime,
@@ -19,11 +22,11 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   date,
   isComplete = false
 }) => {
-  // Removed the horizontal progress bar rendering here entirely
+  // Don't show warning when the hours are very close (within 0.1)
+  const shouldShowUndertime = isUndertime && Math.abs(hoursVariance) > 0.1;
+  const shouldShowOvertime = !isUndertime && !isComplete && Math.abs(hoursVariance) > 0.1;
 
   return <>
-      {/* Removed the horizontal progress bar above the messages for a cleaner UI */}
-
       {hasEntries && isComplete && <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
           <CheckCircle className="h-4 w-4 mr-2" />
           <AlertDescription>
@@ -31,18 +34,17 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
           </AlertDescription>
         </Alert>}
 
-      {hasEntries && isUndertime && !isComplete && <Alert variant="destructive" className="mt-2 border-red-200 text-red-800 px-[26px] my-0 mx-0 bg-orange-100">
+      {hasEntries && shouldShowUndertime && !isComplete && <Alert variant="destructive" className="mt-2 border-red-200 text-red-800 px-[26px] my-0 mx-0 bg-orange-100">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>
             Hours don't match daily entries (under by {Math.abs(hoursVariance).toFixed(1)} hrs)
           </AlertDescription>
         </Alert>}
 
-      {/* New overtime warning message */}
-      {hasEntries && !isUndertime && !isComplete && hoursVariance > 0.1 && <Alert variant="destructive" className="mt-2 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
+      {hasEntries && shouldShowOvertime && <Alert variant="destructive" className="mt-2 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>
-            Hours exceed daily entries (over by {hoursVariance.toFixed(1)} hrs)
+            Hours exceed daily entries (over by {Math.abs(hoursVariance).toFixed(1)} hrs)
           </AlertDescription>
         </Alert>}
       
@@ -54,4 +56,5 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
         </Alert>}
     </>;
 };
+
 export default WorkHoursAlerts;

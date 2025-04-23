@@ -1,71 +1,67 @@
 
-import { calculateHoursFromTimes } from '@/utils/time/calculations';
-import { createTimeLogger } from '@/utils/time/errors';
+import { TimeEntry } from "@/types";
+import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
 
-const logger = createTimeLogger('completionUtils');
+interface CompletionResult {
+  isComplete: boolean;
+  totalHours: number;
+  scheduledHours: number;
+  variance: number;
+}
 
 /**
- * Calculates whether a set of time entries satisfies the expected hours
- * based on start and end times
+ * Calculate completion status for time entries
  * 
- * @param entries Array of entries with optional hours property
- * @param startTime Optional start time string in format "HH:MM" 
- * @param endTime Optional end time string in format "HH:MM"
- * @returns Object with completion status and related metrics
+ * @param entries The time entries to check
+ * @param startTime The scheduled start time
+ * @param endTime The scheduled end time
+ * @param tolerance The tolerance for completion (default 0.01 hours = 36 seconds)
+ * @returns Completion information
  */
 export const calculateCompletion = (
-  entries: { hours?: number }[],
+  entries: TimeEntry[],
   startTime: string | null | undefined,
-  endTime: string | null | undefined
-) => {
-  // No entries means not complete
-  if (!entries.length) {
-    return {
-      isComplete: false,
-      hasEntries: false,
-      totalEntryHours: 0,
-      expectedHours: 0,
-      variance: 0
-    };
-  }
-
+  endTime: string | null | undefined,
+  tolerance: number = 0.01
+): CompletionResult => {
   // Calculate total hours from entries
-  const totalEntryHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+  const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
   
-  // If we don't have start and end times, we can't calculate expected hours
+  // Default result if we can't calculate scheduled hours
   if (!startTime || !endTime) {
-    logger.debug('No start/end times provided for completion check');
     return {
       isComplete: false,
-      hasEntries: true,
-      totalEntryHours,
-      expectedHours: 0,
+      totalHours,
+      scheduledHours: 0,
       variance: 0
     };
   }
 
-  // Calculate expected hours from start and end times
-  let expectedHours;
   try {
-    expectedHours = calculateHoursFromTimes(startTime, endTime);
-    logger.debug(`Completion check - Expected: ${expectedHours}h, Actual: ${totalEntryHours}h`);
+    // Calculate scheduled hours
+    const scheduledHours = calculateHoursFromTimes(startTime, endTime);
+    
+    // Round to nearest 0.25 for consistency with UI display
+    const roundedTotal = Math.round(totalHours * 4) / 4;
+    const roundedScheduled = Math.round(scheduledHours * 4) / 4;
+    
+    // Calculate variance and check if complete
+    const variance = Math.abs(roundedTotal - roundedScheduled);
+    const isComplete = variance <= tolerance;
+    
+    return {
+      isComplete,
+      totalHours: roundedTotal,
+      scheduledHours: roundedScheduled,
+      variance
+    };
   } catch (error) {
-    logger.error('Error calculating hours:', error);
-    expectedHours = 0;
+    console.error("Error calculating completion status:", error);
+    return {
+      isComplete: false,
+      totalHours,
+      scheduledHours: 0,
+      variance: 0
+    };
   }
-
-  const variance = Math.abs(expectedHours - totalEntryHours);
-  const isComplete = variance < 0.1; // Less than 6 minutes difference is considered complete
-
-  if (isComplete) {
-    logger.debug('Day marked as complete - hours match expected total');
-  }
-
-  return {
-    isComplete,
-    hasEntries: true,
-    totalEntryHours,
-    expectedHours,
-    variance
-  };
 };

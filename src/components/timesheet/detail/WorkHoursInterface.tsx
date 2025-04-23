@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -92,6 +93,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return rounded;
   }, [startTime, endTime, breakConfig]);
 
+  // Update the completion check logic to use a tighter tolerance
+  const isActuallyComplete = useMemo(() => {
+    if (!hasEntries || !entries.length) return false;
+    const variance = Math.abs(roundToQuarter(totalEnteredHours) - scheduledHours);
+    return variance <= 0.01; // Use a much tighter tolerance for completion
+  }, [totalEnteredHours, scheduledHours, hasEntries, entries.length]);
+
   const verticalProgressValue = useMemo(() => {
     if (!scheduledHours || scheduledHours === 0) return 0;
     return Math.min(100, (roundToQuarter(totalEnteredHours) / scheduledHours) * 100);
@@ -105,13 +113,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   });
 
   useEffect(() => {
-    if (!hasEntries || !isComplete || !entries.length) return;
+    if (!hasEntries || !isActuallyComplete || !entries.length) return;
     const timeoutId = setTimeout(() => {
       logger.debug('Initiating TOIL calculation based on completed timesheet');
       calculateToilForDay();
     }, 400);
     return () => clearTimeout(timeoutId);
-  }, [hasEntries, isComplete, calculateToilForDay, entries.length]);
+  }, [hasEntries, isActuallyComplete, calculateToilForDay, entries.length]);
 
   const timeChangeHandler = useCallback((type: 'start' | 'end', value: string) => {
     logger.debug(`Direct time change: ${type}=${value}`);
@@ -135,7 +143,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           hasEntries={hasEntries}
           interactive={interactive}
           onTimeChange={timeChangeHandler}
-          isComplete={isComplete}
+          isComplete={isActuallyComplete}
           hoursVariance={hoursVariance}
           isUndertime={isUndertime}
           breaksIncluded={{
@@ -153,7 +161,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           hoursVariance={hoursVariance}
           interactive={interactive}
           date={date}
-          isComplete={isComplete}
+          isComplete={isActuallyComplete}
         />
 
         {isCalculating && (
@@ -172,7 +180,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           height={90}
           width={13}
           barColor={
-            isComplete
+            isActuallyComplete
               ? "bg-green-500"
               : isUndertime
               ? "bg-amber-500"
@@ -182,9 +190,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           }
           bgColor="bg-gray-100"
         />
-        <span className="text-[0.70rem] mt-1 text-gray-700 font-medium">
-          {verticalProgressValue.toFixed(0)}%
-        </span>
+        <span className="text-[0.70rem] mt-1 mx-auto text-gray-500 text-center font-medium">{verticalProgressValue.toFixed(0)}%</span>
       </div>
     </div>
   );

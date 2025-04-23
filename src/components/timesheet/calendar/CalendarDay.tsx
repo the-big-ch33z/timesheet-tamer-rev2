@@ -62,7 +62,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     };
   }, [safeDate]);
 
-  // Memoize completion status calculation
+  // Memoize completion status calculation with tighter tolerance
   const completionStatus = useMemo(() => {
     if (!safeEntries.length || !expectedStartTime || !expectedEndTime) {
       return { 
@@ -71,7 +71,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       };
     }
     
-    const completion = calculateCompletion(safeEntries, expectedStartTime, expectedEndTime);
+    // Use a tighter tolerance (0.01) for matching hours
+    const completion = calculateCompletion(safeEntries, expectedStartTime, expectedEndTime, 0.01);
     const status = hasEntries 
       ? completion.isComplete ? "match" as const : "nomatch" as const 
       : "none" as const;
@@ -128,7 +129,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
           >
             <div className="flex justify-between items-start">
               <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(safeDate, 'd')}</span>
-              {/* ICON overlays */}
+              {/* ICON overlays - Make sure completion check is more prominent */}
               {completionStatus.status === "match" && (
                 <span className="absolute top-1.5 right-2">
                   <Check size={17} color="#22c55e" strokeWidth={2.4} />
