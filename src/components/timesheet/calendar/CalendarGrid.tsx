@@ -61,7 +61,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
     const newDays: Date[] = [];
-    let currentDay = firstDayOfMonth;
+    let currentDay = new Date(firstDayOfMonth);
 
     while (currentDay <= lastDayOfMonth) {
       newDays.push(new Date(currentDay));
@@ -69,6 +69,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
 
     setDays(newDays);
+    console.log("Calendar days generated:", newDays.length, "for month:", currentMonth.toString());
   }, [currentMonth]);
 
   const handleDayClick = useCallback((day: Date) => {
