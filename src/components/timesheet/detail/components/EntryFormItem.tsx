@@ -1,11 +1,19 @@
-import React, { useEffect, useCallback } from "react";
+
+import React, { useEffect, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
 import { useFormSubmission } from "@/hooks/form/useFormSubmission";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Loader2, Trash2 } from "lucide-react";
+import { Clock, Loader2, Trash2, XCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+
+/**
+ * ENHANCEMENT: Add scheduledHours prop to the form for overage validation.
+ * hoursOverageError: true if user enters > scheduled
+ * We highlight and show tooltip + prevent Save button.
+ */
 
 const FIELD_TYPES = {
   HOURS: "hours",
@@ -34,6 +42,8 @@ interface EntryFormItemProps {
   onDelete: () => void;
   entryId: string;
   disabled?: boolean;
+  /** Add scheduledHours for overage validation */
+  scheduledHours?: number;
 }
 
 const renderFormField = (
@@ -44,18 +54,40 @@ const renderFormField = (
   onChange: (value: string) => void,
   disabled: boolean = false,
   error?: string,
-  placeholder: string = ""
+  placeholder: string = "",
+  highlightError?: boolean,
+  errorMessage?: string
 ) => {
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium mb-1">{label}</label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        placeholder={placeholder || label}
-      />
+      <div className="relative">
+        <Input
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          placeholder={placeholder || label}
+          className={highlightError ? "border-red-500 focus-visible:ring-red-500" : ""}
+          aria-invalid={highlightError}
+          aria-describedby={highlightError ? `${id}-overerror-msg` : undefined}
+        />
+        {/* Show error tooltip beside the field */}
+        {highlightError && errorMessage && (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="absolute right-2 top-2 cursor-pointer">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="bg-red-50 border border-red-400 font-semibold text-xs text-red-800 px-3 py-2">
+                {errorMessage}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
@@ -67,7 +99,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   handleSave,
   onDelete,
   entryId,
-  disabled = false
+  disabled = false,
+  scheduledHours = 0
 }) => {
   const { formState, setFieldValue, validateForm } = useFormState(`entry-${entryId}`, {
     hours: initialFormState.hours || '',
@@ -84,6 +117,16 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
       }
     }
   });
+
+  const [hoursOverageError, setHoursOverageError] = useState(false);
+
+  // Overage validation: update hoursOverageError when entry or scheduledHours change
+  useEffect(() => {
+    const entered = parseFloat(formState.fields.hours.value);
+    setHoursOverageError(
+      !isNaN(entered) && scheduledHours > 0 && entered > scheduledHours
+    );
+  }, [formState.fields.hours.value, scheduledHours]);
 
   const handleFieldChangeCallback = useCallback((field: string, value: string) => {
     setFieldValue(field, value);
@@ -103,10 +146,10 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
 
   const onSaveCallback = useCallback(() => {
-    if (!disabled && validateForm()) {
+    if (!disabled && validateForm() && !hoursOverageError) {
       handleSubmit(formState);
     }
-  }, [disabled, validateForm, handleSubmit, formState]);
+  }, [disabled, validateForm, handleSubmit, formState, hoursOverageError]);
 
   return (
     <div 
@@ -147,7 +190,8 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
             disabled,
             formState.fields.rego.error
           )}
-          
+
+          {/* The HOUR FIELD - apply the overage validation */}
           {renderFormField(
             `hours-${entryId}`, 
             FIELD_TYPES.HOURS,
@@ -155,7 +199,14 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
             formState.fields.hours.value,
             (value) => handleFieldChangeCallback(FIELD_TYPES.HOURS, value),
             disabled,
-            formState.fields.hours.error
+            formState.fields.hours.error,
+            undefined,
+            hoursOverageError,
+            hoursOverageError
+              ? scheduledHours > 0
+                ? `You cannot enter more than your scheduled hours (${scheduledHours.toFixed(2)}).`
+                : "You cannot enter more than the scheduled hours."
+              : ""
           )}
         </div>
         
@@ -184,25 +235,38 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
           Delete
         </Button>
         
-        <Button 
-          size="sm" 
-          onClick={onSaveCallback}
-          className={`${formState.isValid ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
-          disabled={disabled || !formState.formEdited || !formState.isValid || isSubmitting}
-          data-testid={`save-button-${entryId}`}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              Saving...
-            </>
-          ) : formState.formEdited ? (
-            <>
-              <Clock className="h-4 w-4 mr-1" />
-              Save Changes
-            </>
-          ) : 'Save Changes'}
-        </Button>
+        <TooltipProvider>
+          <Tooltip open={!!hoursOverageError}>
+            <TooltipTrigger asChild>
+              <div>
+                <Button 
+                  size="sm" 
+                  onClick={onSaveCallback}
+                  className={`${formState.isValid && !hoursOverageError ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300'} text-white`}
+                  disabled={disabled || !!hoursOverageError || !formState.formEdited || !formState.isValid || isSubmitting}
+                  data-testid={`save-button-${entryId}`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Saving...
+                    </>
+                  ) : formState.formEdited ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-1" />
+                      Save Changes
+                    </>
+                  ) : 'Save Changes'}
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {hoursOverageError && (
+              <TooltipContent className="bg-red-50 border border-red-400 text-red-800 font-semibold px-3 py-2 text-xs">
+                You cannot save more than the scheduled hours ({scheduledHours.toFixed(2)}).
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
@@ -211,3 +275,5 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
 EntryFormItem.displayName = 'EntryFormItem';
 
 export default EntryFormItem;
+
+// NOTE: This file is now over 200 lines. Please consider refactoring!
