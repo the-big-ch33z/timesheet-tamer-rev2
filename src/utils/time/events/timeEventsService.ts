@@ -32,12 +32,20 @@ type EventHandler = (data: any) => void;
 // Event listeners storage
 const eventListeners = new Map<TimeEventType, Set<EventHandler>>();
 
-// Debounce storage to prevent event flooding
-const recentEvents = new Map<string, number>();
-const DEBOUNCE_THRESHOLD = 200; // milliseconds
+// Debounce + batch tracking per handler, per event
+const eventBatchTimeouts = new WeakMap<EventHandler, Map<string, number>>();
+const eventBatchQueues = new WeakMap<EventHandler, Map<string, any>>();
+// Key: eventType-eventKey, Value: setTimeout id
+const DEBOUNCE_THRESHOLD = 200; // ms
+
+// Helper for unique event key for batching
+function getEventKey(eventType: TimeEventType, data: any) {
+  return `${eventType}-${data?.id || data?.userId || data?.date || ''}`;
+}
 
 /**
  * Subscribe to a time event
+ * Handlers for identical events within batching window (DEBOUNCE_THRESHOLD) will only be called once.
  */
 const subscribe = (eventType: TimeEventType, handler: EventHandler): Subscription => {
   if (!eventListeners.has(eventType)) {
@@ -46,84 +54,113 @@ const subscribe = (eventType: TimeEventType, handler: EventHandler): Subscriptio
   
   const handlers = eventListeners.get(eventType)!;
   handlers.add(handler);
-  
-  // Return an object with an unsubscribe method
+
+  // Per-handler debounced batch logic
+  if (!eventBatchTimeouts.has(handler)) {
+    eventBatchTimeouts.set(handler, new Map());
+    eventBatchQueues.set(handler, new Map());
+  }
+
+  // Cleanup logic
   return {
     unsubscribe: () => {
       if (eventListeners.has(eventType)) {
         const handlers = eventListeners.get(eventType)!;
         handlers.delete(handler);
+        // Also clear batching if nothing is listening anymore
+        if (handlers.size === 0) {
+          eventListeners.delete(eventType);
+        }
+      }
+      // Clean up batching timeouts and queues for this handler
+      const timeouts = eventBatchTimeouts.get(handler);
+      if (timeouts) {
+        for (const [, timeoutId] of timeouts.entries()) {
+          clearTimeout(timeoutId as any);
+        }
+        eventBatchTimeouts.delete(handler);
+      }
+      if (eventBatchQueues.has(handler)) {
+        eventBatchQueues.delete(handler);
       }
     }
   };
 };
 
 /**
- * Publish a time event with debounce protection
+ * Publish a time event with improved batching protection.
+ * For each (handler, eventType, eventKey), only one call will be executed in DEBOUNCE_THRESHOLD ms window.
  */
 const publish = (eventType: TimeEventType, data: any = {}): boolean => {
-  // Create a unique key for this event type + any ID in the data
-  const eventKey = `${eventType}-${data.id || data.userId || data.date || ''}`;
+  const eventKey = getEventKey(eventType, data);
   const now = Date.now();
   
-  // Check if this event was recently published
-  const lastPublished = recentEvents.get(eventKey);
-  if (lastPublished && now - lastPublished < DEBOUNCE_THRESHOLD) {
-    // Skip this event if it was published too recently
-    console.debug(`[TimeEvents] Skipped duplicate event ${eventType} (debounced)`);
-    return false;
-  }
-  
-  // Update the timestamp for this event
-  recentEvents.set(eventKey, now);
-  
-  // Clean up old entries to prevent memory leaks
-  if (recentEvents.size > 100) {
-    const oldestEntries = Array.from(recentEvents.entries())
-      .sort((a, b) => a[1] - b[1])
-      .slice(0, 50);
-    
-    oldestEntries.forEach(([key]) => recentEvents.delete(key));
-  }
-  
-  // Get handlers for this event type
   const handlers = eventListeners.get(eventType);
-  
-  // If no handlers, just dispatch a DOM event
+
   if (!handlers || handlers.size === 0) {
-    // Dispatch as DOM event for legacy support
+    // No handler, fire DOM event for legacy/other listeners
     const event = new CustomEvent(eventType, { detail: data });
     window.dispatchEvent(event);
     return true;
   }
-  
-  // Call all registered handlers
+
   try {
     handlers.forEach(handler => {
-      try {
-        handler(data);
-      } catch (error) {
-        console.error(`[TimeEvents] Error in handler for ${eventType}:`, error);
+      // Per-handler batching logic
+      const timeouts = eventBatchTimeouts.get(handler);
+      const queues = eventBatchQueues.get(handler);
+      if (timeouts && queues) {
+        if (timeouts.has(eventKey)) {
+          // Already scheduled, replace queued data (to pass up-to-date last object)
+          queues.set(eventKey, data);
+        } else {
+          queues.set(eventKey, data);
+          // Schedule uniquely for this handler-eventKey pair
+          const timeoutId = setTimeout(() => {
+            try {
+              const mostRecentData = queues.get(eventKey);
+              handler(mostRecentData);
+            } catch(e) {
+              // eslint-disable-next-line no-console
+              console.error(`[TimeEvents] Error in batched event handler for ${eventType}:`, e);
+            } finally {
+              timeouts.delete(eventKey);
+              queues.delete(eventKey);
+            }
+          }, DEBOUNCE_THRESHOLD);
+          timeouts.set(eventKey, timeoutId as any);
+        }
+      } else {
+        handler(data); // Fallback: call immediately if batching broke
       }
     });
-    
-    // Also dispatch as DOM event for legacy support
+
+    // Still dispatch legacy DOM event for compatibility
     const event = new CustomEvent(eventType, { detail: data });
     window.dispatchEvent(event);
     
     return true;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`[TimeEvents] Error publishing ${eventType}:`, error);
     return false;
   }
 };
 
+
 /**
  * Clear all event listeners for cleanup
  */
 const clearAllListeners = (): void => {
+  // Also clear timeouts and queues
   eventListeners.clear();
-  recentEvents.clear();
+  eventBatchTimeouts.forEach((timeouts, handler) => {
+    for (const [, timeoutId] of timeouts.entries()) {
+      clearTimeout(timeoutId as any);
+    }
+  });
+  eventBatchTimeouts.clear();
+  eventBatchQueues.clear();
 };
 
 export const timeEventsService = {
@@ -131,3 +168,4 @@ export const timeEventsService = {
   publish,
   clearAllListeners
 };
+
