@@ -47,6 +47,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
 }) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   const hasEntries = safeEntries.length > 0;
+  // Fix: mark day as shifted RDO if it has an originalRdoDate different from itself
   const isShiftedRDO = isRDO && originalRdoDate instanceof Date && !isNaN(originalRdoDate.getTime()) && originalRdoDate.toDateString() !== day.toDateString();
 
   // Safely convert the day to a Date object - memoized
@@ -56,27 +57,29 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   const holidayInfo = useMemo(() => {
     if (!safeDate) return { isHoliday: false, holiday: undefined };
     const holiday = getHolidayForDate(safeDate, defaultQueenslandHolidays);
-    return { 
-      isHoliday: !!holiday, 
-      holiday 
+    return {
+      isHoliday: !!holiday,
+      holiday,
     };
   }, [safeDate]);
 
   // Memoize completion status calculation with tighter tolerance
   const completionStatus = useMemo(() => {
     if (!safeEntries.length || !expectedStartTime || !expectedEndTime) {
-      return { 
-        status: "none" as const, 
-        completion: { isComplete: false } 
+      return {
+        status: "none" as const,
+        completion: { isComplete: false },
       };
     }
-    
+
     // Use a tighter tolerance (0.01) for matching hours
     const completion = calculateCompletion(safeEntries, expectedStartTime, expectedEndTime, 0.01);
-    const status = hasEntries 
-      ? completion.isComplete ? "match" as const : "nomatch" as const 
-      : "none" as const;
-      
+    const status = hasEntries
+      ? completion.isComplete
+        ? ("match" as const)
+        : ("nomatch" as const)
+      : ("none" as const);
+
     return { status, completion };
   }, [safeEntries, expectedStartTime, expectedEndTime, hasEntries]);
 
@@ -86,19 +89,28 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       "w-full min-h-[80px] p-2 border rounded text-left relative",
       isSelected && "ring-2 ring-blue-500",
       isToday && "bg-blue-50",
-      isWeekend && !holidayInfo.isHoliday && "bg-gray-50",
+      isWeekend && !holidayInfo.isHoliday && !isRDO && "bg-gray-50",
       holidayInfo.isHoliday && "bg-amber-50",
-      isRDO && "bg-blue-50 border-blue-200",
+      // RDO Blue backgrounds:
+      isRDO && !isShiftedRDO && "bg-blue-100 border-blue-200",
+      isShiftedRDO && "bg-blue-200 border-blue-300 border-dashed",
       hasEntries && completionStatus.status === "nomatch" && "!bg-[#FEF7CD] !border-yellow-300",
       hasEntries && completionStatus.status === "match" && "!bg-[#F2FCE2] !border-green-300",
       hasEntries && !isComplete && "border-yellow-200",
       hasEntries && isComplete && "border-green-200",
-      !isWorkDay && "cursor-default",
-      isShiftedRDO && "border-blue-300 border-dashed"
+      !isWorkDay && "cursor-default"
     );
   }, [
-    isSelected, isToday, isWeekend, holidayInfo.isHoliday, isRDO, 
-    hasEntries, completionStatus.status, isComplete, isWorkDay, isShiftedRDO
+    isSelected,
+    isToday,
+    isWeekend,
+    holidayInfo.isHoliday,
+    isRDO,
+    isShiftedRDO,
+    hasEntries,
+    completionStatus.status,
+    isComplete,
+    isWorkDay,
   ]);
 
   // If we don't have a valid date, render a placeholder with an error state
@@ -124,11 +136,13 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                   ? COMPLETION_BG
                   : completionStatus.status === "nomatch"
                   ? INCOMPLETE_BG
-                  : undefined
+                  : undefined,
             }}
           >
             <div className="flex justify-between items-start">
-              <span className={cn("font-medium", isWeekend && "text-gray-500")}>{format(safeDate, 'd')}</span>
+              <span className={cn("font-medium", isWeekend && "text-gray-500")}>
+                {format(safeDate, "d")}
+              </span>
               {/* ICON overlays - Make sure completion check is more prominent */}
               {completionStatus.status === "match" && (
                 <span className="absolute top-1.5 right-2">
@@ -146,17 +160,23 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             </div>
 
             {holidayInfo.isHoliday && holidayInfo.holiday && (
-              <Badge variant="secondary" className="mt-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-200">
+              <Badge
+                variant="secondary"
+                className="mt-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-200"
+              >
                 {holidayInfo.holiday.name}
               </Badge>
             )}
 
+            {/* Restore clear blue RDO display */}
             {isRDO && (
               <Badge
                 variant="secondary"
                 className={cn(
                   "mt-1 text-xs",
-                  isShiftedRDO ? "bg-blue-200 text-blue-900 border-blue-300" : "bg-blue-100 text-blue-800"
+                  isShiftedRDO
+                    ? "bg-blue-200 text-blue-900 border-blue-300"
+                    : "bg-blue-100 text-blue-800 border-blue-200"
                 )}
               >
                 {isShiftedRDO ? "Shifted RDO" : "RDO"}
@@ -176,6 +196,15 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             <div className="flex items-center gap-1 mt-1 text-green-800">
               <Check size={16} className="text-green-500" />{" "}
               <span>Hours match expected</span>
+            </div>
+          )}
+          {isRDO && (
+            <div className="flex items-center gap-1 mt-2 text-blue-800">
+              <span>
+                {isShiftedRDO
+                  ? "This is a shifted RDO (Rostered Day Off) assigned from a different week."
+                  : "This is an RDO (Rostered Day Off) according to your work schedule."}
+              </span>
             </div>
           )}
         </TooltipContent>
