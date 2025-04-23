@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
@@ -78,6 +77,10 @@ export const useTimeEntryState = ({
       isMounted.current = false;
     };
   }, []);
+
+  // Used for batching time changes
+  const pendingTimeUpdateRef = useRef<{ startTime?: string; endTime?: string } | null>(null);
+  const rafRef = useRef<number | null>(null);
   
   // Subscribe to time entry events - with improved subscription handling
   useEffect(() => {
@@ -167,52 +170,65 @@ export const useTimeEntryState = ({
     }
   }, [date, userId, getWorkHoursForDate, onHoursChange]);
   
-  // Handle time input changes with improved saving mechanism
+  // Handle time input changes with improved saving mechanism, now batched with rAF
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string): void => {
     if (!interactive || !isMounted.current) return;
-    
+
     logger.debug(`Time change: ${type} = ${value}`);
-    
-    // Update local state immediately for UI feedback
-    if (type === 'start') {
-      setStartTime(value);
-      startTimeRef.current = value;
-    } else {
-      setEndTime(value);
-      endTimeRef.current = value;
+
+    // Batch updates in rAF to minimize excessive renders/calcs
+    if (!pendingTimeUpdateRef.current) {
+      pendingTimeUpdateRef.current = {};
     }
-    
-    // Immediately save the new time values
-    const newStartTime = type === 'start' ? value : startTimeRef.current;
-    const newEndTime = type === 'end' ? value : endTimeRef.current;
-    
-    // Save to work hours storage
-    saveWorkHoursForDate(date, newStartTime, newEndTime, userId);
-    
-    // Calculate new hours if both times are present
-    if (newStartTime && newEndTime) {
-      try {
-        const hours = calculateHoursFromTimes(newStartTime, newEndTime);
-        setScheduledHours(hours);
-        
-        // Notify parent component of hours change
-        if (onHoursChange) {
-          onHoursChange(hours);
+    pendingTimeUpdateRef.current[type === 'start' ? 'startTime' : 'endTime'] = value;
+
+    // Only schedule rAF if not already scheduled
+    if (rafRef.current == null) {
+      rafRef.current = window.requestAnimationFrame(() => {
+        if (!isMounted.current) return;
+        const { startTime: newStart, endTime: newEnd } = {
+          startTime: pendingTimeUpdateRef.current?.startTime ?? startTimeRef.current,
+          endTime: pendingTimeUpdateRef.current?.endTime ?? endTimeRef.current,
+        };
+
+        // Update local state for UI
+        setStartTime(newStart);
+        setEndTime(newEnd);
+        startTimeRef.current = newStart;
+        endTimeRef.current = newEnd;
+
+        // Save to work hours storage
+        saveWorkHoursForDate(date, newStart, newEnd, userId);
+
+        // Calculate new hours if both present
+        if (newStart && newEnd) {
+          try {
+            const hours = calculateHoursFromTimes(newStart, newEnd);
+            setScheduledHours(hours);
+
+            // Notify parent if needed
+            if (onHoursChange) {
+              onHoursChange(hours);
+            }
+          } catch (error) {
+            logger.error('Error calculating hours:', error);
+          }
         }
-      } catch (error) {
-        logger.error('Error calculating hours:', error);
-      }
+
+        // Publish event to notify other components
+        timeEventsService.publish('hours-updated', {
+          type: 'batched',
+          date: date.toISOString(),
+          userId,
+          startTime: newStart,
+          endTime: newEnd
+        });
+
+        // Reset batching refs
+        pendingTimeUpdateRef.current = null;
+        rafRef.current = null;
+      });
     }
-    
-    // Publish event to notify other components
-    timeEventsService.publish('hours-updated', {
-      type,
-      value,
-      date: date.toISOString(),
-      userId,
-      startTime: newStartTime,
-      endTime: newEndTime
-    });
   }, [interactive, date, userId, saveWorkHoursForDate, onHoursChange]);
   
   return {

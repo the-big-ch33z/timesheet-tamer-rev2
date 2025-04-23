@@ -152,25 +152,28 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
  * Clear all event listeners for cleanup
  */
 const clearAllListeners = (): void => {
-  // Also clear timeouts and queues
-  eventListeners.clear();
-  
-  // Fixed code: WeakMap doesn't have forEach method
-  // Instead, we need to iterate through the eventListeners and clear associated timeouts
+  // Save current set of handlers before clearing
+  const handlersSet: Set<EventHandler> = new Set();
   eventListeners.forEach((handlers) => {
     handlers.forEach((handler) => {
-      const timeouts = eventBatchTimeouts.get(handler);
-      if (timeouts) {
-        for (const [, timeoutId] of timeouts.entries()) {
-          clearTimeout(timeoutId as any);
-        }
-        // Delete from WeakMap
-        eventBatchTimeouts.delete(handler);
-      }
-      // Delete from queue WeakMap too
-      eventBatchQueues.delete(handler);
+      handlersSet.add(handler);
     });
   });
+
+  // Clear all timeouts and queues for each handler
+  handlersSet.forEach((handler) => {
+    const timeouts = eventBatchTimeouts.get(handler);
+    if (timeouts) {
+      for (const [, timeoutId] of timeouts.entries()) {
+        clearTimeout(timeoutId as any);
+      }
+      eventBatchTimeouts.delete(handler);
+    }
+    eventBatchQueues.delete(handler);
+  });
+
+  // Finally, clear the eventListeners map
+  eventListeners.clear();
 };
 
 export const timeEventsService = {
