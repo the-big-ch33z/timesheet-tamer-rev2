@@ -3,7 +3,7 @@ import React, { createContext, useContext } from 'react';
 import { TimeEntry } from '@/types';
 
 export interface EntryOperationsContextValue {
-  addEntry: (entry: Omit<TimeEntry, "id">) => string | null;
+  addEntry: (entry: Omit<TimeEntry, "id">) => void;
   updateEntry: (id: string, updates: Partial<TimeEntry>) => boolean;
   deleteEntry: (id: string) => boolean;
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;

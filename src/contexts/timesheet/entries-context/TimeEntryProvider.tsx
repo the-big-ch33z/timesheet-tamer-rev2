@@ -1,3 +1,4 @@
+
 import React, { createContext, useEffect } from 'react';
 import { TimeEntryContextValue, TimeEntryProviderProps } from './types';
 import { useInitialEntries } from './hooks/useInitialEntries';
