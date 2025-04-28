@@ -1,4 +1,3 @@
-
 import React, { useMemo, memo } from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
@@ -10,15 +9,15 @@ import { getHolidayForDate, defaultQueenslandHolidays } from "@/lib/holidays";
 import { toDate } from "@/utils/date/dateConversions";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 
-// Add soft green/yellow per provided color codes
+// Color constants
 const COMPLETION_BG = "#F2FCE2";
 const INCOMPLETE_BG = "#FEF7CD";
-
-// RDO colors
+const ANNUAL_LEAVE_BG = "#D3E4FD";  // Soft blue
+const SICK_LEAVE_BG = "#fff6f6";    // Light red background
+const TOIL_BG = "#f3f0ff";          // Light purple background
 const RDO_BG = "bg-blue-100";
 const RDO_BORDER = "border-blue-200";
 const RDO_TEXT = "text-blue-800";
-
 const SHIFTED_RDO_BG = "bg-blue-200";
 const SHIFTED_RDO_BORDER = "border-blue-300 border-dashed";
 const SHIFTED_RDO_TEXT = "text-blue-900";
@@ -39,6 +38,9 @@ interface CalendarDayProps {
   expectedStartTime?: string | null;
   expectedEndTime?: string | null;
   shiftReason?: string | null;
+  isLeaveDay?: boolean;
+  isSickDay?: boolean;
+  isToilDay?: boolean;
 }
 
 const CalendarDay: React.FC<CalendarDayProps> = ({
@@ -56,7 +58,10 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   isWorkDay = true,
   expectedStartTime,
   expectedEndTime,
-  shiftReason = null
+  shiftReason = null,
+  isLeaveDay = false,
+  isSickDay = false,
+  isToilDay = false
 }) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   const hasEntries = safeEntries.length > 0;
@@ -94,6 +99,16 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     return { status, completion };
   }, [safeEntries, expectedStartTime, expectedEndTime, hasEntries]);
 
+  // Determine background color based on entry types
+  const backgroundColor = useMemo(() => {
+    if (isLeaveDay) return ANNUAL_LEAVE_BG;
+    if (isSickDay) return SICK_LEAVE_BG;
+    if (isToilDay) return TOIL_BG;
+    if (completionStatus.status === "match") return COMPLETION_BG;
+    if (completionStatus.status === "nomatch") return INCOMPLETE_BG;
+    return undefined;
+  }, [isLeaveDay, isSickDay, isToilDay, completionStatus.status]);
+
   // Memoize className construction to prevent recalculation
   const dayClassName = useMemo(() => {
     return cn(
@@ -102,15 +117,14 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       isToday && "bg-blue-50",
       isWeekend && !holidayInfo.isHoliday && !isRDO && "bg-gray-50",
       holidayInfo.isHoliday && "bg-amber-50",
-      // RDO Blue backgrounds - with separate styling for shifted RDOs
       isRDO && !isShiftedRDO && RDO_BG + " " + RDO_BORDER,
       isShiftedRDO && SHIFTED_RDO_BG + " " + SHIFTED_RDO_BORDER,
-      // Completion status colors take precedence over RDO colors
-      hasEntries && completionStatus.status === "nomatch" && "!bg-[#FEF7CD] !border-yellow-300",
-      hasEntries && completionStatus.status === "match" && "!bg-[#F2FCE2] !border-green-300",
       hasEntries && !isComplete && "border-yellow-200",
       hasEntries && isComplete && "border-green-200",
-      !isWorkDay && "cursor-default"
+      !isWorkDay && "cursor-default",
+      isLeaveDay && "border-blue-200",
+      isSickDay && "border-red-200",
+      isToilDay && "border-purple-200"
     );
   }, [
     isSelected,
@@ -120,9 +134,11 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     isRDO,
     isShiftedRDO,
     hasEntries,
-    completionStatus.status,
     isComplete,
     isWorkDay,
+    isLeaveDay,
+    isSickDay,
+    isToilDay
   ]);
 
   // If we don't have a valid date, render a placeholder with an error state
@@ -142,20 +158,13 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             onClick={() => onClick(day)}
             className={dayClassName}
             style={{
-              // Override background with custom color if needed
-              backgroundColor:
-                completionStatus.status === "match"
-                  ? COMPLETION_BG
-                  : completionStatus.status === "nomatch"
-                  ? INCOMPLETE_BG
-                  : undefined,
+              backgroundColor
             }}
           >
             <div className="flex justify-between items-start">
               <span className={cn("font-medium", isWeekend && "text-gray-500")}>
                 {format(safeDate, "d")}
               </span>
-              {/* ICON overlays - Make sure completion check is more prominent */}
               {completionStatus.status === "match" && (
                 <span className="absolute top-1.5 right-2">
                   <Check size={17} color="#22c55e" strokeWidth={2.4} />
@@ -180,7 +189,6 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </Badge>
             )}
 
-            {/* RDO display with different styling for shifted vs regular RDOs */}
             {isRDO && (
               <Badge
                 variant="secondary"
@@ -192,6 +200,22 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 )}
               >
                 {isShiftedRDO ? "Shifted RDO" : "RDO"}
+              </Badge>
+            )}
+
+            {isLeaveDay && (
+              <Badge variant="secondary" className="mt-1 text-xs bg-blue-100 text-blue-800">
+                Annual Leave
+              </Badge>
+            )}
+            {isSickDay && (
+              <Badge variant="secondary" className="mt-1 text-xs bg-red-100 text-red-800">
+                Sick Leave
+              </Badge>
+            )}
+            {isToilDay && (
+              <Badge variant="secondary" className="mt-1 text-xs bg-purple-100 text-purple-800">
+                TOIL
               </Badge>
             )}
           </button>
@@ -232,6 +256,14 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               )}
             </div>
           )}
+          
+          {(isLeaveDay || isSickDay || isToilDay) && (
+            <div className="flex flex-col gap-1 mt-2">
+              {isLeaveDay && <span className="text-blue-800">Annual Leave Day</span>}
+              {isSickDay && <span className="text-red-800">Sick Leave Day</span>}
+              {isToilDay && <span className="text-purple-800">TOIL Day</span>}
+            </div>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -251,7 +283,10 @@ function calendarDayPropsAreEqual(prevProps: CalendarDayProps, nextProps: Calend
       prevProps.isWorkDay !== nextProps.isWorkDay ||
       prevProps.expectedStartTime !== nextProps.expectedStartTime ||
       prevProps.expectedEndTime !== nextProps.expectedEndTime ||
-      prevProps.shiftReason !== nextProps.shiftReason) {
+      prevProps.shiftReason !== nextProps.shiftReason ||
+      prevProps.isLeaveDay !== nextProps.isLeaveDay ||
+      prevProps.isSickDay !== nextProps.isSickDay ||
+      prevProps.isToilDay !== nextProps.isToilDay) {
     return false;
   }
   
