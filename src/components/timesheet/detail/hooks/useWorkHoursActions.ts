@@ -41,23 +41,34 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
       if (entryId) {
         logger.debug(`Attempting to delete synthetic entry: ${entryId} for type: ${type}`);
         
-        const success = await deleteEntry(entryId);
-        if (success) {
-          logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
-          setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
-          setActionStates(prev => ({ ...prev, [type]: false }));
-          setCreatedEntries(prev => ({ ...prev, [type]: false }));
-          
-          toast({
-            title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
-            description: `Entry removed from ${date.toLocaleDateString()}`
-          });
-        } else {
-          logger.error(`Failed to delete synthetic entry: ${entryId}`);
+        try {
+          const success = await deleteEntry(entryId);
+          if (success) {
+            logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
+            setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+            setActionStates(prev => ({ ...prev, [type]: false }));
+            setCreatedEntries(prev => ({ ...prev, [type]: false }));
+            
+            toast({
+              title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
+              description: `Entry removed from ${date.toLocaleDateString()}`
+            });
+          } else {
+            logger.error(`Failed to delete synthetic entry: ${entryId}`);
+            // Revert the UI state since deletion failed
+            setActionStates(prev => ({ ...prev, [type]: false }));
+            toast({
+              title: `Removal Error`,
+              description: `Could not remove ${type} entry. Please try again.`,
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          logger.error(`Error deleting synthetic entry: ${entryId}`, error);
           setActionStates(prev => ({ ...prev, [type]: false }));
           toast({
             title: `Removal Error`,
-            description: `Could not remove ${type} entry. Please try again.`,
+            description: `Could not remove ${type} entry due to an unexpected error.`,
             variant: "destructive"
           });
         }
@@ -92,23 +103,33 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
         synthetic: true
       };
       
-      const newEntryId = createEntry(entryData);
-      
-      if (newEntryId) {
-        logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
-        setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
-        setCreatedEntries(prev => ({ ...prev, [type]: true }));
+      try {
+        const newEntryId = createEntry(entryData);
         
-        toast({
-          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
-          description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
-        });
-      } else {
-        logger.error(`Failed to create synthetic ${type} entry`);
+        if (newEntryId) {
+          logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
+          setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
+          setCreatedEntries(prev => ({ ...prev, [type]: true }));
+          
+          toast({
+            title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
+            description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
+          });
+        } else {
+          logger.error(`Failed to create synthetic ${type} entry`);
+          setActionStates(prev => ({ ...prev, [type]: false }));
+          toast({
+            title: `Creation Error`,
+            description: `Could not create ${type} entry. Please try again.`,
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        logger.error(`Error creating synthetic ${type} entry`, error);
         setActionStates(prev => ({ ...prev, [type]: false }));
         toast({
           title: `Creation Error`,
-          description: `Could not create ${type} entry. Please try again.`,
+          description: `Could not create ${type} entry due to an unexpected error.`,
           variant: "destructive"
         });
       }

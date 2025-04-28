@@ -30,7 +30,7 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
     return this.updateOps.updateEntry(entryId, updates, deletedEntryIds);
   }
 
-  public deleteEntry(entryId: string, deletedEntryIds: string[]): boolean {
+  public async deleteEntry(entryId: string, deletedEntryIds: string[]): Promise<boolean> {
     return this.deleteOps.deleteEntry(entryId, deletedEntryIds);
   }
 }

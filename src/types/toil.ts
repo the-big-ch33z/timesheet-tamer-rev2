@@ -15,7 +15,7 @@ export interface TOILRecord {
    */
   hours: number;
   monthYear: string; // Format: 'yyyy-MM'
-  entryId?: string; // Reference to the original timesheet entry
+  entryId: string; // Reference to the original timesheet entry that generated this TOIL
   status: 'active' | 'expired' | 'used';
 }
 

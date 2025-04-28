@@ -17,7 +17,7 @@ export class DeleteOperations {
     private eventManager: EventManager
   ) {}
 
-  public deleteEntry(entryId: string, deletedEntryIds: string[]): boolean {
+  public async deleteEntry(entryId: string, deletedEntryIds: string[]): Promise<boolean> {
     if (!entryId) {
       logger.error('No entry ID provided for deletion');
       return false;
@@ -36,42 +36,46 @@ export class DeleteOperations {
       allEntries.splice(entryIndex, 1);
       
       // First save the entries to ensure consistency
-      saveEntriesToStorage(allEntries, this.config.storageKey, deletedEntryIds)
-        .then(async (saved) => {
-          if (saved) {
-            this.invalidateCache();
-            
-            // Only after successful save, clean up TOIL records
-            try {
-              const toilDeleted = await deleteTOILRecordByEntryId(entryId);
-              if (toilDeleted) {
-                logger.debug(`Successfully cleaned up TOIL records for entry ${entryId}`);
-              }
-            } catch (toilError) {
-              logger.error(`Error cleaning up TOIL records for entry ${entryId}:`, toilError);
-              // Continue with the flow even if TOIL cleanup fails
-            }
-            
-            // Dispatch events after both operations
-            dispatchEntryEvent(this.eventManager, 'entry-deleted', { entryId, entry: deletedEntry }, deletedEntry.userId);
-            
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
-                detail: { entryId }
-              }));
-            }
-            
-            logger.debug(`Deleted entry ${entryId}`);
+      try {
+        const saved = await saveEntriesToStorage(allEntries, this.config.storageKey, deletedEntryIds);
+        
+        if (!saved) {
+          logger.error(`Failed to save after deleting entry ${entryId}`);
+          return false;
+        }
+        
+        this.invalidateCache();
+        
+        // Only after successful save, clean up TOIL records
+        try {
+          const toilDeleted = await deleteTOILRecordByEntryId(entryId);
+          if (toilDeleted) {
+            logger.debug(`Successfully cleaned up TOIL records for entry ${entryId}`);
           } else {
-            logger.error(`Failed to save after deleting entry ${entryId}`);
+            logger.warn(`No TOIL records found for entry ${entryId} or cleanup failed`);
+            // Continue with the flow even if TOIL cleanup doesn't find records
           }
-        })
-        .catch(error => {
-          logger.error(`Error saving after deleting entry ${entryId}:`, error);
-          dispatchErrorEvent(this.eventManager, error, 'deleteEntry', { entryId });
-        });
-      
-      return true;
+        } catch (toilError) {
+          logger.error(`Error cleaning up TOIL records for entry ${entryId}:`, toilError);
+          // We'll continue with the flow even if TOIL cleanup fails
+        }
+        
+        // Dispatch events after both operations
+        dispatchEntryEvent(this.eventManager, 'entry-deleted', { entryId, entry: deletedEntry }, deletedEntry.userId);
+        
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
+            detail: { entryId }
+          }));
+        }
+        
+        logger.debug(`Deleted entry ${entryId} with TOIL cleanup`);
+        return true;
+      } catch (saveError) {
+        logger.error(`Error saving after deleting entry ${entryId}:`, saveError);
+        dispatchErrorEvent(this.eventManager, saveError, 'deleteEntry', { entryId });
+        return false;
+      }
     } catch (error) {
       logger.error(`Error deleting entry ${entryId}`, error);
       dispatchErrorEvent(this.eventManager, error, 'deleteEntry', { entryId });

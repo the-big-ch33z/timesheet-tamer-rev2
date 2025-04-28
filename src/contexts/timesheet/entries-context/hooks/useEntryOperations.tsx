@@ -5,6 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { ensureDate } from "@/utils/time/validation";
 import { unifiedTimeEntryService } from "@/utils/time/services";
+import { createTimeLogger } from "@/utils/time/errors/timeLogger";
+
+const logger = createTimeLogger('useEntryOperations');
 
 /**
  * Hook that provides operations for manipulating time entries
@@ -17,12 +20,12 @@ export const useEntryOperations = (
 
   // Add a new entry
   const addEntry = useCallback((entryData: Omit<TimeEntry, "id">) => {
-    console.debug("[TimeEntryProvider] Adding new entry:", entryData);
+    logger.debug("[TimeEntryProvider] Adding new entry:", entryData);
     
     // Validate date before adding
     const entryDate = ensureDate(entryData.date);
     if (!entryDate) {
-      console.error("[TimeEntryProvider] Invalid date in new entry:", entryData);
+      logger.error("[TimeEntryProvider] Invalid date in new entry:", entryData);
       toast({
         title: "Error adding entry",
         description: "The entry has an invalid date.",
@@ -37,11 +40,11 @@ export const useEntryOperations = (
       date: entryDate
     };
 
-    console.debug("[TimeEntryProvider] Created entry with ID:", newEntry.id);
+    logger.debug("[TimeEntryProvider] Created entry with ID:", newEntry.id);
     
     setEntries(prev => {
       const newEntries = [...prev, newEntry];
-      console.debug("[TimeEntryProvider] Updated entries array, new length:", newEntries.length);
+      logger.debug("[TimeEntryProvider] Updated entries array, new length:", newEntries.length);
       return newEntries;
     });
     
@@ -51,15 +54,15 @@ export const useEntryOperations = (
     });
   }, [setEntries, toast]);
 
-  // Update an existing entry - return void to match the interface
+  // Update an existing entry
   const updateEntry = useCallback((entryId: string, updates: Partial<TimeEntry>) => {
-    console.debug("[TimeEntryProvider] Updating entry:", entryId, "with updates:", updates);
+    logger.debug("[TimeEntryProvider] Updating entry:", entryId, "with updates:", updates);
     
     // Validate date if it's being updated
     if (updates.date) {
       const validDate = ensureDate(updates.date);
       if (!validDate) {
-        console.error("[TimeEntryProvider] Invalid date in update:", updates);
+        logger.error("[TimeEntryProvider] Invalid date in update:", updates);
         toast({
           title: "Error updating entry",
           description: "The entry has an invalid date.",
@@ -74,14 +77,14 @@ export const useEntryOperations = (
       const entryIndex = prev.findIndex(entry => entry.id === entryId);
       
       if (entryIndex === -1) {
-        console.warn("[TimeEntryProvider] Entry not found for update:", entryId);
+        logger.warn("[TimeEntryProvider] Entry not found for update:", entryId);
         return prev;
       }
       
       const updatedEntries = [...prev];
       updatedEntries[entryIndex] = { ...updatedEntries[entryIndex], ...updates };
       
-      console.debug("[TimeEntryProvider] Entry updated successfully");
+      logger.debug("[TimeEntryProvider] Entry updated successfully");
       return updatedEntries;
     });
     
@@ -91,28 +94,33 @@ export const useEntryOperations = (
     });
   }, [setEntries, toast]);
 
-  // Delete an entry
+  // Delete an entry - now fully async to support TOIL cleanup
   const deleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
-    console.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
+    logger.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
     
     try {
-      // First, track the deletion in the service
-      await unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+      // First, track the deletion in the service which now waits for TOIL cleanup
+      const serviceDeleted = await unifiedTimeEntryService.deleteEntry(entryId);
       
-      // Then update the local state
+      if (!serviceDeleted) {
+        logger.warn("[TimeEntryProvider] Service deletion failed for entry:", entryId);
+        return false;
+      }
+      
+      // Only update UI state after service succeeds
       let success = false;
       
       setEntries(prev => {
         const entryToDelete = prev.find(entry => entry.id === entryId);
         if (!entryToDelete) {
-          console.warn("[TimeEntryProvider] Entry not found for deletion:", entryId);
+          logger.warn("[TimeEntryProvider] Entry not found for deletion in UI state:", entryId);
           return prev;
         }
         
         const filteredEntries = prev.filter(entry => entry.id !== entryId);
         success = true;
         
-        console.debug("[TimeEntryProvider] Entry deleted, remaining entries:", filteredEntries.length);
+        logger.debug("[TimeEntryProvider] Entry deleted from UI state, remaining entries:", filteredEntries.length);
         return filteredEntries;
       });
       
@@ -125,7 +133,7 @@ export const useEntryOperations = (
       
       return success;
     } catch (error) {
-      console.error("[TimeEntryProvider] Error deleting entry:", error);
+      logger.error("[TimeEntryProvider] Error deleting entry:", error);
       toast({
         title: "Error deleting entry",
         description: "An unexpected error occurred"
@@ -136,11 +144,11 @@ export const useEntryOperations = (
 
   // Create a new entry with validation
   const createEntry = useCallback((entryData: Omit<TimeEntry, "id">): string | null => {
-    console.debug("[TimeEntryProvider] Creating new entry with data:", entryData);
+    logger.debug("[TimeEntryProvider] Creating new entry with data:", entryData);
     
     // Validate the entry data
     if (!entryData.userId) {
-      console.error("[TimeEntryProvider] Missing userId in entry data:", entryData);
+      logger.error("[TimeEntryProvider] Missing userId in entry data:", entryData);
       toast({
         title: "Error creating entry",
         description: "Missing user information for the entry",

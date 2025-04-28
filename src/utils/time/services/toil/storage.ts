@@ -396,42 +396,35 @@ export function clearAllTOILCaches(): void {
 }
 
 /**
- * Delete TOIL record by entry ID - Async with transaction-like behavior
+ * Delete TOIL record by entry ID - Async with transaction-like behavior and retry mechanism
  */
-export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolean> {
+export async function deleteTOILRecordByEntryId(entryId: string, maxRetries = 3): Promise<boolean> {
   if (!entryId) {
     logger.warn('Attempted to delete TOIL record with empty entryId');
     return false;
   }
 
-  try {
-    logger.debug(`Attempting to delete TOIL records for entry: ${entryId}`);
-    
-    // Acquire lock for consistent state
-    await storageWriteLock.acquire();
-    
+  let attempts = 0;
+  let success = false;
+  
+  while (attempts < maxRetries && !success) {
+    attempts++;
     try {
-      // Get all records within the lock
-      const records = loadTOILRecords();
-      const usage = loadTOILUsage();
+      logger.debug(`Attempting to delete TOIL records for entry: ${entryId} (attempt ${attempts}/${maxRetries})`);
       
-      // Find records associated with this entry
-      const recordsToRemove = records.filter(record => record.entryId === entryId);
-      const usageToRemove = usage.filter(u => u.entryId === entryId);
+      // Acquire lock for consistent state
+      await storageWriteLock.acquire();
       
-      // If we found any records to remove, log them for debugging
-      if (recordsToRemove.length > 0 || usageToRemove.length > 0) {
-        logger.debug(`Found ${recordsToRemove.length} TOIL records and ${usageToRemove.length} usage records to remove`);
+      try {
+        // Get all records within the lock
+        const records = loadTOILRecords();
+        const usage = loadTOILUsage();
         
-        // Filter out the records to be removed
-        const updatedRecords = records.filter(record => record.entryId !== entryId);
-        const updatedUsage = usage.filter(u => u.entryId !== entryId);
+        // Find records associated with this entry
+        const recordsToRemove = records.filter(record => record.entryId === entryId);
+        const usageToRemove = usage.filter(u => u.entryId === entryId);
         
-        // Save updates within the lock
-        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(updatedRecords));
-        localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(updatedUsage));
-        
-        // Clear cache for affected records - identify affected users and months
+        // Track which users and months are affected for cache clearing
         const affectedUsers = new Set<string>();
         const affectedMonths = new Set<string>();
         
@@ -440,29 +433,51 @@ export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolea
           if (item.monthYear) affectedMonths.add(item.monthYear);
         });
         
-        // Clear specific cache entries
-        affectedUsers.forEach(userId => {
-          affectedMonths.forEach(monthYear => {
-            clearSummaryCache(userId, monthYear);
+        // If we found any records to remove, log them for debugging
+        if (recordsToRemove.length > 0 || usageToRemove.length > 0) {
+          logger.debug(`Found ${recordsToRemove.length} TOIL records and ${usageToRemove.length} usage records to remove`);
+          
+          // Filter out the records to be removed
+          const updatedRecords = records.filter(record => record.entryId !== entryId);
+          const updatedUsage = usage.filter(u => u.entryId !== entryId);
+          
+          // Save updates within the lock
+          localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(updatedRecords));
+          localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(updatedUsage));
+          
+          // Clear cache for affected records
+          affectedUsers.forEach(userId => {
+            affectedMonths.forEach(monthYear => {
+              clearSummaryCache(userId, monthYear);
+            });
           });
-        });
+          
+          logger.debug(`Successfully deleted TOIL records for entry: ${entryId}`);
+          success = true;
+        } else if (attempts === 1) { // Only log this on first attempt
+          logger.debug(`No TOIL records found for entry: ${entryId}`);
+        }
         
-        logger.debug(`Successfully deleted TOIL records for entry: ${entryId}`);
+        // Even if no records were found, we consider it a success
         return true;
+      } finally {
+        // Always release the lock
+        storageWriteLock.release();
+      }
+    } catch (error) {
+      logger.error(`Error deleting TOIL record (attempt ${attempts}/${maxRetries}):`, error);
+      
+      // In case of error, make sure the lock gets released
+      if (storageWriteLock.isLocked) {
+        storageWriteLock.release();
       }
       
-      logger.debug(`No TOIL records found for entry: ${entryId}`);
-      return false;
-    } finally {
-      // Always release the lock
-      storageWriteLock.release();
+      // Wait before retry (exponential backoff)
+      if (attempts < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, Math.min(100 * Math.pow(2, attempts), 1000)));
+      }
     }
-  } catch (error) {
-    logger.error('Error deleting TOIL record:', error);
-    // In case of error, make sure the lock gets released
-    if (storageWriteLock.isLocked) {
-      storageWriteLock.release();
-    }
-    return false;
   }
+  
+  return success;
 }

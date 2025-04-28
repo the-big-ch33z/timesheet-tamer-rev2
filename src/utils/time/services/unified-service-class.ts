@@ -168,7 +168,7 @@ export class UnifiedTimeEntryService {
     return this.operations.updateEntry(entryId, updates, this.deletedEntryIds);
   }
 
-  public deleteEntry(entryId: string): boolean {
+  public deleteEntry(entryId: string): Promise<boolean> {
     return this.operations.deleteEntry(entryId, this.deletedEntryIds);
   }
 

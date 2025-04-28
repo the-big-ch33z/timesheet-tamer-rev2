@@ -1,118 +1,111 @@
 
 import { TimeEntry, WorkSchedule } from "@/types";
-import { TOILRecord, TOILSummary } from "@/types/toil";
+import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
-import { format } from 'date-fns';
-import { isNonWorkingDay } from "@/utils/time/scheduleUtils";
-import { getWeekDay, getFortnightWeek, calculateDayHours } from "@/utils/time/scheduleUtils";
-import { isValidTOILHours, getSanitizedTOILHours } from "@/utils/time/validation/toilValidation";
-import { Holiday } from "@/lib/holidays";
-import { createTimeLogger } from '@/utils/time/errors';
+import { TOILRecord } from "@/types/toil";
+import { isValidTOILHours } from "../../validation/toilValidation";
+import { createTimeLogger } from "../../errors/timeLogger";
+import { isHoliday } from "./holiday-utils";
+import { calculateDayHoursWithBreaks } from "../../scheduleUtils";
 
 const logger = createTimeLogger('TOILCalculation');
 
 /**
- * Calculate TOIL hours based on entries, schedule, and holidays
+ * Calculate TOIL (Time Off In Lieu) for a given set of time entries for a day
+ * 
+ * This function will:
+ * 1. Calculate the scheduled hours for the day
+ * 2. Calculate the total hours worked
+ * 3. Calculate the TOIL hours (hours worked - scheduled hours)
+ * 4. Create a TOIL record if applicable
  */
-export function calculateTOILHours(
-  entries: TimeEntry[], 
+export function calculateDailyTOIL(
+  entries: TimeEntry[],
   date: Date, 
-  workSchedule?: WorkSchedule,
-  holidays: Holiday[] = []
-): number {
-  try {
-    // Guard against empty entries
-    if (!entries || entries.length === 0) {
-      logger.debug('[TOILCalc] No entries found, returning 0 TOIL hours');
-      return 0;
-    }
-    
-    // Guard against missing work schedule
-    if (!workSchedule) {
-      logger.debug('[TOILCalc] No work schedule provided, returning 0 TOIL hours');
-      return 0;
-    }
-
-    // First step: check if the date is a non-working day
-    // This optimization prevents unnecessary calculations
-    const isNonWorking = isNonWorkingDay(date, workSchedule, holidays);
-
-    // Calculate actual hours from entries, but only count entries for the same date
-    const actualHours = entries
-      .filter(entry => {
-        if (!entry.date) return false;
-        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-        return format(entryDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-      })
-      .reduce((sum, entry) => {
-        // Validate hours before adding
-        const hours = isFinite(entry.hours) ? entry.hours : 0;
-        return hours > 0 ? sum + hours : sum;
-      }, 0);
-
-    // Guard against zero actual hours
-    if (actualHours <= 0) {
-      logger.debug('[TOILCalc] No actual hours worked, returning 0 TOIL hours');
-      return 0;
-    }
-
-    let toilHours = 0;
-    
-    // If it's a non-working day, all hours count as TOIL
-    if (isNonWorking) {
-      toilHours = actualHours;
-      logger.debug(`[TOILCalc] Non-working day detected, all ${actualHours}h count as TOIL`);
-    } else {
-      // For working days, calculate excess hours as before
-      const weekDay = getWeekDay(date);
-      const weekNum = getFortnightWeek(date);
-      const daySchedule = workSchedule?.weeks[weekNum][weekDay];
-      
-      if (daySchedule?.startTime && daySchedule?.endTime) {
-        const scheduledHours = calculateDayHours(
-          daySchedule.startTime,
-          daySchedule.endTime,
-          daySchedule.breaks
-        );
-        toilHours = Math.max(0, actualHours - scheduledHours);
-        logger.debug(`[TOILCalc] Working day: actual=${actualHours}h, scheduled=${scheduledHours}h, TOIL=${toilHours}h`);
-      }
-    }
-
-    // ENFORCE positive, valid, clamped TOIL hours
-    if (!isValidTOILHours(toilHours)) {
-      logger.debug('[TOILCalc] Invalid TOIL hours calculated:', toilHours);
-      toilHours = 0;
-    } else {
-      toilHours = getSanitizedTOILHours(toilHours);
-    }
-
-    logger.debug(`[TOILCalc] Final TOIL hours calculated: ${toilHours}`);
-    return toilHours;
-  } catch (error) {
-    logger.error('[TOILCalc] Error calculating TOIL hours:', error);
-    return 0;
-  }
-}
-
-/**
- * Create a TOIL record object
- */
-export function createTOILRecord(
   userId: string,
-  date: Date,
-  hours: number,
-  entryId?: string
-): TOILRecord {
-  const monthYear = format(date, 'yyyy-MM');
+  workSchedule: WorkSchedule
+): TOILRecord | null {
+  if (!entries?.length || !userId || !workSchedule) {
+    logger.debug('Skipping TOIL calculation due to missing inputs');
+    return null;
+  }
   
-  return {
+  // Filter only entries for this user and date
+  const dateString = format(date, 'yyyy-MM-dd');
+  const dayEntries = entries.filter(entry => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+    return format(entryDate, 'yyyy-MM-dd') === dateString && entry.userId === userId;
+  });
+
+  if (!dayEntries.length) {
+    logger.debug(`No entries for ${dateString} for user ${userId}`);
+    return null;
+  }
+  
+  // Check if it's a holiday or weekend
+  if (isHoliday(date)) {
+    logger.debug(`${dateString} is a holiday, all hours are TOIL`);
+  }
+  
+  // Get scheduled hours from work schedule
+  const dayOfWeek = date.getDay();
+  const weekNumber = Math.floor(date.getDate() / 7);
+  let scheduledHours = 0;
+  
+  try {
+    // Calculate scheduled hours for the day based on work schedule
+    const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+    const week = weekNumber % 2; // Alternate between 0 and 1 for fortnight
+    const dayConfig = workSchedule.weeks[week]?.[weekday];
+    
+    if (dayConfig && dayConfig.startTime && dayConfig.endTime) {
+      scheduledHours = calculateDayHoursWithBreaks(
+        dayConfig.startTime, 
+        dayConfig.endTime, 
+        { 
+          lunch: !!dayConfig.breaks?.lunch, 
+          smoko: !!dayConfig.breaks?.smoko 
+        }
+      );
+    }
+    
+    logger.debug(`Scheduled hours for ${dateString}: ${scheduledHours}`);
+  } catch (error) {
+    logger.error('Error calculating scheduled hours:', error);
+    scheduledHours = 7.6; // Default full-day hours
+  }
+  
+  // Calculate total hours worked
+  const totalHours = dayEntries.reduce((sum, entry) => sum + entry.hours, 0);
+  logger.debug(`Total hours for ${dateString}: ${totalHours}`);
+  
+  // Calculate TOIL
+  const toilHours = Math.max(0, totalHours - scheduledHours);
+  logger.debug(`TOIL hours for ${dateString}: ${toilHours}`);
+  
+  // Round to nearest quarter hour
+  const roundedToilHours = Math.round(toilHours * 4) / 4;
+  
+  // Validate TOIL hours
+  if (!isValidTOILHours(roundedToilHours) || roundedToilHours <= 0) {
+    logger.debug(`No valid TOIL hours for ${dateString}`);
+    return null;
+  }
+
+  // Find the first entry to use as reference (preferably the largest one)
+  const primaryEntry = [...dayEntries].sort((a, b) => b.hours - a.hours)[0];
+
+  // Create TOIL record
+  const toilRecord: TOILRecord = {
     id: uuidv4(),
     userId,
-    date,
-    hours: getSanitizedTOILHours(hours),
-    monthYear,
-    entryId,
+    date: new Date(date),
+    hours: roundedToilHours,
+    monthYear: format(date, 'yyyy-MM'),
+    entryId: primaryEntry.id,  // Link to the entry that generated this TOIL
     status: 'active'
   };
+  
+  logger.debug(`Created TOIL record for ${dateString}: ${roundedToilHours} hours`);
+  return toilRecord;
 }
