@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -78,7 +77,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     smoko: null
   });
   
-  // Calculate day hours first so it can be used in createSyntheticEntry
   const calculateDayHours = useCallback(() => {
     if (!workSchedule) return 7.6;
     
@@ -100,14 +98,28 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     );
   }, [workSchedule, date]);
 
-  // Reset all synthetic entry IDs when date changes
   useEffect(() => {
+    logger.debug('Date changed, resetting synthetic entry IDs');
     setSyntheticEntryIds({
       sick: null,
       leave: null,
       toil: null,
       lunch: null,
       smoko: null
+    });
+    setActionStates({
+      sick: false,
+      leave: false,
+      toil: false,
+      lunch: false,
+      smoko: false
+    });
+    setCreatedEntries({
+      sick: false,
+      leave: false,
+      toil: false,
+      lunch: false,
+      smoko: false
     });
   }, [date, userId]);
 
@@ -129,11 +141,9 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }
   }, [actionStates.leave, actionStates.sick]);
   
-  // Handle the synthetic entry creation and deletion with improved error handling and logging
   const createSyntheticEntry = useCallback((type: WorkHoursActionType, isActive: boolean) => {
     logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
 
-    // Handle entry removal when toggling off
     if (!isActive) {
       const entryId = syntheticEntryIds[type];
       if (entryId) {
@@ -144,12 +154,16 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
             if (success) {
               logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
               setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+              setActionStates(prev => ({ ...prev, [type]: false }));
+              setCreatedEntries(prev => ({ ...prev, [type]: false }));
+              
               toast({
                 title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
                 description: `Entry removed from ${date.toLocaleDateString()}`
               });
             } else {
               logger.error(`Failed to delete synthetic entry: ${entryId}`);
+              setActionStates(prev => ({ ...prev, [type]: false }));
               toast({
                 title: `Removal Error`,
                 description: `Could not remove ${type} entry. Please try again.`,
@@ -159,25 +173,22 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           })
           .catch(error => {
             logger.error(`Error deleting synthetic entry: ${entryId}`, error);
+            setActionStates(prev => ({ ...prev, [type]: false }));
             toast({
               title: `Removal Error`,
               description: `Could not remove ${type} entry: ${error.message}`,
               variant: "destructive"
             });
           });
-      } else {
-        logger.debug(`No synthetic entry ID found for type: ${type}, nothing to delete`);
       }
       return;
     }
 
-    // Don't create duplicate entries
     if (syntheticEntryIds[type]) {
       logger.debug(`Synthetic entry already exists for ${type}, not creating another one`);
       return;
     }
 
-    // Create a new entry when toggling on
     const dayHours = calculateDayHours();
     const hoursToRecord = dayHours > 0 ? dayHours : 7.6;
     
@@ -206,6 +217,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       if (newEntryId) {
         logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
         setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
+        setCreatedEntries(prev => ({ ...prev, [type]: true }));
         
         toast({
           title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
@@ -213,13 +225,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         });
       } else {
         logger.error(`Failed to create synthetic ${type} entry`);
+        setActionStates(prev => ({ ...prev, [type]: false }));
         toast({
           title: `Creation Error`,
           description: `Could not create ${type} entry. Please try again.`,
           variant: "destructive"
         });
-        // Reset the toggle state since entry creation failed
-        setActionStates(prev => ({ ...prev, [type]: false }));
       }
     }
   }, [userId, date, createEntry, deleteEntry, calculateDayHours, syntheticEntryIds, toast, logger]);
