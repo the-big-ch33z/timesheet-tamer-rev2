@@ -88,8 +88,12 @@ export async function performSingleCalculation(
       return getTOILSummary(userId, date.toISOString().slice(0, 7));
     }
     
+    // Find the primary entry to associate the TOIL record with
+    const primaryEntry = [...filteredEntries].sort((a, b) => b.hours - a.hours)[0];
+    const entryId = primaryEntry?.id;
+    
     // Create a TOIL record
-    const record = createTOILRecord(userId, date, toilHours);
+    const record = createTOILRecord(userId, date, toilHours, entryId);
     
     // Store the record
     const success = await storeTOILRecord(record);

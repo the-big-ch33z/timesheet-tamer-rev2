@@ -109,3 +109,81 @@ export function calculateDailyTOIL(
   logger.debug(`Created TOIL record for ${dateString}: ${roundedToilHours} hours`);
   return toilRecord;
 }
+
+/**
+ * Calculate TOIL hours for a given set of time entries
+ */
+export function calculateTOILHours(
+  entries: TimeEntry[],
+  date: Date,
+  workSchedule: WorkSchedule, 
+  holidays: any[] = []
+): number {
+  // Filter only entries for the date
+  const dateString = format(date, 'yyyy-MM-dd');
+  const dayEntries = entries.filter(entry => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+    return format(entryDate, 'yyyy-MM-dd') === dateString;
+  });
+
+  if (!dayEntries.length) {
+    return 0;
+  }
+  
+  // Get the scheduled hours for the day
+  const dayOfWeek = date.getDay();
+  const weekNumber = Math.floor(date.getDate() / 7);
+  let scheduledHours = 0;
+  
+  try {
+    // Calculate scheduled hours based on work schedule
+    const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+    const week = weekNumber % 2;
+    const dayConfig = workSchedule.weeks[week]?.[weekday];
+    
+    if (dayConfig && dayConfig.startTime && dayConfig.endTime) {
+      scheduledHours = calculateDayHoursWithBreaks(
+        dayConfig.startTime, 
+        dayConfig.endTime, 
+        { 
+          lunch: !!dayConfig.breaks?.lunch, 
+          smoko: !!dayConfig.breaks?.smoko 
+        }
+      );
+    }
+  } catch (error) {
+    logger.error('Error calculating TOIL hours:', error);
+    scheduledHours = 7.6; // Default
+  }
+  
+  // Calculate total hours worked
+  const totalHours = dayEntries.reduce((sum, entry) => sum + entry.hours, 0);
+  
+  // Calculate TOIL hours (hours worked - scheduled hours)
+  const toilHours = Math.max(0, totalHours - scheduledHours);
+  
+  // Round to nearest quarter hour
+  const roundedToilHours = Math.round(toilHours * 4) / 4;
+  
+  return isValidTOILHours(roundedToilHours) ? roundedToilHours : 0;
+}
+
+/**
+ * Create a new TOIL record
+ */
+export function createTOILRecord(
+  userId: string, 
+  date: Date, 
+  hours: number,
+  entryId?: string
+): TOILRecord {
+  return {
+    id: uuidv4(),
+    userId,
+    date: new Date(date),
+    hours,
+    monthYear: format(date, 'yyyy-MM'),
+    entryId: entryId || uuidv4(), // If no entry ID provided, create a synthetic one
+    status: 'active'
+  };
+}
