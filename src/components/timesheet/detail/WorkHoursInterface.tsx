@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -76,25 +77,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     lunch: null,
     smoko: null
   });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(getStorageKey(date, userId), JSON.stringify(actionStates));
-    } catch {}
-  }, [actionStates, date, userId]);
-
-  useEffect(() => {
-    setActionStates(getInitialActionState(date, userId));
-    setCreatedEntries({ sick: false, leave: false, toil: false, lunch: false, smoko: false });
-  }, [date, userId]);
-
-  useEffect(() => {
-    if (actionStates.leave && actionStates.sick) {
-      setActionStates((prev) => ({ ...prev, leave: false, sick: false }));
-    }
-  }, [actionStates.leave, actionStates.sick]);
-
+  
+  // Calculate day hours first so it can be used in createSyntheticEntry
   const calculateDayHours = useCallback(() => {
     if (!workSchedule) return 7.6;
     
@@ -115,6 +99,130 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       }
     );
   }, [workSchedule, date]);
+
+  // Reset all synthetic entry IDs when date changes
+  useEffect(() => {
+    setSyntheticEntryIds({
+      sick: null,
+      leave: null,
+      toil: null,
+      lunch: null,
+      smoko: null
+    });
+  }, [date, userId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(getStorageKey(date, userId), JSON.stringify(actionStates));
+    } catch {}
+  }, [actionStates, date, userId]);
+
+  useEffect(() => {
+    setActionStates(getInitialActionState(date, userId));
+    setCreatedEntries({ sick: false, leave: false, toil: false, lunch: false, smoko: false });
+  }, [date, userId]);
+
+  useEffect(() => {
+    if (actionStates.leave && actionStates.sick) {
+      setActionStates((prev) => ({ ...prev, leave: false, sick: false }));
+    }
+  }, [actionStates.leave, actionStates.sick]);
+  
+  // Handle the synthetic entry creation and deletion with improved error handling and logging
+  const createSyntheticEntry = useCallback((type: WorkHoursActionType, isActive: boolean) => {
+    logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
+
+    // Handle entry removal when toggling off
+    if (!isActive) {
+      const entryId = syntheticEntryIds[type];
+      if (entryId) {
+        logger.debug(`Attempting to delete synthetic entry: ${entryId} for type: ${type}`);
+        
+        deleteEntry(entryId)
+          .then((success) => {
+            if (success) {
+              logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
+              setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+              toast({
+                title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
+                description: `Entry removed from ${date.toLocaleDateString()}`
+              });
+            } else {
+              logger.error(`Failed to delete synthetic entry: ${entryId}`);
+              toast({
+                title: `Removal Error`,
+                description: `Could not remove ${type} entry. Please try again.`,
+                variant: "destructive"
+              });
+            }
+          })
+          .catch(error => {
+            logger.error(`Error deleting synthetic entry: ${entryId}`, error);
+            toast({
+              title: `Removal Error`,
+              description: `Could not remove ${type} entry: ${error.message}`,
+              variant: "destructive"
+            });
+          });
+      } else {
+        logger.debug(`No synthetic entry ID found for type: ${type}, nothing to delete`);
+      }
+      return;
+    }
+
+    // Don't create duplicate entries
+    if (syntheticEntryIds[type]) {
+      logger.debug(`Synthetic entry already exists for ${type}, not creating another one`);
+      return;
+    }
+
+    // Create a new entry when toggling on
+    const dayHours = calculateDayHours();
+    const hoursToRecord = dayHours > 0 ? dayHours : 7.6;
+    
+    const entryTypeMap = {
+      leave: "LEAVE",
+      sick: "SICK",
+      toil: "TOIL-USED"
+    } as const;
+    
+    if (type === 'leave' || type === 'sick' || type === 'toil') {
+      logger.debug(`Creating synthetic ${type} entry with ${hoursToRecord} hours for ${date.toLocaleDateString()}`);
+      
+      const entryData = {
+        userId,
+        date,
+        hours: hoursToRecord,
+        entryType: "auto",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} - Automatically generated`,
+        jobNumber: entryTypeMap[type],
+        project: "General",
+        synthetic: true
+      };
+      
+      const newEntryId = createEntry(entryData);
+      
+      if (newEntryId) {
+        logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
+        setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
+        
+        toast({
+          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
+          description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
+        });
+      } else {
+        logger.error(`Failed to create synthetic ${type} entry`);
+        toast({
+          title: `Creation Error`,
+          description: `Could not create ${type} entry. Please try again.`,
+          variant: "destructive"
+        });
+        // Reset the toggle state since entry creation failed
+        setActionStates(prev => ({ ...prev, [type]: false }));
+      }
+    }
+  }, [userId, date, createEntry, deleteEntry, calculateDayHours, syntheticEntryIds, toast, logger]);
 
   const handleToggleAction = useCallback((type: WorkHoursActionType) => {
     setActionStates(prev => {
@@ -141,55 +249,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       
       return next;
     });
-  }, []);
-
-  const createSyntheticEntry = useCallback((type: WorkHoursActionType, isActive: boolean) => {
-    if (!isActive) {
-      const entryId = syntheticEntryIds[type];
-      if (entryId) {
-        deleteEntry(entryId);
-        setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
-      }
-      return;
-    }
-
-    if (syntheticEntryIds[type]) {
-      return;
-    }
-
-    const dayHours = calculateDayHours();
-    const hoursToRecord = dayHours > 0 ? dayHours : 7.6;
-    
-    const entryTypeMap = {
-      leave: "LEAVE",
-      sick: "SICK",
-      toil: "TOIL-USED"
-    };
-    
-    if (type === 'leave' || type === 'sick' || type === 'toil') {
-      const entryData = {
-        userId,
-        date,
-        hours: hoursToRecord,
-        entryType: "auto",
-        description: `${type.charAt(0).toUpperCase() + type.slice(1)} - Automatically generated`,
-        jobNumber: entryTypeMap[type],
-        project: "General",
-        synthetic: true
-      };
-      
-      const newEntryId = createEntry(entryData);
-      
-      if (newEntryId) {
-        setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
-        
-        toast({
-          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
-          description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
-        });
-      }
-    }
-  }, [userId, date, createEntry, deleteEntry, calculateDayHours, syntheticEntryIds, toast]);
+  }, [createSyntheticEntry]);
 
   const breakConfig = useMemo(() => {
     if (!workSchedule) return { lunch: false, smoko: false };
