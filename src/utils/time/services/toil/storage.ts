@@ -342,8 +342,8 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary {
     // Calculate used hours
     const used = userUsage.reduce((sum, usage) => sum + usage.hours, 0);
     
-    // Calculate remaining hours
-    const remaining = Math.max(0, accrued - used);
+    // Calculate remaining hours (accrued - used, allowing negative values)
+    const remaining = accrued - used;
     
     logger.debug(`[TOILStorage] Summary: accrued=${accrued}, used=${used}, remaining=${remaining}`);
     

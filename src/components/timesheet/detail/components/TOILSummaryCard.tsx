@@ -1,4 +1,3 @@
-
 import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
@@ -38,7 +37,7 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
       color: "text-blue-600",
       border: "border-blue-100 bg-blue-50",
       icon: <CirclePlus className="w-5 h-5 text-blue-400" />,
-      displaySign: true // Always show "+" for earned
+      displaySign: true
     },
     {
       label: "Used",
@@ -46,7 +45,7 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
       color: "text-red-600",
       border: "border-red-100 bg-red-50",
       icon: <CircleMinus className="w-5 h-5 text-red-400" />,
-      displaySign: false, // Don't add "+" for used, we'll handle this manually
+      displaySign: false,
       forceNegative: true // Always show as negative
     },
     {
@@ -55,23 +54,22 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
       color: isNegativeBalance ? "text-[#ea384c]" : "text-green-600",
       border: isNegativeBalance ? "border-red-100 bg-red-50" : "border-green-100 bg-green-50",
       icon: isNegativeBalance ? 
-        <AlertTriangle className="w-5 h-5 text-[#ea384c]" /> : 
+        <AlertTriangle className="w-4 h-4 text-[#ea384c]" /> : 
         <CircleCheck className="w-5 h-5 text-green-400" />,
-      displaySign: true // Show +/- as appropriate
+      displaySign: true
     }
   ];
 
   return (
     <div className="grid grid-cols-3 gap-3 mb-6">
       {box.map(({ label, value, color, border, icon, displaySign, forceNegative }) => {
-        // Format value with appropriate sign
         let formattedValue;
         
         if (forceNegative) {
           // For "Used", always show as negative
           formattedValue = `-${formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '')}`;
         } else if (displaySign) {
-          // For "Earned" and "Remaining", use regular formatting with signs
+          // For "Earned" and "Remaining", show actual sign
           formattedValue = formatDisplayHours(value);
         } else {
           // For cases where we don't want a sign
