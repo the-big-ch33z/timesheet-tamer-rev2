@@ -26,8 +26,8 @@ const SHIFTED_RDO_TEXT = "text-blue-900";
 interface CalendarDayProps {
   day: Date;
   entries?: TimeEntry[];  // Made optional to fix the TypeScript error
-  isSelected: boolean;
-  isToday: boolean;
+  isSelected?: boolean;   // Made optional to fix the TypeScript error
+  isToday?: boolean;
   onClick: (day: Date) => void;
   isComplete?: boolean;
   totalHours?: number;
@@ -47,8 +47,8 @@ interface CalendarDayProps {
 const CalendarDay: React.FC<CalendarDayProps> = ({
   day,
   entries = [], // Provide default empty array
-  isSelected,
-  isToday,
+  isSelected = false, // Default value added
+  isToday = false, // Default value added
   onClick,
   isComplete = false,
   totalHours = 0,
