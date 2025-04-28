@@ -18,10 +18,12 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   currentMonth,
   workSchedule
 }) => {
-  // Get TOIL summary for the current month
+  // Get TOIL summary for the current month, using monthOnly=true to ensure
+  // it doesn't change when day selection changes
   const { summary: toilSummary, isLoading: toilLoading } = useTOILSummary({
     userId: user.id,
-    date: currentMonth
+    date: currentMonth,
+    monthOnly: true // Explicitly set to use month-only mode
   });
 
   const monthName = format(currentMonth, 'MMMM yyyy');

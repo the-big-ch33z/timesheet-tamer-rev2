@@ -1,3 +1,4 @@
+
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILSummary, TOILUsage } from "@/types/toil";
@@ -32,15 +33,18 @@ export class TOILService {
   ) {
     return new Promise<TOILSummary | null>((resolve) => {
       if (!userId || !workSchedule || !entries?.length) {
+        // Even with no data, return the current month summary
         const monthYear = date.toISOString().slice(0, 7);
         resolve(getTOILSummary(userId, monthYear));
         return;
       }
 
-      // Queue calculation request
-      const dateKey = `${userId}-${date.toISOString().slice(0, 10)}`;
+      // Always use month-year for consistent identification - ignore day component
+      const monthYear = date.toISOString().slice(0, 7);
+      const dateKey = `${userId}-${monthYear}`;
+      
       if (hasRecentlyProcessed(userId, date)) {
-        const monthYear = date.toISOString().slice(0, 7);
+        // Return existing monthly summary if already processed recently
         resolve(getTOILSummary(userId, monthYear));
         return;
       }

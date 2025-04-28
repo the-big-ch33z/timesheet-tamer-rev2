@@ -12,6 +12,7 @@ const logger = createTimeLogger('useTOILSummary');
 export interface UseTOILSummaryProps {
   userId: string;
   date: Date;
+  monthOnly?: boolean; // New flag to indicate we only care about the month
 }
 
 export interface UseTOILSummaryResult {
@@ -23,13 +24,16 @@ export interface UseTOILSummaryResult {
 
 export const useTOILSummary = ({ 
   userId, 
-  date 
+  date,
+  monthOnly = true // Default to month-only mode
 }: UseTOILSummaryProps): UseTOILSummaryResult => {
   const [summary, setSummary] = useState<TOILSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
   
+  // Extract just the year and month for monthly view
+  // This ensures we don't re-fetch data when only the day changes
   const monthYear = format(date, 'yyyy-MM');
   
   // Clear caches when month changes to ensure we get fresh data
@@ -79,7 +83,7 @@ export const useTOILSummary = ({
     }
   };
   
-  // Load summary when userId or date changes
+  // Load summary when userId or month changes - now only depends on monthYear, not the full date
   useEffect(() => {
     loadSummary();
   }, [userId, monthYear]);
