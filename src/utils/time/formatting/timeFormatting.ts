@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 
 /**
@@ -16,8 +17,9 @@ export const formatHours = (hours: number): string => {
  */
 export const formatDisplayHours = (hours: number): string => {
   if (isNaN(hours)) return '0h';
-  const sign = hours >= 0 ? '+' : '';
-  return `${sign}${formatHours(hours).replace('h','')}h`;
+  const sign = hours >= 0 ? '+' : '-';
+  // Use absolute value to handle the sign separately
+  return `${sign}${formatHours(Math.abs(hours)).replace('h','')}h`;
 };
 
 /**
