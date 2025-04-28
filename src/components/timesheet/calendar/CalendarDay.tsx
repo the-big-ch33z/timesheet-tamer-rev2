@@ -1,3 +1,4 @@
+
 import React, { useMemo, memo } from "react";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
@@ -24,7 +25,7 @@ const SHIFTED_RDO_TEXT = "text-blue-900";
 
 interface CalendarDayProps {
   day: Date;
-  entries: TimeEntry[];
+  entries?: TimeEntry[];  // Made optional to fix the TypeScript error
   isSelected: boolean;
   isToday: boolean;
   onClick: (day: Date) => void;
@@ -45,7 +46,7 @@ interface CalendarDayProps {
 
 const CalendarDay: React.FC<CalendarDayProps> = ({
   day,
-  entries = [],
+  entries = [], // Provide default empty array
   isSelected,
   isToday,
   onClick,

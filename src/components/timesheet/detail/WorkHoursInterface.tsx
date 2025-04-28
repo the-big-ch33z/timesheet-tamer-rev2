@@ -95,6 +95,27 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }
   }, [actionStates.leave, actionStates.sick]);
 
+  const calculateDayHours = useCallback(() => {
+    if (!workSchedule) return 7.6;
+    
+    const weekday = getWeekDay(date);
+    const fortnightWeek = getFortnightWeek(date);
+    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
+    
+    if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime) {
+      return 7.6;
+    }
+    
+    return calculateDayHoursWithBreaks(
+      dayConfig.startTime, 
+      dayConfig.endTime, 
+      { 
+        lunch: !!dayConfig.breaks?.lunch, 
+        smoko: !!dayConfig.breaks?.smoko 
+      }
+    );
+  }, [workSchedule, date]);
+
   const handleToggleAction = useCallback((type: WorkHoursActionType) => {
     setActionStates(prev => {
       let next = { ...prev, [type]: !prev[type] };
@@ -202,27 +223,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     userId,
     onHoursChange
   });
-
-  const calculateDayHours = useCallback(() => {
-    if (!workSchedule) return 7.6;
-    
-    const weekday = getWeekDay(date);
-    const fortnightWeek = getFortnightWeek(date);
-    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
-    
-    if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime) {
-      return 7.6;
-    }
-    
-    return calculateDayHoursWithBreaks(
-      dayConfig.startTime, 
-      dayConfig.endTime, 
-      { 
-        lunch: !!dayConfig.breaks?.lunch, 
-        smoko: !!dayConfig.breaks?.smoko 
-      }
-    );
-  }, [workSchedule, date]);
 
   const calculateAdjustedHours = useCallback(() => {
     let adjustment = 0;
