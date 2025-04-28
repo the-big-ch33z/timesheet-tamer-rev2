@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";

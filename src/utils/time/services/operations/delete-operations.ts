@@ -35,13 +35,24 @@ export class DeleteOperations {
       const deletedEntry = allEntries[entryIndex];
       allEntries.splice(entryIndex, 1);
       
-      // Clean up any associated TOIL records
-      deleteTOILRecordByEntryId(entryId);
-      
+      // First save the entries to ensure consistency
       saveEntriesToStorage(allEntries, this.config.storageKey, deletedEntryIds)
-        .then(saved => {
+        .then(async (saved) => {
           if (saved) {
             this.invalidateCache();
+            
+            // Only after successful save, clean up TOIL records
+            try {
+              const toilDeleted = await deleteTOILRecordByEntryId(entryId);
+              if (toilDeleted) {
+                logger.debug(`Successfully cleaned up TOIL records for entry ${entryId}`);
+              }
+            } catch (toilError) {
+              logger.error(`Error cleaning up TOIL records for entry ${entryId}:`, toilError);
+              // Continue with the flow even if TOIL cleanup fails
+            }
+            
+            // Dispatch events after both operations
             dispatchEntryEvent(this.eventManager, 'entry-deleted', { entryId, entry: deletedEntry }, deletedEntry.userId);
             
             if (typeof window !== 'undefined') {
@@ -50,7 +61,7 @@ export class DeleteOperations {
               }));
             }
             
-            logger.debug(`Deleted entry ${entryId} and cleaned up TOIL records`);
+            logger.debug(`Deleted entry ${entryId}`);
           } else {
             logger.error(`Failed to save after deleting entry ${entryId}`);
           }
