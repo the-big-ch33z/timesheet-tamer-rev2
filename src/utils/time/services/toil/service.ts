@@ -1,4 +1,3 @@
-
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILSummary, TOILUsage } from "@/types/toil";
@@ -73,10 +72,12 @@ export class TOILService {
       const usage: TOILUsage = {
         id: entry.id,
         userId: entry.userId,
-        date: entry.date,
+        date: entry.date instanceof Date ? entry.date : new Date(entry.date),
         hours: entry.hours,
         entryId: entry.id,
-        monthYear: entry.date.toISOString().slice(0, 7)
+        monthYear: entry.date instanceof Date ? 
+          entry.date.toISOString().slice(0, 7) : 
+          new Date(entry.date).toISOString().slice(0, 7)
       };
       
       // Store the usage record
@@ -84,7 +85,14 @@ export class TOILService {
       
       if (result) {
         logger.debug(`Recorded TOIL usage: ${entry.hours} hours (id=${entry.id})`);
-        // Trigger an update event
+        // Trigger an update event to immediately update UI
+        dispatchTOILUpdate({
+          userId: entry.userId,
+          monthYear: usage.monthYear,
+          accrued: 0, // We don't know this yet but will be updated soon
+          used: entry.hours,
+          remaining: 0 // Will be updated when TOILSummary is refreshed
+        });
         triggerTOILSave();
       }
       
@@ -152,3 +160,6 @@ export class TOILService {
 
 // Export singleton instance
 export const toilService = new TOILService();
+
+// Export constants for easier access
+export const TOIL_JOB_NUMBER = "TOIL";

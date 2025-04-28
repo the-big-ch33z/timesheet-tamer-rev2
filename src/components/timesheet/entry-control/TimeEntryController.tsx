@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -10,7 +9,6 @@ import EntryInterface from "./EntryInterface";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
 import ExistingEntriesList from "../detail/components/ExistingEntriesList";
 import { useToast } from "@/hooks/use-toast";
-import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil-service";
 
 // Define the interface for TimeEntryController props
 interface TimeEntryControllerProps {
@@ -53,7 +51,7 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
       setIsSubmitting(true);
       
       // Check if this is a TOIL usage entry
-      const isToilUsage = entryData.jobNumber === TOIL_JOB_NUMBER;
+      const isToilUsage = entryData.jobNumber === "TOIL";
       
       if (isToilUsage) {
         logger.debug('[TimeEntryController] Creating TOIL usage entry:', entryData.hours);
@@ -156,4 +154,3 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
 };
 
 export default React.memo(TimeEntryController);
-

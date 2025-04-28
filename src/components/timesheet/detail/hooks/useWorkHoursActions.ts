@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from 'react';
 import { WorkHoursActionType } from '../components/WorkHoursActionButtons';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
@@ -86,7 +85,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     const entryTypeMap = {
       leave: "LEAVE",
       sick: "SICK",
-      toil: "TOIL-USED"
+      toil: "TOIL"
     } as const;
     
     if (type === 'leave' || type === 'sick' || type === 'toil') {
@@ -113,7 +112,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
           
           toast({
             title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
-            description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
+            description: `${hoursToRecord} hours ${type === 'toil' ? 'used from' : 'recorded for'} ${date.toLocaleDateString()}`
           });
         } else {
           logger.error(`Failed to create synthetic ${type} entry`);

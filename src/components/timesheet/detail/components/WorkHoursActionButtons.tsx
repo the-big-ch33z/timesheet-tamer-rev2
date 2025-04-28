@@ -40,7 +40,7 @@ const ACTIONS: ActionConf[] = [
   {
     type: "toil",
     icon: Clock,
-    tooltip: "Mark as TOIL (Time Off in Lieu)",
+    tooltip: "Use TOIL (Time Off in Lieu)",
     adjustment: 0,
     activeColor: "text-purple-600",
     activeBg: "bg-purple-100",
