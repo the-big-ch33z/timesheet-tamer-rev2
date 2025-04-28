@@ -1,28 +1,18 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { TimeEntry, WorkSchedule } from "@/types";
+
+import React, { useEffect, useMemo } from "react";
+import { TimeEntry } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
 import WorkHoursDisplay from "./components/WorkHoursDisplay";
 import WorkHoursAlerts from "./components/WorkHoursAlerts";
-import WorkHoursActionButtons, { WorkHoursActionType } from "./components/WorkHoursActionButtons";
+import WorkHoursActionButtons from "./components/WorkHoursActionButtons";
+import { useWorkHoursActions } from "./hooks/useWorkHoursActions";
 import { useTimeEntryState } from "@/hooks/timesheet/detail/hooks/useTimeEntryState";
-import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
-import { createTimeLogger } from "@/utils/time/errors";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
-import { getWeekDay, getFortnightWeek, calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
-import { VerticalProgressBar } from "@/components/ui/VerticalProgressBar";
-import { formatDisplayHours } from '@/utils/time/formatting/timeFormatting';
-import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
-import { useToast } from "@/hooks/use-toast";
+import { useWorkHoursCalculation } from "./hooks/useWorkHoursCalculation";
+import { WorkHoursStatus } from "./components/WorkHoursStatus";
+import { createTimeLogger } from "@/utils/time/errors";
 
 const logger = createTimeLogger('WorkHoursInterface');
-
-const ACTIONS_CONFIG: Record<WorkHoursActionType, { adjustment?: number; localKey: string }> = {
-  lunch: { adjustment: 0.5, localKey: 'workhours_action_lunch' },
-  smoko: { adjustment: 0.25, localKey: 'workhours_action_smoko' },
-  leave: { localKey: 'workhours_action_leave' },
-  sick: { localKey: 'workhours_action_sick' },
-  toil: { localKey: 'workhours_action_toil' }
-};
 
 interface WorkHoursInterfaceProps {
   date: Date;
@@ -33,22 +23,6 @@ interface WorkHoursInterfaceProps {
   onHoursChange?: (hours: number) => void;
 }
 
-const getStorageKey = (date: Date, userId: string) =>
-  `workhours_actionstate_${userId}_${date.toISOString().slice(0,10)}`;
-
-const getInitialActionState = (date: Date, userId: string): Record<WorkHoursActionType, boolean> => {
-  if (typeof window === 'undefined') return {
-    sick: false, leave: false, toil: false, lunch: false, smoko: false
-  };
-  try {
-    const stored = window.localStorage.getItem(getStorageKey(date, userId));
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {}
-  return { sick: false, leave: false, toil: false, lunch: false, smoko: false };
-};
-
 const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   date,
   userId,
@@ -57,234 +31,21 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   workSchedule,
   onHoursChange
 }) => {
-  const { getWorkHoursForDate, saveWorkHoursForDate } = useTimesheetWorkHours(userId);
-  const { createEntry, deleteEntry } = useTimeEntryContext();
-  const { toast } = useToast();
+  const { calculateDayHours, breakConfig, hasLunchBreakInSchedule, hasSmokoBreakInSchedule } 
+    = useWorkHoursCalculation(date, workSchedule);
 
-  const [actionStates, setActionStates] = useState<Record<WorkHoursActionType, boolean>>(() =>
-    getInitialActionState(date, userId)
-  );
-
-  const [createdEntries, setCreatedEntries] = useState<Record<WorkHoursActionType, boolean>>({
-    sick: false, leave: false, toil: false, lunch: false, smoko: false
-  });
-
-  const [syntheticEntryIds, setSyntheticEntryIds] = useState<Record<WorkHoursActionType, string | null>>({
-    sick: null,
-    leave: null,
-    toil: null,
-    lunch: null,
-    smoko: null
-  });
-  
-  const calculateDayHours = useCallback(() => {
-    if (!workSchedule) return 7.6;
-    
-    const weekday = getWeekDay(date);
-    const fortnightWeek = getFortnightWeek(date);
-    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
-    
-    if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime) {
-      return 7.6;
-    }
-    
-    return calculateDayHoursWithBreaks(
-      dayConfig.startTime, 
-      dayConfig.endTime, 
-      { 
-        lunch: !!dayConfig.breaks?.lunch, 
-        smoko: !!dayConfig.breaks?.smoko 
-      }
-    );
-  }, [workSchedule, date]);
-
-  useEffect(() => {
-    logger.debug('Date changed, resetting synthetic entry IDs');
-    setSyntheticEntryIds({
-      sick: null,
-      leave: null,
-      toil: null,
-      lunch: null,
-      smoko: null
-    });
-    setActionStates({
-      sick: false,
-      leave: false,
-      toil: false,
-      lunch: false,
-      smoko: false
-    });
-    setCreatedEntries({
-      sick: false,
-      leave: false,
-      toil: false,
-      lunch: false,
-      smoko: false
-    });
-  }, [date, userId]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(getStorageKey(date, userId), JSON.stringify(actionStates));
-    } catch {}
-  }, [actionStates, date, userId]);
-
-  useEffect(() => {
-    setActionStates(getInitialActionState(date, userId));
-    setCreatedEntries({ sick: false, leave: false, toil: false, lunch: false, smoko: false });
-  }, [date, userId]);
-
-  useEffect(() => {
-    if (actionStates.leave && actionStates.sick) {
-      setActionStates((prev) => ({ ...prev, leave: false, sick: false }));
-    }
-  }, [actionStates.leave, actionStates.sick]);
-  
-  const createSyntheticEntry = useCallback((type: WorkHoursActionType, isActive: boolean) => {
-    logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
-
-    if (!isActive) {
-      const entryId = syntheticEntryIds[type];
-      if (entryId) {
-        logger.debug(`Attempting to delete synthetic entry: ${entryId} for type: ${type}`);
-        
-        deleteEntry(entryId)
-          .then((success) => {
-            if (success) {
-              logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
-              setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
-              setActionStates(prev => ({ ...prev, [type]: false }));
-              setCreatedEntries(prev => ({ ...prev, [type]: false }));
-              
-              toast({
-                title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
-                description: `Entry removed from ${date.toLocaleDateString()}`
-              });
-            } else {
-              logger.error(`Failed to delete synthetic entry: ${entryId}`);
-              setActionStates(prev => ({ ...prev, [type]: false }));
-              toast({
-                title: `Removal Error`,
-                description: `Could not remove ${type} entry. Please try again.`,
-                variant: "destructive"
-              });
-            }
-          })
-          .catch(error => {
-            logger.error(`Error deleting synthetic entry: ${entryId}`, error);
-            setActionStates(prev => ({ ...prev, [type]: false }));
-            toast({
-              title: `Removal Error`,
-              description: `Could not remove ${type} entry: ${error.message}`,
-              variant: "destructive"
-            });
-          });
-      }
-      return;
-    }
-
-    if (syntheticEntryIds[type]) {
-      logger.debug(`Synthetic entry already exists for ${type}, not creating another one`);
-      return;
-    }
-
-    const dayHours = calculateDayHours();
-    const hoursToRecord = dayHours > 0 ? dayHours : 7.6;
-    
-    const entryTypeMap = {
-      leave: "LEAVE",
-      sick: "SICK",
-      toil: "TOIL-USED"
-    } as const;
-    
-    if (type === 'leave' || type === 'sick' || type === 'toil') {
-      logger.debug(`Creating synthetic ${type} entry with ${hoursToRecord} hours for ${date.toLocaleDateString()}`);
-      
-      const entryData = {
-        userId,
-        date,
-        hours: hoursToRecord,
-        entryType: "auto",
-        description: `${type.charAt(0).toUpperCase() + type.slice(1)} - Automatically generated`,
-        jobNumber: entryTypeMap[type],
-        project: "General",
-        synthetic: true
-      };
-      
-      const newEntryId = createEntry(entryData);
-      
-      if (newEntryId) {
-        logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
-        setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
-        setCreatedEntries(prev => ({ ...prev, [type]: true }));
-        
-        toast({
-          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
-          description: `${hoursToRecord} hours recorded for ${date.toLocaleDateString()}`
-        });
-      } else {
-        logger.error(`Failed to create synthetic ${type} entry`);
-        setActionStates(prev => ({ ...prev, [type]: false }));
-        toast({
-          title: `Creation Error`,
-          description: `Could not create ${type} entry. Please try again.`,
-          variant: "destructive"
-        });
-      }
-    }
-  }, [userId, date, createEntry, deleteEntry, calculateDayHours, syntheticEntryIds, toast, logger]);
-
-  const handleToggleAction = useCallback((type: WorkHoursActionType) => {
-    setActionStates(prev => {
-      let next = { ...prev, [type]: !prev[type] };
-      
-      if (type === "leave" && next.leave) {
-        next.sick = false;
-        next.toil = false;
-      }
-      if (type === "sick" && next.sick) {
-        next.leave = false;
-        next.toil = false;
-      }
-      if (type === "toil" && next.toil) {
-        next.leave = false;
-        next.sick = false;
-      }
-      
-      if ((type === "leave" || type === "sick" || type === "toil") && next[type] !== prev[type]) {
-        setTimeout(() => {
-          createSyntheticEntry(type, next[type]);
-        }, 0);
-      }
-      
-      return next;
-    });
-  }, [createSyntheticEntry]);
-
-  const breakConfig = useMemo(() => {
-    if (!workSchedule) return { lunch: false, smoko: false };
-    const weekday = getWeekDay(date);
-    const fortnightWeek = getFortnightWeek(date);
-    const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
-    return {
-      lunch: !!(dayConfig?.breaks?.lunch),
-      smoko: !!(dayConfig?.breaks?.smoko),
-    };
-  }, [workSchedule, date]);
-
-  const hasLunchBreakInSchedule = breakConfig.lunch;
-  const hasSmokoBreakInSchedule = breakConfig.smoko;
+  const {
+    actionStates,
+    handleToggleAction
+  } = useWorkHoursActions(date, userId);
 
   const {
     startTime,
     endTime,
-    scheduledHours: baseScheduledHours,
     totalEnteredHours,
     hasEntries,
     hoursVariance,
     isUndertime,
-    isComplete,
     handleTimeChange
   } = useTimeEntryState({
     entries,
@@ -295,20 +56,27 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     onHoursChange
   });
 
-  const calculateAdjustedHours = useCallback(() => {
+  const { calculateToilForDay, isCalculating } = useTOILCalculations({
+    userId,
+    date,
+    entries,
+    workSchedule
+  });
+
+  // Calculate effective total hours with break adjustments
+  const calculateAdjustedHours = () => {
     let adjustment = 0;
     if (actionStates.lunch && hasLunchBreakInSchedule) adjustment += 0.5;
     if (actionStates.smoko && hasSmokoBreakInSchedule) adjustment += 0.25;
     return adjustment;
-  }, [actionStates.lunch, actionStates.smoko, hasLunchBreakInSchedule, hasSmokoBreakInSchedule]);
+  };
 
   const roundToQuarter = (val: number) => Math.round(val * 4) / 4;
 
   const scheduledHours = useMemo(() => {
-    const result = calculateDayHoursWithBreaks(startTime, endTime, breakConfig);
-    const rounded = roundToQuarter(result);
-    return rounded;
-  }, [startTime, endTime, breakConfig]);
+    const result = calculateDayHours();
+    return roundToQuarter(result);
+  }, [calculateDayHours]);
 
   const leaveActive = actionStates.leave || actionStates.sick;
   const toilActive = actionStates.toil;
@@ -318,39 +86,14 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       return scheduledHours + calculateAdjustedHours();
     }
     return roundToQuarter(totalEnteredHours + calculateAdjustedHours());
-  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, calculateAdjustedHours]);
+  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours]);
 
   const isActuallyComplete = useMemo(() => {
     if (leaveActive) return true;
     if (!hasEntries || !entries.length) return false;
     const variance = Math.abs(roundToQuarter(totalEnteredHours + calculateAdjustedHours()) - scheduledHours);
     return variance <= 0.01;
-  }, [leaveActive, totalEnteredHours, scheduledHours, hasEntries, entries.length, calculateAdjustedHours]);
-
-  const verticalProgressValue = useMemo(() => {
-    if (!scheduledHours || scheduledHours === 0) return 0;
-    return Math.min(100, (effectiveTotalHours / scheduledHours) * 100);
-  }, [effectiveTotalHours, scheduledHours]);
-
-  const isOverScheduled = effectiveTotalHours > scheduledHours + 0.01;
-  const isDaySick = actionStates.sick;
-  const isDayLeave = actionStates.leave;
-  const isDayToil = actionStates.toil;
-
-  const highlightBg = isDaySick
-    ? "bg-[#fff6f6]"
-    : isDayLeave
-      ? "bg-[#f5faff]"
-      : isDayToil
-        ? "bg-purple-50"
-        : "bg-white";
-
-  const { calculateToilForDay, isCalculating } = useTOILCalculations({
-    userId,
-    date,
-    entries,
-    workSchedule
-  });
+  }, [leaveActive, totalEnteredHours, scheduledHours, hasEntries, entries.length]);
 
   useEffect(() => {
     if (!hasEntries && !leaveActive && !toilActive) return;
@@ -362,17 +105,24 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return () => clearTimeout(timeoutId);
   }, [hasEntries, isActuallyComplete, calculateToilForDay, entries.length, leaveActive, toilActive]);
 
-  const timeChangeHandler = useCallback((type: 'start' | 'end', value: string) => {
-    logger.debug(`Direct time change: ${type}=${value}`);
-    handleTimeChange(type, value);
-  }, [handleTimeChange]);
+  const isOverScheduled = effectiveTotalHours > scheduledHours + 0.01;
+  const highlightBg = actionStates.sick
+    ? "bg-[#fff6f6]"
+    : actionStates.leave
+      ? "bg-[#f5faff]"
+      : actionStates.toil
+        ? "bg-purple-50"
+        : "bg-white";
 
   return (
     <div className="flex w-full">
       <div className="flex-1">
         <div className="flex justify-between items-center mb-4">
           <WorkHoursHeader hasEntries={hasEntries || leaveActive} />
-          <WorkHoursActionButtons value={actionStates} onToggle={handleToggleAction} />
+          <WorkHoursActionButtons 
+            value={actionStates} 
+            onToggle={(type) => handleToggleAction(type, scheduledHours)} 
+          />
         </div>
         <div className="flex space-x-4 items-start">
           <div className="flex-1">
@@ -384,14 +134,11 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
                 calculatedHours={scheduledHours}
                 hasEntries={hasEntries}
                 interactive={interactive && !leaveActive && !toilActive}
-                onTimeChange={timeChangeHandler}
+                onTimeChange={handleTimeChange}
                 isComplete={isActuallyComplete}
                 hoursVariance={hoursVariance}
                 isUndertime={isUndertime}
-                breaksIncluded={{
-                  lunch: hasLunchBreakInSchedule,
-                  smoko: hasSmokoBreakInSchedule
-                }}
+                breaksIncluded={breakConfig}
                 overrideStates={{
                   lunch: hasLunchBreakInSchedule ? actionStates.lunch : false,
                 }}
@@ -415,30 +162,16 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
               </div>
             )}
           </div>
-          <div className="flex flex-col items-center justify-start min-h-[210px]">
-            <VerticalProgressBar
-              value={verticalProgressValue}
-              height={90}
-              width={13}
-              barColor={
-                isOverScheduled
-                  ? "bg-red-500"
-                  : isActuallyComplete
-                  ? "bg-green-500"
-                  : isUndertime
-                  ? "bg-amber-500"
-                  : isDaySick
-                  ? "bg-[#ea384c]"
-                  : isDayLeave
-                  ? "bg-sky-500"
-                  : isDayToil
-                  ? "bg-purple-500"
-                  : "bg-blue-500"
-              }
-              bgColor="bg-gray-100"
-            />
-            <span className="text-[0.70rem] mt-1 mx-auto text-gray-500 text-center font-medium">{verticalProgressValue.toFixed(0)}%</span>
-          </div>
+          <WorkHoursStatus
+            effectiveTotalHours={effectiveTotalHours}
+            scheduledHours={scheduledHours}
+            isOverScheduled={isOverScheduled}
+            isActuallyComplete={isActuallyComplete}
+            isUndertime={isUndertime}
+            isDaySick={actionStates.sick}
+            isDayLeave={actionStates.leave}
+            isDayToil={actionStates.toil}
+          />
         </div>
       </div>
     </div>
