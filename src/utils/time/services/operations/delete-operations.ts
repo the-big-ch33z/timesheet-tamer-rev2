@@ -5,6 +5,7 @@ import { createTimeLogger } from "../../errors/timeLogger";
 import { dispatchEntryEvent, dispatchErrorEvent } from "./event-utils";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
+import { deleteTOILRecordByEntryId } from "../../services/toil/storage";
 
 const logger = createTimeLogger('DeleteOperations');
 
@@ -34,6 +35,9 @@ export class DeleteOperations {
       const deletedEntry = allEntries[entryIndex];
       allEntries.splice(entryIndex, 1);
       
+      // Clean up any associated TOIL records
+      deleteTOILRecordByEntryId(entryId);
+      
       saveEntriesToStorage(allEntries, this.config.storageKey, deletedEntryIds)
         .then(saved => {
           if (saved) {
@@ -46,7 +50,7 @@ export class DeleteOperations {
               }));
             }
             
-            logger.debug(`Deleted entry ${entryId}`);
+            logger.debug(`Deleted entry ${entryId} and cleaned up TOIL records`);
           } else {
             logger.error(`Failed to save after deleting entry ${entryId}`);
           }

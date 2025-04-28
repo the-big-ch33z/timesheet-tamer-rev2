@@ -1,4 +1,3 @@
-
 import { TOILRecord, TOILSummary, TOILUsage } from "@/types/toil";
 import { storageWriteLock } from '../storage-operations';
 import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY } from './types';
@@ -394,4 +393,38 @@ export function clearSummaryCache(userId?: string, monthYear?: string): void {
 export function clearAllTOILCaches(): void {
   clearSummaryCache();
   logger.debug('All TOIL caches cleared');
+}
+
+/**
+ * Delete TOIL record by entry ID
+ */
+export function deleteTOILRecordByEntryId(entryId: string): boolean {
+  try {
+    logger.debug(`Attempting to delete TOIL record for entry: ${entryId}`);
+    
+    // Get all records
+    const records = loadTOILRecords();
+    const usage = loadTOILUsage();
+    
+    // Find and remove records associated with this entry
+    const updatedRecords = records.filter(record => record.entryId !== entryId);
+    const updatedUsage = usage.filter(u => u.entryId !== entryId);
+    
+    // If we found and removed any records, save the updates
+    if (updatedRecords.length !== records.length || updatedUsage.length !== usage.length) {
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(updatedRecords));
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(updatedUsage));
+      
+      // Clear cache for affected records
+      clearAllTOILCaches();
+      
+      logger.debug(`Successfully deleted TOIL records for entry: ${entryId}`);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    logger.error('Error deleting TOIL record:', error);
+    return false;
+  }
 }
