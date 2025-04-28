@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Utensils, Coffee, Square } from "lucide-react";
+import { Utensils, Coffee, Clock, Calendar, Thermometer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type WorkHoursActionType = "sick" | "leave" | "toil" | "lunch" | "smoko";
@@ -19,7 +19,7 @@ type ActionConf = {
 const ACTIONS: ActionConf[] = [
   {
     type: "leave",
-    icon: Square,
+    icon: Calendar,
     tooltip: "Mark as Annual Leave",
     adjustment: 0,
     activeColor: "text-sky-600",
@@ -29,7 +29,7 @@ const ACTIONS: ActionConf[] = [
   },
   {
     type: "sick",
-    icon: Square,
+    icon: Thermometer,
     tooltip: "Mark as Sick Day",
     adjustment: 0,
     activeColor: "text-[#ea384c]",
@@ -39,7 +39,7 @@ const ACTIONS: ActionConf[] = [
   },
   {
     type: "toil",
-    icon: Square,
+    icon: Clock,
     tooltip: "Mark as TOIL (Time Off in Lieu)",
     adjustment: 0,
     activeColor: "text-purple-600",
