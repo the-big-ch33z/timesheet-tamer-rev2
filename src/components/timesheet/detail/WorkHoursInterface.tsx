@@ -11,6 +11,7 @@ import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { useWorkHoursCalculation } from "./hooks/useWorkHoursCalculation";
 import { WorkHoursStatus } from "./components/WorkHoursStatus";
 import { createTimeLogger } from "@/utils/time/errors";
+import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -99,10 +100,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     try {
       if (!startTime || !endTime) return 0;
       
-      // Import the calculation function directly to ensure we're using the latest logic
-      const { calculateHoursFromTimes } = require("@/utils/time/calculations/hoursCalculations");
-      
-      // Get raw hours from timestamps
+      // Use properly imported function instead of require
       const rawHours = calculateHoursFromTimes(startTime, endTime);
       
       // Apply break adjustments
