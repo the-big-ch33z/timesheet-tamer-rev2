@@ -32,7 +32,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     // Optimize build output
     target: 'es2015',
-    minify: 'terser',
+    // Use esbuild for development, terser for production
+    minify: mode === 'production' ? 'terser' : 'esbuild', 
     cssMinify: true,
     // Split chunks for better caching
     rollupOptions: {
