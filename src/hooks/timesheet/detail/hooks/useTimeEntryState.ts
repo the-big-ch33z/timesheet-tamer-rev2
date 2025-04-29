@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
