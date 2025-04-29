@@ -32,18 +32,31 @@ export default defineConfig(({ mode }) => ({
   build: {
     // Optimize build output
     target: 'es2015',
-    minify: 'terser',
+    // Use esbuild for development, terser for production
+    minify: mode === 'production' ? 'terser' : 'esbuild', 
     cssMinify: true,
     // Split chunks for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['@/components/ui'],
-          utils: ['@/lib/utils', '@/lib/date-utils'],
-          contexts: ['@/contexts'],
-        },
+        // Use the function form of manualChunks instead of object form
+        manualChunks: (id) => {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react';
+          }
+          if (id.includes('node_modules/react-router-dom')) {
+            return 'router';
+          }
+          if (id.includes('src/components/ui')) {
+            return 'ui';
+          }
+          if (id.includes('src/lib/utils') || id.includes('src/lib/date-utils')) {
+            return 'utils';
+          }
+          if (id.includes('src/contexts')) {
+            return 'contexts';
+          }
+          return null;
+        }
       },
     },
     // Generate source maps for debugging

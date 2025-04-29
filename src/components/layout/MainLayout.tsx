@@ -4,14 +4,16 @@ import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
+import { useAuth } from '@/contexts/auth';
 
 type MainLayoutProps = {
   children?: React.ReactNode;
 };
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  // Mock user role - in a real app, this would come from auth context
-  const userRole = "admin"; // can be "admin", "manager", or "team-member"
+  // Get user role from auth context
+  const { currentUser } = useAuth();
+  const userRole = currentUser?.role || "team-member";
   
   return (
     <div className="min-h-screen flex flex-col">

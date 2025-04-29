@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo } from "react";
 import { TimeEntry, WorkSchedule } from "@/types";
 import WorkHoursHeader from "./components/WorkHoursHeader";
@@ -10,7 +11,7 @@ import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { useWorkHoursCalculation } from "./hooks/useWorkHoursCalculation";
 import { WorkHoursStatus } from "./components/WorkHoursStatus";
 import { createTimeLogger } from "@/utils/time/errors";
-import { calculateHoursFromTimes } from "@/utils/time/calculations/hoursCalculations";
+import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -99,7 +100,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     try {
       if (!startTime || !endTime) return 0;
       
-      // Use the imported function directly
+      // Use properly imported function instead of require
       const rawHours = calculateHoursFromTimes(startTime, endTime);
       
       // Apply break adjustments
