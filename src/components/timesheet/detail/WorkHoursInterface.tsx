@@ -65,9 +65,22 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 
   // Calculate effective total hours with break adjustments
   const calculateAdjustedHours = () => {
+    // Start with a base adjustment of 0
     let adjustment = 0;
-    if (actionStates.lunch && hasLunchBreakInSchedule) adjustment += 0.5;
-    if (actionStates.smoko && hasSmokoBreakInSchedule) adjustment += 0.25;
+    
+    // Only subtract breaks if there's actually a start and end time entered
+    if (startTime && endTime) {
+      // Apply lunch break adjustment if toggled and part of schedule
+      if (actionStates.lunch && hasLunchBreakInSchedule) {
+        adjustment -= 0.5; // Subtract 30 minutes for lunch
+      }
+      
+      // Apply smoko break adjustment if toggled and part of schedule
+      if (actionStates.smoko && hasSmokoBreakInSchedule) {
+        adjustment -= 0.25; // Subtract 15 minutes for smoko
+      }
+    }
+    
     return adjustment;
   };
 
@@ -80,20 +93,49 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
 
   const leaveActive = actionStates.leave || actionStates.sick;
   const toilActive = actionStates.toil;
+  
+  // Calculate the raw hours from start/end times plus adjustments for breaks
+  const calculatedTimeHours = useMemo(() => {
+    try {
+      if (!startTime || !endTime) return 0;
+      
+      // Import the calculation function directly to ensure we're using the latest logic
+      const { calculateHoursFromTimes } = require("@/utils/time/calculations/hoursCalculations");
+      
+      // Get raw hours from timestamps
+      const rawHours = calculateHoursFromTimes(startTime, endTime);
+      
+      // Apply break adjustments
+      const breakAdjustment = calculateAdjustedHours();
+      
+      // Calculate final hours with breaks
+      return Math.max(0, roundToQuarter(rawHours + breakAdjustment));
+    } catch (error) {
+      console.error("Error calculating time hours:", error);
+      return 0;
+    }
+  }, [startTime, endTime, calculateAdjustedHours]);
 
+  // Combine time-based hours with manual entries for effective total
   const effectiveTotalHours = useMemo(() => {
     if (actionStates.leave || actionStates.sick) {
-      return scheduledHours + calculateAdjustedHours();
+      return scheduledHours;
     }
-    return roundToQuarter(totalEnteredHours + calculateAdjustedHours());
-  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours]);
+    
+    // If we have entered entries, use their sum, otherwise use calculated hours from time
+    return hasEntries ? roundToQuarter(totalEnteredHours) : calculatedTimeHours;
+  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, calculatedTimeHours, hasEntries]);
 
   const isActuallyComplete = useMemo(() => {
     if (leaveActive) return true;
-    if (!hasEntries || !entries.length) return false;
-    const variance = Math.abs(roundToQuarter(totalEnteredHours + calculateAdjustedHours()) - scheduledHours);
+    if (!hasEntries && (!startTime || !endTime)) return false;
+    
+    const targetHours = scheduledHours;
+    const actualHours = hasEntries ? totalEnteredHours : calculatedTimeHours;
+    const variance = Math.abs(roundToQuarter(actualHours) - targetHours);
+    
     return variance <= 0.01;
-  }, [leaveActive, totalEnteredHours, scheduledHours, hasEntries, entries.length]);
+  }, [leaveActive, calculatedTimeHours, scheduledHours, hasEntries, startTime, endTime, totalEnteredHours]);
 
   useEffect(() => {
     if (!hasEntries && !leaveActive && !toilActive) return;

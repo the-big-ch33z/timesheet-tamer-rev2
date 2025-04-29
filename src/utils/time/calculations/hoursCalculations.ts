@@ -6,28 +6,42 @@ import { eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 
 /**
  * Calculate hours difference between two time strings (HH:MM format)
+ * Now with improved time parsing logic to handle both 12h and 24h formats
  */
 export const calculateHoursFromTimes = (start: string, end: string): number => {
   if (!start || !end) return 0;
 
-  // Parse hours and minutes from time strings
-  const [startHour, startMinute] = start.split(':').map(Number);
-  const [endHour, endMinute] = end.split(':').map(Number);
+  try {
+    // First handle the case where the time format is HH:MM (24hr format)
+    // Parse hours and minutes from time strings
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const [endHour, endMinute] = end.split(':').map(Number);
 
-  // Convert to decimal hours
-  const startDecimal = startHour + (startMinute / 60);
-  const endDecimal = endHour + (endMinute / 60);
+    // Ensure we have valid numbers
+    if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+      throw new Error('Invalid time format');
+    }
 
-  // Ensure end time is after start time
-  if (startDecimal >= endDecimal) {
-    throw new Error('End time must be after start time');
+    // Convert to decimal hours
+    const startDecimal = startHour + (startMinute / 60);
+    let endDecimal = endHour + (endMinute / 60);
+
+    // Handle overnight shifts by adding 24 hours to end time if it's before start time
+    if (endDecimal < startDecimal) {
+      endDecimal += 24;
+    }
+
+    // Calculate difference to get total hours worked
+    const rawHours = endDecimal - startDecimal;
+    
+    // Round to nearest 0.25 (15 mins)
+    const roundedHours = Math.round(rawHours * 4) / 4;
+
+    return roundedHours;
+  } catch (error) {
+    console.error("Error calculating hours from times:", error);
+    throw new Error(`Failed to calculate hours from ${start} to ${end}: ${error}`);
   }
-
-  // Calculate difference and round to nearest 0.25
-  const rawHours = endDecimal - startDecimal;
-  const roundedHours = Math.round(rawHours * 4) / 4;
-
-  return roundedHours;
 };
 
 /**
