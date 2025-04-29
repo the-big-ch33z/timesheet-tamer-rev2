@@ -15,6 +15,19 @@ interface TimeInputFieldProps {
   placeholder?: string;
 }
 
+// Helper function to normalize time display
+const formatTimeDisplay = (timeValue: string): string => {
+  if (!timeValue) return "--:--";
+  
+  try {
+    // Make sure we have a valid format for date creation
+    const normalizedTime = timeValue.includes(':') ? timeValue : `${timeValue}:00`;
+    return format(new Date(`2000-01-01T${normalizedTime}`), "h:mm a");
+  } catch (e) {
+    return timeValue || "--:--";
+  }
+};
+
 export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   label,
   value,
@@ -49,7 +62,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
           />
         ) : (
           <span className="text-lg">
-            {localValue ? format(new Date(`2000-01-01T${localValue}`), "h:mm a") : "--:--"}
+            {formatTimeDisplay(localValue)}
           </span>
         )}
         <Clock className="h-4 w-4 text-gray-400 ml-2" />
