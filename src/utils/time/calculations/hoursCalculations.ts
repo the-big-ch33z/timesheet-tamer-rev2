@@ -1,5 +1,3 @@
-
-
 import { calculateFortnightHoursFromSchedule } from "../scheduleUtils";
 import { TimeCalculationError } from "../errors/timeErrorHandling";
 import { getWorkdaysInMonth, getFortnightWeek } from "../scheduleUtils";
@@ -8,16 +6,23 @@ import { eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 
 /**
  * Calculate hours difference between two time strings (HH:MM format)
- * Now with improved time parsing logic to handle both 12h and 24h formats
+ * Improved with robust time format handling to prevent errors
  */
 export const calculateHoursFromTimes = (start: string, end: string): number => {
   if (!start || !end) return 0;
 
   try {
-    // First handle the case where the time format is HH:MM (24hr format)
-    // Parse hours and minutes from time strings
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const [endHour, endMinute] = end.split(':').map(Number);
+    // Normalize time format to ensure HH:MM
+    const normalizedStart = normalizeTimeFormat(start);
+    const normalizedEnd = normalizeTimeFormat(end);
+    
+    if (!normalizedStart || !normalizedEnd) {
+      throw new Error('Invalid time format after normalization');
+    }
+
+    // Parse hours and minutes from normalized time strings
+    const [startHour, startMinute] = normalizedStart.split(':').map(Number);
+    const [endHour, endMinute] = normalizedEnd.split(':').map(Number);
 
     // Ensure we have valid numbers
     if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
@@ -45,6 +50,29 @@ export const calculateHoursFromTimes = (start: string, end: string): number => {
     throw new Error(`Failed to calculate hours from ${start} to ${end}: ${error}`);
   }
 };
+
+/**
+ * Normalize time input to ensure HH:MM format
+ * Handles various input formats like "9:00", "09:00", "9", etc.
+ */
+function normalizeTimeFormat(timeString: string): string | null {
+  if (!timeString) return null;
+  
+  // If already in HH:MM format, return as is
+  if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+    // Ensure hours are two digits
+    const [hours, minutes] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}`;
+  }
+  
+  // If just a number (like "9"), convert to HH:00 format
+  if (/^\d{1,2}$/.test(timeString)) {
+    return `${timeString.padStart(2, '0')}:00`;
+  }
+  
+  // Other formats not supported
+  return null;
+}
 
 /**
  * Count RDO days in a given month based on the work schedule

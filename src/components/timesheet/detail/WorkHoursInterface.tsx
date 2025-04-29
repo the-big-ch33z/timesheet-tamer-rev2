@@ -100,7 +100,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     try {
       if (!startTime || !endTime) return 0;
       
-      // Use properly imported function instead of require
+      // Use properly imported function
       const rawHours = calculateHoursFromTimes(startTime, endTime);
       
       // Apply break adjustments
@@ -166,7 +166,11 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         </div>
         <div className="flex space-x-4 items-start">
           <div className="flex-1">
-            <div className={`rounded-lg border border-gray-200 ${highlightBg}`}>
+            <div className={`rounded-lg border border-gray-200 ${
+              actionStates.sick ? "bg-[#fff6f6]" :
+              actionStates.leave ? "bg-[#f5faff]" :
+              actionStates.toil ? "bg-purple-50" : "bg-white"
+            }`}>
               <WorkHoursDisplay
                 startTime={startTime}
                 endTime={endTime}

@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect } from "react";
-import { TimeInputField } from "./TimeInputField"; // Changed to named import
+import { TimeInputField } from "./TimeInputField";
 import { formatDisplayHours } from "@/utils/time/formatting/timeFormatting";
 
 interface TimeDisplayProps {
@@ -12,6 +12,24 @@ interface TimeDisplayProps {
   interactive: boolean;
   onTimeChange: (type: 'start' | 'end', value: string) => void;
 }
+
+// Helper to normalize time format
+const normalizeTime = (time: string): string => {
+  if (!time) return "";
+  
+  // Already in HH:MM format
+  if (/^\d{1,2}:\d{2}$/.test(time)) {
+    const [hours, minutes] = time.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}`;
+  }
+  
+  // Convert single numbers to HH:00 format
+  if (/^\d{1,2}$/.test(time)) {
+    return `${time.padStart(2, '0')}:00`;
+  }
+  
+  return time;
+};
 
 const TimeDisplay: React.FC<TimeDisplayProps> = ({
   startTime,
@@ -41,8 +59,11 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
       return;
     }
     
+    // Normalize time before passing up
+    const normalizedValue = normalizeTime(value);
+    
     // Directly call the parent handler
-    onTimeChange(type, value);
+    onTimeChange(type, normalizedValue);
   }, [onTimeChange, interactive]);
 
   // Determine if we should show a message about entering times
@@ -54,7 +75,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
       <div className="grid grid-cols-3 gap-4 mb-3">
         <TimeInputField
           label="Start Time"
-          value={startTime}
+          value={normalizeTime(startTime)}
           onChange={handleTimeChange('start')}
           interactive={interactive}
           testId="start-time-input"
@@ -63,7 +84,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
         
         <TimeInputField
           label="End Time"
-          value={endTime}
+          value={normalizeTime(endTime)}
           onChange={handleTimeChange('end')}
           interactive={interactive}
           testId="end-time-input"

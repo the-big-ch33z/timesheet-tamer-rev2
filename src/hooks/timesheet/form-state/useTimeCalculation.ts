@@ -1,8 +1,27 @@
+
 import { useCallback } from 'react';
 import { calculateHoursFromTimes } from '@/utils/time/calculations/timeCalculations';
 
 // Define Timeout type to match NodeJS.Timeout
 type Timeout = ReturnType<typeof setTimeout>;
+
+// Helper to normalize time format to ensure HH:MM format
+const normalizeTimeFormat = (timeString: string): string => {
+  if (!timeString) return "";
+  
+  // If already in HH:MM format, return as is with padding
+  if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+    const [hours, minutes] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}`;
+  }
+  
+  // If just a number (like "9"), convert to HH:00 format
+  if (/^\d{1,2}$/.test(timeString)) {
+    return `${timeString.padStart(2, '0')}:00`;
+  }
+  
+  return timeString;
+};
 
 export const useTimeCalculation = ({
   startTime,
@@ -21,9 +40,13 @@ export const useTimeCalculation = ({
   const updateTimes = useCallback((newStartTime: string, newEndTime: string) => {
     console.debug(`[useTimeCalculation] Updating times: ${newStartTime} - ${newEndTime}`);
     
+    // Normalize time formats
+    const normalizedStart = normalizeTimeFormat(newStartTime);
+    const normalizedEnd = normalizeTimeFormat(newEndTime);
+    
     // Store changes
-    batchedChangesRef.current['startTime'] = newStartTime;
-    batchedChangesRef.current['endTime'] = newEndTime;
+    batchedChangesRef.current['startTime'] = normalizedStart;
+    batchedChangesRef.current['endTime'] = normalizedEnd;
     
     // Clear any existing timeout
     if (batchTimeoutRef.current) {
@@ -44,7 +67,11 @@ export const useTimeCalculation = ({
     }
     
     try {
-      const hours = calculateHoursFromTimes(startTime, endTime);
+      // Normalize times before calculation
+      const normalizedStart = normalizeTimeFormat(startTime);
+      const normalizedEnd = normalizeTimeFormat(endTime);
+      
+      const hours = calculateHoursFromTimes(normalizedStart, normalizedEnd);
       console.debug(`[useTimeCalculation] Calculated hours: ${hours}`);
       
       batchedChangesRef.current['hours'] = hours.toString();

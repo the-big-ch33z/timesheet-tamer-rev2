@@ -1,5 +1,5 @@
 
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,27 @@ interface TimeInputFieldProps {
   placeholder?: string;
 }
 
+/**
+ * Normalize time input to ensure HH:MM format
+ */
+const normalizeTimeValue = (value: string): string => {
+  if (!value) return "";
+  
+  // If already in HH:MM format, ensure hours are two digits
+  if (/^\d{1,2}:\d{2}$/.test(value)) {
+    const [hours, minutes] = value.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}`;
+  }
+  
+  // If just a number, convert to HH:00 format
+  if (/^\d{1,2}$/.test(value)) {
+    return `${value.padStart(2, '0')}:00`;
+  }
+  
+  // Return original value if it doesn't match expected patterns
+  return value;
+};
+
 export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   label,
   value,
@@ -24,11 +45,19 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   testId,
   placeholder
 }) => {
-  // Use the new hook for handling input state
+  // Normalize initial value
+  const normalizedValue = normalizeTimeValue(value);
+  
+  // Use the hook for handling input state
   const { localValue, handleChange } = useTimeInputState({
-    value,
+    value: normalizedValue,
     onChange: (newValue) => onChange(type, newValue)
   });
+  
+  // Format the display value properly for non-interactive mode
+  const formattedDisplayValue = localValue ? 
+    format(new Date(`2000-01-01T${normalizeTimeValue(localValue)}`), "h:mm a") : 
+    "--:--";
 
   return (
     <div>
@@ -39,17 +68,17 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
       )}>
         {interactive ? (
           <input
-            id="time-input"
+            id={`time-input-${type}`}
             type="time"
             value={localValue}
-            onChange={e => handleChange(e.target.value)}
+            onChange={e => handleChange(normalizeTimeValue(e.target.value))}
             className="text-lg bg-transparent w-full outline-none"
             placeholder={placeholder || `Enter ${label.toLowerCase()}`}
             data-testid={testId}
           />
         ) : (
           <span className="text-lg">
-            {localValue ? format(new Date(`2000-01-01T${localValue}`), "h:mm a") : "--:--"}
+            {formattedDisplayValue}
           </span>
         )}
         <Clock className="h-4 w-4 text-gray-400 ml-2" />
