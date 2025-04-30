@@ -175,7 +175,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
                 startTime={startTime}
                 endTime={endTime}
                 totalHours={effectiveTotalHours}
-                calculatedHours={hasEntries ? scheduledHours : calculatedTimeHours}
+                calculatedHours={calculatedTimeHours}
                 hasEntries={hasEntries}
                 interactive={interactive && !leaveActive && !toilActive}
                 onTimeChange={handleTimeChange}
@@ -208,7 +208,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           </div>
           <WorkHoursStatus
             effectiveTotalHours={effectiveTotalHours}
-            scheduledHours={hasEntries ? scheduledHours : calculatedTimeHours}
+            scheduledHours={calculatedTimeHours}
             isOverScheduled={isOverScheduled}
             isActuallyComplete={isActuallyComplete}
             isUndertime={isUndertime}
