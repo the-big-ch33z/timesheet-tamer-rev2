@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,6 @@ import { WorkSchedule, WeekDay } from "@/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Coffee, Bell } from "lucide-react";
 import { calculateDayHoursWithBreaks } from "@/utils/time/scheduleUtils";
-
 interface WorkDayConfigurationProps {
   day: WeekDay;
   activeWeek: 1 | 2;
@@ -17,7 +15,6 @@ interface WorkDayConfigurationProps {
   toggleRdoDay: (day: WeekDay) => void;
   toggleBreak: (day: WeekDay, breakType: 'lunch' | 'smoko') => void;
 }
-
 export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
   day,
   activeWeek,
@@ -33,7 +30,7 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
     lunch: false,
     smoko: false
   };
-  
+
   // Use activeWeek specifically for displaying and tracking RDO days
   const isRdoDay = editingSchedule.rdoDays[activeWeek].includes(day);
 
@@ -42,7 +39,6 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
   if (isWorkDay && dayConfig?.startTime && dayConfig?.endTime) {
     dailyHours = calculateDayHoursWithBreaks(dayConfig.startTime, dayConfig.endTime, breaks);
   }
-
   return <div key={`${activeWeek}-${day}`} className="flex items-center flex-wrap gap-4">
       <div className="w-28 capitalize">{day}</div>
       <div className="flex items-center gap-2">
@@ -55,12 +51,12 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
       {isWorkDay && <>
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor={`start-${activeWeek}-${day}`} className="w-20 text-sm">Start Time</Label>
-            <Input id={`start-${activeWeek}-${day}`} type="time" value={dayConfig?.startTime} onChange={e => updateWorkHours(day, 'startTime', e.target.value)} className="w-24" />
+            <Input id={`start-${activeWeek}-${day}`} type="time" value={dayConfig?.startTime} onChange={e => updateWorkHours(day, 'startTime', e.target.value)} className="w-24 px-[4px]" />
           </div>
 
           <div className="flex items-center gap-2">
             <Label htmlFor={`end-${activeWeek}-${day}`} className="w-20 text-sm">End Time</Label>
-            <Input id={`end-${activeWeek}-${day}`} type="time" value={dayConfig?.endTime} onChange={e => updateWorkHours(day, 'endTime', e.target.value)} className="w-24" />
+            <Input id={`end-${activeWeek}-${day}`} type="time" value={dayConfig?.endTime} onChange={e => updateWorkHours(day, 'endTime', e.target.value)} className="w-24 px-[5px]" />
           </div>
 
           <div className="flex items-center gap-4 ml-4">
@@ -81,30 +77,22 @@ export const WorkDayConfiguration: React.FC<WorkDayConfigurationProps> = ({
             <Switch id={`rdo-${activeWeek}-${day}`} checked={isRdoDay} onCheckedChange={() => toggleRdoDay(day)} />
           </div>
           {/* ---- Daily hours summary & break notice ---- */}
-          {dailyHours !== null && (
-            <div className="ml-4 flex items-center gap-2">
+          {dailyHours !== null && <div className="ml-4 flex items-center gap-2">
               <span className="text-xs rounded-full border px-2 py-0.5 font-medium bg-gray-100 text-gray-700">
                 {dailyHours.toFixed(2)} hrs
               </span>
               {/* Lunch/subtraction chip */}
-              {(breaks.lunch || breaks.smoko) && (
-                <span className="flex items-center gap-1 text-xs">
-                  {breaks.lunch && (
-                    <span className="flex items-center px-[0.35em] py-[0.1em] rounded-full bg-lime-50 border border-lime-200 text-lime-600">
+              {(breaks.lunch || breaks.smoko) && <span className="flex items-center gap-1 text-xs">
+                  {breaks.lunch && <span className="flex items-center px-[0.35em] py-[0.1em] rounded-full bg-lime-50 border border-lime-200 text-lime-600">
                       <Bell className="h-3 w-3 mr-0.5" />
                       Lunch subtracted
-                    </span>
-                  )}
-                  {breaks.smoko && (
-                    <span className="flex items-center px-[0.35em] py-[0.1em] rounded-full bg-yellow-50 border border-yellow-200 text-yellow-700 ml-1">
+                    </span>}
+                  {breaks.smoko && <span className="flex items-center px-[0.35em] py-[0.1em] rounded-full bg-yellow-50 border border-yellow-200 text-yellow-700 ml-1">
                       <Coffee className="h-3 w-3 mr-0.5" />
                       Smoko subtracted
-                    </span>
-                  )}
-                </span>
-              )}
-            </div>
-          )}
+                    </span>}
+                </span>}
+            </div>}
         </>}
     </div>;
 };
