@@ -29,6 +29,7 @@ export interface AuthContextType {
   teams: Team[];
   teamMemberships: TeamMembership[];
   isAuthenticated: boolean;
+  setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (email: string, name: string, password: string, organizationName: string) => Promise<void>;

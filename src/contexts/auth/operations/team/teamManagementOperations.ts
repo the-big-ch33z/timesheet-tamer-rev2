@@ -127,7 +127,7 @@ export const createTeamManagementOperations = (
       
       await syncService.recordSync('teams', 'success', 1);
       
-      return updatedTeam;
+      // Return void instead of the updated team to match the interface
     } catch (error) {
       toast.toast({
         title: "Failed to assign manager",
