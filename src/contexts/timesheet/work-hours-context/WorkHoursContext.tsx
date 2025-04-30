@@ -79,6 +79,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const userSchedulesSubscription = timeEventsService.subscribe('user-schedules-updated', handleSchedulesUpdated);
     
     return () => {
+      // Properly unsubscribe from each subscription object
       schedulesSubscription.unsubscribe();
       userSchedulesSubscription.unsubscribe();
     };
