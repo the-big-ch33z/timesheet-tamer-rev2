@@ -1,9 +1,9 @@
 
-import React, { memo, useEffect } from "react";
+import React, { memo } from "react";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useTimeInputState } from "@/hooks/timesheet/useTimeInputState";
+import TimeInput from "@/components/ui/time-input/TimeInput";
 
 interface TimeInputFieldProps {
   label: string;
@@ -15,27 +15,6 @@ interface TimeInputFieldProps {
   placeholder?: string;
 }
 
-/**
- * Normalize time input to ensure HH:MM format
- */
-const normalizeTimeValue = (value: string): string => {
-  if (!value) return "";
-  
-  // If already in HH:MM format, ensure hours are two digits
-  if (/^\d{1,2}:\d{2}$/.test(value)) {
-    const [hours, minutes] = value.split(':');
-    return `${hours.padStart(2, '0')}:${minutes}`;
-  }
-  
-  // If just a number, convert to HH:00 format
-  if (/^\d{1,2}$/.test(value)) {
-    return `${value.padStart(2, '0')}:00`;
-  }
-  
-  // Return original value if it doesn't match expected patterns
-  return value;
-};
-
 export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   label,
   value,
@@ -45,43 +24,31 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   testId,
   placeholder
 }) => {
-  // Normalize initial value
-  const normalizedValue = normalizeTimeValue(value);
-  
-  // Use the hook for handling input state
-  const { localValue, handleChange } = useTimeInputState({
-    value: normalizedValue,
-    onChange: (newValue) => onChange(type, normalizeTimeValue(newValue))
-  });
-  
-  // Format the display value properly for non-interactive mode
-  const formattedDisplayValue = localValue ? 
-    format(new Date(`2000-01-01T${normalizeTimeValue(localValue)}`), "h:mm a") : 
-    "--:--";
-
   return (
     <div>
       <div className="text-sm text-amber-700 mb-1 mx-[9px]">{label}</div>
       <div className={cn(
-        "border rounded-md p-2 flex items-center",
+        "border rounded-md p-2",
         interactive ? "bg-white border-amber-200" : "bg-gray-50 border-gray-200"
       )}>
         {interactive ? (
-          <input
+          <TimeInput
             id={`time-input-${type}`}
-            type="time"
-            value={localValue}
-            onChange={e => handleChange(normalizeTimeValue(e.target.value))}
-            className="text-lg bg-transparent w-full outline-none"
+            value={value}
+            onChange={(newValue) => onChange(type, newValue)}
+            disabled={!interactive}
+            className="bg-transparent border-none shadow-none p-0 h-auto"
             placeholder={placeholder || `Enter ${label.toLowerCase()}`}
             data-testid={testId}
           />
         ) : (
-          <span className="text-lg">
-            {formattedDisplayValue}
-          </span>
+          <div className="flex items-center">
+            <span className="text-lg flex-1">
+              {value ? format(new Date(`2000-01-01T${value}`), "h:mm a") : "--:--"}
+            </span>
+            <Clock className="h-4 w-4 text-gray-400 ml-2" />
+          </div>
         )}
-        <Clock className="h-4 w-4 text-gray-400 ml-2" />
       </div>
     </div>
   );

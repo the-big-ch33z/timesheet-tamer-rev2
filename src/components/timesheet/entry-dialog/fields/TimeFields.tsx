@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback } from "react";
 import { WorkSchedule } from "@/types";
-import TimeInput from "./time/TimeInput";
+import TimeInput from "@/components/ui/time-input/TimeInput";
 import TimeWarningDialog from "./time/TimeWarningDialog";
 import TimeWarningAlert from "./time/TimeWarningAlert";
 import { validateTime, validateTimeOrder } from "@/utils/time/validation/timeValidation";
