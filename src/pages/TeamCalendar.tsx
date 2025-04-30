@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { User, Team } from "@/types";
+import { useAuth } from "@/contexts/auth";
 
 type ScheduleEntry = {
   date: Date;
@@ -26,77 +27,47 @@ type TeamWithMembers = {
   members: MemberSchedule[];
 };
 
-// Mock team data
-const TEAMS: Team[] = [
-  {
-    id: "team-1",
-    name: "Frontend Team",
-    organizationId: "org-1",
-    managerId: "3",
-    description: "UI/UX and frontend development"
-  },
-  {
-    id: "team-2",
-    name: "Backend Team",
-    organizationId: "org-1",
-    managerId: "3",
-    description: "API and database development"
-  }
-];
+// Status color mapping
+const statusColorMap: Record<ScheduleEntry["status"], string> = {
+  Completed: "bg-green-200 border-green-500",
+  RDO: "bg-blue-100 border-blue-500",
+  PublicHoliday: "bg-amber-100 border-amber-500",
+  Sick: "bg-red-100 border-red-500",
+  TOIL: "bg-purple-100 border-purple-500",
+  None: "bg-transparent"
+};
 
-// Mock user data
-const TEAM_MEMBERS: User[] = [
-  { 
-    id: "1", 
-    name: "John Doe", 
-    email: "john@example.com", 
-    role: "team-member", 
-    teamIds: ["team-1"],
-    avatarUrl: "",
-    status: "active" 
-  },
-  { 
-    id: "2", 
-    name: "Jane Smith", 
-    email: "jane@example.com", 
-    role: "team-member", 
-    teamIds: ["team-1"],
-    avatarUrl: "",
-    status: "archived" 
-  },
-  { 
-    id: "3", 
-    name: "Michael Brown", 
-    email: "michael@example.com", 
-    role: "manager", 
-    teamIds: ["team-1", "team-2"],
-    avatarUrl: "",
-    status: "active" 
-  },
-  { 
-    id: "4", 
-    name: "Sarah Wilson", 
-    email: "sarah@example.com", 
-    role: "team-member", 
-    teamIds: ["team-2"],
-    avatarUrl: "",
-    status: "active" 
-  },
-  { 
-    id: "5", 
-    name: "Alex Johnson", 
-    email: "alex@example.com", 
-    role: "team-member", 
-    teamIds: ["team-2"],
-    avatarUrl: "",
-    status: "active" 
-  }
-];
+// Status label mapping
+const statusLabelMap: Record<ScheduleEntry["status"], string> = {
+  Completed: "Completed Entry",
+  RDO: "Rostered Day Off",
+  PublicHoliday: "Public Holiday",
+  Sick: "Sick Day",
+  TOIL: "Time Off in Lieu",
+  None: "No Entry"
+};
 
-// Generate mock schedule data for demo purposes
-const generateMockScheduleData = (
-  teamMembers: User[],
+// Status emoji mapping
+const statusEmojiMap: Record<ScheduleEntry["status"], string> = {
+  Completed: "✅",
+  RDO: "📅",
+  PublicHoliday: "🇦🇺",
+  Sick: "💤",
+  TOIL: "🟣",
+  None: "⬜"
+};
+
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("");
+};
+
+// Generate schedule data for real users from auth context
+const generateScheduleData = (
   teams: Team[],
+  getUsersByTeam: (teamId: string) => User[],
   month: Date,
   includeArchived: boolean
 ): TeamWithMembers[] => {
@@ -105,23 +76,17 @@ const generateMockScheduleData = (
   const monthEnd = endOfMonth(month);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   
-  // Filter members based on status if needed
-  const filteredMembers = includeArchived 
-    ? teamMembers 
-    : teamMembers.filter(member => member.status !== "archived");
-  
-  // Status options with weighted probabilities
-  const statusOptions: {value: ScheduleEntry["status"], weight: number}[] = [
-    { value: "Completed", weight: 20 },
-    { value: "RDO", weight: 3 },
-    { value: "PublicHoliday", weight: 1 },
-    { value: "Sick", weight: 2 },
-    { value: "TOIL", weight: 2 },
-    { value: "None", weight: 5 }
-  ];
-  
   // Helper function to select random status based on weights
   const getRandomStatus = (): ScheduleEntry["status"] => {
+    const statusOptions: {value: ScheduleEntry["status"], weight: number}[] = [
+      { value: "Completed", weight: 20 },
+      { value: "RDO", weight: 3 },
+      { value: "PublicHoliday", weight: 1 },
+      { value: "Sick", weight: 2 },
+      { value: "TOIL", weight: 2 },
+      { value: "None", weight: 5 }
+    ];
+    
     const totalWeight = statusOptions.reduce((acc, option) => acc + option.weight, 0);
     let random = Math.random() * totalWeight;
     
@@ -132,23 +97,18 @@ const generateMockScheduleData = (
     
     return "None";
   };
-
-  // Group members by team
-  const teamMap: Record<string, User[]> = {};
-  filteredMembers.forEach(member => {
-    if (member.teamIds) {
-      member.teamIds.forEach(teamId => {
-        if (!teamMap[teamId]) teamMap[teamId] = [];
-        teamMap[teamId].push(member);
-      });
-    }
-  });
   
   // Generate team data with members and their schedules
   return teams.map(team => {
-    const teamMembersList = teamMap[team.id] || [];
+    // Get real team members from auth context
+    const teamMembers = getUsersByTeam(team.id);
     
-    const membersWithSchedules: MemberSchedule[] = teamMembersList.map(member => {
+    // Filter members based on status if needed
+    const filteredMembers = includeArchived 
+      ? teamMembers 
+      : teamMembers.filter(member => member.status !== "archived");
+    
+    const membersWithSchedules: MemberSchedule[] = filteredMembers.map(member => {
       // Generate schedule for this member
       const schedule: Record<string, ScheduleEntry> = {};
       
@@ -188,43 +148,6 @@ const generateMockScheduleData = (
       members: membersWithSchedules
     };
   });
-};
-
-// Status color mapping
-const statusColorMap: Record<ScheduleEntry["status"], string> = {
-  Completed: "bg-green-200 border-green-500",
-  RDO: "bg-blue-100 border-blue-500",
-  PublicHoliday: "bg-amber-100 border-amber-500",
-  Sick: "bg-red-100 border-red-500",
-  TOIL: "bg-purple-100 border-purple-500",
-  None: "bg-transparent"
-};
-
-// Status label mapping
-const statusLabelMap: Record<ScheduleEntry["status"], string> = {
-  Completed: "Completed Entry",
-  RDO: "Rostered Day Off",
-  PublicHoliday: "Public Holiday",
-  Sick: "Sick Day",
-  TOIL: "Time Off in Lieu",
-  None: "No Entry"
-};
-
-// Status emoji mapping
-const statusEmojiMap: Record<ScheduleEntry["status"], string> = {
-  Completed: "✅",
-  RDO: "📅",
-  PublicHoliday: "🇦🇺",
-  Sick: "💤",
-  TOIL: "🟣",
-  None: "⬜"
-};
-
-const getInitials = (name: string) => {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("");
 };
 
 const MonthNavigationHeader = ({ 
@@ -394,6 +317,7 @@ const TeamSection: React.FC<TeamSectionProps> = ({ teamWithMembers, daysInMonth,
 const TeamCalendar = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showArchived, setShowArchived] = useState<boolean>(false);
+  const { teams, getUsersByTeam, isAuthenticated } = useAuth();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -406,10 +330,35 @@ const TeamCalendar = () => {
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   
-  // Generate mock data for calendar with archived filter
+  // Generate schedule data from actual teams/members in auth context
   const teamsWithSchedules = useMemo(() => 
-    generateMockScheduleData(TEAM_MEMBERS, TEAMS, currentMonth, showArchived),
-  [currentMonth, showArchived]);
+    generateScheduleData(teams, getUsersByTeam, currentMonth, showArchived),
+  [teams, getUsersByTeam, currentMonth, showArchived]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold text-brand-800 mb-6">Team Monthly Calendar</h1>
+        <Card className="p-8 text-center">
+          <p className="mb-4">Please login to view team calendars.</p>
+          <Button onClick={() => window.location.href = '/login'}>Login</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (teams.length === 0) {
+    return (
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold text-brand-800 mb-6">Team Monthly Calendar</h1>
+        <Card className="p-8 text-center">
+          <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          <h2 className="text-xl font-medium mb-2">No Teams Available</h2>
+          <p className="text-muted-foreground mb-4">There are no teams created yet or you don't have access to any teams.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">
