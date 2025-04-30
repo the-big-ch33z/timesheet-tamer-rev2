@@ -4,9 +4,17 @@ import { AlertTriangle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
+interface FallbackProps {
+  error: Error;
+  resetErrorBoundary: () => void;
+}
+
+type FallbackComponent = React.ComponentType<FallbackProps>;
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  fallbackComponent?: FallbackComponent;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
@@ -40,11 +48,23 @@ class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
+      // First check if a custom fallback component is provided
+      if (this.props.fallbackComponent) {
+        const FallbackComponent = this.props.fallbackComponent;
+        return (
+          <FallbackComponent 
+            error={this.state.error as Error} 
+            resetErrorBoundary={this.resetErrorBoundary} 
+          />
+        );
+      }
+      
+      // Then check for a static fallback
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
+      // Default fallback
       return (
         <Alert variant="destructive" className="mb-4">
           <AlertTriangle className="h-4 w-4" />

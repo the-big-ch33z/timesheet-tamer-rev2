@@ -34,15 +34,14 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = me
   };
   
   // Create a specialized fallback for timesheet errors
-  const renderTimeSheetErrorFallback = (props: any) => (
+  const renderTimeSheetErrorFallback = ({ error, resetErrorBoundary }: any) => (
     <div className="container py-6 max-w-7xl">
       <div className="bg-white rounded-lg shadow p-6">
         <ErrorFallback 
-          {...props}
-          error={props.error} 
+          error={error} 
           resetErrorBoundary={() => {
             // First try the normal reset
-            props.resetErrorBoundary();
+            resetErrorBoundary();
             
             // If it didn't work and we still have errors, try a more thorough reset
             setTimeout(() => {
@@ -63,7 +62,7 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = me
   return (
     <ErrorBoundary 
       onError={handleTimesheetError} 
-      fallback={renderTimeSheetErrorFallback}
+      fallbackComponent={renderTimeSheetErrorFallback}
     >
       <TimesheetProvider>
         {children}

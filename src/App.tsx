@@ -28,14 +28,14 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Initialize services on app start
-React.useEffect(() => {
-  initializeService().catch(error => 
-    console.error("Failed to initialize services:", error)
-  );
-}, []);
-
 function App() {
+  // Initialize services on app start
+  React.useEffect(() => {
+    initializeService().catch(error => 
+      console.error("Failed to initialize services:", error)
+    );
+  }, []);
+
   return (
     <GlobalErrorBoundary>
       <AuthProvider>
