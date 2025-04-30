@@ -1,3 +1,4 @@
+
 import React, { useMemo, memo } from "react";
 import { 
   startOfMonth, 
@@ -28,7 +29,10 @@ interface CalendarGridProps {
   userId: string;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({
+// Add debug mode feature toggle
+const DEBUG_CALENDAR = false;
+
+const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   currentMonth,
   selectedDate,
   workSchedule,
@@ -38,33 +42,42 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const logger = useLogger("CalendarGrid");
   const { getDayEntries } = useTimeEntryContext();
   const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
+  
+  // Memoize holidays to prevent recalculation
   const holidays = useMemo(() => getHolidays(), []);
 
+  // Memoize days calculation
   const days = useMemo(() => {
-    logger.debug("Calculating calendar grid days");
+    if (DEBUG_CALENDAR) logger.debug("Calculating calendar grid days");
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
     return eachDayOfInterval({ start: startDate, end: endDate });
-  }, [currentMonth, logger]);
+  }, [currentMonth, logger, DEBUG_CALENDAR]);
 
+  // Memoize RDO shift calculation
   const shiftedRDOMap = useMemo(() => {
     return getShiftedRDOsForMonth(days, workSchedule, holidays);
   }, [days, workSchedule, holidays]);
 
+  // Memoize heavy day data calculations
   const daysData = useMemo(() => {
-    logger.debug("Pre-calculating calendar days data");
+    if (DEBUG_CALENDAR) logger.debug("Pre-calculating calendar days data");
     const monthStart = startOfMonth(currentMonth);
-
-    return days.map(day => {
+    const calculatedData = [];
+    
+    // Use a simple for loop instead of map for better performance
+    for (let i = 0; i < days.length; i++) {
+      const day = days[i];
       const isCurrentMonth = isSameMonth(day, monthStart);
 
       if (!isCurrentMonth) {
-        return {
+        calculatedData.push({
           day,
           isCurrentMonth: false,
-        };
+        });
+        continue;
       }
 
       const dayState = getDayState(day, selectedDate, monthStart);
@@ -93,7 +106,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         shiftReason = shiftedInfo.reason;
       }
 
-      return {
+      calculatedData.push({
         day,
         isCurrentMonth: true,
         entries,
@@ -112,8 +125,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         isLeaveDay: hasLeaveEntry,
         isSickDay: hasSickEntry,
         isToilDay: hasToilEntry
-      };
-    });
+      });
+    }
+    
+    return calculatedData;
   }, [
     days,
     selectedDate,
@@ -121,7 +136,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     getDayState,
     getStartAndEndTimeForDay,
     currentMonth,
-    shiftedRDOMap
+    shiftedRDOMap,
+    DEBUG_CALENDAR,
+    logger
   ]);
 
   return (
@@ -150,8 +167,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       })}
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom equality function for CalendarGrid memo
+  return (
+    prevProps.userId === nextProps.userId &&
+    prevProps.currentMonth.getTime() === nextProps.currentMonth.getTime() &&
+    prevProps.workSchedule?.id === nextProps.workSchedule?.id &&
+    ((prevProps.selectedDate === null && nextProps.selectedDate === null) ||
+      (prevProps.selectedDate?.getTime() === nextProps.selectedDate?.getTime()))
+  );
+});
 
 const MemoizedCalendarDay = memo(CalendarDay);
 
-export default memo(CalendarGrid);
+CalendarGrid.displayName = 'CalendarGrid';
+
+export default CalendarGrid;

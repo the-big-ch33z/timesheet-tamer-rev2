@@ -16,6 +16,10 @@ interface UserScheduleOperations {
   resetUserSchedule: (userId: string) => Promise<void>;
 }
 
+// Cache for getUserSchedule results
+const scheduleCache = new Map<string, { schedule: WorkSchedule; timestamp: number }>();
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
 export const createUserScheduleOperations = ({
   state,
   setState,
@@ -59,6 +63,9 @@ export const createUserScheduleOperations = ({
         }));
       }
       
+      // Clear cache for this user when schedule changes
+      scheduleCache.delete(userId);
+      
       console.log(`Schedule ${scheduleId} successfully assigned to user ${userId}`);
       
       toast({
@@ -76,18 +83,54 @@ export const createUserScheduleOperations = ({
     }
   };
 
-  // Get the schedule for a user
+  // Get the schedule for a user - with caching
   const getUserSchedule = (userId: string): WorkSchedule => {
-    const assignedScheduleId = state.userSchedules[userId];
-    console.log(`Getting schedule for user ${userId}, assigned ID: ${assignedScheduleId}`);
+    // Check cache first
+    const cachedEntry = scheduleCache.get(userId);
+    const now = Date.now();
     
-    if (!assignedScheduleId) return state.defaultSchedule;
+    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_EXPIRY)) {
+      return cachedEntry.schedule;
+    }
+    
+    // Only log when we're actually retrieving, not on every call
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`Getting schedule for user ${userId}, assigned ID: ${state.userSchedules[userId]}`);
+    }
+    
+    const assignedScheduleId = state.userSchedules[userId];
+    
+    if (!assignedScheduleId) {
+      // Cache default schedule for this user
+      scheduleCache.set(userId, {
+        schedule: state.defaultSchedule,
+        timestamp: now
+      });
+      return state.defaultSchedule;
+    }
     
     const assignedSchedule = state.schedules.find(s => s.id === assignedScheduleId);
     if (!assignedSchedule) {
       console.warn(`Schedule ${assignedScheduleId} not found for user ${userId}, using default`);
+      // Cache default schedule when assigned one not found
+      scheduleCache.set(userId, {
+        schedule: state.defaultSchedule,
+        timestamp: now
+      });
+      return state.defaultSchedule;
     }
-    return assignedSchedule || state.defaultSchedule;
+    
+    // Cache the found schedule
+    scheduleCache.set(userId, {
+      schedule: assignedSchedule,
+      timestamp: now
+    });
+    return assignedSchedule;
+  };
+
+  // Clear cache when schedules change - helper method
+  const clearScheduleCache = () => {
+    scheduleCache.clear();
   };
 
   // Reset a user to the default schedule
@@ -104,6 +147,9 @@ export const createUserScheduleOperations = ({
       return { ...prev, userSchedules: newUserSchedules };
     });
     
+    // Clear cache for this user
+    scheduleCache.delete(userId);
+    
     toast({
       title: 'Schedule reset',
       description: 'User will now use the default work schedule',
@@ -115,4 +161,9 @@ export const createUserScheduleOperations = ({
     getUserSchedule,
     resetUserSchedule
   };
+};
+
+// Export function to clear cache from outside
+export const clearAllScheduleCache = () => {
+  scheduleCache.clear();
 };

@@ -1,11 +1,13 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { WorkHoursContextType } from './types';
 import { useWorkSchedule } from '@/contexts/work-schedule';
 import { createWorkHoursOperations } from './workHoursOperations';
 import { useWorkHoursState } from './hooks/useWorkHoursState';
 import { useWorkHoursStorage } from './hooks/useWorkHoursStorage';
 import { useWorkHoursValue } from './hooks/useWorkHoursValue';
+import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const WorkHoursContext = createContext<WorkHoursContextType | undefined>(undefined);
 
@@ -24,18 +26,20 @@ interface WorkHoursProviderProps {
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
   const { defaultSchedule, schedules, getUserSchedule } = useWorkSchedule();
   
-  // Create a wrapper function to extract schedule ID
-  const getUserScheduleId = (userId: string): string => {
+  // Create a wrapper function to extract schedule ID with cached lookup
+  const getUserScheduleId = React.useCallback((userId: string): string => {
     const schedule = getUserSchedule(userId);
     return schedule?.id || 'default';
-  };
+  }, [getUserSchedule]);
 
-  // Initialize operations with the wrapper function
-  const { getDefaultHoursFromSchedule } = createWorkHoursOperations(
-    defaultSchedule,
-    schedules,
-    getUserScheduleId
-  );
+  // Initialize operations with the wrapper function using useMemo
+  const { getDefaultHoursFromSchedule } = React.useMemo(() => (
+    createWorkHoursOperations(
+      defaultSchedule,
+      schedules,
+      getUserScheduleId
+    )
+  ), [defaultSchedule, schedules, getUserScheduleId]);
 
   // Use our new hooks
   const {
@@ -55,13 +59,29 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     isInitializedRef
   });
 
-  // Create context value
+  // Create context value with memoization
   const value = useWorkHoursValue({
     workHoursMap,
     setWorkHoursMap,
     latestWorkHoursRef,
     getDefaultHoursFromSchedule
   });
+
+  // Listen for schedule update events to clear caches
+  useEffect(() => {
+    const handleSchedulesUpdated = () => {
+      console.debug('WorkHoursContext: Schedules updated, clearing work hours cache');
+      clearWorkHoursCache();
+    };
+    
+    timeEventsService.subscribe('schedules-updated', handleSchedulesUpdated);
+    timeEventsService.subscribe('user-schedules-updated', handleSchedulesUpdated);
+    
+    return () => {
+      timeEventsService.unsubscribe('schedules-updated', handleSchedulesUpdated);
+      timeEventsService.unsubscribe('user-schedules-updated', handleSchedulesUpdated);
+    };
+  }, []);
 
   return (
     <WorkHoursContext.Provider value={value}>

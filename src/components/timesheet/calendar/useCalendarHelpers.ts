@@ -14,6 +14,9 @@ const logger = createTimeLogger('useCalendarHelpers');
 // Cache for start and end times based on date
 const startEndTimeCache = new Map<string, { startTime?: string, endTime?: string }>();
 
+// Cache for day state calculations
+const dayStateCache = new Map<string, any>();
+
 interface DayStateResult {
   isToday: boolean;
   isSelected: boolean;
@@ -28,11 +31,26 @@ interface DayStateResult {
   shiftReason?: string | null;
 }
 
+const ONE_HOUR = 60 * 60 * 1000;
+const CACHE_CLEAR_INTERVAL = ONE_HOUR;
+let lastCacheClear = Date.now();
+
 /**
  * Helper hook for calendar functionality with improved performance
  */
 export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
   const holidays = useMemo(() => getHolidays(), []);
+
+  // Clear caches periodically to prevent memory leaks
+  useMemo(() => {
+    const now = Date.now();
+    if (now - lastCacheClear > CACHE_CLEAR_INTERVAL) {
+      startEndTimeCache.clear();
+      dayStateCache.clear();
+      lastCacheClear = now;
+    }
+    return null;
+  }, []);
 
   /**
    * Memoized function to check if a date is a working day
@@ -58,17 +76,32 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
         return { isShifted: false };
       }
 
+      const dateKey = format(day, 'yyyy-MM-dd');
+      const cacheKey = `shift-${dateKey}-${workSchedule?.id || 'none'}`;
+      
+      // Check cache
+      const cachedData = dayStateCache.get(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
+
       // Check if this RDO needs to be shifted due to holiday or weekend
       const shiftInfo = getShiftedRDODate(day, holidays);
+      let result;
+      
       if (shiftInfo.shifted) {
-        return {
+        result = {
           isShifted: true,
           originalDate: day, // This is the original date when checking the source day
           reason: shiftInfo.reason || undefined,
         };
+      } else {
+        result = { isShifted: false };
       }
-
-      return { isShifted: false };
+      
+      // Cache result
+      dayStateCache.set(cacheKey, result);
+      return result;
     },
     [workSchedule, checkIsRDO, holidays]
   );
@@ -78,11 +111,22 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
    */
   const getDayState = useCallback(
     (day: Date, selectedDay: Date | null, monthStart: Date): DayStateResult => {
+      const dateKey = format(day, 'yyyy-MM-dd');
+      const selectedDateKey = selectedDay ? format(selectedDay, 'yyyy-MM-dd') : 'none';
+      const monthStartKey = format(monthStart, 'yyyy-MM');
+      const cacheKey = `state-${dateKey}-${selectedDateKey}-${monthStartKey}-${workSchedule?.id || 'none'}`;
+      
+      // Check cache
+      const cachedState = dayStateCache.get(cacheKey);
+      if (cachedState) {
+        return cachedState;
+      }
+      
       const isRDO = checkIsRDO(day);
       const shiftInfo = isRDO ? getRDOShiftInfo(day) : { isShifted: false };
       
       // Create result
-      return {
+      const result = {
         isToday: isToday(day),
         isSelected: selectedDay ? day.toDateString() === selectedDay.toDateString() : false,
         isCurrentMonth: day.getMonth() === monthStart.getMonth(),
@@ -95,6 +139,10 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
         originalRdoDate: shiftInfo.isShifted ? shiftInfo.originalDate : undefined,
         shiftReason: shiftInfo.reason || null
       };
+      
+      // Cache result
+      dayStateCache.set(cacheKey, result);
+      return result;
     },
     [workSchedule, checkIsWorkingDay, checkIsRDO, getRDOShiftInfo]
   );
@@ -154,7 +202,8 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
     // Only clean cache when workSchedule changes
     if (workSchedule) {
       startEndTimeCache.clear();
-      logger.debug('Cleared start/end time cache due to schedule change');
+      dayStateCache.clear();
+      logger.debug('Cleared helper caches due to schedule change');
     }
     return null;
   }, [workSchedule]);
@@ -167,4 +216,11 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
     getRDOShiftInfo,
     getStartAndEndTimeForDay 
   };
+};
+
+// Export function to clear caches
+export const clearCalendarHelperCaches = () => {
+  startEndTimeCache.clear();
+  dayStateCache.clear();
+  lastCacheClear = Date.now();
 };

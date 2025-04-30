@@ -22,7 +22,8 @@ interface TimesheetCalendarProps {
   userId: string;
 }
 
-const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
+// Use React.memo to prevent unnecessary re-renders
+const TimesheetCalendar: React.FC<TimesheetCalendarProps> = memo(({
   currentMonth,
   onPrevMonth,
   onNextMonth,
@@ -102,6 +103,18 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({
       </CardContent>
     </Card>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom equality check for the memo
+  return (
+    prevProps.userId === nextProps.userId &&
+    prevProps.currentMonth.getTime() === nextProps.currentMonth.getTime() &&
+    prevProps.onPrevMonth === nextProps.onPrevMonth &&
+    prevProps.onNextMonth === nextProps.onNextMonth &&
+    prevProps.onDayClick === nextProps.onDayClick &&
+    prevProps.workSchedule?.id === nextProps.workSchedule?.id
+  );
+});
 
-export default memo(TimesheetCalendar);
+TimesheetCalendar.displayName = 'TimesheetCalendar';
+
+export default TimesheetCalendar;

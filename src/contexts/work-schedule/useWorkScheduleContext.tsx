@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { defaultWorkSchedule } from './defaultSchedule';
 import { createStorageOperations } from './storage-utils';
 import { createScheduleOperations } from './schedule-operations';
-import { createUserScheduleOperations } from './user-schedule-operations';
+import { createUserScheduleOperations, clearAllScheduleCache } from './user-schedule-operations';
 import { WorkScheduleState } from './internal-types';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
@@ -34,6 +35,9 @@ export function useWorkScheduleContext() {
   // Save schedules to localStorage whenever they change
   useEffect(() => {
     storageOps.saveSchedules(state.schedules);
+    
+    // Clear all schedule caches when schedules change
+    clearAllScheduleCache();
     
     // Publish an event when schedules change so other contexts can react
     timeEventsService.publish('schedules-updated', {
@@ -136,6 +140,9 @@ export function useWorkScheduleContext() {
         description: 'The schedule has been deleted successfully',
       });
     }
+
+    // Clear all schedule caches when a schedule is deleted
+    clearAllScheduleCache();
   };
 
   return {
