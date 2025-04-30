@@ -468,8 +468,15 @@ export async function deleteTOILRecordByEntryId(entryId: string, maxRetries = 3)
       logger.error(`Error deleting TOIL record (attempt ${attempts}/${maxRetries}):`, error);
       
       // In case of error, make sure the lock gets released
-      if (storageWriteLock.isLocked) {
-        storageWriteLock.release();
+      try {
+        // Check if we need to release the lock by attempting to acquire it
+        // If acquisition succeeds, release it right away
+        const needToRelease = await storageWriteLock.acquire();
+        if (needToRelease) {
+          storageWriteLock.release();
+        }
+      } catch (e) {
+        // Ignore any errors in the cleanup process
       }
       
       // Wait before retry (exponential backoff)

@@ -34,7 +34,7 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = me
   };
   
   // Create a specialized fallback for timesheet errors
-  const timeSheetErrorFallback = (props: any) => (
+  const renderTimeSheetErrorFallback = (props: any) => (
     <div className="container py-6 max-w-7xl">
       <div className="bg-white rounded-lg shadow p-6">
         <ErrorFallback 
@@ -63,7 +63,7 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = me
   return (
     <ErrorBoundary 
       onError={handleTimesheetError} 
-      fallback={timeSheetErrorFallback}
+      fallback={renderTimeSheetErrorFallback}
     >
       <TimesheetProvider>
         {children}

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { useUnifiedTimeEntries, UseUnifiedTimeEntriesOptions, UnifiedTimeEntriesResult } from './useUnifiedTimeEntries';
+import { useUnifiedTimeEntries } from './useUnifiedTimeEntries';
+import { UseUnifiedTimeEntriesOptions, UnifiedTimeEntriesResult } from './types';
 import { initializeService } from '@/utils/time/services/api-wrapper';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
@@ -63,7 +64,9 @@ export const useTimeEntriesWithRecovery = (
       updateEntry: () => false,
       deleteEntry: async () => false,
       getDayEntries: () => [],
-      getMonthEntries: () => []
+      getMonthEntries: () => [],
+      calculateTotalHours: () => 0,
+      refreshEntries: () => {}
     };
   }
   
