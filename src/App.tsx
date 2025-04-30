@@ -9,6 +9,7 @@ import { ProtectedRoute } from './lib/routeProtection';
 import MainLayout from './components/layout/MainLayout';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
+import { Toaster } from './components/ui/toaster';
 
 // Lazy load pages to improve initial load time
 const Timesheet = lazy(() => import('./pages/Timesheet'));
@@ -87,6 +88,7 @@ function App() {
               {/* 404 route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Toaster />
           </UserMetricsProvider>
         </TimesheetSettingsProvider>
       </WorkScheduleProvider>

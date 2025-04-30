@@ -154,6 +154,8 @@ export interface ToastAPI {
 }
 
 // Fix the toast function to properly implement the ToastAPI interface
+type Toast = Omit<ToasterToast, "id">
+
 function toast(props: Toast): { id: string; dismiss: () => void; update: (props: ToasterToast) => void; } {
   const id = genId()
 
@@ -208,7 +210,5 @@ function useToast() {
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
-
-type Toast = Omit<ToasterToast, "id">
 
 export { useToast, toast }

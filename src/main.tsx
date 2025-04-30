@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
+import { createSeedData } from './utils/seedData';
 
 // Use a web worker for performance intensive tasks if needed
 const supportsWorker = typeof Worker !== 'undefined';
@@ -15,6 +16,9 @@ const mount = () => {
     console.error("Root element not found");
     return;
   }
+
+  // Initialize seed data for first-time users
+  createSeedData();
   
   // Create root and render app
   createRoot(rootElement).render(

@@ -13,10 +13,29 @@ export const createAuthenticationOperations = (
 ) => {
   const login = async (email: string, password: string) => {
     try {
-      const user = state.users.find(u => u.email === email);
+      // For demo purposes, we're not checking passwords
+      const user = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!user) {
-        throw new Error("User not found");
+        // Look for any user if the specific email is not found
+        const anyUser = state.users[0];
+        if (anyUser) {
+          console.log('Default user login:', anyUser.email);
+          state.setCurrentUser(anyUser);
+          state.setIsAuthenticated(true);
+          localStorage.setItem('currentUser', JSON.stringify(anyUser));
+          
+          toast.toast({
+            title: "Logged in as demo user",
+            description: `Welcome, ${anyUser.name}`,
+            variant: "success"
+          });
+          
+          navigate('/timesheet');
+          return;
+        }
+        
+        throw new Error("No users found in the system. Please sign up.");
       }
       
       state.setCurrentUser(user);
@@ -33,10 +52,12 @@ export const createAuthenticationOperations = (
       toast.toast({
         title: "Logged in successfully",
         description: `Welcome back, ${user.name}`,
+        variant: "success"
       });
       
       navigate('/timesheet');
     } catch (error) {
+      console.error("Login error:", error);
       toast.toast({
         title: "Login failed",
         description: (error as Error).message,
@@ -98,6 +119,8 @@ export const createAuthenticationOperations = (
       state.setIsAuthenticated(true);
       
       localStorage.setItem('currentUser', JSON.stringify(newUser));
+      localStorage.setItem('users', JSON.stringify([...state.users, newUser]));
+      localStorage.setItem('organizations', JSON.stringify([...state.organizations, newOrg]));
       
       await auditService.logEvent(
         newUser.id,
@@ -112,10 +135,12 @@ export const createAuthenticationOperations = (
       toast.toast({
         title: "Registration successful",
         description: `Welcome to TimeFlow, ${name}!`,
+        variant: "success"
       });
       
       navigate('/timesheet');
     } catch (error) {
+      console.error("Registration error:", error);
       toast.toast({
         title: "Registration failed",
         description: (error as Error).message,

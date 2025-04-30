@@ -1,74 +1,82 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/auth";
 
-export const LoginForm = () => {
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+import React, { useState } from 'react';
+import { useAuth } from '@/contexts/auth';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
+
+export function LoginForm() {
+  const [email, setEmail] = useState('admin@example.com');
+  const [password, setPassword] = useState('password');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
 
     try {
       await login(email, password);
-      
-      toast({
-        title: "Success",
-        description: "You have successfully logged in",
-      });
-      
-      navigate("/timesheet");
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Invalid email or password",
-        variant: "destructive",
+        title: "Login failed",
+        description: (error as Error).message || "Please check your credentials",
+        variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Alert className="bg-blue-50 text-blue-800 border-blue-100 mb-4">
+        <AlertDescription className="flex items-start">
+          <InfoIcon className="h-5 w-5 mr-2 mt-0.5" />
+          <div>
+            <p className="font-medium">Demo Account</p>
+            <p className="text-sm">Email: admin@example.com</p>
+            <p className="text-sm">Password: password</p>
+          </div>
+        </AlertDescription>
+      </Alert>
+      
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input
+        <Input 
           id="email"
-          type="email"
-          placeholder="name@example.com"
+          type="email" 
+          placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>
+      
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password">Password</Label>
-          <Button variant="link" className="px-0 text-xs" type="button">
+          <a href="#" className="text-sm text-brand-600 hover:text-brand-800">
             Forgot password?
-          </Button>
+          </a>
         </div>
-        <Input
+        <Input 
           id="password"
-          type="password"
+          type="password" 
+          placeholder="Enter your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Logging in..." : "Login"}
+      
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Signing in..." : "Sign in"}
       </Button>
     </form>
   );
-};
+}
