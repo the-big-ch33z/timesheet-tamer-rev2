@@ -104,6 +104,10 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
     }
   };
 
+  // Ensure we display actual hours / target hours for clarity
+  const displayTotalHours = totalHours;
+  const displayCalculatedHours = calculatedHours;
+
   return (
     <div className="w-full p-4 bg-white border-t border-gray-200 rounded-b-md">
       <div className="flex items-center justify-start gap-6 mb-2">
@@ -133,11 +137,11 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           />
         </div>
 
-        {/* Scheduled hours summary, now rounded to 0.25 */}
+        {/* Hours summary, proper display of entered/target hours */}
         <div className="flex flex-col justify-center">
           <div className="text-xs text-gray-500">Hours Summary</div>
           <div className="text-sm font-semibold text-gray-800">
-            {roundToQuarter(totalHours).toFixed(2)} / {roundToQuarter(calculatedHours).toFixed(2)} hours
+            {displayTotalHours.toFixed(2)} / {displayCalculatedHours.toFixed(2)} hours
           </div>
         </div>
 

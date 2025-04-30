@@ -121,8 +121,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     }
     
     // If we have entered entries, use their sum, otherwise use calculated hours from time
-    return hasEntries ? roundToQuarter(totalEnteredHours) : calculatedTimeHours;
-  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, calculatedTimeHours, hasEntries]);
+    return hasEntries ? roundToQuarter(totalEnteredHours) : 0;
+  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, hasEntries]);
 
   const isActuallyComplete = useMemo(() => {
     if (leaveActive) return true;
@@ -175,7 +175,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
                 startTime={startTime}
                 endTime={endTime}
                 totalHours={effectiveTotalHours}
-                calculatedHours={scheduledHours}
+                calculatedHours={hasEntries ? scheduledHours : calculatedTimeHours}
                 hasEntries={hasEntries}
                 interactive={interactive && !leaveActive && !toilActive}
                 onTimeChange={handleTimeChange}
@@ -208,7 +208,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           </div>
           <WorkHoursStatus
             effectiveTotalHours={effectiveTotalHours}
-            scheduledHours={scheduledHours}
+            scheduledHours={hasEntries ? scheduledHours : calculatedTimeHours}
             isOverScheduled={isOverScheduled}
             isActuallyComplete={isActuallyComplete}
             isUndertime={isUndertime}
