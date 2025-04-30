@@ -77,6 +77,9 @@ export const AddTeamMemberDialog: React.FC<AddTeamMemberDialogProps> = ({
     }
   };
 
+  // Get all users that are not already in the team
+  const availableUsers = users.filter(user => !user.teamIds?.includes(team?.id || ""));
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
@@ -119,14 +122,11 @@ export const AddTeamMemberDialog: React.FC<AddTeamMemberDialogProps> = ({
                   <SelectValue placeholder="Select a user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users
-                    .filter(user => !user.teamIds?.includes(team?.id || ""))
-                    .map(user => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.email})
-                      </SelectItem>
-                    ))
-                  }
+                  {availableUsers.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

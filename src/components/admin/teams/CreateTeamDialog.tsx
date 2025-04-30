@@ -60,9 +60,9 @@ export const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({
     },
   });
 
-  // Get potential managers for selection
+  // Get potential managers for selection - include both managers and admin users
   const potentialManagers = users.filter(user => 
-    user.role === "manager" || user.role === "team-member"
+    user.role === "manager" || user.role === "team-member" || user.role === "admin"
   );
 
   // Handle team creation submission
@@ -128,7 +128,7 @@ export const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({
                     <SelectContent>
                       {potentialManagers.map(user => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.name} {user.role !== "manager" ? "(Will be promoted to Manager)" : ""}
+                          {user.name} {user.role === "admin" ? "(Admin)" : user.role !== "manager" ? "(Will be promoted to Manager)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
