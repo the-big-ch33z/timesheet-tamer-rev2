@@ -171,7 +171,7 @@ export const createTeamManagementOperations = (
         description: `Team "${team.name}" has been deleted successfully`,
       });
       
-      return true;
+      // Changed: Don't return boolean value to match the Promise<void> return type
     } catch (error) {
       toast.toast({
         title: "Failed to delete team",
