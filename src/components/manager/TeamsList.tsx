@@ -14,11 +14,13 @@ import {
 import { PlusCircle, Settings, UserPlus, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AddTeamMemberDialog } from "@/components/admin/teams/AddTeamMemberDialog";
+import { EditTeamDialog } from "@/components/admin/teams/EditTeamDialog";
 import { Team } from "@/types";
 
 const TeamsList = () => {
   const { teams, getUserById, users, currentUser } = useAuth();
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isEditTeamOpen, setIsEditTeamOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   // Filter teams by organization or by manager (if current user is a manager)
@@ -42,6 +44,11 @@ const TeamsList = () => {
   const handleAddMember = (team: Team) => {
     setSelectedTeam(team);
     setIsAddMemberOpen(true);
+  };
+
+  const handleManageTeam = (team: Team) => {
+    setSelectedTeam(team);
+    setIsEditTeamOpen(true);
   };
 
   return (
@@ -112,7 +119,12 @@ const TeamsList = () => {
                         <UserPlus className="h-4 w-4" />
                         Add Member
                       </Button>
-                      <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-1"
+                        onClick={() => handleManageTeam(team)}
+                      >
                         <Settings className="h-4 w-4" />
                         Manage
                       </Button>
@@ -130,6 +142,13 @@ const TeamsList = () => {
         open={isAddMemberOpen} 
         onOpenChange={setIsAddMemberOpen} 
         team={selectedTeam} 
+      />
+
+      {/* Edit Team Dialog */}
+      <EditTeamDialog
+        open={isEditTeamOpen}
+        onOpenChange={setIsEditTeamOpen}
+        team={selectedTeam}
       />
     </div>
   );

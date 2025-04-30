@@ -4,16 +4,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
-import { Users, UserPlus, User as UserIcon } from "lucide-react";
+import { Users, UserPlus, Settings, User as UserIcon } from "lucide-react";
 import { RoleBadge } from "@/components/common/RoleBasedUI";
 import { Team } from "@/types";
 
 interface TeamTableProps {
   searchTerm: string;
   onAddMember: (team: Team) => void;
+  onManageTeam: (team: Team) => void;
 }
 
-export const TeamTable: React.FC<TeamTableProps> = ({ searchTerm, onAddMember }) => {
+export const TeamTable: React.FC<TeamTableProps> = ({ 
+  searchTerm, 
+  onAddMember, 
+  onManageTeam 
+}) => {
   const { teams, users, getUsersByTeam } = useAuth();
 
   // Filter teams based on search term
@@ -59,14 +64,24 @@ export const TeamTable: React.FC<TeamTableProps> = ({ searchTerm, onAddMember })
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onAddMember(team)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Member
-                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onAddMember(team)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Member
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onManageTeam(team)}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           );

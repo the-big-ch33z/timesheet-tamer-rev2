@@ -5,12 +5,14 @@ import { TeamSearch } from "./TeamSearch";
 import { TeamTable } from "./TeamTable";
 import { CreateTeamDialog } from "./CreateTeamDialog";
 import { AddTeamMemberDialog } from "./AddTeamMemberDialog";
+import { EditTeamDialog } from "./EditTeamDialog";
 import { Team } from "@/types";
 
 const TeamManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isEditTeamOpen, setIsEditTeamOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   const handleCreateTeam = () => {
@@ -20,6 +22,11 @@ const TeamManagement = () => {
   const handleAddMember = (team: Team) => {
     setSelectedTeam(team);
     setIsAddMemberOpen(true);
+  };
+
+  const handleManageTeam = (team: Team) => {
+    setSelectedTeam(team);
+    setIsEditTeamOpen(true);
   };
 
   return (
@@ -38,7 +45,8 @@ const TeamManagement = () => {
         
         <TeamTable 
           searchTerm={searchTerm} 
-          onAddMember={handleAddMember} 
+          onAddMember={handleAddMember}
+          onManageTeam={handleManageTeam}
         />
       </CardContent>
 
@@ -50,6 +58,12 @@ const TeamManagement = () => {
       <AddTeamMemberDialog
         open={isAddMemberOpen}
         onOpenChange={setIsAddMemberOpen}
+        team={selectedTeam}
+      />
+
+      <EditTeamDialog
+        open={isEditTeamOpen}
+        onOpenChange={setIsEditTeamOpen}
         team={selectedTeam}
       />
     </Card>
