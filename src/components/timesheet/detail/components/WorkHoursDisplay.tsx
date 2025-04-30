@@ -81,12 +81,18 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           </div>
         </div>
 
-        {/* Break chips */}
+        {/* Break chips - only show when they're actually being subtracted */}
         <div className="flex items-center gap-2 ml-4">
           {breaksIncluded.lunch && (
             <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-lime-50 border border-lime-200 text-lime-700 text-xs">
               <Bell className="h-3 w-3 mr-1" />
               Lunch subtracted
+            </span>
+          )}
+          {overrideStates.lunch && (
+            <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs">
+              <Bell className="h-3 w-3 mr-1" />
+              Lunch override
             </span>
           )}
           {breaksIncluded.smoko && (

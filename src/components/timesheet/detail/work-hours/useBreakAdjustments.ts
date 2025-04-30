@@ -17,12 +17,14 @@ export const useBreakAdjustments = (
     // Only subtract breaks if there's actually a start and end time entered
     if (startTime && endTime) {
       // Apply lunch break adjustment if toggled and part of schedule
-      if (actionStates.lunch && hasLunchBreakInSchedule) {
+      // Only subtract lunch if it's in the schedule AND NOT overridden with the lunch toggle
+      if (hasLunchBreakInSchedule && !actionStates.lunch) {
         adjustment -= 0.5; // Subtract 30 minutes for lunch
       }
       
       // Apply smoko break adjustment if toggled and part of schedule
-      if (actionStates.smoko && hasSmokoBreakInSchedule) {
+      // Only subtract smoko if it's in the schedule AND NOT overridden with the smoko toggle
+      if (hasSmokoBreakInSchedule && !actionStates.smoko) {
         adjustment -= 0.25; // Subtract 15 minutes for smoko
       }
     }
@@ -30,13 +32,22 @@ export const useBreakAdjustments = (
     return adjustment;
   }, [startTime, endTime, actionStates.lunch, actionStates.smoko, hasLunchBreakInSchedule, hasSmokoBreakInSchedule]);
 
+  // Base break configuration from the schedule
   const breakConfig: BreakConfig = {
     lunch: hasLunchBreakInSchedule,
     smoko: hasSmokoBreakInSchedule
   };
+  
+  // Display break configuration that considers both schedule and action states
+  // This controls which break flags are displayed in the UI
+  const displayBreakConfig: BreakConfig = {
+    lunch: hasLunchBreakInSchedule && !actionStates.lunch,
+    smoko: hasSmokoBreakInSchedule && !actionStates.smoko
+  };
 
   return {
     breakAdjustment: calculateAdjustedHours,
-    breakConfig
+    breakConfig,
+    displayBreakConfig
   };
 };

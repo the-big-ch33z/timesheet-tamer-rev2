@@ -60,7 +60,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [calculateDayHours]);
 
   // Get break adjustments
-  const { breakAdjustment, breakConfig: breakConfigState } = useBreakAdjustments(
+  const { breakAdjustment, breakConfig: breakConfigState, displayBreakConfig } = useBreakAdjustments(
     startTime, 
     endTime, 
     actionStates, 
@@ -116,6 +116,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           hoursVariance={hoursVariance}
           isUndertime={isUndertime}
           breakConfig={breakConfigState}
+          displayBreakConfig={displayBreakConfig}
           actionStates={actionStates}
           isOverScheduled={isOverScheduled}
           isCalculating={isCalculating}
