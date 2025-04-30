@@ -1,15 +1,17 @@
 
 import { useCalendarState } from "./timesheet/useCalendarState";
 import { useTimesheetContext } from "./timesheet/useTimesheetContext";
-import { useUnifiedTimeEntries } from "./useUnifiedTimeEntries";
+import { useTimeEntriesWithRecovery } from "./timeEntries/useTimeEntriesWithRecovery";
 import { useLogger } from "./useLogger";
+import { useErrorHandler } from "./useErrorHandler";
 
 /**
  * Primary hook for timesheet functionality
- * Combines calendar state, timesheet context and unified time entries
+ * Enhanced with better error handling and service recovery
  */
 export const useTimesheet = () => {
   const logger = useLogger("Timesheet");
+  const { errorState, handleError } = useErrorHandler("Timesheet");
   
   // Use our specialized hooks
   const {
@@ -31,21 +33,29 @@ export const useTimesheet = () => {
     setActiveTab
   } = useTimesheetContext();
   
-  // Get entries for the current user
+  // Get entries for the current user with recovery logic
   const {
     entries,
-    isLoading: entriesLoading
-  } = useUnifiedTimeEntries({
+    isLoading: entriesLoading,
+    error: entriesError,
+    isServiceReady
+  } = useTimeEntriesWithRecovery({
     userId: targetUserId || undefined,
     date: selectedDay,
     showToasts: false
   });
   
+  // Handle any errors from entries loading
+  if (entriesError && !errorState.hasError) {
+    handleError(new Error(entriesError), 'loading entries');
+  }
+  
   logger.debug("Timesheet hook initialized", { 
     targetUserId, 
     hasViewedUser: !!viewedUser,
     canViewTimesheet,
-    entriesCount: entries?.length
+    entriesCount: entries?.length,
+    isServiceReady
   });
 
   // Return merged state and handlers from specialized hooks
@@ -61,6 +71,8 @@ export const useTimesheet = () => {
     // Entries
     entries,
     entriesLoading,
+    entriesError,
+    isServiceReady,
     
     // Timesheet context
     activeTab,
@@ -69,7 +81,10 @@ export const useTimesheet = () => {
     viewedUser,
     canViewTimesheet,
     userWorkSchedule,
-    setActiveTab
+    setActiveTab,
+    
+    // Error state
+    error: errorState.hasError ? errorState : null
   };
 };
 

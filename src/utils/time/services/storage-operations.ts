@@ -1,232 +1,243 @@
+
 import { TimeEntry } from "@/types";
-import { createTimeLogger } from '../errors/timeLogger';
-import { formatDateForComparison } from '../validation/dateValidation';
+import { createTimeLogger } from "../errors/timeLogger";
 
-const logger = createTimeLogger('TimeEntryStorageOps');
+const logger = createTimeLogger('storage-operations');
 
-// Constants for storage
-export const STORAGE_KEY = 'timeEntries';
-export const DELETED_ENTRIES_KEY = 'deletedTimeEntries';
+// Storage keys
+export const STORAGE_KEY = 'time-entries';
+export const DELETED_ENTRIES_KEY = 'time-entries-deleted';
+export const CACHE_TIMESTAMP_KEY = 'time-entries-cache-timestamp';
 
-// Enhanced lock mechanism with promise-based queuing to prevent simultaneous writes to localStorage
+// Write lock mechanism to prevent simultaneous writes
+let writeInProgress = false;
+let writeQueue: (() => Promise<void>)[] = [];
+
 export const storageWriteLock = {
-  isLocked: false,
-  lockTimeout: null as NodeJS.Timeout | null,
-  lockQueue: [] as Array<() => void>,
-  
-  acquire: function(): Promise<boolean> {
-    // Return a promise that resolves when the lock is acquired
-    return new Promise<boolean>((resolve) => {
-      if (!this.isLocked) {
-        // Lock is available, acquire it immediately
-        this._acquireLock();
-        resolve(true);
-      } else {
-        // Lock is busy, add to queue
-        logger.debug('Storage write lock busy, queuing operation');
-        this.lockQueue.push(() => {
-          this._acquireLock();
+  acquire: async (): Promise<boolean> => {
+    if (writeInProgress) {
+      return new Promise<boolean>(resolve => {
+        const queuedWrite = async () => {
           resolve(true);
+        };
+        writeQueue.push(queuedWrite);
+      });
+    }
+    
+    writeInProgress = true;
+    return true;
+  },
+  
+  release: (): void => {
+    writeInProgress = false;
+    
+    if (writeQueue.length > 0) {
+      const nextWrite = writeQueue.shift();
+      if (nextWrite) {
+        writeInProgress = true;
+        nextWrite().catch(error => {
+          logger.error("Error in queued write:", error);
+          storageWriteLock.release();
         });
       }
-    });
-  },
-  
-  _acquireLock: function(): void {
-    this.isLocked = true;
-    
-    // Auto-release lock after 2 seconds as a safety measure
-    if (this.lockTimeout) clearTimeout(this.lockTimeout);
-    this.lockTimeout = setTimeout(() => {
-      this._releaseLock();
-      console.warn("[TimeEntryStorage] Storage lock auto-released after timeout");
-    }, 2000);
-  },
-  
-  _releaseLock: function(): void {
-    this.isLocked = false;
-    if (this.lockTimeout) {
-      clearTimeout(this.lockTimeout);
-      this.lockTimeout = null;
     }
-    
-    // Process next item in queue if any
-    const next = this.lockQueue.shift();
-    if (next) {
-      setTimeout(next, 0); // Use setTimeout to prevent call stack issues
-    }
-  },
-  
-  release: function(): void {
-    this._releaseLock();
   }
 };
 
 /**
- * Load entries from localStorage with improved date handling
+ * Enhanced load entries function with error recovery and validation
  */
-export function loadEntriesFromStorage(
-  storageKey: string = STORAGE_KEY,
-  deletedIds: string[] = []
-): TimeEntry[] {
+export const loadEntriesFromStorage = (
+  storageKey: string = STORAGE_KEY, 
+  deletedEntryIds: string[] = []
+): TimeEntry[] => {
   try {
-    // Load from storage
-    const savedEntries = typeof localStorage !== 'undefined' 
-      ? localStorage.getItem(storageKey) 
-      : null;
+    const storedData = localStorage.getItem(storageKey);
     
-    let entries: TimeEntry[] = [];
-    
-    if (savedEntries) {
-      // Parse entries
-      const parsedEntries = JSON.parse(savedEntries);
-      
-      // Filter out deleted entries and ensure proper date formats
-      entries = parsedEntries
-        .filter((entry: any) => !deletedIds.includes(entry.id))
-        .map((entry: any) => {
-          // Always create a new Date object to ensure proper date handling
-          const entryDate = new Date(entry.date);
-          
-          return {
-            ...entry,
-            date: entryDate,
-            // Store formatted date string for comparison
-            dateString: formatDateForComparison(entryDate)
-          };
-        });
-      
-      logger.debug(`Loaded ${entries.length} entries from storage`);
-    } else {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(storageKey, JSON.stringify([]));
-      }
+    if (!storedData) {
       logger.debug('No entries found in storage');
+      return [];
     }
     
-    return entries;
+    const entries: TimeEntry[] = JSON.parse(storedData);
+    
+    // Validate data integrity
+    if (!Array.isArray(entries)) {
+      logger.error('Invalid storage data: not an array');
+      return [];
+    }
+    
+    // Filter out deleted entries
+    const filteredEntries = entries.filter(entry => 
+      entry && entry.id && !deletedEntryIds.includes(entry.id)
+    );
+    
+    // Validate basic structure
+    const validEntries = filteredEntries.filter(entry => {
+      // Ensure minimum required fields exist
+      if (!entry.id || !entry.userId || !entry.date) {
+        return false;
+      }
+      
+      // Ensure date is parseable
+      try {
+        if (!(entry.date instanceof Date)) {
+          new Date(entry.date);
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    });
+    
+    if (validEntries.length !== filteredEntries.length) {
+      logger.warn(`Found ${filteredEntries.length - validEntries.length} invalid entries which were excluded`);
+    }
+    
+    // Update timestamp of last successful load
+    try {
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+    } catch (e) {
+      logger.debug('Could not update cache timestamp', e);
+    }
+    
+    logger.debug(`Loaded ${validEntries.length} entries from storage`);
+    return validEntries;
+    
   } catch (error) {
     logger.error('Error loading entries from storage', error);
-    return [];
-  }
-}
-
-/**
- * Save entries to localStorage using async/await pattern
- */
-export async function saveEntriesToStorage(
-  entries: TimeEntry[],
-  storageKey: string = STORAGE_KEY,
-  deletedIds: string[] = []
-): Promise<boolean> {
-  try {
-    // Acquire lock (returns a promise now)
-    const lockAcquired = await storageWriteLock.acquire();
-    if (!lockAcquired) {
-      logger.debug('Failed to acquire storage write lock');
-      return false;
+    
+    // Attempt to recover from corrupted storage
+    try {
+      // Store the error state to prevent repeated failures
+      localStorage.setItem('error-state', JSON.stringify({
+        time: Date.now(),
+        error: error instanceof Error ? error.message : String(error)
+      }));
+    } catch (e) {
+      // Silently fail if we can't even store the error state
     }
     
+    return [];
+  }
+};
+
+/**
+ * Enhanced save entries function with retries
+ */
+export const saveEntriesToStorage = async (
+  entries: TimeEntry[], 
+  storageKey: string = STORAGE_KEY,
+  deletedEntryIds: string[] = []
+): Promise<boolean> => {
+  let retries = 0;
+  const MAX_RETRIES = 3;
+  
+  while (retries < MAX_RETRIES) {
     try {
-      // Filter out any entries that are in the deleted list
+      // Acquire write lock
+      await storageWriteLock.acquire();
+      
+      // Filter out deleted entries before saving
       const filteredEntries = entries.filter(entry => 
-        !deletedIds.includes(entry.id)
+        entry && entry.id && !deletedEntryIds.includes(entry.id)
       );
       
-      // Save to storage
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(storageKey, JSON.stringify(filteredEntries));
+      // Serialize and store
+      localStorage.setItem(storageKey, JSON.stringify(filteredEntries));
+      logger.debug(`Saved ${filteredEntries.length} entries to storage`);
+      
+      // Update timestamp of last successful save
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+      
+      return true;
+    } catch (error) {
+      retries++;
+      logger.error(`Error saving entries (attempt ${retries}):`, error);
+      
+      if (retries >= MAX_RETRIES) {
+        break;
       }
       
-      logger.debug(`Saved ${filteredEntries.length} entries to storage`);
-      return true;
+      // Wait before retrying with exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 100));
     } finally {
       // Always release the lock
       storageWriteLock.release();
     }
-  } catch (error) {
-    logger.error('Error saving entries to storage', error);
-    // In case of error, make sure the lock gets released
-    storageWriteLock.release();
-    return false;
   }
-}
+  
+  return false;
+};
 
 /**
- * Load deleted entry IDs from storage
+ * Load deleted entry IDs
  */
-export function loadDeletedEntries(
-  storageKey: string = DELETED_ENTRIES_KEY
-): string[] {
+export const loadDeletedEntries = (storageKey: string = DELETED_ENTRIES_KEY): string[] => {
   try {
-    const deletedEntries = typeof localStorage !== 'undefined' 
-      ? localStorage.getItem(storageKey) 
-      : null;
-      
-    if (deletedEntries) {
-      const ids = JSON.parse(deletedEntries);
-      logger.debug(`Loaded ${ids.length} deleted entry IDs`);
-      return ids;
-    } else {
+    const storedData = localStorage.getItem(storageKey);
+    
+    if (!storedData) {
       return [];
     }
+    
+    const deletedEntries = JSON.parse(storedData);
+    
+    if (!Array.isArray(deletedEntries)) {
+      logger.error('Invalid deleted entries data: not an array');
+      return [];
+    }
+    
+    return deletedEntries.filter(id => typeof id === 'string');
+    
   } catch (error) {
     logger.error('Error loading deleted entries', error);
     return [];
   }
-}
+};
 
 /**
- * Save deleted entry IDs to storage with Promise-based locking
+ * Add an entry ID to deleted entries
  */
-export async function saveDeletedEntries(
-  deletedIds: string[],
+export const addToDeletedEntries = async (
+  entryId: string,
+  currentDeletedIds: string[] = [],
   storageKey: string = DELETED_ENTRIES_KEY
-): Promise<boolean> {
+): Promise<string[]> => {
+  // Acquire write lock
+  await storageWriteLock.acquire();
+  
   try {
-    // Acquire lock
-    const lockAcquired = await storageWriteLock.acquire();
-    if (!lockAcquired) {
-      logger.debug('Failed to acquire storage write lock for deleted entries');
-      return false;
+    // Refresh the list from storage in case it changed
+    let deletedEntries = loadDeletedEntries(storageKey);
+    
+    // Merge with provided IDs
+    currentDeletedIds.forEach(id => {
+      if (!deletedEntries.includes(id)) {
+        deletedEntries.push(id);
+      }
+    });
+    
+    // Add new ID if not already included
+    if (!deletedEntries.includes(entryId)) {
+      deletedEntries.push(entryId);
+      
+      // Save updated list
+      localStorage.setItem(storageKey, JSON.stringify(deletedEntries));
+      logger.debug(`Added entry ID ${entryId} to deleted entries`);
     }
     
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(storageKey, JSON.stringify(deletedIds));
-      }
-      logger.debug(`Saved ${deletedIds.length} deleted entry IDs`);
-      return true;
-    } finally {
-      // Always release the lock
-      storageWriteLock.release();
-    }
-  } catch (error) {
-    logger.error('Error saving deleted entries', error);
-    // In case of error, make sure the lock gets released
-    storageWriteLock.release();
-    return false;
-  }
-}
-
-/**
- * Add an entry ID to the deleted entries list - async/await pattern
- */
-export async function addToDeletedEntries(
-  entryId: string,
-  deletedIds: string[],
-  storageKey: string = DELETED_ENTRIES_KEY
-): Promise<string[]> {
-  try {
-    if (!deletedIds.includes(entryId)) {
-      const newDeletedIds = [...deletedIds, entryId];
-      await saveDeletedEntries(newDeletedIds, storageKey);
-      logger.debug(`Added entry ${entryId} to deleted list`);
-      return newDeletedIds;
-    }
-    return deletedIds;
+    return deletedEntries;
   } catch (error) {
     logger.error('Error adding to deleted entries', error);
-    return deletedIds;
+    
+    // Return original list plus the new ID as best effort
+    if (!currentDeletedIds.includes(entryId)) {
+      return [...currentDeletedIds, entryId];
+    }
+    return currentDeletedIds;
+  } finally {
+    // Always release the lock
+    storageWriteLock.release();
   }
-}
+};
