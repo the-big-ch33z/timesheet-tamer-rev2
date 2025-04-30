@@ -20,17 +20,21 @@ const mount = () => {
   // Initialize seed data for first-time users
   createSeedData();
   
-  // Create root and render app
-  createRoot(rootElement).render(
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  );
-  
-  // Register service worker for production
-  if (import.meta.env.PROD) {
-    // This would be where we'd register a service worker if needed
-    console.log('Running in production mode');
+  try {
+    // Create root and render app
+    createRoot(rootElement).render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+    
+    // Register service worker for production
+    if (import.meta.env.PROD) {
+      // This would be where we'd register a service worker if needed
+      console.log('Running in production mode');
+    }
+  } catch (error) {
+    console.error("Error mounting application:", error);
   }
 };
 
