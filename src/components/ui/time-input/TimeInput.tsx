@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { format, parse } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -69,11 +69,12 @@ function formatDisplayTime(timeString: string): string {
     const date = parse(timeString, 'HH:mm', new Date());
     return format(date, 'h:mm a');
   } catch (error) {
+    console.error("Error formatting time:", error);
     return timeString; // Return original on parsing error
   }
 }
 
-export const TimeInput: React.FC<TimeInputProps> = ({
+const TimeInput: React.FC<TimeInputProps> = ({
   id,
   label,
   value,
@@ -88,8 +89,8 @@ export const TimeInput: React.FC<TimeInputProps> = ({
   );
   
   // Handle display updates when prop value changes
-  React.useEffect(() => {
-    if (value && !document.activeElement?.id?.includes(id || '')) {
+  useEffect(() => {
+    if (value && (!document.activeElement || document.activeElement.id !== id)) {
       setDisplayValue(formatDisplayTime(value));
     }
   }, [value, id]);

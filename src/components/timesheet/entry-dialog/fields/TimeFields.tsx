@@ -37,6 +37,11 @@ const TimeFields: React.FC<TimeFieldsProps> = ({
     
     // Allow empty values during editing
     if (!value) {
+      if (type === 'start') {
+        setStartTime('');
+      } else {
+        setEndTime('');
+      }
       setIsEditing(true);
       return;
     }

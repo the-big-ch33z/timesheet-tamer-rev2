@@ -1,9 +1,8 @@
 
 import React, { memo } from "react";
 import { Clock } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import TimeInput from "@/components/ui/time-input/TimeInput";
+import { cn } from "@/lib/utils";
 
 interface TimeInputFieldProps {
   label: string;
@@ -44,7 +43,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
         ) : (
           <div className="flex items-center">
             <span className="text-lg flex-1">
-              {value ? format(new Date(`2000-01-01T${value}`), "h:mm a") : "--:--"}
+              {value ? value : "--:--"}
             </span>
             <Clock className="h-4 w-4 text-gray-400 ml-2" />
           </div>

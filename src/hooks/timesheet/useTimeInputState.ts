@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface UseTimeInputStateProps {
@@ -20,9 +20,11 @@ export const useTimeInputState = ({
   const debouncedOnChange = useDebounce(onChange, debounceMs);
   
   // Update local value when prop changes (if not focused)
-  if (value !== localValue && document.activeElement?.id !== 'time-input') {
-    setLocalValue(value);
-  }
+  useEffect(() => {
+    if (value !== localValue && document.activeElement?.id !== 'time-input') {
+      setLocalValue(value);
+    }
+  }, [value, localValue]);
   
   const handleChange = useCallback((newValue: string) => {
     setLocalValue(newValue);
