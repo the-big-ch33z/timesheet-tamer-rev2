@@ -19,5 +19,8 @@ export interface WorkHoursContextType {
   resetDayWorkHours: (date: Date, userId: string) => void;
   refreshTimesForDate: (date: Date, userId: string) => void;
   synchronizeFromRemote?: (remoteData: WorkHoursData[]) => void;
+  
+  // Add the methods being used in useTimeEntryState
+  getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
+  saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;
 }
-

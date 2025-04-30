@@ -29,10 +29,18 @@ export const useTimeEntryState = ({
   onHoursChange
 }: UseTimeEntryStateProps) => {
   // Get work hours from context
-  const { getWorkHoursForDate, saveWorkHoursForDate } = useWorkHoursContext();
+  const workHoursContext = useWorkHoursContext();
   
-  // Get stored work hours for this date and user
-  const storedWorkHours = getWorkHoursForDate(date, userId);
+  // Get stored work hours for this date and user, handling both API versions
+  let storedWorkHours: { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
+  
+  // Try the newer API first, fall back to older API if needed
+  if (workHoursContext.getWorkHoursForDate) {
+    storedWorkHours = workHoursContext.getWorkHoursForDate(date, userId);
+  } else {
+    // Fall back to the original getWorkHours method
+    storedWorkHours = workHoursContext.getWorkHours(date, userId);
+  }
   
   // State for start and end times
   const [startTime, setStartTime] = useState(storedWorkHours?.startTime || '09:00');
@@ -78,10 +86,20 @@ export const useTimeEntryState = ({
     try {
       if (type === 'start') {
         setStartTime(normalizedValue);
-        saveWorkHoursForDate(date, normalizedValue, endTime, userId);
+        // Use the appropriate save method based on what's available
+        if (workHoursContext.saveWorkHoursForDate) {
+          workHoursContext.saveWorkHoursForDate(date, normalizedValue, endTime, userId);
+        } else {
+          workHoursContext.saveWorkHours(date, userId, normalizedValue, endTime);
+        }
       } else {
         setEndTime(normalizedValue);
-        saveWorkHoursForDate(date, startTime, normalizedValue, userId);
+        // Use the appropriate save method based on what's available
+        if (workHoursContext.saveWorkHoursForDate) {
+          workHoursContext.saveWorkHoursForDate(date, startTime, normalizedValue, userId);
+        } else {
+          workHoursContext.saveWorkHours(date, userId, startTime, normalizedValue);
+        }
       }
       
       // Calculate hours if we have both start and end times
@@ -102,7 +120,7 @@ export const useTimeEntryState = ({
     } catch (err) {
       logger.error(`Error handling time change for ${type}:`, err);
     }
-  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate, onHoursChange]);
+  }, [startTime, endTime, interactive, date, userId, workHoursContext, onHoursChange, normalizeTimeValue]);
   
   // Initialize with stored values on mount
   useEffect(() => {
@@ -120,7 +138,7 @@ export const useTimeEntryState = ({
       hasEntries,
       entriesCount: entries.length
     });
-  }, [date, entries.length]);
+  }, [date, entries.length, startTime, endTime, hasEntries]);
 
   return {
     startTime,

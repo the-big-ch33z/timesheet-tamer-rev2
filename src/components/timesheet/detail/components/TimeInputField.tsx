@@ -51,7 +51,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   // Use the hook for handling input state
   const { localValue, handleChange } = useTimeInputState({
     value: normalizedValue,
-    onChange: (newValue) => onChange(type, newValue)
+    onChange: (newValue) => onChange(type, normalizeTimeValue(newValue))
   });
   
   // Format the display value properly for non-interactive mode
