@@ -33,17 +33,18 @@ export const useHoursCalculation = (
 
   // Check if the day is complete based on hours
   const isComplete = useMemo(() => {
-    if (!hasEntries && (!startTime || !endTime)) return false;
+    // If no entries or missing start/end times, it's not complete
+    if (!hasEntries || (!startTime || !endTime)) return false;
     
     const targetHours = scheduledHours;
-    const actualHours = hasEntries ? effectiveHours : calculatedTimeHours;
+    const actualHours = hasEntries ? effectiveHours : 0; // Use 0 if no entries
     const variance = Math.abs(roundToQuarter(actualHours) - targetHours);
     
     return variance <= 0.01;
   }, [calculatedTimeHours, scheduledHours, hasEntries, startTime, endTime, effectiveHours]);
 
-  // Check if hours exceed scheduled hours
-  const isOverScheduled = effectiveHours > scheduledHours + 0.01;
+  // Check if hours exceed scheduled hours - only relevant if there are entries
+  const isOverScheduled = hasEntries && effectiveHours > scheduledHours + 0.01;
 
   return {
     calculatedTimeHours,

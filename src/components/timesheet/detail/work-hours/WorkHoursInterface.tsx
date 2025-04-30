@@ -82,15 +82,16 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     hasEntries
   );
 
-  // Calculate effective total hours
+  // Calculate effective total hours - FIXED to show 0 when no entries
   const effectiveTotalHours = useMemo(() => {
     if (actionStates.leave || actionStates.sick) {
       return scheduledHours;
     }
     
-    // If we have entered entries, use their sum, otherwise use calculated hours from time
-    return hasEntries ? Math.round(totalEnteredHours * 4) / 4 : calculatedTimeHours;
-  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, hasEntries, calculatedTimeHours]);
+    // If we have entered entries, use their sum, otherwise show 0
+    // This is the key fix - we now return 0 instead of calculatedTimeHours when there are no entries
+    return hasEntries ? Math.round(totalEnteredHours * 4) / 4 : 0;
+  }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, hasEntries]);
 
   // Set up TOIL calculation effects
   useToilEffects(
@@ -112,7 +113,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           calculatedTimeHours={calculatedTimeHours}
           hasEntries={hasEntries}
           interactive={interactive}
-          isActuallyComplete={isComplete}
+          isActuallyComplete={isComplete && hasEntries} // Only consider complete if there are entries
           hoursVariance={hoursVariance}
           isUndertime={isUndertime}
           breakConfig={breakConfigState}
