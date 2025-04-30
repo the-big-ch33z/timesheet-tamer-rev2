@@ -4,9 +4,10 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMont
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { User, Team } from "@/types";
 
 type ScheduleEntry = {
@@ -51,7 +52,8 @@ const TEAM_MEMBERS: User[] = [
     email: "john@example.com", 
     role: "team-member", 
     teamIds: ["team-1"],
-    avatarUrl: "" 
+    avatarUrl: "",
+    status: "active" 
   },
   { 
     id: "2", 
@@ -59,7 +61,8 @@ const TEAM_MEMBERS: User[] = [
     email: "jane@example.com", 
     role: "team-member", 
     teamIds: ["team-1"],
-    avatarUrl: "" 
+    avatarUrl: "",
+    status: "archived" 
   },
   { 
     id: "3", 
@@ -67,7 +70,8 @@ const TEAM_MEMBERS: User[] = [
     email: "michael@example.com", 
     role: "manager", 
     teamIds: ["team-1", "team-2"],
-    avatarUrl: "" 
+    avatarUrl: "",
+    status: "active" 
   },
   { 
     id: "4", 
@@ -75,7 +79,8 @@ const TEAM_MEMBERS: User[] = [
     email: "sarah@example.com", 
     role: "team-member", 
     teamIds: ["team-2"],
-    avatarUrl: "" 
+    avatarUrl: "",
+    status: "active" 
   },
   { 
     id: "5", 
@@ -83,7 +88,8 @@ const TEAM_MEMBERS: User[] = [
     email: "alex@example.com", 
     role: "team-member", 
     teamIds: ["team-2"],
-    avatarUrl: "" 
+    avatarUrl: "",
+    status: "active" 
   }
 ];
 
@@ -91,12 +97,18 @@ const TEAM_MEMBERS: User[] = [
 const generateMockScheduleData = (
   teamMembers: User[],
   teams: Team[],
-  month: Date
+  month: Date,
+  includeArchived: boolean
 ): TeamWithMembers[] => {
   // Get all days in the month
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  
+  // Filter members based on status if needed
+  const filteredMembers = includeArchived 
+    ? teamMembers 
+    : teamMembers.filter(member => member.status !== "archived");
   
   // Status options with weighted probabilities
   const statusOptions: {value: ScheduleEntry["status"], weight: number}[] = [
@@ -123,7 +135,7 @@ const generateMockScheduleData = (
 
   // Group members by team
   const teamMap: Record<string, User[]> = {};
-  teamMembers.forEach(member => {
+  filteredMembers.forEach(member => {
     if (member.teamIds) {
       member.teamIds.forEach(teamId => {
         if (!teamMap[teamId]) teamMap[teamId] = [];
@@ -219,12 +231,16 @@ const MonthNavigationHeader = ({
   currentMonth, 
   onPrevMonth, 
   onNextMonth, 
-  onToday 
+  onToday,
+  showArchived,
+  onToggleArchived
 }: { 
   currentMonth: Date; 
   onPrevMonth: () => void; 
   onNextMonth: () => void; 
-  onToday: () => void; 
+  onToday: () => void;
+  showArchived: boolean;
+  onToggleArchived: () => void;
 }) => (
   <div className="flex justify-between items-center mb-6">
     <Button variant="outline" onClick={onPrevMonth}>
@@ -240,9 +256,21 @@ const MonthNavigationHeader = ({
       </h2>
     </div>
     
-    <Button variant="outline" onClick={onNextMonth}>
-      Next Month <ChevronRight className="h-4 w-4 ml-2" />
-    </Button>
+    <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="show-archived"
+          checked={showArchived}
+          onCheckedChange={onToggleArchived}
+        />
+        <label htmlFor="show-archived" className="text-sm cursor-pointer select-none">
+          Show Archived Members
+        </label>
+      </div>
+      <Button variant="outline" onClick={onNextMonth}>
+        Next Month <ChevronRight className="h-4 w-4 ml-2" />
+      </Button>
+    </div>
   </div>
 );
 
@@ -300,6 +328,18 @@ interface TeamSectionProps {
 const TeamSection: React.FC<TeamSectionProps> = ({ teamWithMembers, daysInMonth, today }) => {
   const { team, members } = teamWithMembers;
   
+  if (members.length === 0) {
+    return (
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-4 text-brand-700">{team.name}</h3>
+        <div className="border rounded-lg p-8 flex flex-col items-center justify-center text-center">
+          <Users className="h-12 w-12 text-gray-400 mb-2" />
+          <p className="text-gray-500">No active team members to display</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold mb-4 text-brand-700">{team.name}</h3>
@@ -314,8 +354,15 @@ const TeamSection: React.FC<TeamSectionProps> = ({ teamWithMembers, daysInMonth,
                 <AvatarImage src={memberSchedule.member.avatarUrl} />
                 <AvatarFallback>{getInitials(memberSchedule.member.name)}</AvatarFallback>
               </Avatar>
-              <div>
-                <div className="font-medium">{memberSchedule.member.name}</div>
+              <div className="flex flex-col">
+                <div className="font-medium">
+                  {memberSchedule.member.name}
+                  {memberSchedule.member.status === "archived" && (
+                    <span className="ml-2 text-xs bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full">
+                      Archived
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {memberSchedule.member.role}
                 </div>
@@ -346,21 +393,23 @@ const TeamSection: React.FC<TeamSectionProps> = ({ teamWithMembers, daysInMonth,
 
 const TeamCalendar = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [showArchived, setShowArchived] = useState<boolean>(false);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const resetToday = () => setCurrentMonth(new Date());
+  const toggleArchived = () => setShowArchived(!showArchived);
   
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   
-  // Generate mock data for calendar
+  // Generate mock data for calendar with archived filter
   const teamsWithSchedules = useMemo(() => 
-    generateMockScheduleData(TEAM_MEMBERS, TEAMS, currentMonth),
-  [currentMonth]);
+    generateMockScheduleData(TEAM_MEMBERS, TEAMS, currentMonth, showArchived),
+  [currentMonth, showArchived]);
 
   return (
     <div className="container py-8">
@@ -371,6 +420,8 @@ const TeamCalendar = () => {
         onPrevMonth={prevMonth}
         onNextMonth={nextMonth}
         onToday={resetToday}
+        showArchived={showArchived}
+        onToggleArchived={toggleArchived}
       />
       
       <StatusLegend />
