@@ -74,12 +74,13 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       clearWorkHoursCache();
     };
     
-    timeEventsService.subscribe('schedules-updated', handleSchedulesUpdated);
-    timeEventsService.subscribe('user-schedules-updated', handleSchedulesUpdated);
+    // Store subscriptions to clean them up properly
+    const schedulesSubscription = timeEventsService.subscribe('schedules-updated', handleSchedulesUpdated);
+    const userSchedulesSubscription = timeEventsService.subscribe('user-schedules-updated', handleSchedulesUpdated);
     
     return () => {
-      timeEventsService.unsubscribe('schedules-updated', handleSchedulesUpdated);
-      timeEventsService.unsubscribe('user-schedules-updated', handleSchedulesUpdated);
+      schedulesSubscription.unsubscribe();
+      userSchedulesSubscription.unsubscribe();
     };
   }, []);
 
