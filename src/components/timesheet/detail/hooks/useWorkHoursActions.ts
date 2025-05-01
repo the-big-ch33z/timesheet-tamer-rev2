@@ -1,9 +1,10 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { WorkHoursActionType } from '../components/WorkHoursActionButtons';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useWorkHoursActions');
 
@@ -20,7 +21,7 @@ const INITIAL_STATES = {
 };
 
 export const useWorkHoursActions = (date: Date, userId: string) => {
-  const { createEntry, deleteEntry } = useTimeEntryContext();
+  const { createEntry, deleteEntry, dayEntries } = useTimeEntryContext();
   const { toast } = useToast();
   
   const [actionStates, setActionStates] = useState<ActionStates>(INITIAL_STATES);
@@ -33,22 +34,86 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     smoko: null
   });
 
+  // Effect to initialize state from existing entries
+  useEffect(() => {
+    // Look for synthetic entries that exist in the current day's entries
+    const toilEntry = dayEntries.find(entry => 
+      entry.synthetic === true && 
+      entry.jobNumber === "TOIL"
+    );
+    
+    const sickEntry = dayEntries.find(entry => 
+      entry.synthetic === true && 
+      entry.jobNumber === "SICK"
+    );
+    
+    const leaveEntry = dayEntries.find(entry => 
+      entry.synthetic === true && 
+      entry.jobNumber === "LEAVE"
+    );
+    
+    // Update our state to match existing entries
+    setActionStates(prev => ({
+      ...prev,
+      toil: !!toilEntry,
+      sick: !!sickEntry,
+      leave: !!leaveEntry
+    }));
+    
+    // Update synthetic entry IDs
+    setSyntheticEntryIds(prev => ({
+      ...prev,
+      toil: toilEntry?.id || null,
+      sick: sickEntry?.id || null,
+      leave: leaveEntry?.id || null
+    }));
+    
+    // Update created entries state
+    setCreatedEntries(prev => ({
+      ...prev,
+      toil: !!toilEntry,
+      sick: !!sickEntry,
+      leave: !!leaveEntry
+    }));
+    
+  }, [dayEntries]);
+
   const createSyntheticEntry = useCallback(async (type: WorkHoursActionType, isActive: boolean, dayHours: number) => {
     logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
 
     // Handle toggling OFF - this needs to properly delete the entry
     if (!isActive) {
       const entryId = syntheticEntryIds[type];
+      
       if (entryId) {
         logger.debug(`Attempting to delete synthetic entry: ${entryId} for type: ${type}`);
         
         try {
+          // Before deleting, double-check if the entry still exists
+          const entryExists = dayEntries.some(entry => entry.id === entryId);
+          
+          if (!entryExists) {
+            logger.debug(`Entry ${entryId} no longer exists in dayEntries, updating state only`);
+            setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+            setActionStates(prev => ({ ...prev, [type]: false }));
+            setCreatedEntries(prev => ({ ...prev, [type]: false }));
+            return;
+          }
+          
           const success = await deleteEntry(entryId);
+          
           if (success) {
             logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
             setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
             setActionStates(prev => ({ ...prev, [type]: false }));
             setCreatedEntries(prev => ({ ...prev, [type]: false }));
+            
+            timeEventsService.publish('toil-updated', {
+              userId,
+              date: date.toISOString(),
+              entryId,
+              reset: true
+            });
             
             toast({
               title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
@@ -73,6 +138,11 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
             variant: "destructive"
           });
         }
+      } else {
+        // No entry ID found but the state thinks it's active - fix the state
+        logger.debug(`No entry ID found for ${type}, but state was active. Fixing state.`);
+        setActionStates(prev => ({ ...prev, [type]: false }));
+        setCreatedEntries(prev => ({ ...prev, [type]: false }));
       }
       return;
     }
@@ -87,11 +157,11 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     // For TOIL, always include the smoko break time (0.25 hours)
     let hoursToRecord = dayHours > 0 ? dayHours : 7.6;
     
-    // For TOIL specifically, add smoko time if not already included
-    if (type === 'toil' && hoursToRecord < 9 && hoursToRecord >= 8.5) {
-      // If the day is close to 8.75 hours, it likely doesn't include smoko
+    // For TOIL specifically, ensure we use the standard day hours
+    if (type === 'toil') {
+      // Base standard day is 8.75 hours (with 0.5h lunch and 0.25h smoko)
       hoursToRecord = 9.0; // Include the smoko break (0.25 hours)
-      logger.debug(`Adjusted TOIL hours to include smoko break: ${hoursToRecord}`);
+      logger.debug(`Using standard TOIL hours: ${hoursToRecord}`);
     }
     
     const entryTypeMap = {
@@ -122,6 +192,16 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
           setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
           setCreatedEntries(prev => ({ ...prev, [type]: true }));
           
+          // Publish TOIL update event for UI refresh
+          if (type === 'toil') {
+            timeEventsService.publish('toil-updated', {
+              userId,
+              date: date.toISOString(),
+              entryId: newEntryId,
+              hours: hoursToRecord
+            });
+          }
+          
           toast({
             title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
             description: `${hoursToRecord} hours ${type === 'toil' ? 'used from' : 'recorded for'} ${date.toLocaleDateString()}`
@@ -145,7 +225,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
         });
       }
     }
-  }, [date, userId, createEntry, deleteEntry, syntheticEntryIds, toast]);
+  }, [date, userId, createEntry, deleteEntry, syntheticEntryIds, toast, dayEntries]);
 
   const handleToggleAction = useCallback((type: WorkHoursActionType, dayHours: number) => {
     setActionStates(prev => {

@@ -55,6 +55,12 @@ export class DeleteOperations {
         // Only after successful save, clean up TOIL records
         try {
           logger.debug(`Attempting to clean up TOIL records for entry ${entryId}`);
+          
+          // Make sure we have a valid date before calling toISOString()
+          const entryDate = deletedEntry.date instanceof Date 
+            ? deletedEntry.date 
+            : new Date(deletedEntry.date);
+            
           const toilDeleted = await deleteTOILRecordByEntryId(entryId);
           
           if (toilDeleted) {
@@ -65,7 +71,7 @@ export class DeleteOperations {
               logger.debug(`Dispatching special TOIL update for TOIL entry deletion`);
               timeEventsService.publish('toil-updated', { 
                 userId: deletedEntry.userId,
-                date: deletedEntry.date.toISOString(),
+                date: entryDate.toISOString(),
                 entryId,
                 reset: true
               });
@@ -73,7 +79,7 @@ export class DeleteOperations {
               // Regular TOIL update event
               timeEventsService.publish('toil-updated', { 
                 userId: deletedEntry.userId,
-                date: deletedEntry.date.toISOString(),
+                date: entryDate.toISOString(),
                 entryId
               });
             }
