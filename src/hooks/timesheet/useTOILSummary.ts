@@ -4,7 +4,7 @@ import { TOILSummary } from '@/types/toil';
 import { toilService } from '@/utils/time/services/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
-import { getTOILSummary, clearTOILStorageForMonth } from '@/utils/time/services/toil/storage';
+import { getTOILSummary, clearTOILStorageForMonth, cleanupDuplicateTOILRecords } from '@/utils/time/services/toil/storage';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useTOILSummary');
@@ -37,10 +37,21 @@ export const useTOILSummary = ({
   const monthYear = format(date, 'yyyy-MM');
   
   // Clear caches when month changes to ensure we get fresh data
+  // UPDATED: Added cleanup call to fix duplicate records
   useEffect(() => {
     toilService.clearCache();
-    logger.debug(`Month changed to ${monthYear}, cache cleared`);
-  }, [monthYear]);
+    // New: cleanup duplicate TOIL records when month changes
+    if (userId) {
+      cleanupDuplicateTOILRecords(userId)
+        .then(count => {
+          if (count > 0) {
+            logger.debug(`Cleaned up ${count} duplicate TOIL records for ${userId}`);
+          }
+        })
+        .catch(err => logger.error('Error cleaning up duplicates:', err));
+    }
+    logger.debug(`Month changed to ${monthYear}, cache cleared and duplicates cleaned`);
+  }, [monthYear, userId]);
   
   const loadSummary = () => {
     try {

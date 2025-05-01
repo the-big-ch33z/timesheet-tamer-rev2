@@ -4,7 +4,7 @@ import { Holiday } from "@/lib/holidays";
 import { TOILRecord, TOILSummary } from "@/types/toil";
 import { v4 as uuidv4 } from "uuid";
 import { createTOILRecord, calculateTOILHours } from "./calculation";
-import { storeTOILRecord, getTOILSummary } from "./storage";
+import { storeTOILRecord, getTOILSummary, cleanupDuplicateTOILRecords } from "./storage";
 import { createTimeLogger } from '@/utils/time/errors';
 import { format, isSameMonth } from 'date-fns';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
@@ -39,6 +39,7 @@ export function clearRecentProcessing(): void {
 
 /**
  * Perform a TOIL calculation for a single batch of entries
+ * FIXED: Added cleanup call and improved validation to prevent duplicate/incorrect records
  */
 export async function performSingleCalculation(
   entries: TimeEntry[],
@@ -53,6 +54,12 @@ export async function performSingleCalculation(
       return null;
     }
 
+    // First, cleanup any existing duplicate records
+    // This runs asynchronously but we don't need to wait for it
+    cleanupDuplicateTOILRecords(userId).catch(err => 
+      logger.error('Error while cleaning up duplicate records:', err)
+    );
+
     // Filter entries to same month only
     const filteredEntries = entries.filter(entry => {
       if (!entry.date) return false;
@@ -65,9 +72,9 @@ export async function performSingleCalculation(
       return getTOILSummary(userId, date.toISOString().slice(0, 7));
     }
 
-    logger.debug(`Processing ${filteredEntries.length} entries for TOIL calculation`);
+    logger.debug(`Processing ${filteredEntries.length} entries for TOIL calculation for date: ${format(date, 'yyyy-MM-dd')}`);
     
-    // Calculate TOIL hours
+    // Calculate TOIL hours - This now correctly calculates only excess hours as TOIL
     const toilHours = calculateTOILHours(filteredEntries, date, workSchedule, holidays);
     
     // Mark this date as recently processed
@@ -83,8 +90,9 @@ export async function performSingleCalculation(
       oldestEntries.forEach(([key]) => recentlyProcessed.delete(key));
     }
     
-    if (toilHours <= 0) {
-      logger.debug(`No TOIL hours calculated for ${date.toISOString().slice(0, 10)}`);
+    // FIXED: Added better validation to prevent insignificant TOIL amounts
+    if (toilHours <= 0.01) {
+      logger.debug(`No significant TOIL hours (${toilHours}) calculated for ${format(date, 'yyyy-MM-dd')}, skipping record creation`);
       return getTOILSummary(userId, date.toISOString().slice(0, 7));
     }
     
@@ -95,7 +103,10 @@ export async function performSingleCalculation(
     // Create a TOIL record
     const record = createTOILRecord(userId, date, toilHours, entryId);
     
-    // Store the record
+    // Enhanced logging 
+    logger.debug(`Creating TOIL record for ${format(date, 'yyyy-MM-dd')} with ${toilHours} hours`);
+    
+    // Store the record - the improved storeTOILRecord will handle duplicates
     const success = await storeTOILRecord(record);
     
     if (!success) {

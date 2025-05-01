@@ -148,20 +148,26 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
       // Get existing records
       const records = loadTOILRecords();
       
-      // Check for duplicate
-      const existingIndex = records.findIndex(r => 
-        r.userId === record.userId && 
-        format(r.date, 'yyyy-MM-dd') === format(record.date, 'yyyy-MM-dd')
-      );
+      // Improved check for duplicate - use exact date comparison
+      const recordDateStr = format(new Date(record.date), 'yyyy-MM-dd');
+      
+      // Log for debugging
+      logger.debug(`Checking for existing TOIL record: userId=${record.userId}, date=${recordDateStr}`);
+      
+      // Find any existing record for this user and exact date
+      const existingIndex = records.findIndex(r => {
+        const existingDateStr = format(new Date(r.date), 'yyyy-MM-dd');
+        return r.userId === record.userId && existingDateStr === recordDateStr;
+      });
       
       if (existingIndex >= 0) {
-        // Update existing record
+        // Found existing record - update it
+        logger.debug(`Found existing TOIL record for ${recordDateStr}, updating it instead of creating new one`);
         records[existingIndex] = record;
-        logger.debug(`Updated existing TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
       } else {
-        // Add new record
+        // No existing record - add new one
         records.push(record);
-        logger.debug(`Added new TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+        logger.debug(`No existing TOIL record found for ${recordDateStr}, adding new one`);
       }
       
       // Save records
@@ -487,4 +493,107 @@ export async function deleteTOILRecordByEntryId(entryId: string, maxRetries = 3)
   }
   
   return success;
+}
+
+/**
+ * Clean up duplicate TOIL records for a user
+ * NEW FUNCTION: Detects and removes duplicate TOIL records
+ */
+export async function cleanupDuplicateTOILRecords(userId: string): Promise<number> {
+  try {
+    // Acquire lock for consistent state
+    await storageWriteLock.acquire();
+    
+    try {
+      // Load all records
+      const allRecords = loadTOILRecords();
+      
+      // Track unique dates and records
+      const uniqueDates = new Map<string, TOILRecord>();
+      let duplicatesRemoved = 0;
+      
+      // Find records for this user
+      const userRecords = allRecords.filter(r => r.userId === userId);
+      
+      // Process each record to find duplicates
+      userRecords.forEach(record => {
+        const dateKey = `${userId}-${format(new Date(record.date), 'yyyy-MM-dd')}`;
+        
+        if (!uniqueDates.has(dateKey)) {
+          // First record for this date, store it
+          uniqueDates.set(dateKey, record);
+        } else {
+          // Already have a record for this date
+          const existingRecord = uniqueDates.get(dateKey)!;
+          
+          // Replace only if this record has more recent ID
+          if (record.id > existingRecord.id) {
+            uniqueDates.set(dateKey, record);
+          }
+          
+          // Count as a duplicate
+          duplicatesRemoved++;
+        }
+      });
+      
+      // If we found duplicates, update storage
+      if (duplicatesRemoved > 0) {
+        // Keep records from other users
+        const otherUserRecords = allRecords.filter(r => r.userId !== userId);
+        
+        // Combine with unique records for this user
+        const cleanedRecords = [...otherUserRecords, ...uniqueDates.values()];
+        
+        // Save updated records
+        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(cleanedRecords));
+        
+        // Clear cache
+        clearSummaryCache(userId);
+        
+        logger.debug(`Cleaned up ${duplicatesRemoved} duplicate TOIL records for user ${userId}`);
+      } else {
+        logger.debug(`No duplicate TOIL records found for user ${userId}`);
+      }
+      
+      return duplicatesRemoved;
+    } finally {
+      // Release lock
+      storageWriteLock.release();
+    }
+  } catch (error) {
+    logger.error('Error cleaning up duplicate TOIL records:', error);
+    return 0;
+  }
+}
+
+/**
+ * Reset all TOIL data for a user
+ * NEW FUNCTION: Utility to reset a user's TOIL data if needed
+ */
+export function resetUserTOILData(userId: string): void {
+  try {
+    if (!userId) {
+      logger.error('Cannot reset TOIL data: missing userId');
+      return;
+    }
+    
+    // Load existing data
+    const allRecords = loadTOILRecords();
+    const allUsage = loadTOILUsage();
+    
+    // Filter out this user's records
+    const filteredRecords = allRecords.filter(r => r.userId !== userId);
+    const filteredUsage = allUsage.filter(u => u.userId !== userId);
+    
+    // Save filtered data
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+    localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsage));
+    
+    // Clear caches
+    clearSummaryCache(userId);
+    
+    logger.debug(`Reset all TOIL data for user ${userId}`);
+  } catch (error) {
+    logger.error('Error resetting TOIL data:', error);
+  }
 }

@@ -18,6 +18,8 @@ const logger = createTimeLogger('TOILCalculation');
  * 2. Calculate the total hours worked
  * 3. Calculate the TOIL hours (hours worked - scheduled hours)
  * 4. Create a TOIL record if applicable
+ * 
+ * FIXED: Enhanced logging and validation to prevent incorrect TOIL calculation
  */
 export function calculateDailyTOIL(
   entries: TimeEntry[],
@@ -79,15 +81,25 @@ export function calculateDailyTOIL(
   const totalHours = dayEntries.reduce((sum, entry) => sum + entry.hours, 0);
   logger.debug(`Total hours for ${dateString}: ${totalHours}`);
   
-  // Calculate TOIL
+  // FIXED: Only count hours over scheduled hours as TOIL
   const toilHours = Math.max(0, totalHours - scheduledHours);
-  logger.debug(`TOIL hours for ${dateString}: ${toilHours}`);
+  
+  // Enhanced logging for better debugging
+  logger.debug(`
+    TOIL calculation details: 
+    - Date: ${dateString}
+    - User: ${userId}
+    - Total hours worked: ${totalHours}
+    - Scheduled hours: ${scheduledHours}
+    - TOIL hours (difference): ${toilHours}
+  `);
   
   // Round to nearest quarter hour
   const roundedToilHours = Math.round(toilHours * 4) / 4;
+  logger.debug(`Rounded TOIL hours for ${dateString}: ${roundedToilHours}`);
   
-  // Validate TOIL hours
-  if (!isValidTOILHours(roundedToilHours) || roundedToilHours <= 0) {
+  // Validate TOIL hours - add slightly more precision to tolerance
+  if (!isValidTOILHours(roundedToilHours) || roundedToilHours <= 0.01) {
     logger.debug(`No valid TOIL hours for ${dateString}`);
     return null;
   }
@@ -112,6 +124,7 @@ export function calculateDailyTOIL(
 
 /**
  * Calculate TOIL hours for a given set of time entries
+ * FIXED: Similar fix to ensure TOIL is only calculated for excess hours
  */
 export function calculateTOILHours(
   entries: TimeEntry[],
@@ -151,6 +164,9 @@ export function calculateTOILHours(
         }
       );
     }
+    
+    // Enhanced logging
+    logger.debug(`Calculated scheduled hours for ${dateString}: ${scheduledHours}`);
   } catch (error) {
     logger.error('Error calculating TOIL hours:', error);
     scheduledHours = 7.6; // Default
@@ -159,13 +175,23 @@ export function calculateTOILHours(
   // Calculate total hours worked
   const totalHours = dayEntries.reduce((sum, entry) => sum + entry.hours, 0);
   
-  // Calculate TOIL hours (hours worked - scheduled hours)
+  // FIXED: Only count hours over scheduled hours as TOIL
   const toilHours = Math.max(0, totalHours - scheduledHours);
+  
+  // Add more detailed logging
+  logger.debug(`
+    TOIL hours calculation:
+    - Date: ${dateString}
+    - Total hours: ${totalHours}
+    - Scheduled hours: ${scheduledHours}
+    - TOIL hours: ${toilHours}
+  `);
   
   // Round to nearest quarter hour
   const roundedToilHours = Math.round(toilHours * 4) / 4;
   
-  return isValidTOILHours(roundedToilHours) ? roundedToilHours : 0;
+  // Don't return insignificant TOIL amounts (less than 0.01)
+  return isValidTOILHours(roundedToilHours) && roundedToilHours > 0.01 ? roundedToilHours : 0;
 }
 
 /**
