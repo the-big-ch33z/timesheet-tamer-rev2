@@ -246,7 +246,7 @@ export function clearTOILStorageForMonth(userId: string, monthYear: string): voi
   }
 }
 
-// NEW: Get TOIL records for a specific day
+// Get TOIL records for a specific day
 export function getTOILRecordsForDay(userId: string, date: Date): TOILRecord[] {
   try {
     const records = loadTOILRecords();
@@ -262,7 +262,7 @@ export function getTOILRecordsForDay(userId: string, date: Date): TOILRecord[] {
   }
 }
 
-// NEW: Check if a day has TOIL accrued or used
+// Check if a day has TOIL accrued or used
 export function hasTOILForDay(userId: string, date: Date): { 
   hasAccrued: boolean; 
   hasUsed: boolean;

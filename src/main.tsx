@@ -18,7 +18,12 @@ const mount = () => {
   }
 
   // Initialize seed data for first-time users
-  createSeedData();
+  try {
+    createSeedData();
+  } catch (error) {
+    console.error("Error initializing seed data:", error);
+    // Continue loading app even if seed data fails
+  }
   
   try {
     // Create root and render app
