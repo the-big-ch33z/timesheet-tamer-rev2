@@ -10,6 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { User, Team } from "@/types";
 import { useAuth } from "@/contexts/auth";
+import { Skeleton } from "@/components/ui/skeleton";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 
 type ScheduleEntry = {
   date: Date;
@@ -71,83 +73,97 @@ const generateScheduleData = (
   month: Date,
   includeArchived: boolean
 ): TeamWithMembers[] => {
-  // Get all days in the month
-  const monthStart = startOfMonth(month);
-  const monthEnd = endOfMonth(month);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  
-  // Helper function to select random status based on weights
-  const getRandomStatus = (): ScheduleEntry["status"] => {
-    const statusOptions: {value: ScheduleEntry["status"], weight: number}[] = [
-      { value: "Completed", weight: 20 },
-      { value: "RDO", weight: 3 },
-      { value: "PublicHoliday", weight: 1 },
-      { value: "Sick", weight: 2 },
-      { value: "TOIL", weight: 2 },
-      { value: "None", weight: 5 }
-    ];
+  try {
+    // Get all days in the month
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    const totalWeight = statusOptions.reduce((acc, option) => acc + option.weight, 0);
-    let random = Math.random() * totalWeight;
-    
-    for (const option of statusOptions) {
-      if (random < option.weight) return option.value;
-      random -= option.weight;
-    }
-    
-    return "None";
-  };
-  
-  // Generate team data with members and their schedules
-  return teams.map(team => {
-    // Get real team members from auth context
-    const teamMembers = getUsersByTeam(team.id);
-    
-    // Filter members based on status if needed
-    const filteredMembers = includeArchived 
-      ? teamMembers 
-      : teamMembers.filter(member => member.status !== "archived");
-    
-    const membersWithSchedules: MemberSchedule[] = filteredMembers.map(member => {
-      // Generate schedule for this member
-      const schedule: Record<string, ScheduleEntry> = {};
+    // Helper function to select random status based on weights
+    const getRandomStatus = (): ScheduleEntry["status"] => {
+      const statusOptions: {value: ScheduleEntry["status"], weight: number}[] = [
+        { value: "Completed", weight: 20 },
+        { value: "RDO", weight: 3 },
+        { value: "PublicHoliday", weight: 1 },
+        { value: "Sick", weight: 2 },
+        { value: "TOIL", weight: 2 },
+        { value: "None", weight: 5 }
+      ];
       
-      daysInMonth.forEach(day => {
-        // Weekend days more likely to be empty
-        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-        const dateKey = format(day, "yyyy-MM-dd");
-
-        // Public holidays (let's say 1st and 25th are holidays)
-        const isHoliday = day.getDate() === 1 || day.getDate() === 25;
-
-        let status: ScheduleEntry["status"];
-        
-        if (isHoliday) {
-          status = "PublicHoliday";
-        } else if (isWeekend) {
-          status = Math.random() > 0.8 ? getRandomStatus() : "None";
-        } else {
-          status = getRandomStatus();
-        }
-        
-        schedule[dateKey] = {
-          date: day,
-          status,
-          details: `${status} on ${format(day, "MMM d")}`
-        };
-      });
+      const totalWeight = statusOptions.reduce((acc, option) => acc + option.weight, 0);
+      let random = Math.random() * totalWeight;
       
-      return {
-        member,
-        schedule
-      };
-    });
-    
-    return {
-      team,
-      members: membersWithSchedules
+      for (const option of statusOptions) {
+        if (random < option.weight) return option.value;
+        random -= option.weight;
+      }
+      
+      return "None";
     };
-  });
+    
+    // Generate team data with members and their schedules
+    return teams.map(team => {
+      try {
+        // Get real team members from auth context
+        const teamMembers = getUsersByTeam(team.id);
+        
+        // Filter members based on status if needed
+        const filteredMembers = includeArchived 
+          ? teamMembers 
+          : teamMembers.filter(member => member.status !== "archived");
+        
+        const membersWithSchedules: MemberSchedule[] = filteredMembers.map(member => {
+          // Generate schedule for this member
+          const schedule: Record<string, ScheduleEntry> = {};
+          
+          daysInMonth.forEach(day => {
+            // Weekend days more likely to be empty
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            const dateKey = format(day, "yyyy-MM-dd");
+
+            // Public holidays (let's say 1st and 25th are holidays)
+            const isHoliday = day.getDate() === 1 || day.getDate() === 25;
+
+            let status: ScheduleEntry["status"];
+            
+            if (isHoliday) {
+              status = "PublicHoliday";
+            } else if (isWeekend) {
+              status = Math.random() > 0.8 ? getRandomStatus() : "None";
+            } else {
+              status = getRandomStatus();
+            }
+            
+            schedule[dateKey] = {
+              date: day,
+              status,
+              details: `${status} on ${format(day, "MMM d")}`
+            };
+          });
+          
+          return {
+            member,
+            schedule
+          };
+        });
+        
+        return {
+          team,
+          members: membersWithSchedules
+        };
+      } catch (err) {
+        console.error(`Error processing team ${team.id}:`, err);
+        // Return team with empty members as fallback
+        return {
+          team,
+          members: []
+        };
+      }
+    });
+  } catch (err) {
+    console.error("Error in generateScheduleData:", err);
+    return [];
+  }
 };
 
 const MonthNavigationHeader = ({ 
@@ -314,12 +330,65 @@ const TeamSection: React.FC<TeamSectionProps> = ({ teamWithMembers, daysInMonth,
   );
 };
 
+// Loading state component for the calendar
+const CalendarLoadingState = () => (
+  <div>
+    <div className="flex justify-between items-center mb-6">
+      <Skeleton className="h-10 w-40" />
+      <div className="flex items-center space-x-2">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-8 w-32" />
+      </div>
+      <div className="flex items-center space-x-4">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+    </div>
+    
+    <Skeleton className="h-8 w-full mb-6" />
+    
+    <Card>
+      <CardContent className="p-6">
+        <div className="space-y-6">
+          {[1, 2].map((teamIndex) => (
+            <div key={teamIndex} className="space-y-4">
+              <Skeleton className="h-6 w-48" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((memberIndex) => (
+                  <Skeleton key={memberIndex} className="h-16 w-full" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+// Error fallback component
+const CalendarErrorFallback = ({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) => (
+  <Card className="p-6 text-center">
+    <h2 className="text-xl font-medium mb-4 text-red-600">Calendar Error</h2>
+    <p className="mb-4">There was a problem loading the team calendar.</p>
+    <p className="text-sm text-gray-600 mb-4">{error.message}</p>
+    <Button onClick={resetErrorBoundary}>Try Again</Button>
+  </Card>
+);
+
 const TeamCalendar = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showArchived, setShowArchived] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { teams, getUsersByTeam, isAuthenticated } = useAuth();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  
+  // Set loading to false after initial render
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
   
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -331,9 +400,35 @@ const TeamCalendar = () => {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   
   // Generate schedule data from actual teams/members in auth context
-  const teamsWithSchedules = useMemo(() => 
-    generateScheduleData(teams, getUsersByTeam, currentMonth, showArchived),
-  [teams, getUsersByTeam, currentMonth, showArchived]);
+  // Use defensive programming to handle potential errors
+  const teamsWithSchedules = useMemo(() => {
+    try {
+      if (!teams || teams.length === 0) {
+        console.log("No teams available");
+        return [];
+      }
+      
+      if (!getUsersByTeam) {
+        console.error("getUsersByTeam function not available");
+        return [];
+      }
+      
+      return generateScheduleData(teams, getUsersByTeam, currentMonth, showArchived);
+    } catch (error) {
+      console.error("Error generating schedule data:", error);
+      return [];
+    }
+  }, [teams, getUsersByTeam, currentMonth, showArchived]);
+
+  // If authentication is still loading, show loading state
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold text-brand-800 mb-6">Team Monthly Calendar</h1>
+        <CalendarLoadingState />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -347,7 +442,7 @@ const TeamCalendar = () => {
     );
   }
 
-  if (teams.length === 0) {
+  if (!teams || teams.length === 0) {
     return (
       <div className="container py-8">
         <h1 className="text-3xl font-bold text-brand-800 mb-6">Team Monthly Calendar</h1>
@@ -401,14 +496,20 @@ const TeamCalendar = () => {
               </div>
               
               {/* Teams and members */}
-              {teamsWithSchedules.map((teamData) => (
-                <TeamSection 
-                  key={teamData.team.id}
-                  teamWithMembers={teamData}
-                  daysInMonth={daysInMonth}
-                  today={today}
-                />
-              ))}
+              {teamsWithSchedules.length > 0 ? (
+                teamsWithSchedules.map((teamData) => (
+                  <TeamSection 
+                    key={teamData.team.id}
+                    teamWithMembers={teamData}
+                    daysInMonth={daysInMonth}
+                    today={today}
+                  />
+                ))
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">No team data available to display</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </CardContent>
@@ -417,4 +518,11 @@ const TeamCalendar = () => {
   );
 };
 
-export default TeamCalendar;
+// Wrap the component in an error boundary to catch rendering errors
+const TeamCalendarWithErrorBoundary = () => (
+  <ErrorBoundary fallbackComponent={CalendarErrorFallback}>
+    <TeamCalendar />
+  </ErrorBoundary>
+);
+
+export default TeamCalendarWithErrorBoundary;

@@ -5,6 +5,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "./ErrorFallback";
+import AppStateRecovery from "@/utils/error/errorRecovery";
 
 const logger = createTimeLogger('GlobalErrorBoundary');
 
@@ -50,8 +51,11 @@ class GlobalErrorBoundary extends Component<Props, State> {
       logger.error("GlobalErrorBoundary caught an error", error, errorInfo);
       this.lastErrorTime = now;
       
-      // Here we could report to an error monitoring service with throttling
-      // But we'll avoid adding a dependency on Sentry directly
+      // Attempt recovery for certain error patterns
+      if (this.shouldAttemptRecovery(error)) {
+        logger.info("Attempting automatic recovery...");
+        AppStateRecovery.attemptRecovery();
+      }
     } else {
       logger.debug("Suppressed duplicate error report");
     }
@@ -62,6 +66,23 @@ class GlobalErrorBoundary extends Component<Props, State> {
     }));
   }
 
+  // Check if error type indicates we should try recovery
+  shouldAttemptRecovery(error: Error): boolean {
+    const errorMessage = error.message.toLowerCase();
+    
+    // Look for indicators of state inconsistency
+    const stateIssueIndicators = [
+      'undefined is not an object',
+      'cannot read property',
+      'null is not an object',
+      'is not a function',
+      'is not iterable',
+      'is not defined'
+    ];
+    
+    return stateIssueIndicators.some(indicator => errorMessage.includes(indicator));
+  }
+
   resetErrorBoundary = (): void => {
     this.setState({ 
       hasError: false, 
@@ -69,6 +90,19 @@ class GlobalErrorBoundary extends Component<Props, State> {
       errorInfo: undefined,
       errorCount: 0
     });
+  };
+
+  // Perform advanced recovery with page reload
+  handleDeepRecovery = (): void => {
+    // Clear any problematic state
+    AppStateRecovery.attemptRecovery();
+    
+    // If we haven't already attempted a reload, try reloading the page
+    if (!AppStateRecovery.hasRecentlyReloaded()) {
+      AppStateRecovery.forceReload();
+    } else {
+      alert("Multiple reload attempts detected. Please try clearing your browser cache and reloading the page manually.");
+    }
   };
 
   render(): ReactNode {
@@ -82,6 +116,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
         <ErrorFallback 
           error={this.state.error}
           resetErrorBoundary={this.resetErrorBoundary}
+          deepRecovery={this.handleDeepRecovery}
           errorCount={this.state.errorCount}
         />
       );

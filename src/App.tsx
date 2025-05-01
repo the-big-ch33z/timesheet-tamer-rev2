@@ -28,13 +28,83 @@ const LoadingFallback = () => (
   </div>
 );
 
+// Global app state tracking
+const globalAppState = {
+  isInitialized: false,
+  loadingStartTime: Date.now(),
+  hasErrors: false
+};
+
 function App() {
-  // Initialize services on app start
+  const [isAppReady, setIsAppReady] = React.useState(false);
+  
+  // Initialize services and monitor app state on startup
   React.useEffect(() => {
-    initializeService().catch(error => 
-      console.error("Failed to initialize services:", error)
-    );
+    const initializeApp = async () => {
+      try {
+        // Check for stored auth data
+        const storedUser = localStorage.getItem('currentUser');
+        const storedTeams = localStorage.getItem('teams');
+        
+        // Validate the stored data - this helps catch corrupted localStorage issues
+        if (storedUser) {
+          try {
+            JSON.parse(storedUser);
+          } catch (e) {
+            console.warn("Corrupted user data detected, clearing...");
+            localStorage.removeItem('currentUser');
+          }
+        }
+        
+        if (storedTeams) {
+          try {
+            JSON.parse(storedTeams);
+          } catch (e) {
+            console.warn("Corrupted teams data detected, clearing...");
+            localStorage.removeItem('teams');
+          }
+        }
+        
+        // Initialize core services
+        await initializeService();
+        
+        // Mark app as initialized
+        globalAppState.isInitialized = true;
+        setIsAppReady(true);
+      } catch (error) {
+        console.error("Failed to initialize application:", error);
+        globalAppState.hasErrors = true;
+        
+        // Still mark app as ready so we can show error UI
+        setIsAppReady(true);
+      }
+    };
+    
+    // Start initialization
+    initializeApp();
+    
+    // Set up error monitoring
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+      globalAppState.hasErrors = true;
+      originalConsoleError.apply(this, args);
+    };
+    
+    // Cleanup
+    return () => {
+      console.error = originalConsoleError;
+    };
   }, []);
+
+  // Show a loading indicator while the app initializes
+  if (!isAppReady) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Loading application...</p>
+      </div>
+    );
+  }
 
   return (
     <GlobalErrorBoundary>

@@ -8,12 +8,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 interface ErrorFallbackProps {
   error?: Error;
   resetErrorBoundary: () => void;
+  deepRecovery?: () => void;
   errorCount?: number;
 }
 
 const ErrorFallback: React.FC<ErrorFallbackProps> = ({ 
   error, 
   resetErrorBoundary,
+  deepRecovery,
   errorCount = 1
 }) => {
   // Determine if we should show a simple or full error UI
@@ -39,18 +41,22 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
   
   // Handle a full reset (clears storage and reloads page)
   const handleFullReset = () => {
-    try {
-      // Don't clear all localStorage as that could lose user data
-      // Just clear entries that might be causing problems
-      localStorage.removeItem('time-entries-cache');
-      localStorage.removeItem('time-entries-cache-timestamp');
-      localStorage.removeItem('error-state');
-    } catch (e) {
-      console.error("Error during storage cleanup:", e);
+    if (deepRecovery) {
+      deepRecovery();
+    } else {
+      try {
+        // Don't clear all localStorage as that could lose user data
+        // Just clear entries that might be causing problems
+        localStorage.removeItem('time-entries-cache');
+        localStorage.removeItem('time-entries-cache-timestamp');
+        localStorage.removeItem('error-state');
+      } catch (e) {
+        console.error("Error during storage cleanup:", e);
+      }
+      
+      // Force reload the page
+      window.location.reload();
     }
-    
-    // Force reload the page
-    window.location.reload();
   };
 
   if (!showFullError) {
@@ -61,13 +67,18 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
           <CardHeader>
             <CardTitle className="flex items-center text-red-600">
               <AlertTriangle className="mr-2 h-5 w-5" />
-              Something went wrong
+              Application Error
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-700">
               We encountered a problem loading this content. Reloading the page might help resolve this issue.
             </p>
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 rounded text-xs text-red-800">
+                Error: {error.message}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex justify-end space-x-2">
             <Button 
@@ -81,7 +92,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
               onClick={handleFullReset}
             >
               <RefreshCw className="mr-2 h-4 w-4" />
-              Reload Page
+              Deep Recovery
             </Button>
           </CardFooter>
         </Card>
