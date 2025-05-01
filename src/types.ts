@@ -26,6 +26,8 @@ export interface TimeEntry {
   taskNumber?: string;
   rego?: string;
   project: string;
+  synthetic?: boolean; // Added synthetic property that was missing
+  entryType?: string;  // Also adding entryType which appears in the code
 }
 
 export interface Client {
