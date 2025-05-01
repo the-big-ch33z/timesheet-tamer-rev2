@@ -89,7 +89,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       const hasSickEntry = entries.some(entry => entry.jobNumber === "SICK");
       const hasToilEntry = entries.some(entry => entry.jobNumber === "TOIL-USED");
 
-      const { isComplete } = calculateCompletion(entries, startTime, endTime, 0.01);
+      // Calculate completion status for each day
+      const completion = calculateCompletion(entries, startTime, endTime, 0.01);
+      // Fix: Set isComplete properly based on the completion calculation
+      const isComplete = entries.length > 0 && completion.isComplete;
 
       const dateKey = day.toISOString().split('T')[0];
       const isShiftedRDOTarget = shiftedRDOMap.has(dateKey);

@@ -88,8 +88,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       return scheduledHours;
     }
     
-    // If we have entered entries, use their sum, otherwise show 0
-    // This is the key fix - we now return 0 instead of calculatedTimeHours when there are no entries
+    // Use entered hours if we have entries, otherwise 0
     return hasEntries ? Math.round(totalEnteredHours * 4) / 4 : 0;
   }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, hasEntries]);
 
@@ -103,6 +102,23 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     entries.length
   );
 
+  // Fix: Make sure we're reporting completion status consistently
+  const isActuallyComplete = useMemo(() => {
+    if (!hasEntries) return false;
+    
+    if (actionStates.leave || actionStates.sick) {
+      // Leave days are always considered complete if they have entries
+      return true;
+    }
+    
+    // Round values to avoid floating point comparison issues
+    const roundedTotal = Math.round(totalEnteredHours * 4) / 4;
+    const roundedScheduled = Math.round(scheduledHours * 4) / 4;
+    
+    // Use tighter tolerance for comparison (0.01 hours = 36 seconds)
+    return Math.abs(roundedTotal - roundedScheduled) <= 0.01;
+  }, [totalEnteredHours, scheduledHours, hasEntries, actionStates.leave, actionStates.sick]);
+
   return (
     <div className="flex w-full">
       <div className="flex-1">
@@ -113,7 +129,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
           calculatedTimeHours={calculatedTimeHours}
           hasEntries={hasEntries}
           interactive={interactive}
-          isActuallyComplete={isComplete && hasEntries} // Only consider complete if there are entries
+          isActuallyComplete={isActuallyComplete}
           hoursVariance={hoursVariance}
           isUndertime={isUndertime}
           breakConfig={breakConfigState}

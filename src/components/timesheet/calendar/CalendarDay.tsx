@@ -82,6 +82,14 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
 
   // Memoize completion status calculation with tighter tolerance
   const completionStatus = useMemo(() => {
+    // Important fix: If the day is marked as complete from parent, use that directly
+    if (isComplete && hasEntries) {
+      return {
+        status: "match" as const,
+        completion: { isComplete: true },
+      };
+    }
+    
     if (!safeEntries.length || !expectedStartTime || !expectedEndTime) {
       return {
         status: "none" as const,
@@ -98,7 +106,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       : ("none" as const);
 
     return { status, completion };
-  }, [safeEntries, expectedStartTime, expectedEndTime, hasEntries]);
+  }, [safeEntries, expectedStartTime, expectedEndTime, hasEntries, isComplete]);
 
   // Determine background color based on entry types
   const backgroundColor = useMemo(() => {
@@ -120,8 +128,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       holidayInfo.isHoliday && "bg-amber-50",
       isRDO && !isShiftedRDO && RDO_BG + " " + RDO_BORDER,
       isShiftedRDO && SHIFTED_RDO_BG + " " + SHIFTED_RDO_BORDER,
-      hasEntries && !isComplete && "border-yellow-200",
-      hasEntries && isComplete && "border-green-200",
+      hasEntries && !completionStatus.status.includes("match") && "border-yellow-200",
+      hasEntries && completionStatus.status === "match" && "border-green-200",
       !isWorkDay && "cursor-default",
       isLeaveDay && "border-blue-200",
       isSickDay && "border-red-200",
@@ -135,7 +143,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     isRDO,
     isShiftedRDO,
     hasEntries,
-    isComplete,
+    completionStatus.status,
     isWorkDay,
     isLeaveDay,
     isSickDay,
@@ -177,7 +185,9 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 </span>
               )}
               {completionStatus.status === "none" && isComplete && hasEntries && (
-                <Check size={17} color="#22c55e" strokeWidth={2.4} className="opacity-50" />
+                <span className="absolute top-1.5 right-2">
+                  <Check size={17} color="#22c55e" strokeWidth={2.4} />
+                </span>
               )}
             </div>
 

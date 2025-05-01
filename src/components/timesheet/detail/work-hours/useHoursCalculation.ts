@@ -38,10 +38,12 @@ export const useHoursCalculation = (
     
     const targetHours = scheduledHours;
     const actualHours = hasEntries ? effectiveHours : 0; // Use 0 if no entries
+    
+    // Use a tighter tolerance (0.01 hours = 36 seconds) to match calculation in completionUtils
     const variance = Math.abs(roundToQuarter(actualHours) - targetHours);
     
     return variance <= 0.01;
-  }, [calculatedTimeHours, scheduledHours, hasEntries, startTime, endTime, effectiveHours]);
+  }, [scheduledHours, hasEntries, startTime, endTime, effectiveHours]);
 
   // Check if hours exceed scheduled hours - only relevant if there are entries
   const isOverScheduled = hasEntries && effectiveHours > scheduledHours + 0.01;
