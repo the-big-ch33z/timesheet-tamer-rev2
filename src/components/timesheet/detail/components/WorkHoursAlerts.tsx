@@ -22,9 +22,12 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   date,
   isComplete = false
 }) => {
-  // Don't show warning when the hours are very close (within 0.1)
-  const shouldShowUndertime = isUndertime && Math.abs(hoursVariance) > 0.1;
-  const shouldShowOvertime = !isUndertime && !isComplete && Math.abs(hoursVariance) > 0.1;
+  // Round variance to nearest quarter hour for display
+  const roundedVariance = Math.round(Math.abs(hoursVariance) * 4) / 4;
+  
+  // Don't show warning when the hours are very close (within 0.01)
+  const shouldShowUndertime = isUndertime && Math.abs(hoursVariance) > 0.01 && !isComplete;
+  const shouldShowOvertime = !isUndertime && !isComplete && Math.abs(hoursVariance) > 0.01;
 
   return <>
       {hasEntries && isComplete && <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
@@ -34,17 +37,17 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
           </AlertDescription>
         </Alert>}
 
-      {hasEntries && shouldShowUndertime && !isComplete && <Alert variant="destructive" className="mt-2 border-red-200 text-red-800 px-[26px] my-0 mx-0 bg-orange-100">
+      {hasEntries && shouldShowUndertime && <Alert variant="destructive" className="mt-2 border-red-200 text-red-800 px-[26px] my-0 mx-0 bg-orange-100">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>
-            Hours don't match daily entries (under by {Math.abs(hoursVariance).toFixed(1)} hrs)
+            Hours don't match daily entries (under by {roundedVariance.toFixed(2)} hrs)
           </AlertDescription>
         </Alert>}
 
       {hasEntries && shouldShowOvertime && <Alert variant="destructive" className="mt-2 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
           <AlertTriangle className="h-4 w-4 mr-2" />
           <AlertDescription>
-            Hours exceed daily entries (over by {Math.abs(hoursVariance).toFixed(1)} hrs)
+            Hours exceed daily entries (over by {roundedVariance.toFixed(2)} hrs)
           </AlertDescription>
         </Alert>}
       

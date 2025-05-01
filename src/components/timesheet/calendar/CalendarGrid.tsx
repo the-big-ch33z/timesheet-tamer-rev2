@@ -20,6 +20,7 @@ import { useLogger } from "@/hooks/useLogger";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 import { getShiftedRDOsForMonth } from "@/utils/time/rdoDisplay";
+import { hasTOILForDay } from "@/utils/time/services/toil/storage";
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -109,6 +110,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         shiftReason = shiftedInfo.reason;
       }
 
+      // NEW: Check for TOIL records for this day
+      const toilInfo = hasTOILForDay(userId, day);
+
       calculatedData.push({
         day,
         isCurrentMonth: true,
@@ -127,7 +131,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         shiftReason,
         isLeaveDay: hasLeaveEntry,
         isSickDay: hasSickEntry,
-        isToilDay: hasToilEntry
+        isToilDay: hasToilEntry,
+        // Add TOIL status
+        hasTOILAccrued: toilInfo.hasAccrued,
+        hasTOILUsed: toilInfo.hasUsed,
+        toilHours: toilInfo.toilHours
       });
     }
     
@@ -141,7 +149,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
     currentMonth,
     shiftedRDOMap,
     DEBUG_CALENDAR,
-    logger
+    logger,
+    userId // Added userId to dependencies
   ]);
 
   return (

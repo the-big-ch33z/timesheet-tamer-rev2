@@ -11,7 +11,8 @@ import { toDate } from "@/utils/date/dateConversions";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 
 // Color constants
-const COMPLETION_BG = "#F2FCE2";
+const COMPLETION_BG = "#F2FCE2";  // Light green for normal completion
+const COMPLETION_TOIL_BG = "#E2F5D2";  // Slightly darker green for days with TOIL
 const INCOMPLETE_BG = "#FEF7CD";
 const ANNUAL_LEAVE_BG = "#D3E4FD";  // Soft blue
 const SICK_LEAVE_BG = "#fff6f6";    // Light red background
@@ -25,8 +26,8 @@ const SHIFTED_RDO_TEXT = "text-blue-900";
 
 interface CalendarDayProps {
   day: Date;
-  entries?: TimeEntry[];  // Made optional to fix the TypeScript error
-  isSelected?: boolean;   // Made optional to fix the TypeScript error
+  entries?: TimeEntry[];
+  isSelected?: boolean;
   isToday?: boolean;
   onClick: (day: Date) => void;
   isComplete?: boolean;
@@ -42,6 +43,10 @@ interface CalendarDayProps {
   isLeaveDay?: boolean;
   isSickDay?: boolean;
   isToilDay?: boolean;
+  // Add new properties for TOIL visualization
+  hasTOILAccrued?: boolean;
+  hasTOILUsed?: boolean;
+  toilHours?: number;
 }
 
 const CalendarDay: React.FC<CalendarDayProps> = ({
@@ -62,7 +67,11 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   shiftReason = null,
   isLeaveDay = false,
   isSickDay = false,
-  isToilDay = false
+  isToilDay = false,
+  // New props with defaults
+  hasTOILAccrued = false,
+  hasTOILUsed = false,
+  toilHours = 0
 }) => {
   const safeEntries = Array.isArray(entries) ? entries : [];
   const hasEntries = safeEntries.length > 0;
@@ -108,15 +117,18 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     return { status, completion };
   }, [safeEntries, expectedStartTime, expectedEndTime, hasEntries, isComplete]);
 
-  // Determine background color based on entry types
+  // Determine background color based on entry types and TOIL status
   const backgroundColor = useMemo(() => {
     if (isLeaveDay) return ANNUAL_LEAVE_BG;
     if (isSickDay) return SICK_LEAVE_BG;
     if (isToilDay) return TOIL_BG;
-    if (completionStatus.status === "match") return COMPLETION_BG;
+    if (completionStatus.status === "match") {
+      // Use darker green for completed days with TOIL accrued
+      return hasTOILAccrued ? COMPLETION_TOIL_BG : COMPLETION_BG;
+    }
     if (completionStatus.status === "nomatch") return INCOMPLETE_BG;
     return undefined;
-  }, [isLeaveDay, isSickDay, isToilDay, completionStatus.status]);
+  }, [isLeaveDay, isSickDay, isToilDay, completionStatus.status, hasTOILAccrued]);
 
   // Memoize className construction to prevent recalculation
   const dayClassName = useMemo(() => {
@@ -133,7 +145,9 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
       !isWorkDay && "cursor-default",
       isLeaveDay && "border-blue-200",
       isSickDay && "border-red-200",
-      isToilDay && "border-purple-200"
+      isToilDay && "border-purple-200",
+      // Add purple bottom border for days with TOIL accrued
+      hasTOILAccrued && "border-b-purple-300 border-b-2"
     );
   }, [
     isSelected,
@@ -147,7 +161,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     isWorkDay,
     isLeaveDay,
     isSickDay,
-    isToilDay
+    isToilDay,
+    hasTOILAccrued
   ]);
 
   // If we don't have a valid date, render a placeholder with an error state
@@ -229,6 +244,13 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
                 TOIL
               </Badge>
             )}
+            
+            {/* Add badge for days with TOIL accrued */}
+            {hasTOILAccrued && !isToilDay && (
+              <Badge variant="outline" className="mt-1 text-xs border-purple-200 text-purple-700">
+                +{toilHours.toFixed(2)} TOIL
+              </Badge>
+            )}
           </button>
         </TooltipTrigger>
         <TooltipContent>
@@ -275,6 +297,19 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               {isToilDay && <span className="text-purple-800">TOIL Day</span>}
             </div>
           )}
+          
+          {/* Add TOIL info to tooltip */}
+          {hasTOILAccrued && (
+            <div className="flex flex-col gap-1 mt-2 text-purple-800">
+              <span>TOIL accrued: {toilHours.toFixed(2)} hours</span>
+            </div>
+          )}
+          
+          {hasTOILUsed && (
+            <div className="flex flex-col gap-1 mt-2 text-purple-800">
+              <span>TOIL used on this day</span>
+            </div>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -297,7 +332,10 @@ function calendarDayPropsAreEqual(prevProps: CalendarDayProps, nextProps: Calend
       prevProps.shiftReason !== nextProps.shiftReason ||
       prevProps.isLeaveDay !== nextProps.isLeaveDay ||
       prevProps.isSickDay !== nextProps.isSickDay ||
-      prevProps.isToilDay !== nextProps.isToilDay) {
+      prevProps.isToilDay !== nextProps.isToilDay ||
+      prevProps.hasTOILAccrued !== nextProps.hasTOILAccrued ||
+      prevProps.hasTOILUsed !== nextProps.hasTOILUsed ||
+      prevProps.toilHours !== nextProps.toilHours) {
     return false;
   }
   

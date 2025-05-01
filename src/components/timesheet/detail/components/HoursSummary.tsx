@@ -36,17 +36,20 @@ const getStatusDisplay = (
     };
   }
 
+  // Round variance to nearest 0.25
+  const roundedVariance = Math.round(Math.abs(hoursVariance || 0) * 4) / 4;
+
   if (isUndertime && typeof hoursVariance === "number") {
     return {
-      text: `${Math.abs(hoursVariance).toFixed(1)} hours under`,
+      text: `${roundedVariance.toFixed(2)} hours under`,
       icon: <AlertTriangle className="w-4 h-4 mr-1 text-amber-500" />,
       color: "text-amber-700"
     };
   }
 
-  if (typeof hoursVariance === "number" && hoursVariance > 0.1) {
+  if (typeof hoursVariance === "number" && hoursVariance > 0.01) {
     return {
-      text: `${Math.abs(hoursVariance).toFixed(1)} hours over`,
+      text: `${roundedVariance.toFixed(2)} hours over`,
       icon: <Info className="w-4 h-4 mr-1 text-blue-500" />,
       color: "text-blue-700"
     };
@@ -57,6 +60,7 @@ const getStatusDisplay = (
 
 /**
  * HOURS SUMMARY: Now also shows overall progress, entered/scheduled fraction, and status
+ * Updated with better quarter-hour rounding
  */
 export const HoursSummary: React.FC<HoursSummaryProps> = ({
   totalHours,
@@ -67,9 +71,13 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
   hoursVariance = 0,
   isUndertime = false
 }) => {
+  // Round totalHours and calculatedHours to nearest quarter hour for display
+  const roundedTotal = Math.round(totalHours * 4) / 4;
+  const roundedCalculated = Math.round(calculatedHours * 4) / 4;
+  
   const percent =
-    calculatedHours > 0
-      ? Math.min(100, Math.round((totalHours / calculatedHours) * 100))
+    roundedCalculated > 0
+      ? Math.min(100, Math.round((roundedTotal / roundedCalculated) * 100))
       : 0;
 
   const status = getStatusDisplay(isComplete, isUndertime, hoursVariance, hasEntries);
@@ -85,9 +93,9 @@ export const HoursSummary: React.FC<HoursSummaryProps> = ({
             "text-lg flex items-center font-bold",
             isComplete ? "text-green-600" : !hasEntries && "text-gray-400"
           )}>
-            {totalHours.toFixed(1)}
+            {roundedTotal.toFixed(2)}
             <span className="mx-1 text-gray-400 font-normal text-base">/</span>
-            <span className="text-gray-500 font-semibold">{calculatedHours.toFixed(1)}</span>
+            <span className="text-gray-500 font-semibold">{roundedCalculated.toFixed(2)}</span>
             <span className="ml-2 text-xs text-gray-500 font-normal">hours</span>
           </div>
           <div className={"mt-1 flex items-center text-xs " + status.color}>
