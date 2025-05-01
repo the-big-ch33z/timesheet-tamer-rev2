@@ -294,3 +294,62 @@ export function hasTOILForDay(userId: string, date: Date): {
     };
   }
 }
+
+/**
+ * Delete a TOIL record associated with a specific entry ID
+ * This is needed by the delete-operations.ts module
+ */
+export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolean> {
+  try {
+    if (!entryId) {
+      logger.error('No entry ID provided for TOIL record deletion');
+      return false;
+    }
+    
+    const allRecords = loadTOILRecords();
+    const recordIndex = allRecords.findIndex(record => record.entryId === entryId);
+    
+    if (recordIndex === -1) {
+      logger.debug(`No TOIL record found for entry ID ${entryId}`);
+      return false;
+    }
+    
+    // Store the user and month before deletion for cache clearing
+    const { userId, monthYear } = allRecords[recordIndex];
+    
+    // Remove the record
+    allRecords.splice(recordIndex, 1);
+    
+    // Save the updated records
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
+    
+    // Clear the summary cache
+    clearSummaryCache(userId, monthYear);
+    
+    logger.debug(`Deleted TOIL record for entry ID ${entryId}`);
+    return true;
+  } catch (error) {
+    logger.error('Error deleting TOIL record:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear all TOIL caches for all users
+ * This is used by the service.ts module
+ */
+export function clearAllTOILCaches(): void {
+  try {
+    // Find and remove all TOIL summary cache keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
+        localStorage.removeItem(key);
+      }
+    }
+    
+    logger.debug('All TOIL caches cleared');
+  } catch (error) {
+    logger.error('Error clearing all TOIL caches:', error);
+  }
+}
