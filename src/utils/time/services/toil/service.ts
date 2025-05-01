@@ -1,172 +1,303 @@
-
+import { 
+  TOILRecord, TOILSummary, TOILUsage 
+} from "@/types/toil";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
-import { TOILSummary, TOILUsage } from "@/types/toil";
-import { createTimeLogger } from '@/utils/time/errors';
-import { performSingleCalculation, hasRecentlyProcessed } from './batch-processing';
-import { PendingTOILCalculation } from './types';
+import { v4 as uuidv4 } from "uuid";
+import { format } from "date-fns";
+import { PendingTOILCalculation } from "./types";
+import { calculateTOILHours } from "./calculation";
 import { 
-  getTOILSummary, 
-  storeTOILUsage, 
-  clearAllTOILCaches 
-} from './storage';
-import { clearHolidayCache } from './holiday-utils';
-import { triggerTOILSave, dispatchTOILUpdate } from './events';
+  loadTOILRecords, 
+  loadTOILUsage,
+  clearSummaryCache,
+  TOIL_RECORDS_KEY,
+  TOIL_USAGE_KEY,
+  TOIL_SUMMARY_CACHE_KEY,
+} from "./storage";
+import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
+import { dispatchTOILEvent } from "./events";
+import { createTimeLogger } from "../../errors/timeLogger";
 
 const logger = createTimeLogger('TOILService');
 
-/**
- * Service to manage Time Off In Lieu (TOIL) records
- */
+// TOIL Service class for managing TOIL calculations and storage
 export class TOILService {
-  // Batch processing
-  private pendingCalculations: Map<string, PendingTOILCalculation> = new Map();
-  private calculationTimer: number | null = null;
-  private isProcessing = false;
+  private calculationQueueEnabled: boolean = true;
+  
+  constructor(calculationQueueEnabled: boolean = true) {
+    this.calculationQueueEnabled = calculationQueueEnabled;
+  }
+  
+  // Clear all TOIL-related caches
+  public clearCache(): void {
+    try {
+      localStorage.removeItem(TOIL_RECORDS_KEY);
+      localStorage.removeItem(TOIL_USAGE_KEY);
+      
+      // Clear all summary caches
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      logger.debug('TOIL cache cleared');
+    } catch (error) {
+      logger.error('Error clearing TOIL cache:', error);
+    }
+  }
 
-  /**
-   * Calculate and store TOIL accrual based on timesheet entries
-   */
+  // Calculate and store TOIL for a given day
   public async calculateAndStoreTOIL(
     entries: TimeEntry[],
     date: Date,
     userId: string,
-    workSchedule?: WorkSchedule,
-    holidays: Holiday[] = []
-  ) {
-    return new Promise<TOILSummary | null>((resolve) => {
-      if (!userId || !workSchedule || !entries?.length) {
-        // Even with no data, return the current month summary
-        const monthYear = date.toISOString().slice(0, 7);
-        resolve(getTOILSummary(userId, monthYear));
-        return;
-      }
-
-      // Always use month-year for consistent identification - ignore day component
-      const monthYear = date.toISOString().slice(0, 7);
-      const dateKey = `${userId}-${monthYear}`;
-      
-      if (hasRecentlyProcessed(userId, date)) {
-        // Return existing monthly summary if already processed recently
-        resolve(getTOILSummary(userId, monthYear));
-        return;
-      }
-
-      this.pendingCalculations.set(dateKey, {
-        userId,
-        date,
-        entries: [...entries],
-        workSchedule,
-        holidays,
-        resolve
-      });
-
-      this.scheduleBatchProcessing();
-    });
-  }
-
-  /**
-   * Record TOIL usage from a timesheet entry
-   */
-  public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
-    if (!entry || !entry.id || !entry.userId) {
-      logger.error('Invalid entry for TOIL usage');
-      return false;
-    }
-
+    workSchedule: WorkSchedule,
+    holidays: Holiday[]
+  ): Promise<TOILSummary | null> {
     try {
-      // Create a TOIL usage record from the entry
-      const usage: TOILUsage = {
-        id: entry.id,
-        userId: entry.userId,
-        date: entry.date instanceof Date ? entry.date : new Date(entry.date),
-        hours: entry.hours,
-        entryId: entry.id,
-        monthYear: entry.date instanceof Date ? 
-          entry.date.toISOString().slice(0, 7) : 
-          new Date(entry.date).toISOString().slice(0, 7)
+      if (!entries || entries.length === 0) {
+        logger.debug('No entries to calculate TOIL for');
+        return null;
+      }
+      
+      const monthYear = format(date, 'yyyy-MM');
+      
+      // Calculate TOIL hours
+      const toilHours = calculateTOILHours(entries, date, workSchedule, holidays);
+      
+      if (toilHours === 0) {
+        logger.debug('No TOIL hours calculated');
+        return this.getTOILSummary(userId, monthYear); // Return existing summary
+      }
+      
+      // Create a new TOIL record
+      const toilRecord: TOILRecord = {
+        id: uuidv4(),
+        userId: userId,
+        date: date,
+        hours: toilHours,
+        monthYear: monthYear,
+        entryId: entries[0].id, // Reference first entry for simplicity
+        status: 'active'
       };
       
-      // Store the usage record
-      const result = await storeTOILUsage(usage);
+      // Store the TOIL record
+      const stored = await this.storeTOILRecord(toilRecord);
       
-      if (result) {
-        logger.debug(`Recorded TOIL usage: ${entry.hours} hours (id=${entry.id})`);
-        // Trigger an update event to immediately update UI
-        dispatchTOILUpdate({
-          userId: entry.userId,
-          monthYear: usage.monthYear,
-          accrued: 0, // We don't know this yet but will be updated soon
-          used: entry.hours,
-          remaining: 0 // Will be updated when TOILSummary is refreshed
-        });
-        triggerTOILSave();
+      if (!stored) {
+        logger.error('Failed to store TOIL record');
+        return null;
       }
       
-      return result;
+      // Get updated summary
+      const summary = await this.getTOILSummary(userId, monthYear);
+      
+      // Dispatch TOIL update event
+      dispatchTOILEvent(summary);
+      
+      return summary;
+    } catch (error) {
+      logger.error('Error calculating and storing TOIL:', error);
+      return null;
+    }
+  }
+
+  // Get TOIL summary for a user and month
+  public getTOILSummary(userId: string, monthYear: string): TOILSummary | null {
+    try {
+      const records = loadTOILRecords();
+      const usages = loadTOILUsage();
+      
+      // Filter records and usages for the specified user and month
+      const userRecords = records.filter(record => record.userId === userId && record.monthYear === monthYear);
+      const userUsages = usages.filter(usage => usage.userId === userId && usage.monthYear === monthYear);
+      
+      // Calculate total accrued and used hours
+      const accrued = userRecords.reduce((sum, record) => sum + record.hours, 0);
+      const used = userUsages.reduce((sum, usage) => sum + usage.hours, 0);
+      const remaining = accrued - used;
+      
+      const summary: TOILSummary = {
+        userId: userId,
+        monthYear: monthYear,
+        accrued: accrued,
+        used: used,
+        remaining: remaining
+      };
+      
+      logger.debug(`TOIL summary for ${userId} - ${monthYear}:`, summary);
+      return summary;
+    } catch (error) {
+      logger.error('Error getting TOIL summary:', error);
+      return null;
+    }
+  }
+
+  // Store a TOIL record
+  private async storeTOILRecord(record: TOILRecord): Promise<boolean> {
+    try {
+      const records = loadTOILRecords();
+      
+      // Check for duplicate by date and userId
+      const existingIndex = records.findIndex(r => 
+        r.userId === record.userId && 
+        format(new Date(r.date), 'yyyy-MM-dd') === format(new Date(record.date), 'yyyy-MM-dd')
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing record
+        records[existingIndex] = record;
+        logger.debug(`Updated existing TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      } else {
+        // Add new record
+        records.push(record);
+        logger.debug(`Added new TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      }
+      
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
+      
+      // Clear the summary cache for this month
+      clearSummaryCache(record.userId, record.monthYear);
+      
+      return true;
+    } catch (error) {
+      logger.error('Error storing TOIL record:', error);
+      return false;
+    }
+  }
+
+  // Record TOIL usage
+  public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
+    try {
+      if (!entry) {
+        logger.error('No entry provided for TOIL usage');
+        return false;
+      }
+      
+      const usage: TOILUsage = {
+        id: uuidv4(),
+        userId: entry.userId,
+        date: entry.date,
+        hours: entry.hours,
+        entryId: entry.id,
+        monthYear: format(entry.date, 'yyyy-MM')
+      };
+      
+      const usages = loadTOILUsage();
+      usages.push(usage);
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usages));
+      
+      // Clear the summary cache for this month
+      clearSummaryCache(entry.userId, usage.monthYear);
+      
+      logger.debug(`Recorded TOIL usage for entry ${entry.id}`);
+      
+      // Get updated summary
+      const summary = await this.getTOILSummary(entry.userId, usage.monthYear);
+      
+      // Dispatch TOIL update event
+      dispatchTOILEvent(summary);
+      
+      return true;
     } catch (error) {
       logger.error('Error recording TOIL usage:', error);
       return false;
     }
   }
 
-  private scheduleBatchProcessing() {
-    if (this.calculationTimer !== null || this.isProcessing) return;
-    
-    this.calculationTimer = window.setTimeout(() => {
-      this.processPendingCalculations();
-    }, 100);
-  }
-
-  private async processPendingCalculations() {
-    if (this.isProcessing || this.pendingCalculations.size === 0) {
-      this.calculationTimer = null;
+  // Queue TOIL calculation
+  public queueCalculation(
+    userId: string,
+    date: Date,
+    entries: TimeEntry[],
+    workSchedule: WorkSchedule,
+    holidays: Holiday[],
+    resolve: (summary: TOILSummary | null) => void
+  ): void {
+    if (!this.calculationQueueEnabled) {
+      logger.warn('TOIL calculation queue is disabled, processing immediately');
+      this.processCalculation(userId, date, entries, workSchedule, holidays, resolve);
       return;
     }
-
-    try {
-      this.isProcessing = true;
-      const calculations = Array.from(this.pendingCalculations.values());
-      this.pendingCalculations.clear();
-      this.calculationTimer = null;
-
-      for (const calc of calculations) {
-        try {
-          const result = await performSingleCalculation(
-            calc.entries,
-            calc.date,
-            calc.userId,
-            calc.workSchedule,
-            calc.holidays
-          );
-
-          if (result) {
-            dispatchTOILUpdate(result);
-          }
-
-          calc.resolve(result);
-        } catch (error) {
-          logger.error('Error in TOIL calculation:', error);
-          calc.resolve(null);
-        }
-      }
-    } finally {
-      this.isProcessing = false;
-      if (this.pendingCalculations.size > 0) {
-        this.scheduleBatchProcessing();
-      }
-    }
+    
+    queueTOILCalculation({
+      userId,
+      date,
+      entries,
+      workSchedule,
+      holidays,
+      resolve
+    });
   }
 
-  public clearCache(): void {
-    clearHolidayCache();
-    clearAllTOILCaches();
-    logger.debug('All TOIL caches cleared');
+  // Process TOIL calculation immediately
+  private processCalculation(
+    userId: string,
+    date: Date,
+    entries: TimeEntry[],
+    workSchedule: WorkSchedule,
+    holidays: Holiday[],
+    resolve: (summary: TOILSummary | null) => void
+  ): void {
+    try {
+      const monthYear = format(date, 'yyyy-MM');
+      
+      // Calculate TOIL hours
+      const toilHours = calculateTOILHours(entries, date, workSchedule, holidays);
+      
+      if (toilHours === 0) {
+        logger.debug('No TOIL hours calculated');
+        resolve(this.getTOILSummary(userId, monthYear)); // Resolve with existing summary
+        return;
+      }
+      
+      // Create a new TOIL record
+      const toilRecord: TOILRecord = {
+        id: uuidv4(),
+        userId: userId,
+        date: date,
+        hours: toilHours,
+        monthYear: monthYear,
+        entryId: entries[0].id, // Reference first entry for simplicity
+        status: 'active'
+      };
+      
+      // Store the TOIL record
+      this.storeTOILRecord(toilRecord)
+        .then(stored => {
+          if (!stored) {
+            logger.error('Failed to store TOIL record');
+            resolve(null);
+            return;
+          }
+          
+          // Get updated summary
+          this.getTOILSummary(userId, monthYear);
+          
+          // Get updated summary
+          const summary = this.getTOILSummary(userId, monthYear);
+          
+          // Dispatch TOIL update event
+          dispatchTOILEvent(summary);
+          
+          resolve(summary);
+        })
+        .catch(error => {
+          logger.error('Error storing TOIL record:', error);
+          resolve(null);
+        });
+    } catch (error) {
+      logger.error('Error calculating and storing TOIL:', error);
+      resolve(null);
+    }
   }
 }
 
-// Export singleton instance
+// Export a singleton instance of the TOILService
 export const toilService = new TOILService();
 
-// Export constants for easier access
-export const TOIL_JOB_NUMBER = "TOIL";
+// Start processing the queue
+processTOILQueue();
