@@ -10,6 +10,7 @@ import {
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY
 } from './core';
+import { dispatchTOILEvent } from "../events";
 
 const logger = createTimeLogger('TOILRecordManagement');
 
@@ -50,7 +51,19 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
 export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
   try {
     const usages = loadTOILUsage();
-    usages.push(usage);
+    
+    // Check for existing usage for the same entry
+    const existingIndex = usages.findIndex(u => u.entryId === usage.entryId);
+    if (existingIndex >= 0) {
+      // Update existing usage
+      usages[existingIndex] = usage;
+      logger.debug(`Updated existing TOIL usage for entry ${usage.entryId}`);
+    } else {
+      // Add new usage
+      usages.push(usage);
+      logger.debug(`Added new TOIL usage record for entry ${usage.entryId}`);
+    }
+    
     localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usages));
     
     // Clear the summary cache for this month
@@ -74,25 +87,68 @@ export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolea
     const allRecords = loadTOILRecords();
     const recordIndex = allRecords.findIndex(record => record.entryId === entryId);
     
-    if (recordIndex === -1) {
-      logger.debug(`No TOIL record found for entry ID ${entryId}`);
-      return false;
+    // Also check for usage records - FIX: deleting the TOIL entry should delete the usage
+    const allUsages = loadTOILUsage();
+    const usageIndex = allUsages.findIndex(usage => usage.entryId === entryId);
+    
+    let deleted = false;
+    let userId = '';
+    let monthYear = '';
+    
+    // Handle TOIL record deletion
+    if (recordIndex !== -1) {
+      // Store the user and month before deletion for cache clearing
+      userId = allRecords[recordIndex].userId;
+      monthYear = allRecords[recordIndex].monthYear;
+      
+      // Remove the record
+      allRecords.splice(recordIndex, 1);
+      
+      // Save the updated records
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
+      
+      deleted = true;
+      logger.debug(`Deleted TOIL record for entry ID ${entryId}`);
     }
     
-    // Store the user and month before deletion for cache clearing
-    const { userId, monthYear } = allRecords[recordIndex];
+    // Handle TOIL usage deletion
+    if (usageIndex !== -1) {
+      // If we didn't get userId/monthYear from record, get it from usage
+      if (!userId) {
+        userId = allUsages[usageIndex].userId;
+        monthYear = allUsages[usageIndex].monthYear;
+      }
+      
+      // Remove the usage entry
+      allUsages.splice(usageIndex, 1);
+      
+      // Save the updated usages
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(allUsages));
+      
+      deleted = true;
+      logger.debug(`Deleted TOIL usage for entry ID ${entryId}`);
+    }
     
-    // Remove the record
-    allRecords.splice(recordIndex, 1);
+    // Clear the summary cache if we deleted something
+    if (deleted && userId && monthYear) {
+      clearSummaryCache(userId, monthYear);
+      
+      // Get updated summary to send with the event
+      const summary = {
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
+      
+      // Dispatch updated summary event
+      dispatchTOILEvent(summary);
+      
+      return true;
+    }
     
-    // Save the updated records
-    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
-    
-    // Clear the summary cache
-    clearSummaryCache(userId, monthYear);
-    
-    logger.debug(`Deleted TOIL record for entry ID ${entryId}`);
-    return true;
+    return deleted;
   } catch (error) {
     logger.error('Error deleting TOIL record:', error);
     return false;

@@ -34,6 +34,11 @@ export class DeleteOperations {
       }
       
       const deletedEntry = allEntries[entryIndex];
+      
+      // Check if this is a TOIL entry
+      const isToilEntry = deletedEntry.jobNumber === "TOIL";
+      
+      // Delete the entry from the collection
       allEntries.splice(entryIndex, 1);
       
       // First save the entries to ensure consistency
@@ -49,23 +54,35 @@ export class DeleteOperations {
         
         // Only after successful save, clean up TOIL records
         try {
+          logger.debug(`Attempting to clean up TOIL records for entry ${entryId}`);
           const toilDeleted = await deleteTOILRecordByEntryId(entryId);
+          
           if (toilDeleted) {
             logger.debug(`Successfully cleaned up TOIL records for entry ${entryId}`);
             
-            // Dispatch TOIL update event to refresh UI immediately
-            timeEventsService.publish('toil-updated', { 
-              userId: deletedEntry.userId,
-              date: deletedEntry.date.toISOString(),
-              entryId
-            });
+            // Dispatch additional TOIL event for UI refresh if this was a TOIL entry
+            if (isToilEntry) {
+              logger.debug(`Dispatching special TOIL update for TOIL entry deletion`);
+              timeEventsService.publish('toil-updated', { 
+                userId: deletedEntry.userId,
+                date: deletedEntry.date.toISOString(),
+                entryId,
+                reset: true
+              });
+            } else {
+              // Regular TOIL update event
+              timeEventsService.publish('toil-updated', { 
+                userId: deletedEntry.userId,
+                date: deletedEntry.date.toISOString(),
+                entryId
+              });
+            }
           } else {
-            logger.warn(`No TOIL records found for entry ${entryId} or cleanup failed`);
-            // Continue with the flow even if TOIL cleanup doesn't find records
+            logger.debug(`No TOIL records found for entry ${entryId} or cleanup had no effect`);
           }
         } catch (toilError) {
           logger.error(`Error cleaning up TOIL records for entry ${entryId}:`, toilError);
-          // We'll continue with the flow even if TOIL cleanup fails
+          // Continue even if TOIL cleanup fails
         }
         
         // Dispatch events after both operations

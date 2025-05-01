@@ -1,114 +1,69 @@
 
-import { TOILRecord, TOILSummary } from "@/types/toil";
+import { TOILRecord } from "@/types/toil";
 import { format, isSameDay } from "date-fns";
-import { createTimeLogger } from '@/utils/time/errors';
-import { loadTOILRecords, loadTOILUsage, TOIL_SUMMARY_CACHE_KEY } from './core';
+import { loadTOILRecords, loadTOILUsage } from './core';
+import { createTimeLogger } from "@/utils/time/errors";
 
 const logger = createTimeLogger('TOILQueries');
 
-// Get TOIL summary for a user and month
-export function getTOILSummary(userId: string, monthYear: string): TOILSummary {
-  try {
-    // Try to get cached summary first
-    const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}-${monthYear}`;
-    const cachedSummary = localStorage.getItem(cacheKey);
-    
-    if (cachedSummary) {
-      return JSON.parse(cachedSummary);
-    }
-    
-    // Calculate summary from records if not cached
-    const records = loadTOILRecords();
-    const usages = loadTOILUsage();
-    
-    // Filter records by user and month
-    const userRecords = records.filter(
-      record => record.userId === userId && record.monthYear === monthYear
-    );
-    
-    // Filter usages by user and month
-    const userUsages = usages.filter(
-      usage => usage.userId === userId && usage.monthYear === monthYear
-    );
-    
-    // Calculate total accrued hours
-    const accrued = userRecords.reduce((total, record) => total + record.hours, 0);
-    
-    // Calculate total used hours
-    const used = userUsages.reduce((total, usage) => total + usage.hours, 0);
-    
-    // Calculate remaining hours
-    const remaining = accrued - used;
-    
-    const summary = {
-      userId,
-      monthYear,
-      accrued,
-      used,
-      remaining
-    };
-    
-    // Cache the result
-    localStorage.setItem(cacheKey, JSON.stringify(summary));
-    
-    return summary;
-  } catch (error) {
-    logger.error('Error getting TOIL summary:', error);
-    return {
-      userId,
-      monthYear,
-      accrued: 0,
-      used: 0,
-      remaining: 0
-    };
-  }
+// Get all TOIL records for a specific user
+export function getUserTOILRecords(userId: string): TOILRecord[] {
+  const allRecords = loadTOILRecords();
+  return allRecords.filter(record => record.userId === userId);
 }
 
-// Get TOIL records for a specific day
-export function getTOILRecordsForDay(userId: string, date: Date): TOILRecord[] {
-  try {
-    const records = loadTOILRecords();
-    
-    // Find records for this user and date
-    return records.filter(record => 
-      record.userId === userId && 
-      isSameDay(new Date(record.date), date)
-    );
-  } catch (error) {
-    logger.error('Error getting TOIL records for day:', error);
-    return [];
-  }
-}
-
-// Check if a day has TOIL accrued or used
+// Check if a user has TOIL records for a specific day
 export function hasTOILForDay(userId: string, date: Date): { 
   hasAccrued: boolean; 
   hasUsed: boolean;
   toilHours: number;
 } {
+  if (!userId || !date) {
+    return { hasAccrued: false, hasUsed: false, toilHours: 0 };
+  }
+  
   try {
-    // Check for accrued TOIL
-    const accrued = getTOILRecordsForDay(userId, date);
-    const accrualHours = accrued.reduce((total, record) => total + record.hours, 0);
+    // Load all records and usage
+    const records = loadTOILRecords();
+    const usage = loadTOILUsage();
     
-    // Check for used TOIL
-    const usages = loadTOILUsage();
-    const used = usages.filter(usage => 
+    // Find records for this day
+    const dayToilRecords = records.filter(record => 
+      record.userId === userId && 
+      isSameDay(new Date(record.date), date)
+    );
+    
+    // Find usage for this day
+    const dayToilUsage = usage.filter(usage => 
       usage.userId === userId && 
       isSameDay(new Date(usage.date), date)
     );
     
-    return {
-      hasAccrued: accrued.length > 0,
-      hasUsed: used.length > 0,
-      toilHours: accrualHours
+    // Sum up hours for this day
+    const accruedHours = dayToilRecords.reduce((sum, record) => sum + record.hours, 0);
+    const usedHours = dayToilUsage.reduce((sum, usage) => sum + usage.hours, 0);
+    
+    return { 
+      hasAccrued: dayToilRecords.length > 0, 
+      hasUsed: dayToilUsage.length > 0,
+      toilHours: Math.max(accruedHours, usedHours)
     };
   } catch (error) {
     logger.error('Error checking TOIL for day:', error);
-    return {
-      hasAccrued: false,
-      hasUsed: false,
-      toilHours: 0
-    };
+    return { hasAccrued: false, hasUsed: false, toilHours: 0 };
   }
+}
+
+// Find TOIL records by entry ID
+export function findTOILRecordsByEntryId(entryId: string): TOILRecord[] {
+  if (!entryId) return [];
+  
+  const allRecords = loadTOILRecords();
+  return allRecords.filter(record => record.entryId === entryId);
+}
+
+// Check if a user has any TOIL for a specific month
+export function hasTOILForMonth(userId: string, monthYear: string): boolean {
+  const records = loadTOILRecords();
+  return records.some(record => record.userId === userId && record.monthYear === monthYear);
 }

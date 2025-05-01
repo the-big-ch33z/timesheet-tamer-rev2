@@ -1,3 +1,4 @@
+
 import { useCallback, useState } from 'react';
 import { WorkHoursActionType } from '../components/WorkHoursActionButtons';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
@@ -35,6 +36,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
   const createSyntheticEntry = useCallback(async (type: WorkHoursActionType, isActive: boolean, dayHours: number) => {
     logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
 
+    // Handle toggling OFF - this needs to properly delete the entry
     if (!isActive) {
       const entryId = syntheticEntryIds[type];
       if (entryId) {
@@ -54,7 +56,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
             });
           } else {
             logger.error(`Failed to delete synthetic entry: ${entryId}`);
-            // Revert the UI state since deletion failed
+            // Make sure we still update the UI state since deletion failed
             setActionStates(prev => ({ ...prev, [type]: false }));
             toast({
               title: `Removal Error`,
@@ -75,12 +77,22 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
       return;
     }
 
+    // Don't create duplicate entries
     if (syntheticEntryIds[type]) {
       logger.debug(`Synthetic entry already exists for ${type}, not creating another one`);
       return;
     }
 
-    const hoursToRecord = dayHours > 0 ? dayHours : 7.6;
+    // Calculate the correct hours for the entry
+    // For TOIL, always include the smoko break time (0.25 hours)
+    let hoursToRecord = dayHours > 0 ? dayHours : 7.6;
+    
+    // For TOIL specifically, add smoko time if not already included
+    if (type === 'toil' && hoursToRecord < 9 && hoursToRecord >= 8.5) {
+      // If the day is close to 8.75 hours, it likely doesn't include smoko
+      hoursToRecord = 9.0; // Include the smoko break (0.25 hours)
+      logger.debug(`Adjusted TOIL hours to include smoko break: ${hoursToRecord}`);
+    }
     
     const entryTypeMap = {
       leave: "LEAVE",
@@ -139,6 +151,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     setActionStates(prev => {
       let next = { ...prev, [type]: !prev[type] };
       
+      // Ensure only one of these can be active at a time
       if (type === "leave" && next.leave) {
         next.sick = false;
         next.toil = false;
@@ -153,6 +166,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
       }
       
       if ((type === "leave" || type === "sick" || type === "toil") && next[type] !== prev[type]) {
+        // Use setTimeout to avoid state update issues
         setTimeout(() => {
           createSyntheticEntry(type, next[type], dayHours);
         }, 0);

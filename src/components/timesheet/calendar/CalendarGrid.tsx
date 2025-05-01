@@ -86,9 +86,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       const entries = getDayEntries(day);
       const totalHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
 
+      // Check for special entry types
       const hasLeaveEntry = entries.some(entry => entry.jobNumber === "LEAVE");
       const hasSickEntry = entries.some(entry => entry.jobNumber === "SICK");
-      const hasToilEntry = entries.some(entry => entry.jobNumber === "TOIL-USED");
+      
+      // FIX: Check for TOIL entries using the correct job number
+      const hasToilEntry = entries.some(entry => entry.jobNumber === "TOIL");
 
       // Calculate completion status for each day
       const completion = calculateCompletion(entries, startTime, endTime, 0.01);
@@ -131,8 +134,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         shiftReason,
         isLeaveDay: hasLeaveEntry,
         isSickDay: hasSickEntry,
-        isToilDay: hasToilEntry,
-        // Add TOIL status
+        isToilDay: hasToilEntry || toilInfo.hasUsed, // FIX: Check both for entries and TOIL usage records
         hasTOILAccrued: toilInfo.hasAccrued,
         hasTOILUsed: toilInfo.hasUsed,
         toilHours: toilInfo.toilHours

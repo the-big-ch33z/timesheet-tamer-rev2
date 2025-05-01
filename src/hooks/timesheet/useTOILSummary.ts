@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { toilService } from '@/utils/time/services/toil';
@@ -10,6 +9,7 @@ import {
   cleanupDuplicateTOILRecords 
 } from '@/utils/time/services/toil/storage';
 import { createTimeLogger } from '@/utils/time/errors';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useTOILSummary');
 
@@ -115,18 +115,35 @@ export const useTOILSummary = ({
     const handleTOILUpdate = (event: CustomEvent) => {
       if (!isMountedRef.current) return;
       
-      const updatedSummary = event.detail as TOILSummary;
-      if (updatedSummary.userId === userId && updatedSummary.monthYear === monthYear) {
+      const eventData = event.detail;
+      const shouldRefresh = eventData?.userId === userId && (!eventData.monthYear || eventData.monthYear === monthYear);
+      
+      if (shouldRefresh) {
         logger.debug('Received TOIL update event, refreshing summary');
-        setSummary(updatedSummary);
+        
+        // If we have a complete summary in the event, use it directly
+        if (eventData.accrued !== undefined) {
+          setSummary(eventData);
+        } else {
+          // Otherwise reload from storage
+          loadSummary();
+        }
+        
         setIsLoading(false); // Ensure loading state is reset
       }
     };
     
+    // Listen for both traditional events and the timeEventsService events
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+    
+    const subscription = timeEventsService.subscribe('toil-updated', () => {
+      logger.debug('Received toil-updated event via timeEventsService');
+      loadSummary();
+    });
     
     return () => {
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+      subscription.unsubscribe();
     };
   }, [userId, monthYear]);
   
