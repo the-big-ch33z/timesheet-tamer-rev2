@@ -3,11 +3,11 @@ import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILRecord, TOILSummary } from "@/types/toil";
 import { v4 as uuidv4 } from "uuid";
-import { createTOILRecord, calculateTOILHours } from "./calculation";
-import { storeTOILRecord, getTOILSummary, cleanupDuplicateTOILRecords } from "./storage";
 import { createTimeLogger } from '@/utils/time/errors';
 import { format, isSameMonth } from 'date-fns';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { calculateTOILHours } from "./calculation";
+import { storeTOILRecord, getTOILSummary, cleanupDuplicateTOILRecords } from "./storage";
 
 const logger = createTimeLogger('TOILBatchProcessor');
 
@@ -35,6 +35,71 @@ export function hasRecentlyProcessed(userId: string, date: Date): boolean {
 export function clearRecentProcessing(): void {
   recentlyProcessed.clear();
   logger.debug('Cleared recently processed cache');
+}
+
+// Queue of pending TOIL calculations
+export interface PendingTOILCalculation {
+  userId: string;
+  date: Date;
+  entries: TimeEntry[];
+  workSchedule: WorkSchedule;
+  holidays: Holiday[];
+  resolve: (summary: TOILSummary | null) => void;
+}
+
+const calculationQueue: PendingTOILCalculation[] = [];
+let isProcessing = false;
+
+// Add a calculation task to the queue
+export function queueTOILCalculation(calculation: PendingTOILCalculation): void {
+  calculationQueue.push(calculation);
+  logger.debug(`TOIL calculation queued for ${calculation.date.toISOString().slice(0, 10)}, queue length: ${calculationQueue.length}`);
+  
+  // Start processing if not already running
+  if (!isProcessing) {
+    processTOILQueue();
+  }
+}
+
+// Process the TOIL calculation queue
+export function processTOILQueue(): void {
+  if (isProcessing || calculationQueue.length === 0) {
+    return;
+  }
+  
+  isProcessing = true;
+  
+  const processNext = () => {
+    if (calculationQueue.length === 0) {
+      isProcessing = false;
+      return;
+    }
+    
+    const calculation = calculationQueue.shift()!;
+    
+    performSingleCalculation(
+      calculation.entries,
+      calculation.date,
+      calculation.userId,
+      calculation.workSchedule,
+      calculation.holidays
+    )
+      .then(result => {
+        calculation.resolve(result);
+        
+        // Process next item in queue
+        setTimeout(processNext, 0);
+      })
+      .catch(error => {
+        logger.error('Error processing TOIL calculation:', error);
+        calculation.resolve(null);
+        
+        // Continue processing queue despite error
+        setTimeout(processNext, 0);
+      });
+  };
+  
+  processNext();
 }
 
 /**
@@ -101,7 +166,15 @@ export async function performSingleCalculation(
     const entryId = primaryEntry?.id;
     
     // Create a TOIL record
-    const record = createTOILRecord(userId, date, toilHours, entryId);
+    const record: TOILRecord = {
+      id: uuidv4(),
+      userId,
+      date,
+      hours: toilHours,
+      monthYear: format(date, 'yyyy-MM'),
+      entryId: entryId || uuidv4(),
+      status: 'active'
+    };
     
     // Enhanced logging 
     logger.debug(`Creating TOIL record for ${format(date, 'yyyy-MM-dd')} with ${toilHours} hours`);

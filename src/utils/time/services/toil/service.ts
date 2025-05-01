@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -5,8 +6,6 @@ import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
-import { PendingTOILCalculation } from "./types";
-import { calculateTOILHours } from "./calculation";
 import { 
   loadTOILRecords, 
   loadTOILUsage,
@@ -15,6 +14,7 @@ import {
   TOIL_USAGE_KEY,
   TOIL_SUMMARY_CACHE_KEY,
 } from "./storage";
+import { calculateTOILHours } from "./calculation";
 import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
 import { dispatchTOILEvent } from "./events";
 import { createTimeLogger } from "../../errors/timeLogger";

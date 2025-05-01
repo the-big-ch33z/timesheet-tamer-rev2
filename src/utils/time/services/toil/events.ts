@@ -23,7 +23,8 @@ export const triggerTOILSave = () => {
   return true;
 };
 
-export const dispatchTOILUpdate = (summary: TOILSummary) => {
+// Renamed function to match what's imported in service.ts
+export const dispatchTOILEvent = (summary: TOILSummary) => {
   const event = new CustomEvent('toil:summary-updated', { detail: summary });
   window.dispatchEvent(event);
   logger.debug('TOIL summary update event dispatched');
