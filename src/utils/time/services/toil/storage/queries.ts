@@ -67,3 +67,42 @@ export function hasTOILForMonth(userId: string, monthYear: string): boolean {
   const records = loadTOILRecords();
   return records.some(record => record.userId === userId && record.monthYear === monthYear);
 }
+
+// Get TOIL summary for a user and month
+export function getTOILSummary(userId: string, monthYear: string) {
+  try {
+    const records = loadTOILRecords();
+    const usages = loadTOILUsage();
+    
+    // Filter records and usages for the specified user and month
+    const userRecords = records.filter(record => 
+      record.userId === userId && record.monthYear === monthYear
+    );
+    
+    const userUsages = usages.filter(usage => 
+      usage.userId === userId && usage.monthYear === monthYear
+    );
+    
+    // Calculate total accrued and used hours
+    const accrued = userRecords.reduce((sum, record) => sum + record.hours, 0);
+    const used = userUsages.reduce((sum, usage) => sum + usage.hours, 0);
+    const remaining = accrued - used;
+    
+    return {
+      userId,
+      monthYear,
+      accrued,
+      used,
+      remaining
+    };
+  } catch (error) {
+    logger.error('Error getting TOIL summary:', error);
+    return {
+      userId,
+      monthYear,
+      accrued: 0,
+      used: 0,
+      remaining: 0
+    };
+  }
+}
