@@ -4,7 +4,11 @@ import { TOILSummary } from '@/types/toil';
 import { toilService } from '@/utils/time/services/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
-import { getTOILSummary, clearTOILStorageForMonth, cleanupDuplicateTOILRecords } from '@/utils/time/services/toil/storage';
+import { 
+  getTOILSummary, 
+  clearTOILStorageForMonth, 
+  cleanupDuplicateTOILRecords 
+} from '@/utils/time/services/toil/storage';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useTOILSummary');
