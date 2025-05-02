@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { WorkHoursActionType } from '../components/WorkHoursActionButtons';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
@@ -6,6 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { useDebounce } from '@/hooks/useDebounce';
+// Import cleanup functions directly from storage module
+import { cleanupDuplicateToilUsage } from '@/utils/time/services/toil/storage/cleanup';
 
 const logger = createTimeLogger('useWorkHoursActions');
 
@@ -308,21 +309,18 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
   // Add a function to run cleanup at component mount
   useEffect(() => {
     // Clean up any duplicate TOIL usage records on mount
-    import('@/utils/time/services/toil/storage/cleanup')
-      .then(({ cleanupDuplicateToilUsage }) => {
-        cleanupDuplicateToilUsage(userId)
-          .then(count => {
-            if (count > 0) {
-              logger.debug(`Cleaned up ${count} duplicate TOIL usage records at mount`);
-            }
-          })
-          .catch(err => {
-            logger.error('Error cleaning up duplicate TOIL usage:', err);
-          });
-      })
-      .catch(err => {
-        logger.error('Error importing cleanup module:', err);
-      });
+    if (userId) {
+      // Direct function call instead of dynamic import
+      cleanupDuplicateToilUsage(userId)
+        .then(count => {
+          if (count > 0) {
+            logger.debug(`Cleaned up ${count} duplicate TOIL usage records at mount`);
+          }
+        })
+        .catch(err => {
+          logger.error('Error cleaning up duplicate TOIL usage:', err);
+        });
+    }
   }, [userId]);
 
   return {

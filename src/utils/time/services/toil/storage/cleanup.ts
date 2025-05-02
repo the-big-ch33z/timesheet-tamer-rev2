@@ -31,3 +31,6 @@ export async function cleanupAllToilData(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+// Re-export the individual cleanup functions to make them available to importers
+export { cleanupDuplicateTOILRecords, cleanupDuplicateToilUsage } from './queries';
