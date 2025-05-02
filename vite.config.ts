@@ -13,8 +13,11 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      // Ensure React is properly injected and available globally
-      jsxRuntime: 'automatic',
+      // Use correct options for react-swc plugin
+      swcReact: {
+        development: mode === 'development',
+        refresh: mode === 'development',
+      },
     }),
     splitVendorChunkPlugin(),
     mode === 'development' && componentTagger(),
@@ -99,10 +102,9 @@ export default defineConfig(({ mode }) => ({
     },
     sourcemap: mode !== 'production',
   },
-  // Ensure React is properly handled
+  // Ensure React is properly handled but don't use jsxInject since we're importing React explicitly
   esbuild: {
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
-    jsxInject: `import React from 'react'`,
   },
 }));
