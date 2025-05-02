@@ -81,7 +81,7 @@ export const useTimeEntriesEvents = (
 
   // Set up event listeners
   useEffect(() => {
-    // Subscribe to events
+    // Subscribe to events using our unified service
     const unsubEntryCreated = unifiedTimeEntryService.addEventListener('entry-created', handleServiceEvent);
     const unsubEntryUpdated = unifiedTimeEntryService.addEventListener('entry-updated', handleServiceEvent);
     const unsubEntryDeleted = unifiedTimeEntryService.addEventListener('entry-deleted', handleServiceEvent);

@@ -31,8 +31,8 @@ export const loadEntriesFromStorage = (): TimeEntry[] => {
 };
 
 // Simple redirects to the unified service
-export const getDeletedEntryIds = unifiedTimeEntryService.getDeletedEntryIds;
-export const addToDeletedEntries = unifiedTimeEntryService.deleteEntryFromStorage;
-export const cleanupDeletedEntries = unifiedTimeEntryService.cleanupDeletedEntries;
-export const saveEntriesToStorage = unifiedTimeEntryService.saveEntriesToStorage;
-export const deleteEntryFromStorage = unifiedTimeEntryService.deleteEntryFromStorage;
+export const getDeletedEntryIds = () => unifiedTimeEntryService.getDeletedEntryIds();
+export const addToDeletedEntries = (entryId: string) => unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+export const cleanupDeletedEntries = () => unifiedTimeEntryService.cleanupDeletedEntries();
+export const saveEntriesToStorage = (entries: TimeEntry[]) => unifiedTimeEntryService.saveEntriesToStorage(entries);
+export const deleteEntryFromStorage = (entryId: string) => unifiedTimeEntryService.deleteEntryFromStorage(entryId);
