@@ -8,6 +8,7 @@ import { createSeedData } from './utils/seedData';
 
 // Initialize polyfills and compatibility layer
 import './utils/react-is-polyfill';
+import './utils/prop-types-polyfill';
 
 // Mount the app with proper browser checks
 const mount = () => {

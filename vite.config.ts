@@ -35,6 +35,7 @@ export default defineConfig(({ mode }) => ({
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
       "react/jsx-runtime": path.resolve(__dirname, "node_modules/react/jsx-runtime"),
       "react-is": path.resolve(__dirname, "node_modules/react-is"),
+      "prop-types": path.resolve(__dirname, "node_modules/prop-types"),
       "@radix-ui": path.resolve(__dirname, "node_modules/@radix-ui"),
     },
     // Ensure proper module extension resolution
@@ -48,6 +49,7 @@ export default defineConfig(({ mode }) => ({
       "react-dom",
       "react-router-dom",
       "react-is",
+      "prop-types",
       "date-fns",
       "@radix-ui/react-slot",
       "@radix-ui/react-primitive",
@@ -75,9 +77,11 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/@radix-ui\//,
         /node_modules\/react-dom\//,
         /node_modules\/react-is\//,
+        /node_modules\/prop-types\//,
         // Add specific handling for recharts and lodash due to the ESM/CJS issues
         /node_modules\/recharts\//,
         /node_modules\/lodash\//,
+        /node_modules\/react-smooth\//,
       ],
       // Force specific Recharts dependency to be considered as requiring
       requireReturnsDefault: 'auto',
@@ -95,7 +99,8 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules/@radix-ui')) {
             return 'radix';
           }
-          if (id.includes('node_modules/recharts') || id.includes('node_modules/lodash')) {
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/lodash') || 
+              id.includes('node_modules/prop-types') || id.includes('node_modules/react-smooth')) {
             return 'charts';
           }
           if (id.includes('src/components/ui')) {
