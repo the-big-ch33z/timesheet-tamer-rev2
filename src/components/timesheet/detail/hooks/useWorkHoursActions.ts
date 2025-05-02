@@ -20,6 +20,10 @@ const INITIAL_STATES = {
   smoko: false
 };
 
+// Add debounce protection for TOIL events
+let lastTOILEventTime = 0;
+const DEBOUNCE_TIME = 500; // ms
+
 export const useWorkHoursActions = (date: Date, userId: string) => {
   const { createEntry, deleteEntry, dayEntries } = useTimeEntryContext();
   const { toast } = useToast();
@@ -78,6 +82,19 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     
   }, [dayEntries]);
 
+  // New: Debounced event publisher for TOIL updates
+  const publishToilEvent = useCallback((eventData: any) => {
+    const now = Date.now();
+    if (now - lastTOILEventTime < DEBOUNCE_TIME) {
+      logger.debug('Skipping duplicate TOIL event due to debounce');
+      return;
+    }
+    
+    lastTOILEventTime = now;
+    timeEventsService.publish('toil-updated', eventData);
+    logger.debug('Published debounced TOIL event:', eventData);
+  }, []);
+
   const createSyntheticEntry = useCallback(async (type: WorkHoursActionType, isActive: boolean, dayHours: number) => {
     logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
 
@@ -108,12 +125,15 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
             setActionStates(prev => ({ ...prev, [type]: false }));
             setCreatedEntries(prev => ({ ...prev, [type]: false }));
             
-            timeEventsService.publish('toil-updated', {
-              userId,
-              date: date.toISOString(),
-              entryId,
-              reset: true
-            });
+            // FIXED: Use debounced publisher for TOIL events
+            if (type === 'toil') {
+              publishToilEvent({
+                userId,
+                date: date.toISOString(),
+                entryId,
+                reset: true
+              });
+            }
             
             toast({
               title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
@@ -173,6 +193,20 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     if (type === 'leave' || type === 'sick' || type === 'toil') {
       logger.debug(`Creating synthetic ${type} entry with ${hoursToRecord} hours for ${date.toLocaleDateString()}`);
       
+      // Check for existing entries for the same day and type
+      const existingForDay = dayEntries.find(entry => 
+        entry.synthetic === true && 
+        entry.jobNumber === entryTypeMap[type]
+      );
+      
+      if (existingForDay) {
+        logger.debug(`Found existing ${type} entry for today, using it:`, existingForDay);
+        setSyntheticEntryIds(prev => ({ ...prev, [type]: existingForDay.id }));
+        setActionStates(prev => ({ ...prev, [type]: true }));
+        setCreatedEntries(prev => ({ ...prev, [type]: true }));
+        return;
+      }
+      
       const entryData = {
         userId,
         date,
@@ -192,9 +226,9 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
           setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
           setCreatedEntries(prev => ({ ...prev, [type]: true }));
           
-          // Publish TOIL update event for UI refresh
+          // FIXED: Use debounced publisher for TOIL events
           if (type === 'toil') {
-            timeEventsService.publish('toil-updated', {
+            publishToilEvent({
               userId,
               date: date.toISOString(),
               entryId: newEntryId,
@@ -225,7 +259,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
         });
       }
     }
-  }, [date, userId, createEntry, deleteEntry, syntheticEntryIds, toast, dayEntries]);
+  }, [date, userId, createEntry, deleteEntry, syntheticEntryIds, toast, dayEntries, publishToilEvent]);
 
   const handleToggleAction = useCallback((type: WorkHoursActionType, dayHours: number) => {
     setActionStates(prev => {

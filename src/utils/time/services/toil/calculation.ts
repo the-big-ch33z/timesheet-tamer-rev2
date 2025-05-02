@@ -20,6 +20,7 @@ const logger = createTimeLogger('TOILCalculation');
  * 4. Create a TOIL record if applicable
  * 
  * FIXED: Enhanced logging and validation to prevent incorrect TOIL calculation
+ * FIXED: Only calculate TOIL for hours exceeding the scheduled hours
  */
 export function calculateDailyTOIL(
   entries: TimeEntry[],
@@ -44,8 +45,17 @@ export function calculateDailyTOIL(
     return null;
   }
   
+  // IMPORTANT: Filter out synthetic TOIL entries to prevent circular calculation
+  const nonToilEntries = dayEntries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
+  
+  if (nonToilEntries.length === 0) {
+    logger.debug(`Only synthetic TOIL entries found for ${dateString}, skipping TOIL calculation`);
+    return null;
+  }
+  
   // Check if it's a holiday or weekend
-  if (isHoliday(date)) {
+  const isHolidayDay = isHoliday(date);
+  if (isHolidayDay) {
     logger.debug(`${dateString} is a holiday, all hours are TOIL`);
   }
   
@@ -77,12 +87,13 @@ export function calculateDailyTOIL(
     scheduledHours = 7.6; // Default full-day hours
   }
   
-  // Calculate total hours worked
-  const totalHours = dayEntries.reduce((sum, entry) => sum + entry.hours, 0);
+  // Calculate total hours worked from non-TOIL entries only
+  const totalHours = nonToilEntries.reduce((sum, entry) => sum + entry.hours, 0);
   logger.debug(`Total hours for ${dateString}: ${totalHours}`);
   
   // FIXED: Only count hours over scheduled hours as TOIL
-  const toilHours = Math.max(0, totalHours - scheduledHours);
+  // For holidays, count all hours as TOIL
+  const toilHours = isHolidayDay ? totalHours : Math.max(0, totalHours - scheduledHours);
   
   // Enhanced logging for better debugging
   logger.debug(`
@@ -91,6 +102,7 @@ export function calculateDailyTOIL(
     - User: ${userId}
     - Total hours worked: ${totalHours}
     - Scheduled hours: ${scheduledHours}
+    - Is holiday: ${isHolidayDay}
     - TOIL hours (difference): ${toilHours}
   `);
   
@@ -105,7 +117,7 @@ export function calculateDailyTOIL(
   }
 
   // Find the first entry to use as reference (preferably the largest one)
-  const primaryEntry = [...dayEntries].sort((a, b) => b.hours - a.hours)[0];
+  const primaryEntry = [...nonToilEntries].sort((a, b) => b.hours - a.hours)[0];
 
   // Create TOIL record
   const toilRecord: TOILRecord = {
@@ -143,6 +155,17 @@ export function calculateTOILHours(
     return 0;
   }
   
+  // IMPORTANT: Filter out synthetic TOIL entries to prevent circular calculation
+  const nonToilEntries = dayEntries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
+  
+  if (nonToilEntries.length === 0) {
+    logger.debug(`Only synthetic TOIL entries found for ${dateString}, skipping TOIL calculation`);
+    return 0;
+  }
+  
+  // Check if it's a holiday
+  const isHolidayDay = isHoliday(date);
+  
   // Get the scheduled hours for the day
   const dayOfWeek = date.getDay();
   const weekNumber = Math.floor(date.getDate() / 7);
@@ -172,11 +195,12 @@ export function calculateTOILHours(
     scheduledHours = 7.6; // Default
   }
   
-  // Calculate total hours worked
-  const totalHours = dayEntries.reduce((sum, entry) => sum + entry.hours, 0);
+  // Calculate total hours worked from non-TOIL entries only
+  const totalHours = nonToilEntries.reduce((sum, entry) => sum + entry.hours, 0);
   
   // FIXED: Only count hours over scheduled hours as TOIL
-  const toilHours = Math.max(0, totalHours - scheduledHours);
+  // For holidays, count all hours as TOIL
+  const toilHours = isHolidayDay ? totalHours : Math.max(0, totalHours - scheduledHours);
   
   // Add more detailed logging
   logger.debug(`
@@ -184,6 +208,7 @@ export function calculateTOILHours(
     - Date: ${dateString}
     - Total hours: ${totalHours}
     - Scheduled hours: ${scheduledHours}
+    - Is holiday: ${isHolidayDay}
     - TOIL hours: ${toilHours}
   `);
   

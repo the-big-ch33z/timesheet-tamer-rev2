@@ -28,11 +28,11 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
     if (existingIndex >= 0) {
       // Update existing record
       records[existingIndex] = record;
-      logger.debug(`Updated existing TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      logger.debug(`Updated existing TOIL record for ${format(new Date(record.date), 'yyyy-MM-dd')}`);
     } else {
       // Add new record
       records.push(record);
-      logger.debug(`Added new TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      logger.debug(`Added new TOIL record for ${format(new Date(record.date), 'yyyy-MM-dd')}`);
     }
     
     localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
@@ -47,7 +47,7 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
   }
 }
 
-// Store TOIL usage
+// Store TOIL usage - FIXED to prevent duplicates
 export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
   try {
     const usages = loadTOILUsage();
@@ -59,6 +59,18 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
       usages[existingIndex] = usage;
       logger.debug(`Updated existing TOIL usage for entry ${usage.entryId}`);
     } else {
+      // Check for duplicate by date and userId to avoid multiple usage entries for same day
+      const sameDay = usages.find(u => 
+        u.userId === usage.userId && 
+        format(new Date(u.date), 'yyyy-MM-dd') === format(new Date(usage.date), 'yyyy-MM-dd') &&
+        Math.abs(u.hours - usage.hours) < 0.01 // Same hours (within tolerance)
+      );
+      
+      if (sameDay) {
+        logger.debug(`Skipping duplicate TOIL usage for same day: ${format(new Date(usage.date), 'yyyy-MM-dd')}`);
+        return true; // Consider it stored successfully (prevents duplicates)
+      }
+      
       // Add new usage
       usages.push(usage);
       logger.debug(`Added new TOIL usage record for entry ${usage.entryId}`);

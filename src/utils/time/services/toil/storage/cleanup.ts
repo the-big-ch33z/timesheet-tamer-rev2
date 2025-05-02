@@ -40,7 +40,7 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
       const otherUserRecords = allRecords.filter(r => r.userId !== userId);
       
       // Combine with unique records for this user
-      const cleanedRecords = [...otherUserRecords, ...uniqueDates.values()];
+      const cleanedRecords = [...otherUserRecords, ...Array.from(uniqueDates.values())];
       
       // Save back to storage
       localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(cleanedRecords));
@@ -50,6 +50,52 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
     return duplicatesRemoved;
   } catch (error) {
     logger.error('Error cleaning up duplicate TOIL records:', error);
+    return 0;
+  }
+}
+
+// NEW: Clean up duplicate TOIL usage entries for a user 
+export async function cleanupDuplicateTOILUsage(userId: string): Promise<number> {
+  try {
+    const allUsages = loadTOILUsage();
+    const uniqueEntryIds = new Map();
+    let duplicatesRemoved = 0;
+    
+    // Filter usages for this user
+    const userUsages = allUsages.filter(u => u.userId === userId);
+    
+    // Process each usage to find duplicates by entryId
+    userUsages.forEach(usage => {
+      if (!uniqueEntryIds.has(usage.entryId)) {
+        // First usage for this entry
+        uniqueEntryIds.set(usage.entryId, usage);
+      } else {
+        // Duplicate found - keep only the most recent one (assuming newer = higher ID)
+        const existing = uniqueEntryIds.get(usage.entryId);
+        
+        if (usage.id > existing.id) {
+          uniqueEntryIds.set(usage.entryId, usage);
+        }
+        
+        duplicatesRemoved++;
+      }
+    });
+    
+    if (duplicatesRemoved > 0) {
+      // Keep usages from other users
+      const otherUserUsages = allUsages.filter(u => u.userId !== userId);
+      
+      // Combine with unique usages for this user
+      const cleanedUsages = [...otherUserUsages, ...Array.from(uniqueEntryIds.values())];
+      
+      // Save back to storage
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(cleanedUsages));
+      logger.debug(`Removed ${duplicatesRemoved} duplicate TOIL usage entries for user ${userId}`);
+    }
+    
+    return duplicatesRemoved;
+  } catch (error) {
+    logger.error('Error cleaning up duplicate TOIL usage entries:', error);
     return 0;
   }
 }
