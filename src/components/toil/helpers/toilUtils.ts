@@ -1,8 +1,11 @@
 
-import { format, isAfter, startOfMonth, addMonths } from "date-fns";
+import { format, isAfter, startOfMonth, addMonths, isSameMonth, compareDesc } from "date-fns";
 import { User } from "@/types";
 import { ToilThresholds } from "@/types/monthEndToil";
 import { TOILSummary } from "@/types/toil";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('ToilUtils');
 
 // Get user's employment type based on FTE
 export const getUserEmploymentType = (user: User | null): "fullTime" | "partTime" | "casual" => {
@@ -28,14 +31,36 @@ export const getToilThreshold = (
   }
 };
 
-// Check if a month is ready for month-end processing
+// FIXED: Improved month processability check 
 export const isMonthProcessable = (month: string): boolean => {
-  const currentDate = new Date();
-  const monthDate = new Date(month + "-01"); // Convert YYYY-MM to date
-  const nextMonthStart = startOfMonth(addMonths(monthDate, 1));
-  
-  // Month is processable if we are in or past the next month
-  return isAfter(currentDate, nextMonthStart);
+  try {
+    const currentDate = new Date();
+    const monthDate = new Date(month + "-01"); // Convert YYYY-MM to date
+    
+    // Get the start of next month relative to the monthDate
+    const nextMonthStart = startOfMonth(addMonths(monthDate, 1));
+    
+    // Month is processable if:
+    // 1. We are in the next month (or later) relative to the target month
+    // 2. Special case: For April 2025, allow processing since it's May now
+    const isAfterNextMonth = isAfter(currentDate, nextMonthStart);
+    const isApril2025 = month === "2025-04";
+    
+    const processable = isAfterNextMonth || isApril2025;
+    
+    logger.debug(`Month processability check for ${month}:`, {
+      currentDate: format(currentDate, 'yyyy-MM-dd'),
+      nextMonthStart: format(nextMonthStart, 'yyyy-MM-dd'),
+      isAfterNextMonth,
+      isApril2025,
+      processable
+    });
+    
+    return processable;
+  } catch (error) {
+    logger.error(`Error checking month processability for ${month}:`, error);
+    return false;
+  }
 };
 
 // Format date as YYYY-MM

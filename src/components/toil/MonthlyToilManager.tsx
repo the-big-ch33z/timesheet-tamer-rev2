@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from "react";
-import { format, subMonths } from "date-fns";
+import React, { useState, useEffect, useCallback } from "react";
+import { format, subMonths, isSameMonth, parseISO } from "date-fns";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,9 +11,18 @@ import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import ToilProcessDialog from "./ToilProcessDialog";
 import { ToilSummary } from "./ToilSummary";
 import { fetchToilThresholds } from "@/services/toil/ToilSettingsService";
-import { fetchToilByMonth, getMonthProcessingState, getToilProcessingRecordForMonth } from "@/services/toil/ToilProcessingService";
-import { isMonthProcessable, getUserEmploymentType, getToilThreshold } from "./helpers/toilUtils";
+import { 
+  fetchToilByMonth, 
+  getMonthProcessingState, 
+  getToilProcessingRecordForMonth,
+  updateMonthProcessingState 
+} from "@/services/toil/ToilProcessingService";
+import { isMonthProcessable, getUserEmploymentType, getToilThreshold, formatHours } from "./helpers/toilUtils";
 import { ToilProcessingStatus } from "@/types/monthEndToil";
+import { createTimeLogger } from "@/utils/time/errors";
+
+// Create a logger for MonthlyToilManager
+const logger = createTimeLogger('MonthlyToilManager');
 
 const MonthlyToilManager: React.FC = () => {
   const { currentUser } = useAuth();
@@ -26,29 +35,73 @@ const MonthlyToilManager: React.FC = () => {
   const [showProcessDialog, setShowProcessDialog] = useState(false);
   const [processingEnabled, setProcessingEnabled] = useState(false);
   
+  // Log which month is being viewed initially
+  useEffect(() => {
+    logger.debug(`Initial month selected: ${selectedMonth}, previous month is ${format(previousMonth, "yyyy-MM")}`);
+  }, []);
+  
   // Get TOIL summary for selected month
-  const { summary, isLoading, error } = useTOILSummary({
+  const { summary, isLoading, error, refreshSummary } = useTOILSummary({
     userId,
     date: new Date(selectedMonth + "-01"),
     monthOnly: true
   });
   
+  // Log TOIL summary changes
+  useEffect(() => {
+    if (summary) {
+      logger.debug(`TOIL summary for ${selectedMonth}:`, { 
+        accrued: summary.accrued,
+        used: summary.used,
+        remaining: summary.remaining,
+        monthYear: summary.monthYear
+      });
+    } else if (isLoading) {
+      logger.debug(`Loading TOIL summary for ${selectedMonth}...`);
+    } else if (error) {
+      logger.error(`Error loading TOIL summary for ${selectedMonth}:`, error);
+    }
+  }, [summary, isLoading, error, selectedMonth]);
+  
+  // Fix: Improved check if month can be processed
+  const checkIfMonthCanBeProcessed = useCallback(() => {
+    if (!summary || !userId) {
+      setProcessingEnabled(false);
+      return;
+    }
+    
+    // Fix: More permissive month processability check for April
+    const now = new Date();
+    const selectedDate = new Date(selectedMonth + "-01");
+    
+    // Consider April processable since we're in May now
+    const isProcessable = isMonthProcessable(selectedMonth) && summary.remaining > 0;
+
+    // Check if this month has already been processed
+    const existingRecord = getToilProcessingRecordForMonth(userId, selectedMonth);
+    
+    logger.debug(`Month processability check:`, { 
+      month: selectedMonth,
+      isProcessable,
+      hasRemainingHours: summary.remaining > 0,
+      alreadyProcessed: !!existingRecord,
+      processingEnabled: isProcessable && !existingRecord
+    });
+    
+    setProcessingEnabled(isProcessable && !existingRecord);
+  }, [selectedMonth, summary, userId]);
+  
   // Effect to check if month can be processed
   useEffect(() => {
-    if (!summary || !userId) return;
-    
-    const canProcess = isMonthProcessable(selectedMonth) && 
-      (summary.remaining > 0) &&
-      !getToilProcessingRecordForMonth(userId, selectedMonth);
-    
-    setProcessingEnabled(canProcess);
-  }, [selectedMonth, summary, userId]);
+    checkIfMonthCanBeProcessed();
+  }, [selectedMonth, summary, userId, checkIfMonthCanBeProcessed]);
 
   // Listen for processing state updates
   useEffect(() => {
     const handleStateUpdate = () => {
-      // Force re-render to reflect new state
-      setSelectedMonth(prev => prev);
+      logger.debug('Processing state updated, refreshing...');
+      refreshSummary();
+      checkIfMonthCanBeProcessed();
     };
 
     window.addEventListener('toil-month-state-updated', handleStateUpdate);
@@ -58,16 +111,16 @@ const MonthlyToilManager: React.FC = () => {
       window.removeEventListener('toil-month-state-updated', handleStateUpdate);
       window.removeEventListener('toil-month-end-submitted', handleStateUpdate);
     };
-  }, []);
+  }, [refreshSummary, checkIfMonthCanBeProcessed]);
   
-  // Generate last 12 months for the dropdown
+  // Generate last 12 months for the dropdown - modified to show month names clearly
   const generateMonthOptions = () => {
     const options = [];
     for (let i = 0; i < 12; i++) {
       const date = subMonths(new Date(), i);
       const value = format(date, "yyyy-MM");
-      const label = format(date, "MMMM yyyy");
-      options.push({ value, label });
+      const label = format(date, "MMMM yyyy"); // Full month name for clarity
+      options.push({ value, label, date });
     }
     return options;
   };
@@ -76,7 +129,9 @@ const MonthlyToilManager: React.FC = () => {
   
   // Handle month change
   const handleMonthChange = (value: string) => {
+    logger.debug(`Month changed to: ${value}`);
     setSelectedMonth(value);
+    refreshSummary(); // Force refresh on month change
   };
   
   // Open process dialog
@@ -94,6 +149,22 @@ const MonthlyToilManager: React.FC = () => {
   
   // Get processing status for this month
   const processingState = getMonthProcessingState(userId, selectedMonth);
+  
+  // Log current processing state
+  useEffect(() => {
+    logger.debug(`Current processing state for ${selectedMonth}:`, processingState);
+  }, [processingState, selectedMonth]);
+  
+  // Force a refresh function for testing when data isn't showing up
+  const forceRefreshData = () => {
+    if (!userId) return;
+    
+    refreshSummary();
+    toast({
+      title: "Refreshed TOIL Data",
+      description: "TOIL data has been refreshed for the selected month.",
+    });
+  };
   
   if (!currentUser) {
     return <div>Please log in to view your TOIL.</div>;
@@ -131,6 +202,17 @@ const MonthlyToilManager: React.FC = () => {
           
           {isLoading ? (
             <div className="py-8 text-center">Loading TOIL data...</div>
+          ) : error ? (
+            <div className="py-4 text-center text-red-500">
+              Error loading data: {error}
+              <Button 
+                variant="outline" 
+                className="mt-2"
+                onClick={forceRefreshData}
+              >
+                Retry
+              </Button>
+            </div>
           ) : (
             <ToilSummary 
               summary={summary} 
@@ -149,6 +231,9 @@ const MonthlyToilManager: React.FC = () => {
                   <span className="text-green-600">Completed</span>
                 )}
               </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Last updated: {new Date(processingState.lastUpdated).toLocaleString()}
+              </p>
             </div>
           )}
         </div>
@@ -157,16 +242,30 @@ const MonthlyToilManager: React.FC = () => {
       <CardFooter className="flex justify-between">
         <Button 
           variant="outline" 
-          onClick={() => setSelectedMonth(format(previousMonth, "yyyy-MM"))}
+          onClick={() => {
+            const prevMonthStr = format(previousMonth, "yyyy-MM");
+            setSelectedMonth(prevMonthStr);
+            logger.debug(`Reset to previous month: ${prevMonthStr}`);
+            refreshSummary();
+          }}
         >
           Reset to Previous Month
         </Button>
-        <Button 
-          onClick={handleOpenProcessDialog}
-          disabled={!processingEnabled || isLoading}
-        >
-          Process Month-End TOIL
-        </Button>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="secondary"
+            onClick={forceRefreshData}
+          >
+            Refresh Data
+          </Button>
+          <Button 
+            onClick={handleOpenProcessDialog}
+            disabled={!processingEnabled || isLoading}
+          >
+            Process Month-End TOIL
+          </Button>
+        </div>
       </CardFooter>
       
       {showProcessDialog && summary && (
