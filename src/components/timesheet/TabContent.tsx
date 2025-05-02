@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy, useEffect } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { 
@@ -92,4 +91,3 @@ const TabContent: React.FC = () => {
 };
 
 export default React.memo(TabContent);
-
