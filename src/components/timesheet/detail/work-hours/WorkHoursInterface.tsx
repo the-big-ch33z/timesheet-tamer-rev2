@@ -50,7 +50,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   });
 
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
-    userId,
+    userId: userId || '',
     date,
     entries: safeEntries,
     workSchedule
@@ -102,7 +102,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     toilActive,
     isComplete,
     calculateToilForDay,
-    safeEntries.length // Use safeEntries instead of entries directly
+    safeEntries.length // Use safeEntries.length instead of entries.length
   );
 
   // Fix: Make sure we're reporting completion status consistently

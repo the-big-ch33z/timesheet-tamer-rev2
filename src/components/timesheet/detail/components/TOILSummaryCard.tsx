@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('TOILSummaryCard');
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -21,6 +24,16 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
   onRefresh,
   monthName
 }) => {
+  // Debug the props when they change
+  React.useEffect(() => {
+    logger.debug('TOILSummaryCard props:', { 
+      hasSummary: !!summary, 
+      loading, 
+      monthName,
+      summaryData: summary
+    });
+  }, [summary, loading, monthName]);
+  
   return (
     <Card className="bg-gradient-to-br from-white via-purple-50 to-purple-100 shadow-md rounded-xl w-full">
       <CardHeader className="flex flex-row justify-between items-center pb-2">
@@ -69,7 +82,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = ({
             </div>
           </div>
         ) : (
-          <ToilSummary summary={summary} />
+          <ToilSummary 
+            summary={summary || { 
+              userId: '', 
+              monthYear: monthName || '', 
+              accrued: 0, 
+              used: 0, 
+              remaining: 0 
+            }} 
+          />
         )}
       </CardContent>
     </Card>
