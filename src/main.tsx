@@ -9,8 +9,25 @@ import { createSeedData } from './utils/seedData';
 // Use a web worker for performance intensive tasks if needed
 const supportsWorker = typeof Worker !== 'undefined';
 
+// Add protection against module loading errors
+const preloadCriticalModules = async () => {
+  try {
+    // Pre-load critical modules to detect circular dependency issues early
+    await Promise.all([
+      import('./utils/time/services/toil/storage/core'),
+      import('./utils/time/services/toil/storage/queries'),
+      import('./utils/time/services/toil/storage/cleanup')
+    ]);
+    console.log('Critical modules loaded successfully');
+    return true;
+  } catch (error) {
+    console.error('Error preloading critical modules:', error);
+    return false;
+  }
+};
+
 // Mount the app with proper browser checks and error handling
-const mount = () => {
+const mount = async () => {
   const rootElement = document.getElementById("root");
   
   if (!rootElement) {
@@ -25,6 +42,9 @@ const mount = () => {
     console.error("Error initializing seed data:", error);
     // Continue loading app even if seed data fails
   }
+  
+  // Preload critical modules to catch any circular reference issues early
+  const modulesLoaded = await preloadCriticalModules();
   
   try {
     // Create root and render app with error boundary wrapper

@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { WorkHoursActionType } from '../components/WorkHoursActionButtons';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
@@ -5,8 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { useDebounce } from '@/hooks/useDebounce';
-// Import cleanup functions directly from storage module
-import { cleanupDuplicateToilUsage } from '@/utils/time/services/toil/storage/cleanup';
+// Import cleanup function directly from queries to avoid circular references
+import { cleanupDuplicateToilUsage } from '@/utils/time/services/toil/storage/queries';
 
 const logger = createTimeLogger('useWorkHoursActions');
 
@@ -89,7 +90,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     
   }, [dayEntries]);
 
-  // Debounced implementation of createSyntheticEntry to prevent rapid duplicate calls
+  // Debounced implementation of createSyntheticEntry
   const createSyntheticEntry = useDebounce(async (type: WorkHoursActionType, isActive: boolean, dayHours: number) => {
     // If already processing this type, skip to prevent duplicates
     if (processingRef.current[type]) {
@@ -310,7 +311,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
   useEffect(() => {
     // Clean up any duplicate TOIL usage records on mount
     if (userId) {
-      // Direct function call instead of dynamic import
+      // Direct function call to cleanup from queries module
       cleanupDuplicateToilUsage(userId)
         .then(count => {
           if (count > 0) {

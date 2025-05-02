@@ -2,9 +2,11 @@
 import { loadTOILRecords, loadTOILUsage } from './core';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
-import { cleanupDuplicateTOILRecords, cleanupDuplicateToilUsage } from './queries';
 
 const logger = createTimeLogger('TOILCleanup');
+
+// Import cleanup functions directly to avoid circular dependencies
+import { cleanupDuplicateTOILRecords, cleanupDuplicateToilUsage } from './queries';
 
 // Clean up all TOIL data for a user
 export async function cleanupAllToilData(userId: string): Promise<boolean> {
@@ -33,4 +35,4 @@ export async function cleanupAllToilData(userId: string): Promise<boolean> {
 }
 
 // Re-export the individual cleanup functions to make them available to importers
-export { cleanupDuplicateTOILRecords, cleanupDuplicateToilUsage } from './queries';
+export { cleanupDuplicateTOILRecords, cleanupDuplicateToilUsage };
