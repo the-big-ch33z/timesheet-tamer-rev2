@@ -43,6 +43,22 @@ const MonthlyToilManager: React.FC = () => {
     
     setProcessingEnabled(canProcess);
   }, [selectedMonth, summary, userId]);
+
+  // Listen for processing state updates
+  useEffect(() => {
+    const handleStateUpdate = () => {
+      // Force re-render to reflect new state
+      setSelectedMonth(prev => prev);
+    };
+
+    window.addEventListener('toil-month-state-updated', handleStateUpdate);
+    window.addEventListener('toil-month-end-submitted', handleStateUpdate);
+    
+    return () => {
+      window.removeEventListener('toil-month-state-updated', handleStateUpdate);
+      window.removeEventListener('toil-month-end-submitted', handleStateUpdate);
+    };
+  }, []);
   
   // Generate last 12 months for the dropdown
   const generateMonthOptions = () => {

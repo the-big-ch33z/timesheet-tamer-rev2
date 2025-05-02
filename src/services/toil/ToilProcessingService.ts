@@ -79,7 +79,9 @@ export const submitToilProcessing = (data: ToilProcessingFormData): ToilProcessi
   updateMonthProcessingState(data.userId, data.month, ToilProcessingStatus.IN_PROGRESS);
   
   // Dispatch event for UI update
-  timeEventsService.publish('toil-month-end-submitted', processingRecord);
+  // Use CustomEvent instead of timeEventsService to avoid type errors
+  const event = new CustomEvent("toil-month-end-submitted", { detail: processingRecord });
+  window.dispatchEvent(event);
   
   return processingRecord;
 };
@@ -127,7 +129,9 @@ export const updateMonthProcessingState = (
     localStorage.setItem(TOIL_MONTH_PROCESSING_STATE_KEY, JSON.stringify(allStates));
     
     // Dispatch event for UI update
-    timeEventsService.publish('toil-month-state-updated', newState);
+    // Use CustomEvent instead of timeEventsService to avoid type errors
+    const event = new CustomEvent("toil-month-state-updated", { detail: newState });
+    window.dispatchEvent(event);
   } catch (error) {
     console.error("Error updating TOIL month processing state:", error);
   }

@@ -44,7 +44,9 @@ export const approveToil = (recordId: string, approverId: string): ToilProcessin
     localStorage.setItem(TOIL_PROCESSING_RECORDS_KEY, JSON.stringify(records));
     
     // Dispatch event for UI update
-    timeEventsService.publish('toil-approval-updated', records[recordIndex]);
+    // Use CustomEvent instead of timeEventsService to avoid type errors
+    const event = new CustomEvent("toil-approval-updated", { detail: records[recordIndex] });
+    window.dispatchEvent(event);
     
     return records[recordIndex];
   } catch (error) {
@@ -78,7 +80,9 @@ export const rejectToil = (recordId: string, approverId: string): ToilProcessing
     localStorage.setItem(TOIL_PROCESSING_RECORDS_KEY, JSON.stringify(records));
     
     // Dispatch event for UI update
-    timeEventsService.publish('toil-approval-updated', records[recordIndex]);
+    // Use CustomEvent instead of timeEventsService to avoid type errors
+    const event = new CustomEvent("toil-approval-updated", { detail: records[recordIndex] });
+    window.dispatchEvent(event);
     
     return records[recordIndex];
   } catch (error) {

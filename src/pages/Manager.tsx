@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
 import StatisticsCards from "@/components/manager/StatisticsCards";
 import TabContent from "@/components/manager/TabContent";
@@ -81,27 +81,31 @@ const Manager = () => {
       />
       
       {/* Tabs */}
-      <Tabs defaultValue="team-overview" className="w-full" onValueChange={setSelectedTab}>
+      <Tabs defaultValue="team-overview" className="w-full" value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="bg-muted/50">
           <TabsTrigger value="team-overview">Team Overview</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
-          <TabsTrigger value="toil-report">TOIL Approval Report</TabsTrigger>
+          <TabsTrigger value="toil-approvals">TOIL Approval Report</TabsTrigger>
           <TabsTrigger value="dta-report">DTA Approval Report</TabsTrigger>
         </TabsList>
 
-        <TabContent
-          activeTab={selectedTab}
-          filteredTeams={filteredTeams}
-          selectedTeamId={selectedTeamId}
-          setSelectedTeamId={setSelectedTeamId}
-          selectedTeam={selectedTeam}
-          manager={manager}
-          teamMembers={teamMembers}
-          onRefreshData={managerState.refreshTeamMembers}
-          onEditUser={onEditUser}
-          onArchiveUser={userActions.handleArchiveUser}
-          onRestoreUser={userActions.handleRestoreUser}
-        />
+        <TabContent />
+
+        {/* Use TabsContent for rendering specific content based on tab selection */}
+        <TabsContent value="team-overview">
+          <TeamOverview 
+            teams={filteredTeams}
+            selectedTeamId={selectedTeamId}
+            setSelectedTeamId={setSelectedTeamId}
+            selectedTeam={selectedTeam}
+            manager={manager}
+            teamMembers={teamMembers}
+            onRefreshData={managerState.refreshTeamMembers}
+            onEditUser={onEditUser}
+            onArchiveUser={userActions.handleArchiveUser}
+            onRestoreUser={userActions.handleRestoreUser}
+          />
+        </TabsContent>
       </Tabs>
       
       {/* Edit User Sheet */}
