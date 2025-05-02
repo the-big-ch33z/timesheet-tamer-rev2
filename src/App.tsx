@@ -37,6 +37,7 @@ const globalAppState = {
 
 function App() {
   const [isAppReady, setIsAppReady] = React.useState(false);
+  const [initError, setInitError] = React.useState<Error | null>(null);
   
   // Initialize services and monitor app state on startup
   React.useEffect(() => {
@@ -74,6 +75,7 @@ function App() {
       } catch (error) {
         console.error("Failed to initialize application:", error);
         globalAppState.hasErrors = true;
+        setInitError(error instanceof Error ? error : new Error('Unknown initialization error'));
         
         // Still mark app as ready so we can show error UI
         setIsAppReady(true);
@@ -102,6 +104,27 @@ function App() {
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <p className="text-gray-600">Loading application...</p>
+      </div>
+    );
+  }
+
+  // If we have an initialization error, show it
+  if (initError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 p-4">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+          <h2 className="text-xl font-bold text-red-600 mb-2">Application Error</h2>
+          <p className="mb-4">There was a problem initializing the application:</p>
+          <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto max-h-40">
+            {initError.message}
+          </pre>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Reload Application
+          </button>
+        </div>
       </div>
     );
   }

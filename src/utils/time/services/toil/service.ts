@@ -1,4 +1,3 @@
-
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -232,7 +231,7 @@ export class TOILService {
         status: 'active'
       };
       
-      // Store the TOIL record - FIX: Use imported storeTOILRecord instead of non-existent class method
+      // Store the TOIL record - Use imported storeTOILRecord instead of non-existent class method
       storeTOILRecord(toilRecord)
         .then(stored => {
           if (!stored) {
@@ -241,10 +240,7 @@ export class TOILService {
             return;
           }
           
-          // Get updated summary
-          this.getTOILSummary(userId, monthYear);
-          
-          // Get updated summary
+          // Get updated summary - Fix: Remove duplicate call
           const summary = this.getTOILSummary(userId, monthYear);
           
           // Dispatch TOIL update event

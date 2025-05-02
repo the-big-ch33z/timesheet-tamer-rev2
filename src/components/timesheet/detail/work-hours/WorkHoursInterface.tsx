@@ -16,11 +16,14 @@ const logger = createTimeLogger('WorkHoursInterface');
 const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   date,
   userId,
-  entries,
+  entries = [], // Default to empty array if entries is undefined
   interactive = true,
   workSchedule,
   onHoursChange
 }) => {
+  // Ensure entries is always an array
+  const safeEntries = Array.isArray(entries) ? entries : [];
+
   const { calculateDayHours, breakConfig, hasLunchBreakInSchedule, hasSmokoBreakInSchedule } 
     = useWorkHoursCalculation(date, workSchedule);
 
@@ -38,7 +41,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     isUndertime,
     handleTimeChange
   } = useTimeEntryState({
-    entries,
+    entries: safeEntries,
     date,
     workSchedule,
     interactive,
@@ -49,7 +52,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   const { calculateToilForDay, isCalculating } = useTOILCalculations({
     userId,
     date,
-    entries,
+    entries: safeEntries,
     workSchedule
   });
 
@@ -99,7 +102,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     toilActive,
     isComplete,
     calculateToilForDay,
-    entries.length
+    safeEntries.length // Use safeEntries instead of entries directly
   );
 
   // Fix: Make sure we're reporting completion status consistently
