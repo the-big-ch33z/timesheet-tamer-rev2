@@ -20,8 +20,6 @@ import {
 import { isMonthProcessable, getUserEmploymentType, getToilThreshold, formatHours } from "./helpers/toilUtils";
 import { ToilProcessingStatus } from "@/types/monthEndToil";
 import { createTimeLogger } from "@/utils/time/errors";
-import { cleanupAllToilData } from "@/utils/time/services/toil/storage/cleanup";
-import { getTOILSummary } from "@/utils/time/services/toil/storage";
 
 // Create a logger for MonthlyToilManager
 const logger = createTimeLogger('MonthlyToilManager');
@@ -36,7 +34,6 @@ const MonthlyToilManager: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(format(previousMonth, "yyyy-MM"));
   const [showProcessDialog, setShowProcessDialog] = useState(false);
   const [processingEnabled, setProcessingEnabled] = useState(false);
-  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   
   // Log which month is being viewed initially
   useEffect(() => {
@@ -52,8 +49,19 @@ const MonthlyToilManager: React.FC = () => {
   
   // Log TOIL summary changes
   useEffect(() => {
-    logger.debug(`TOIL summary for ${selectedMonth}:`, summary || 'No summary data');
-  }, [summary, selectedMonth]);
+    if (summary) {
+      logger.debug(`TOIL summary for ${selectedMonth}:`, { 
+        accrued: summary.accrued,
+        used: summary.used,
+        remaining: summary.remaining,
+        monthYear: summary.monthYear
+      });
+    } else if (isLoading) {
+      logger.debug(`Loading TOIL summary for ${selectedMonth}...`);
+    } else if (error) {
+      logger.error(`Error loading TOIL summary for ${selectedMonth}:`, error);
+    }
+  }, [summary, isLoading, error, selectedMonth]);
   
   // Fix: Improved check if month can be processed
   const checkIfMonthCanBeProcessed = useCallback(() => {
@@ -63,11 +71,11 @@ const MonthlyToilManager: React.FC = () => {
     }
     
     // Fix: More permissive month processability check for April
+    const now = new Date();
     const selectedDate = new Date(selectedMonth + "-01");
     
     // Consider April processable since we're in May now
-    const isProcessable = isMonthProcessable(selectedMonth) && 
-                         (summary.remaining > 0 || selectedMonth === '2025-04');
+    const isProcessable = isMonthProcessable(selectedMonth) && summary.remaining > 0;
 
     // Check if this month has already been processed
     const existingRecord = getToilProcessingRecordForMonth(userId, selectedMonth);
@@ -148,49 +156,14 @@ const MonthlyToilManager: React.FC = () => {
   }, [processingState, selectedMonth]);
   
   // Force a refresh function for testing when data isn't showing up
-  const forceRefreshData = async () => {
+  const forceRefreshData = () => {
     if (!userId) return;
     
-    setIsManualRefreshing(true);
-    
-    try {
-      // Run full cleanup
-      await cleanupAllToilData(userId);
-      
-      // Force refresh of special test data for April 2025
-      if (selectedMonth === '2025-04') {
-        const testSummary = {
-          userId,
-          monthYear: selectedMonth,
-          accrued: 14.5,
-          used: 6.0, 
-          remaining: 8.5
-        };
-        
-        // Dispatch an event with the test data
-        const event = new CustomEvent("toil:summary-updated", { 
-          detail: testSummary
-        });
-        window.dispatchEvent(event);
-      }
-      
-      // Regular refresh from storage
-      refreshSummary();
-      
-      toast({
-        title: "Refreshed TOIL Data",
-        description: "TOIL data has been refreshed for the selected month."
-      });
-    } catch (err) {
-      logger.error('Error during data refresh:', err);
-      toast({
-        title: "Refresh Error",
-        description: "There was a problem refreshing the data.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsManualRefreshing(false);
-    }
+    refreshSummary();
+    toast({
+      title: "Refreshed TOIL Data",
+      description: "TOIL data has been refreshed for the selected month.",
+    });
   };
   
   if (!currentUser) {
@@ -236,7 +209,6 @@ const MonthlyToilManager: React.FC = () => {
                 variant="outline" 
                 className="mt-2"
                 onClick={forceRefreshData}
-                disabled={isManualRefreshing}
               >
                 Retry
               </Button>
@@ -245,7 +217,6 @@ const MonthlyToilManager: React.FC = () => {
             <ToilSummary 
               summary={summary} 
               showRollover={!!processingState && processingState.status === ToilProcessingStatus.COMPLETED}
-              rolloverHours={selectedMonth === '2025-04' ? 4.5 : 0}
             />
           )}
           
@@ -285,13 +256,12 @@ const MonthlyToilManager: React.FC = () => {
           <Button 
             variant="secondary"
             onClick={forceRefreshData}
-            disabled={isManualRefreshing || isLoading}
           >
-            {isManualRefreshing ? 'Refreshing...' : 'Refresh Data'}
+            Refresh Data
           </Button>
           <Button 
             onClick={handleOpenProcessDialog}
-            disabled={!processingEnabled || isLoading || isManualRefreshing}
+            disabled={!processingEnabled || isLoading}
           >
             Process Month-End TOIL
           </Button>

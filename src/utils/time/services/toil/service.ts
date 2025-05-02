@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -11,8 +12,6 @@ import {
   clearSummaryCache,
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
-  storeTOILRecord,
-  storeTOILUsage,
   TOIL_SUMMARY_CACHE_KEY,
 } from "./storage";
 import { calculateTOILHours } from "./calculation";
@@ -85,8 +84,8 @@ export class TOILService {
         status: 'active'
       };
       
-      // Store the TOIL record using the shared function
-      const stored = await storeTOILRecord(toilRecord);
+      // Store the TOIL record
+      const stored = await this.storeTOILRecord(toilRecord);
       
       if (!stored) {
         logger.error('Failed to store TOIL record');
@@ -137,15 +136,46 @@ export class TOILService {
     }
   }
 
-  // Record TOIL usage - FIXED: Now uses storeTOILUsage which checks for duplicates
+  // Store a TOIL record
+  private async storeTOILRecord(record: TOILRecord): Promise<boolean> {
+    try {
+      const records = loadTOILRecords();
+      
+      // Check for duplicate by date and userId
+      const existingIndex = records.findIndex(r => 
+        r.userId === record.userId && 
+        format(new Date(r.date), 'yyyy-MM-dd') === format(new Date(record.date), 'yyyy-MM-dd')
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing record
+        records[existingIndex] = record;
+        logger.debug(`Updated existing TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      } else {
+        // Add new record
+        records.push(record);
+        logger.debug(`Added new TOIL record for ${format(record.date, 'yyyy-MM-dd')}`);
+      }
+      
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
+      
+      // Clear the summary cache for this month
+      clearSummaryCache(record.userId, record.monthYear);
+      
+      return true;
+    } catch (error) {
+      logger.error('Error storing TOIL record:', error);
+      return false;
+    }
+  }
+
+  // Record TOIL usage
   public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
     try {
       if (!entry) {
         logger.error('No entry provided for TOIL usage');
         return false;
       }
-      
-      logger.debug(`Recording TOIL usage for entry: ${entry.id}, hours: ${entry.hours}`);
       
       const usage: TOILUsage = {
         id: uuidv4(),
@@ -156,18 +186,22 @@ export class TOILService {
         monthYear: format(entry.date, 'yyyy-MM')
       };
       
-      // Use the shared storeTOILUsage function to handle duplicate prevention
-      const success = await storeTOILUsage(usage);
+      const usages = loadTOILUsage();
+      usages.push(usage);
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usages));
       
-      if (success) {
-        // Get updated summary
-        const summary = await this.getTOILSummary(entry.userId, usage.monthYear);
-        
-        // Dispatch TOIL update event with complete summary data for immediate UI update
-        dispatchTOILEvent(summary);
-      }
+      // Clear the summary cache for this month
+      clearSummaryCache(entry.userId, usage.monthYear);
       
-      return success;
+      logger.debug(`Recorded TOIL usage for entry ${entry.id}`);
+      
+      // Get updated summary
+      const summary = await this.getTOILSummary(entry.userId, usage.monthYear);
+      
+      // Dispatch TOIL update event
+      dispatchTOILEvent(summary);
+      
+      return true;
     } catch (error) {
       logger.error('Error recording TOIL usage:', error);
       return false;
@@ -231,8 +265,8 @@ export class TOILService {
         status: 'active'
       };
       
-      // Store the TOIL record - Use imported storeTOILRecord instead of non-existent class method
-      storeTOILRecord(toilRecord)
+      // Store the TOIL record
+      this.storeTOILRecord(toilRecord)
         .then(stored => {
           if (!stored) {
             logger.error('Failed to store TOIL record');
@@ -240,7 +274,10 @@ export class TOILService {
             return;
           }
           
-          // Get updated summary - Fix: Remove duplicate call
+          // Get updated summary
+          this.getTOILSummary(userId, monthYear);
+          
+          // Get updated summary
           const summary = this.getTOILSummary(userId, monthYear);
           
           // Dispatch TOIL update event

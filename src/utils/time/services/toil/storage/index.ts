@@ -1,16 +1,16 @@
 
-/**
- * Export all storage-related functions to maintain consistent API
- */
-
-// Export core storage functions
+// Export all storage functionality from the individual modules
 export * from './core';
-
-// Export record management functions
 export * from './record-management';
 
-// Export query functions directly (not through cleanup to avoid circular deps)
-export * from './queries';
+// Explicitly export from queries while avoiding duplicates with cleanup module
+export {
+  getUserTOILRecords,
+  findTOILRecordsByEntryId,
+  hasTOILForDay,
+  hasTOILForMonth,
+  getTOILSummary
+} from './queries';
 
-// Export cleanup functions 
+// Export cleanup functions from their dedicated module
 export * from './cleanup';

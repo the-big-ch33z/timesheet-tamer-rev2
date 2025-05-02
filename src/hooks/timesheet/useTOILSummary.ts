@@ -6,8 +6,7 @@ import { useLogger } from '@/hooks/useLogger';
 import { 
   getTOILSummary, 
   clearTOILStorageForMonth, 
-  cleanupDuplicateTOILRecords,
-  cleanupDuplicateToilUsage
+  cleanupDuplicateTOILRecords 
 } from '@/utils/time/services/toil/storage';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
@@ -37,8 +36,6 @@ export const useTOILSummary = ({
   const [error, setError] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const isMountedRef = useRef(true);
-  const lastEventIdRef = useRef<string | null>(null);
-  const lastMonthYearRef = useRef<string>("");
   
   // Extract just the year and month for monthly view
   // This ensures we don't re-fetch data when only the day changes
@@ -47,31 +44,22 @@ export const useTOILSummary = ({
   // Debug log the hook initialization
   useEffect(() => {
     logger.debug(`TOIL Summary hook initialized for user ${userId}, month ${monthYear}`);
-    lastMonthYearRef.current = monthYear;
   }, [userId, monthYear]);
   
-  // Clear caches and cleanup duplicates when month changes
+  // Clear caches when month changes to ensure we get fresh data
   useEffect(() => {
-    if (lastMonthYearRef.current !== monthYear) {
-      toilService.clearCache();
-      if (userId) {
-        // Run both cleanup functions
-        Promise.all([
-          cleanupDuplicateTOILRecords(userId),
-          cleanupDuplicateToilUsage(userId)
-        ])
-          .then(([recordCount, usageCount]) => {
-            if (recordCount > 0 || usageCount > 0) {
-              logger.debug(`Cleaned up ${recordCount} duplicate TOIL records and ${usageCount} usage records for ${userId}`);
-              // Force refresh after cleanup
-              setRefreshCounter(prev => prev + 1);
-            }
-          })
-          .catch(err => logger.error('Error cleaning up duplicates:', err));
-      }
-      lastMonthYearRef.current = monthYear;
-      logger.debug(`Month changed to ${monthYear}, cache cleared and duplicates cleaned`);
+    toilService.clearCache();
+    // New: cleanup duplicate TOIL records when month changes
+    if (userId) {
+      cleanupDuplicateTOILRecords(userId)
+        .then(count => {
+          if (count > 0) {
+            logger.debug(`Cleaned up ${count} duplicate TOIL records for ${userId}`);
+          }
+        })
+        .catch(err => logger.error('Error cleaning up duplicates:', err));
     }
+    logger.debug(`Month changed to ${monthYear}, cache cleared and duplicates cleaned`);
   }, [monthYear, userId]);
   
   // The loadSummary function, now as useCallback to prevent recreation
@@ -87,64 +75,34 @@ export const useTOILSummary = ({
         return;
       }
       
-      // Cleanup duplicate TOIL usage records first
-      cleanupDuplicateToilUsage(userId)
-        .then(count => {
-          if (count > 0) {
-            logger.debug(`Cleaned up ${count} duplicate TOIL usage records before loading summary`);
-          }
-          
-          // Then get the summary
-          const toilSummary = getTOILSummary(userId, monthYear);
-          
-          if (!isMountedRef.current) return;
-          
-          // Check if summary has data
-          if (toilSummary && (toilSummary.accrued > 0 || toilSummary.used > 0)) {
-            setSummary(toilSummary);
-            logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
-          } else {
-            // For April 2025, inject test data if none exists
-            if (monthYear === '2025-04') {
-              logger.debug(`No data found for April 2025, creating sample data`);
-              // Create a sample summary for April 2025
-              const sampleSummary: TOILSummary = {
-                userId,
-                monthYear,
-                accrued: 14.5,
-                used: 6.0,
-                remaining: 8.5
-              };
-              setSummary(sampleSummary);
-            } else {
-              // Otherwise use the normal (possibly empty) summary
-              setSummary(toilSummary || {
-                userId,
-                monthYear,
-                accrued: 0,
-                used: 0,
-                remaining: 0
-              });
-              logger.debug(`Loaded empty or default TOIL summary for ${userId}, month=${monthYear}`);
-            }
-          }
-          
-          setIsLoading(false);
-        })
-        .catch(err => {
-          logger.error(`Error cleaning up duplicates: ${err.message}`);
-          // Continue with summary loading anyway
-          const toilSummary = getTOILSummary(userId, monthYear);
-          if (!isMountedRef.current) return;
-          setSummary(toilSummary || {
+      // Use the improved getTOILSummary function
+      const toilSummary = getTOILSummary(userId, monthYear);
+      
+      if (!isMountedRef.current) return;
+      
+      // Check if summary has data
+      if (toilSummary && (toilSummary.accrued > 0 || toilSummary.used > 0)) {
+        setSummary(toilSummary);
+        logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
+      } else {
+        // For April 2025, inject test data if none exists
+        if (monthYear === '2025-04') {
+          logger.debug(`No data found for April 2025, creating sample data`);
+          // Create a sample summary for April 2025
+          const sampleSummary: TOILSummary = {
             userId,
             monthYear,
-            accrued: 0,
-            used: 0,
-            remaining: 0
-          });
-          setIsLoading(false);
-        });
+            accrued: 14.5,
+            used: 6.0,
+            remaining: 8.5
+          };
+          setSummary(sampleSummary);
+        } else {
+          // Otherwise use the normal (possibly empty) summary
+          setSummary(toilSummary);
+          logger.debug(`Loaded empty or default TOIL summary for ${userId}, month=${monthYear}`);
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading TOIL summary';
       logger.error(errorMessage);
@@ -160,6 +118,9 @@ export const useTOILSummary = ({
           used: 0,
           remaining: 0
         });
+      }
+    } finally {
+      if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
@@ -189,16 +150,6 @@ export const useTOILSummary = ({
       if (!isMountedRef.current) return;
       
       const eventData = event.detail;
-      const eventId = eventData?.entryId || 'no-id';
-      
-      // Skip if we've already processed this exact event recently
-      if (eventId === lastEventIdRef.current) {
-        logger.debug('Skipping duplicate TOIL update event');
-        return;
-      }
-      
-      lastEventIdRef.current = eventId;
-      
       const shouldRefresh = eventData?.userId === userId && (!eventData.monthYear || eventData.monthYear === monthYear);
       
       if (shouldRefresh) {
@@ -228,22 +179,10 @@ export const useTOILSummary = ({
     const subscription = timeEventsService.subscribe('toil-updated', (data) => {
       logger.debug('Received toil-updated event via timeEventsService:', data);
       
-      // Skip duplicate events
-      if (data?.entryId === lastEventIdRef.current) {
-        logger.debug('Skipping duplicate toil-updated event');
-        return;
-      }
-      
-      lastEventIdRef.current = data?.entryId || 'no-id';
-      
       // Handle direct updates from TOIL usage or creation
       if (data?.userId === userId && data?.date) {
-        // Force immediate refresh with a small delay to ensure storage is updated
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            loadSummary();
-          }
-        }, 50); 
+        // Force immediate refresh
+        setTimeout(() => loadSummary(), 10); 
       }
     });
     
