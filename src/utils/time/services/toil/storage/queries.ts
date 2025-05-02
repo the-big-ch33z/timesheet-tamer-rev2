@@ -1,4 +1,3 @@
-
 import { TOILRecord } from "@/types/toil";
 import { format, isSameDay } from "date-fns";
 import { loadTOILRecords, loadTOILUsage } from './core';
@@ -10,6 +9,45 @@ const logger = createTimeLogger('TOILQueries');
 export function getUserTOILRecords(userId: string): TOILRecord[] {
   const allRecords = loadTOILRecords();
   return allRecords.filter(record => record.userId === userId);
+}
+
+// Clean up duplicate TOIL records for a user
+export async function cleanupDuplicateTOILRecords(userId: string): Promise<number> {
+  try {
+    const allRecords = loadTOILRecords();
+    const uniqueDates = new Map<string, TOILRecord>();
+    let duplicatesRemoved = 0;
+    
+    // Keep only the latest record for each date
+    allRecords.filter(record => record.userId === userId).forEach(record => {
+      const dateKey = format(new Date(record.date), 'yyyy-MM-dd');
+      
+      if (!uniqueDates.has(dateKey) || 
+          new Date(record.date) > new Date(uniqueDates.get(dateKey)!.date)) {
+        uniqueDates.set(dateKey, record);
+      } else {
+        duplicatesRemoved++;
+      }
+    });
+    
+    if (duplicatesRemoved > 0) {
+      // Save the cleaned records back
+      const cleanedRecords = allRecords.filter(record => {
+        if (record.userId !== userId) return true;
+        
+        const dateKey = format(new Date(record.date), 'yyyy-MM-dd');
+        return uniqueDates.get(dateKey)?.id === record.id;
+      });
+      
+      localStorage.setItem('toilRecords', JSON.stringify(cleanedRecords));
+      logger.debug(`Removed ${duplicatesRemoved} duplicate TOIL records for user ${userId}`);
+    }
+    
+    return duplicatesRemoved;
+  } catch (error) {
+    logger.error('Error cleaning up duplicate TOIL records:', error);
+    return 0;
+  }
 }
 
 // Check if a user has TOIL records for a specific day
@@ -68,23 +106,67 @@ export function hasTOILForMonth(userId: string, monthYear: string): boolean {
   return records.some(record => record.userId === userId && record.monthYear === monthYear);
 }
 
-// Get TOIL summary for a user and month
+// Delete all TOIL storage for a particular month
+export function clearTOILStorageForMonth(userId: string, monthYear: string): boolean {
+  try {
+    // Get all records and usage
+    const allRecords = loadTOILRecords();
+    const allUsage = loadTOILUsage();
+    
+    // Filter out records for this user and month
+    const filteredRecords = allRecords.filter(record => 
+      record.userId !== userId || record.monthYear !== monthYear
+    );
+    
+    const filteredUsage = allUsage.filter(usage => 
+      usage.userId !== userId || usage.monthYear !== monthYear
+    );
+    
+    // Save filtered data back to storage
+    localStorage.setItem('toilRecords', JSON.stringify(filteredRecords));
+    localStorage.setItem('toilUsage', JSON.stringify(filteredUsage));
+    
+    // Clear the summary cache
+    localStorage.removeItem(`toilSummaryCache-${userId}-${monthYear}`);
+    
+    return true;
+  } catch (error) {
+    logger.error('Error clearing TOIL storage for month:', error);
+    return false;
+  }
+}
+
+// Get TOIL summary for a user and month - IMPROVED version
 export function getTOILSummary(userId: string, monthYear: string) {
   try {
     const records = loadTOILRecords();
     const usages = loadTOILUsage();
     
-    // Filter records and usages for the specified user and month
-    const userRecords = records.filter(record => 
-      record.userId === userId && record.monthYear === monthYear
-    );
+    // More strict filtering to avoid duplicates
+    const uniqueDates = new Map<string, TOILRecord>();
     
+    // Get unique records by date (take the most recent one)
+    records
+      .filter(record => record.userId === userId && record.monthYear === monthYear)
+      .forEach(record => {
+        const dateKey = format(new Date(record.date), 'yyyy-MM-dd');
+        
+        if (!uniqueDates.has(dateKey) || 
+            new Date(record.date) > new Date(uniqueDates.get(dateKey)!.date)) {
+          uniqueDates.set(dateKey, record);
+        }
+      });
+    
+    // Calculate with unique records only
+    const accrued = Array.from(uniqueDates.values())
+      .reduce((sum, record) => sum + record.hours, 0);
+    
+    // Filter usages for this user and month
     const userUsages = usages.filter(usage => 
       usage.userId === userId && usage.monthYear === monthYear
     );
     
-    // Calculate total accrued and used hours
-    const accrued = userRecords.reduce((sum, record) => sum + record.hours, 0);
+    // Calculate used hours
     const used = userUsages.reduce((sum, usage) => sum + usage.hours, 0);
     const remaining = accrued - used;
     

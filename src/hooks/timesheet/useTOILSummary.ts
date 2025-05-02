@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { toilService } from '@/utils/time/services/toil';
@@ -68,7 +69,7 @@ export const useTOILSummary = ({
         return;
       }
       
-      // Use the imported getTOILSummary function instead of accessing it through toilService
+      // Use the improved getTOILSummary function
       const toilSummary = getTOILSummary(userId, monthYear);
       
       if (isMountedRef.current) {
@@ -110,7 +111,7 @@ export const useTOILSummary = ({
     };
   }, []);
   
-  // Listen for TOIL update events to refresh the summary
+  // Listen for TOIL update events to refresh the summary - IMPROVED immediate response
   useEffect(() => {
     const handleTOILUpdate = (event: CustomEvent) => {
       if (!isMountedRef.current) return;
@@ -121,24 +122,35 @@ export const useTOILSummary = ({
       if (shouldRefresh) {
         logger.debug('Received TOIL update event, refreshing summary');
         
-        // If we have a complete summary in the event, use it directly
+        // If we have a complete summary in the event, use it directly for immediate update
         if (eventData.accrued !== undefined) {
-          setSummary(eventData);
+          setSummary({
+            userId: eventData.userId,
+            monthYear: eventData.monthYear || monthYear,
+            accrued: eventData.accrued,
+            used: eventData.used,
+            remaining: eventData.remaining
+          });
+          setIsLoading(false);
         } else {
           // Otherwise reload from storage
           loadSummary();
         }
-        
-        setIsLoading(false); // Ensure loading state is reset
       }
     };
     
     // Listen for both traditional events and the timeEventsService events
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     
-    const subscription = timeEventsService.subscribe('toil-updated', () => {
-      logger.debug('Received toil-updated event via timeEventsService');
-      loadSummary();
+    // More responsive event handling for immediate UI updates
+    const subscription = timeEventsService.subscribe('toil-updated', (data) => {
+      logger.debug('Received toil-updated event via timeEventsService:', data);
+      
+      // Handle direct updates from TOIL usage or creation
+      if (data?.userId === userId && data?.date) {
+        // Force immediate refresh
+        setTimeout(() => loadSummary(), 10); 
+      }
     });
     
     return () => {

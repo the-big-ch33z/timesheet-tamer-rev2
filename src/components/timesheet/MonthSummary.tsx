@@ -13,6 +13,9 @@ import { getWorkdaysInMonth } from "@/utils/time/scheduleUtils";
 
 const logger = createTimeLogger('MonthSummary');
 
+// Define TOIL and synthetic job numbers to exclude
+const EXCLUDED_JOB_NUMBERS = ["TOIL"];
+
 interface MonthSummaryProps {
   userId: string;
   date: Date;
@@ -45,9 +48,25 @@ const MonthSummary: React.FC<MonthSummaryProps> = ({
   useEffect(() => {
     setIsLoading(true);
     const monthEntries = getMonthEntries(date, userId);
-    const totalHours = calculateTotalHours(monthEntries);
     
-    logger.debug(`Month total hours: ${totalHours} from ${monthEntries.length} entries`);
+    // IMPORTANT: Filter out TOIL entries and synthetic entries to prevent them affecting monthly total
+    const filteredEntries = monthEntries.filter(entry => {
+      // Exclude entries with TOIL job number
+      if (EXCLUDED_JOB_NUMBERS.includes(entry.jobNumber || '')) {
+        return false;
+      }
+      
+      // Exclude synthetic entries (which includes TOIL)
+      if (entry.synthetic === true) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    const totalHours = calculateTotalHours(filteredEntries);
+    
+    logger.debug(`Month total hours: ${totalHours} from ${filteredEntries.length} filtered entries (excluded ${monthEntries.length - filteredEntries.length} TOIL entries)`);
     setMonthTotalHours(totalHours);
     setIsLoading(false);
   }, [date, userId, getMonthEntries, calculateTotalHours]);
