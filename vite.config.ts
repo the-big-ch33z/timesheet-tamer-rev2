@@ -13,11 +13,11 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      // Use correct options for react-swc plugin
-      swcReact: {
-        development: mode === 'development',
-        refresh: mode === 'development',
-      },
+      // Use correct options for the plugin
+      plugins: [],
+      jsxImportSource: undefined,
+      // Development mode configuration for React
+      devTarget: 'es2020',
     }),
     splitVendorChunkPlugin(),
     mode === 'development' && componentTagger(),
@@ -72,7 +72,12 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/react\//,
         /node_modules\/@radix-ui\//,
         /node_modules\/react-dom\//,
+        // Add specific handling for recharts and lodash due to the ESM/CJS issues
+        /node_modules\/recharts\//,
+        /node_modules\/lodash\//,
       ],
+      // Force specific Recharts dependency to be considered as requiring
+      requireReturnsDefault: 'auto',
     },
     rollupOptions: {
       output: {
@@ -86,6 +91,9 @@ export default defineConfig(({ mode }) => ({
           }
           if (id.includes('node_modules/@radix-ui')) {
             return 'radix';
+          }
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/lodash')) {
+            return 'charts';
           }
           if (id.includes('src/components/ui')) {
             return 'ui';
