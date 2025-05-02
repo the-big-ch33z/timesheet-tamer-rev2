@@ -54,6 +54,73 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
   }
 }
 
+// NEW: Clean up duplicate TOIL usage records for a specific user
+export async function cleanupDuplicateToilUsage(userId: string): Promise<number> {
+  try {
+    const allUsages = loadTOILUsage();
+    const uniqueEntryIds = new Map();
+    let duplicatesRemoved = 0;
+    
+    // Filter usages for this user
+    const userUsages = allUsages.filter(u => u.userId === userId);
+    
+    // Process each usage to find duplicates by entryId
+    userUsages.forEach(usage => {
+      if (!uniqueEntryIds.has(usage.entryId)) {
+        // First usage for this entry
+        uniqueEntryIds.set(usage.entryId, usage);
+      } else {
+        // Duplicate found - keep the most recent one (assuming higher ID = newer)
+        const existing = uniqueEntryIds.get(usage.entryId);
+        
+        // Keep the usage with the highest ID (most recent)
+        if (usage.id > existing.id) {
+          uniqueEntryIds.set(usage.entryId, usage);
+        }
+        
+        duplicatesRemoved++;
+      }
+    });
+    
+    if (duplicatesRemoved > 0) {
+      // Keep usages from other users
+      const otherUserUsages = allUsages.filter(u => u.userId !== userId);
+      
+      // Combine with unique usages for this user
+      const cleanedUsages = [...otherUserUsages, ...uniqueEntryIds.values()];
+      
+      // Save back to storage
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(cleanedUsages));
+      logger.debug(`Removed ${duplicatesRemoved} duplicate TOIL usage records for user ${userId}`);
+      
+      // Clear summaries for affected months
+      const months = new Set<string>();
+      uniqueEntryIds.forEach(usage => months.add(usage.monthYear));
+      months.forEach(monthYear => clearSummaryCache(userId, monthYear));
+    }
+    
+    return duplicatesRemoved;
+  } catch (error) {
+    logger.error('Error cleaning up duplicate TOIL usage records:', error);
+    return 0;
+  }
+}
+
+// Clean up all TOIL data for a user
+export async function cleanupAllToilData(userId: string): Promise<boolean> {
+  try {
+    // Clean up both types of duplicates
+    const recordsRemoved = await cleanupDuplicateTOILRecords(userId);
+    const usagesRemoved = await cleanupDuplicateToilUsage(userId);
+    
+    logger.debug(`Cleanup complete for ${userId}: removed ${recordsRemoved} accrual and ${usagesRemoved} usage duplicates`);
+    return (recordsRemoved > 0 || usagesRemoved > 0);
+  } catch (error) {
+    logger.error('Error cleaning up TOIL data:', error);
+    return false;
+  }
+}
+
 // Clear all TOIL storage for a specific month
 export function clearTOILStorageForMonth(userId: string, monthYear: string): void {
   try {

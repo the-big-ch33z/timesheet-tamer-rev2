@@ -1,10 +1,11 @@
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { WorkHoursActionType } from '../components/WorkHoursActionButtons';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const logger = createTimeLogger('useWorkHoursActions');
 
@@ -32,6 +33,15 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     toil: null,
     lunch: null,
     smoko: null
+  });
+  
+  // Add processing state refs to prevent duplicate operations
+  const processingRef = useRef<Record<WorkHoursActionType, boolean>>({
+    sick: false,
+    leave: false,
+    toil: false,
+    lunch: false,
+    smoko: false
   });
 
   // Effect to initialize state from existing entries
@@ -78,156 +88,197 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     
   }, [dayEntries]);
 
-  const createSyntheticEntry = useCallback(async (type: WorkHoursActionType, isActive: boolean, dayHours: number) => {
-    logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
+  // Debounced implementation of createSyntheticEntry to prevent rapid duplicate calls
+  const createSyntheticEntry = useDebounce(async (type: WorkHoursActionType, isActive: boolean, dayHours: number) => {
+    // If already processing this type, skip to prevent duplicates
+    if (processingRef.current[type]) {
+      logger.debug(`Already processing ${type}, skipping duplicate operation`);
+      return;
+    }
+    
+    // Set processing flag
+    processingRef.current[type] = true;
+    
+    try {
+      logger.debug(`${type} toggle state changed to: ${isActive ? 'active' : 'inactive'}`);
 
-    // Handle toggling OFF - this needs to properly delete the entry
-    if (!isActive) {
-      const entryId = syntheticEntryIds[type];
-      
-      if (entryId) {
-        logger.debug(`Attempting to delete synthetic entry: ${entryId} for type: ${type}`);
+      // Handle toggling OFF - this needs to properly delete the entry
+      if (!isActive) {
+        const entryId = syntheticEntryIds[type];
         
-        try {
-          // Before deleting, double-check if the entry still exists
-          const entryExists = dayEntries.some(entry => entry.id === entryId);
+        if (entryId) {
+          logger.debug(`Attempting to delete synthetic entry: ${entryId} for type: ${type}`);
           
-          if (!entryExists) {
-            logger.debug(`Entry ${entryId} no longer exists in dayEntries, updating state only`);
-            setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
-            setActionStates(prev => ({ ...prev, [type]: false }));
-            setCreatedEntries(prev => ({ ...prev, [type]: false }));
-            return;
-          }
-          
-          const success = await deleteEntry(entryId);
-          
-          if (success) {
-            logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
-            setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
-            setActionStates(prev => ({ ...prev, [type]: false }));
-            setCreatedEntries(prev => ({ ...prev, [type]: false }));
+          try {
+            // Before deleting, double-check if the entry still exists
+            const entryExists = dayEntries.some(entry => entry.id === entryId);
             
-            timeEventsService.publish('toil-updated', {
-              userId,
-              date: date.toISOString(),
-              entryId,
-              reset: true
-            });
+            if (!entryExists) {
+              logger.debug(`Entry ${entryId} no longer exists in dayEntries, updating state only`);
+              setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+              setActionStates(prev => ({ ...prev, [type]: false }));
+              setCreatedEntries(prev => ({ ...prev, [type]: false }));
+              return;
+            }
             
-            toast({
-              title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
-              description: `Entry removed from ${date.toLocaleDateString()}`
-            });
-          } else {
-            logger.error(`Failed to delete synthetic entry: ${entryId}`);
-            // Make sure we still update the UI state since deletion failed
+            const success = await deleteEntry(entryId);
+            
+            if (success) {
+              logger.debug(`Successfully deleted synthetic entry: ${entryId}`);
+              setSyntheticEntryIds(prev => ({ ...prev, [type]: null }));
+              setActionStates(prev => ({ ...prev, [type]: false }));
+              setCreatedEntries(prev => ({ ...prev, [type]: false }));
+              
+              timeEventsService.publish('toil-updated', {
+                userId,
+                date: date.toISOString(),
+                entryId,
+                reset: true
+              });
+              
+              toast({
+                title: `${type.charAt(0).toUpperCase() + type.slice(1)} Removed`,
+                description: `Entry removed from ${date.toLocaleDateString()}`
+              });
+            } else {
+              logger.error(`Failed to delete synthetic entry: ${entryId}`);
+              // Make sure we still update the UI state since deletion failed
+              setActionStates(prev => ({ ...prev, [type]: false }));
+              toast({
+                title: `Removal Error`,
+                description: `Could not remove ${type} entry. Please try again.`,
+                variant: "destructive"
+              });
+            }
+          } catch (error) {
+            logger.error(`Error deleting synthetic entry: ${entryId}`, error);
             setActionStates(prev => ({ ...prev, [type]: false }));
             toast({
               title: `Removal Error`,
-              description: `Could not remove ${type} entry. Please try again.`,
+              description: `Could not remove ${type} entry due to an unexpected error.`,
+              variant: "destructive"
+            });
+          }
+        } else {
+          // No entry ID found but the state thinks it's active - fix the state
+          logger.debug(`No entry ID found for ${type}, but state was active. Fixing state.`);
+          setActionStates(prev => ({ ...prev, [type]: false }));
+          setCreatedEntries(prev => ({ ...prev, [type]: false }));
+        }
+        return;
+      }
+
+      // Don't create duplicate entries
+      if (syntheticEntryIds[type]) {
+        logger.debug(`Synthetic entry already exists for ${type}, not creating another one`);
+        return;
+      }
+      
+      // TOIL-specific check: Check if we already have a TOIL entry for this day
+      if (type === 'toil') {
+        const existingToilEntry = dayEntries.find(entry => 
+          entry.jobNumber === "TOIL"
+        );
+        
+        if (existingToilEntry) {
+          logger.debug(`TOIL entry already exists for this day: ${existingToilEntry.id}, updating state to match`);
+          setSyntheticEntryIds(prev => ({ ...prev, [type]: existingToilEntry.id }));
+          setCreatedEntries(prev => ({ ...prev, [type]: true }));
+          setActionStates(prev => ({ ...prev, [type]: true }));
+          return;
+        }
+      }
+
+      // Calculate the correct hours for the entry
+      // For TOIL, always include the smoko break time (0.25 hours)
+      let hoursToRecord = dayHours > 0 ? dayHours : 7.6;
+      
+      // For TOIL specifically, ensure we use the standard day hours
+      if (type === 'toil') {
+        // Base standard day is 8.75 hours (with 0.5h lunch and 0.25h smoko)
+        hoursToRecord = 9.0; // Include the smoko break (0.25 hours)
+        logger.debug(`Using standard TOIL hours: ${hoursToRecord}`);
+      }
+      
+      const entryTypeMap = {
+        leave: "LEAVE",
+        sick: "SICK",
+        toil: "TOIL"
+      } as const;
+      
+      if (type === 'leave' || type === 'sick' || type === 'toil') {
+        logger.debug(`Creating synthetic ${type} entry with ${hoursToRecord} hours for ${date.toLocaleDateString()}`);
+        
+        const entryData = {
+          userId,
+          date,
+          hours: hoursToRecord,
+          entryType: "auto",
+          description: `${type.charAt(0).toUpperCase() + type.slice(1)} - Automatically generated`,
+          jobNumber: entryTypeMap[type],
+          project: "General",
+          synthetic: true
+        };
+        
+        try {
+          const newEntryId = createEntry(entryData);
+          
+          if (newEntryId) {
+            logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
+            setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
+            setCreatedEntries(prev => ({ ...prev, [type]: true }));
+            
+            // Publish TOIL update event for UI refresh
+            if (type === 'toil') {
+              // Add a small delay before publishing to ensure the entry is fully created
+              setTimeout(() => {
+                timeEventsService.publish('toil-updated', {
+                  userId,
+                  date: date.toISOString(),
+                  entryId: newEntryId,
+                  hours: hoursToRecord
+                });
+              }, 100);
+            }
+            
+            toast({
+              title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
+              description: `${hoursToRecord} hours ${type === 'toil' ? 'used from' : 'recorded for'} ${date.toLocaleDateString()}`
+            });
+          } else {
+            logger.error(`Failed to create synthetic ${type} entry`);
+            setActionStates(prev => ({ ...prev, [type]: false }));
+            toast({
+              title: `Creation Error`,
+              description: `Could not create ${type} entry. Please try again.`,
               variant: "destructive"
             });
           }
         } catch (error) {
-          logger.error(`Error deleting synthetic entry: ${entryId}`, error);
-          setActionStates(prev => ({ ...prev, [type]: false }));
-          toast({
-            title: `Removal Error`,
-            description: `Could not remove ${type} entry due to an unexpected error.`,
-            variant: "destructive"
-          });
-        }
-      } else {
-        // No entry ID found but the state thinks it's active - fix the state
-        logger.debug(`No entry ID found for ${type}, but state was active. Fixing state.`);
-        setActionStates(prev => ({ ...prev, [type]: false }));
-        setCreatedEntries(prev => ({ ...prev, [type]: false }));
-      }
-      return;
-    }
-
-    // Don't create duplicate entries
-    if (syntheticEntryIds[type]) {
-      logger.debug(`Synthetic entry already exists for ${type}, not creating another one`);
-      return;
-    }
-
-    // Calculate the correct hours for the entry
-    // For TOIL, always include the smoko break time (0.25 hours)
-    let hoursToRecord = dayHours > 0 ? dayHours : 7.6;
-    
-    // For TOIL specifically, ensure we use the standard day hours
-    if (type === 'toil') {
-      // Base standard day is 8.75 hours (with 0.5h lunch and 0.25h smoko)
-      hoursToRecord = 9.0; // Include the smoko break (0.25 hours)
-      logger.debug(`Using standard TOIL hours: ${hoursToRecord}`);
-    }
-    
-    const entryTypeMap = {
-      leave: "LEAVE",
-      sick: "SICK",
-      toil: "TOIL"
-    } as const;
-    
-    if (type === 'leave' || type === 'sick' || type === 'toil') {
-      logger.debug(`Creating synthetic ${type} entry with ${hoursToRecord} hours for ${date.toLocaleDateString()}`);
-      
-      const entryData = {
-        userId,
-        date,
-        hours: hoursToRecord,
-        entryType: "auto",
-        description: `${type.charAt(0).toUpperCase() + type.slice(1)} - Automatically generated`,
-        jobNumber: entryTypeMap[type],
-        project: "General",
-        synthetic: true
-      };
-      
-      try {
-        const newEntryId = createEntry(entryData);
-        
-        if (newEntryId) {
-          logger.debug(`Successfully created synthetic ${type} entry: ${newEntryId}`);
-          setSyntheticEntryIds(prev => ({ ...prev, [type]: newEntryId }));
-          setCreatedEntries(prev => ({ ...prev, [type]: true }));
-          
-          // Publish TOIL update event for UI refresh
-          if (type === 'toil') {
-            timeEventsService.publish('toil-updated', {
-              userId,
-              date: date.toISOString(),
-              entryId: newEntryId,
-              hours: hoursToRecord
-            });
-          }
-          
-          toast({
-            title: `${type.charAt(0).toUpperCase() + type.slice(1)} Recorded`,
-            description: `${hoursToRecord} hours ${type === 'toil' ? 'used from' : 'recorded for'} ${date.toLocaleDateString()}`
-          });
-        } else {
-          logger.error(`Failed to create synthetic ${type} entry`);
+          logger.error(`Error creating synthetic ${type} entry`, error);
           setActionStates(prev => ({ ...prev, [type]: false }));
           toast({
             title: `Creation Error`,
-            description: `Could not create ${type} entry. Please try again.`,
+            description: `Could not create ${type} entry due to an unexpected error.`,
             variant: "destructive"
           });
         }
-      } catch (error) {
-        logger.error(`Error creating synthetic ${type} entry`, error);
-        setActionStates(prev => ({ ...prev, [type]: false }));
-        toast({
-          title: `Creation Error`,
-          description: `Could not create ${type} entry due to an unexpected error.`,
-          variant: "destructive"
-        });
       }
+    } finally {
+      // Clear processing flag after a short delay to prevent rapid double-clicks
+      setTimeout(() => {
+        processingRef.current[type] = false;
+      }, 300);
     }
-  }, [date, userId, createEntry, deleteEntry, syntheticEntryIds, toast, dayEntries]);
+  }, 300);
 
   const handleToggleAction = useCallback((type: WorkHoursActionType, dayHours: number) => {
+    // Prevent toggling if already processing
+    if (processingRef.current[type]) {
+      logger.debug(`Skipping toggle for ${type} - already processing`);
+      return;
+    }
+    
     setActionStates(prev => {
       let next = { ...prev, [type]: !prev[type] };
       
@@ -247,14 +298,32 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
       
       if ((type === "leave" || type === "sick" || type === "toil") && next[type] !== prev[type]) {
         // Use setTimeout to avoid state update issues
-        setTimeout(() => {
-          createSyntheticEntry(type, next[type], dayHours);
-        }, 0);
+        createSyntheticEntry(type, next[type], dayHours);
       }
       
       return next;
     });
   }, [createSyntheticEntry]);
+
+  // Add a function to run cleanup at component mount
+  useEffect(() => {
+    // Clean up any duplicate TOIL usage records on mount
+    import('@/utils/time/services/toil/storage/cleanup')
+      .then(({ cleanupDuplicateToilUsage }) => {
+        cleanupDuplicateToilUsage(userId)
+          .then(count => {
+            if (count > 0) {
+              logger.debug(`Cleaned up ${count} duplicate TOIL usage records at mount`);
+            }
+          })
+          .catch(err => {
+            logger.error('Error cleaning up duplicate TOIL usage:', err);
+          });
+      })
+      .catch(err => {
+        logger.error('Error importing cleanup module:', err);
+      });
+  }, [userId]);
 
   return {
     actionStates,
