@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -231,8 +232,8 @@ export class TOILService {
         status: 'active'
       };
       
-      // Store the TOIL record
-      this.storeTOILRecord(toilRecord)
+      // Store the TOIL record - FIX: Use imported storeTOILRecord instead of non-existent class method
+      storeTOILRecord(toilRecord)
         .then(stored => {
           if (!stored) {
             logger.error('Failed to store TOIL record');
