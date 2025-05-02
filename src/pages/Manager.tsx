@@ -8,6 +8,7 @@ import { EditUserForm } from "@/components/admin/users/EditUserForm";
 import ManagerHeader from "@/components/manager/ManagerHeader";
 import { useManagerState } from "@/components/manager/hooks/useManagerState";
 import { useUserActions } from "@/components/manager/hooks/useUserActions";
+import TeamOverview from "@/components/manager/team-overview";
 
 const Manager = () => {
   const { users, teams, getUserById } = useAuth();
