@@ -6,14 +6,8 @@ import App from './App.tsx';
 import './index.css';
 import { createSeedData } from './utils/seedData';
 
-// Explicitly set React on window for legacy components that might access it directly
-// This helps with libraries that expect React to be globally available
-if (typeof window !== 'undefined') {
-  window.React = React;
-}
-
-// Use a web worker for performance intensive tasks if needed
-const supportsWorker = typeof Worker !== 'undefined';
+// Initialize polyfills and compatibility layer
+import './utils/react-is-polyfill';
 
 // Mount the app with proper browser checks
 const mount = () => {

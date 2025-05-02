@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => ({
       "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
       "react/jsx-runtime": path.resolve(__dirname, "node_modules/react/jsx-runtime"),
+      "react-is": path.resolve(__dirname, "node_modules/react-is"),
       "@radix-ui": path.resolve(__dirname, "node_modules/@radix-ui"),
     },
     // Ensure proper module extension resolution
@@ -46,6 +47,7 @@ export default defineConfig(({ mode }) => ({
       "react",
       "react-dom",
       "react-router-dom",
+      "react-is",
       "date-fns",
       "@radix-ui/react-slot",
       "@radix-ui/react-primitive",
@@ -72,6 +74,7 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/react\//,
         /node_modules\/@radix-ui\//,
         /node_modules\/react-dom\//,
+        /node_modules\/react-is\//,
         // Add specific handling for recharts and lodash due to the ESM/CJS issues
         /node_modules\/recharts\//,
         /node_modules\/lodash\//,
@@ -83,7 +86,7 @@ export default defineConfig(({ mode }) => ({
       output: {
         // Ensure React is included in its own chunk
         manualChunks: (id) => {
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-is')) {
             return 'react';
           }
           if (id.includes('node_modules/react-router-dom')) {
