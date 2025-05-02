@@ -1,9 +1,16 @@
 
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 import { createSeedData } from './utils/seedData';
+
+// Explicitly set React on window for legacy components that might access it directly
+// This helps with libraries that expect React to be globally available
+if (typeof window !== 'undefined') {
+  window.React = React;
+}
 
 // Use a web worker for performance intensive tasks if needed
 const supportsWorker = typeof Worker !== 'undefined';
@@ -28,9 +35,11 @@ const mount = () => {
   try {
     // Create root and render app
     createRoot(rootElement).render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <React.StrictMode>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </React.StrictMode>
     );
     
     // Register service worker for production

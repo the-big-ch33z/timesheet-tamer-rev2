@@ -1,3 +1,4 @@
+
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -11,7 +12,10 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
-    react(),
+    react({
+      // Ensure React is properly injected and available globally
+      jsxRuntime: 'automatic',
+    }),
     splitVendorChunkPlugin(),
     mode === 'development' && componentTagger(),
     mode === 'production' && visualizer({
@@ -23,31 +27,62 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      react: path.resolve(__dirname, "node_modules/react"),
+      // More comprehensive React aliasing to ensure proper resolution
+      "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+      "react/jsx-runtime": path.resolve(__dirname, "node_modules/react/jsx-runtime"),
+      "@radix-ui": path.resolve(__dirname, "node_modules/@radix-ui"),
     },
+    // Ensure proper module extension resolution
+    extensions: ['.mjs', '.js', '.jsx', '.ts', '.tsx', '.json'],
+    mainFields: ['module', 'jsnext:main', 'jsnext', 'browser', 'main'],
   },
   optimizeDeps: {
+    // Force these packages to be pre-bundled properly
     include: [
-      "@radix-ui/react-slot",
       "react",
       "react-dom",
       "react-router-dom",
       "date-fns",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-primitive",
+      "clsx",
+      "class-variance-authority",
     ],
+    // Ensure proper ESM/CJS interop
+    esbuildOptions: {
+      target: 'es2020',
+      jsx: 'automatic',
+      platform: 'browser',
+    },
   },
   build: {
     target: 'es2015',
     minify: mode === 'production' ? 'terser' : 'esbuild',
     cssMinify: true,
+    // Ensure proper module handling
+    commonjsOptions: {
+      // Handle named exports from CommonJS modules
+      transformMixedEsModules: true,
+      // Include React and Radix in the transformation process
+      include: [
+        /node_modules\/react\//,
+        /node_modules\/@radix-ui\//,
+        /node_modules\/react-dom\//,
+      ],
+    },
     rollupOptions: {
       output: {
+        // Ensure React is included in its own chunk
         manualChunks: (id) => {
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
             return 'react';
           }
           if (id.includes('node_modules/react-router-dom')) {
             return 'router';
+          }
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'radix';
           }
           if (id.includes('src/components/ui')) {
             return 'ui';
@@ -63,5 +98,11 @@ export default defineConfig(({ mode }) => ({
       },
     },
     sourcemap: mode !== 'production',
+  },
+  // Ensure React is properly handled
+  esbuild: {
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment',
+    jsxInject: `import React from 'react'`,
   },
 }));
