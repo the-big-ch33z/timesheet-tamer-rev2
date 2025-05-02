@@ -1,4 +1,3 @@
-
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -13,11 +12,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    // Split vendor chunks for better caching
     splitVendorChunkPlugin(),
-    // Only use the tagger in development mode
     mode === 'development' && componentTagger(),
-    // Visualize bundle size in stats.html
     mode === 'production' && visualizer({
       filename: 'stats.html',
       open: false,
@@ -27,18 +23,25 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      react: path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
   },
+  optimizeDeps: {
+    include: [
+      "@radix-ui/react-slot",
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "date-fns",
+    ],
+  },
   build: {
-    // Optimize build output
     target: 'es2015',
-    // Use esbuild for development, terser for production
-    minify: mode === 'production' ? 'terser' : 'esbuild', 
+    minify: mode === 'production' ? 'terser' : 'esbuild',
     cssMinify: true,
-    // Split chunks for better caching
     rollupOptions: {
       output: {
-        // Use the function form of manualChunks instead of object form
         manualChunks: (id) => {
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
             return 'react';
@@ -56,14 +59,9 @@ export default defineConfig(({ mode }) => ({
             return 'contexts';
           }
           return null;
-        }
+        },
       },
     },
-    // Generate source maps for debugging
     sourcemap: mode !== 'production',
-  },
-  // Optimize deps for faster development server
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'date-fns'],
   },
 }));
