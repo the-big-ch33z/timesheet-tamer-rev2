@@ -62,12 +62,17 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
       {box.map(({ label, value, color, border, icon, displaySign, forceNegative }) => {
         let formattedValue;
 
-        if (forceNegative) {
-          formattedValue = `-${formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '')}`;
-        } else if (displaySign) {
-          formattedValue = formatDisplayHours(value);
-        } else {
-          formattedValue = formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '');
+        try {
+          if (forceNegative) {
+            formattedValue = `-${formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '')}`;
+          } else if (displaySign) {
+            formattedValue = formatDisplayHours(value);
+          } else {
+            formattedValue = formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '');
+          }
+        } catch (e) {
+          console.error(`Error formatting value for ${label}`, e);
+          formattedValue = "0h";
         }
 
         return (
@@ -118,91 +123,87 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
   );
 });
 
-const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
-  summary,
-  loading = false,
-  monthName
-}) => {
-  useEffect(() => {
+const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({ summary, loading = false, monthName }) => {
+  try {
     console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
-  }, [summary, loading]);
 
-  const accrued = summary?.accrued ?? 0;
-  const used = summary?.used ?? 0;
-  const remaining = summary?.remaining ?? 0;
-  const total = Math.max(accrued + Math.abs(used), 1);
-  const isNegativeBalance = remaining < 0;
+    const accrued = summary?.accrued ?? 0;
+    const used = summary?.used ?? 0;
+    const remaining = summary?.remaining ?? 0;
+    const total = Math.max(accrued + Math.abs(used), 1);
+    const isNegativeBalance = remaining < 0;
+    const hasNoTOILActivity = loading;
+    const progressColor = isNegativeBalance ? "bg-[#ea384c]" : "bg-green-500";
+    const progressBgColor = isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60";
 
-  // PATCHED: always show summary cards, even if values are 0
-  const hasNoTOILActivity = loading; 
+    return (
+      <Card
+        className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl transition-shadow hover:shadow-xl group"
+        style={{ minWidth: 300 }}
+      >
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl font-semibold text-blue-700 tracking-tight flex items-center gap-2 mb-2">
+            <Clock className="w-6 h-6 text-blue-400" />
+            TOIL Summary {monthName && <span className="text-blue-400 ml-1 text-base">({monthName})</span>}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {loading ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-3">
+                {[1,2,3].map(key =>
+                  <div key={key} className="flex-1 rounded-lg border bg-blue-100/40 border-blue-100 px-4 py-3 animate-pulse">
+                    <div className="h-4 w-6 mb-3 rounded bg-blue-200/60"></div>
+                    <div className="h-6 w-14 mb-2 rounded bg-blue-200/60"></div>
+                    <div className="h-3 w-10 rounded bg-blue-100"></div>
+                  </div>
+                )}
+              </div>
+              <div className="h-3 rounded bg-blue-100/70 mt-4 animate-pulse w-full"></div>
+            </div>
+          ) : hasNoTOILActivity ? (
+            <div className="flex flex-col items-center justify-center py-7 text-blue-500 opacity-70">
+              <CircleCheck className="w-10 h-10 mb-2 opacity-80" />
+              <p className="text-center text-base font-medium">No TOIL activity for this month.</p>
+              <span className="text-sm text-blue-500/70 mt-1">Earn TOIL by working overtime. Log TOIL time off as "TOIL".</span>
+            </div>
+          ) : (
+            <>
+              <TOILSummaryBoxes accrued={accrued} used={used} remaining={remaining} />
 
-  const progressColor = isNegativeBalance ? "bg-[#ea384c]" : "bg-green-500";
-  const progressBgColor = isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60";
-
-  return (
-    <Card
-      className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl transition-shadow hover:shadow-xl group"
-      style={{ minWidth: 300 }}
-    >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-semibold text-blue-700 tracking-tight flex items-center gap-2 mb-2">
-          <Clock className="w-6 h-6 text-blue-400" />
-          TOIL Summary {monthName && <span className="text-blue-400 ml-1 text-base">({monthName})</span>}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {loading ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-3">
-              {[1,2,3].map(key =>
-                <div key={key} className="flex-1 rounded-lg border bg-blue-100/40 border-blue-100 px-4 py-3 animate-pulse">
-                  <div className="h-4 w-6 mb-3 rounded bg-blue-200/60"></div>
-                  <div className="h-6 w-14 mb-2 rounded bg-blue-200/60"></div>
-                  <div className="h-3 w-10 rounded bg-blue-100"></div>
+              {isNegativeBalance && (
+                <div className="mb-4 p-2 rounded-md bg-red-50 border border-red-100 text-sm text-[#ea384c]">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="font-medium">Negative TOIL balance</span>
+                  </div>
+                  <p className="ml-6 text-xs mt-1">
+                    You've used more TOIL hours than you've earned this month.
+                  </p>
                 </div>
               )}
-            </div>
-            <div className="h-3 rounded bg-blue-100/70 mt-4 animate-pulse w-full"></div>
-          </div>
-        ) : hasNoTOILActivity ? (
-          <div className="flex flex-col items-center justify-center py-7 text-blue-500 opacity-70">
-            <CircleCheck className="w-10 h-10 mb-2 opacity-80" />
-            <p className="text-center text-base font-medium">No TOIL activity for this month.</p>
-            <span className="text-sm text-blue-500/70 mt-1">Earn TOIL by working overtime. Log TOIL time off as "TOIL".</span>
-          </div>
-        ) : (
-          <>
-            <TOILSummaryBoxes accrued={accrued} used={used} remaining={remaining} />
 
-            {isNegativeBalance && (
-              <div className="mb-4 p-2 rounded-md bg-red-50 border border-red-100 text-sm text-[#ea384c]">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span className="font-medium">Negative TOIL balance</span>
-                </div>
-                <p className="ml-6 text-xs mt-1">
-                  You've used more TOIL hours than you've earned this month.
-                </p>
+              <div className="mb-3 flex items-center justify-between text-xs font-medium text-gray-600 px-2">
+                <span>Balance</span>
+                <span className={`font-bold tracking-tight ${isNegativeBalance ? "text-[#ea384c]" : ""}`}>
+                  {isNegativeBalance ? "-" : "+"}{formatDisplayHours(Math.abs(remaining)).replace(/^[+-]/, '')}
+                </span>
               </div>
-            )}
-
-            <div className="mb-3 flex items-center justify-between text-xs font-medium text-gray-600 px-2">
-              <span>Balance</span>
-              <span className={`font-bold tracking-tight ${isNegativeBalance ? "text-[#ea384c]" : ""}`}>
-                {isNegativeBalance ? "-" : "+"}{formatDisplayHours(Math.abs(remaining)).replace(/^[+-]/, '')}
-              </span>
-            </div>
-            <Progress
-              value={total === 0 ? 0 : Math.max(0, Math.min(100, 100 * Math.abs(remaining) / (accrued || 1)))}
-              color={isNegativeBalance ? "destructive" : "success"}
-              className={`h-2 ${progressBgColor}`}
-              indicatorColor={progressColor}
-            />
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
+              <Progress
+                value={total === 0 ? 0 : Math.max(0, Math.min(100, 100 * Math.abs(remaining) / (accrued || 1)))}
+                color={isNegativeBalance ? "destructive" : "success"}
+                className={`h-2 ${progressBgColor}`}
+                indicatorColor={progressColor}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  } catch (err) {
+    console.error("TOILSummaryCard crashed while rendering:", err);
+    return <div className="text-red-600 p-4">Error displaying TOIL summary.</div>;
+  }
 });
 
 export default memo(TOILSummaryCard);
