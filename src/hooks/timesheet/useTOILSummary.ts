@@ -53,23 +53,25 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
   }, [monthYear, userId]);
 
   const loadSummary = useCallback(() => {
+    console.log('[TOIL] top of loadSummary');
     try {
       logger.debug(`Loading TOIL summary for ${userId}, month=${monthYear}, attempt=${refreshCounter}`);
       setIsLoading(true);
       setError(null);
 
       if (!userId) {
+        console.log('[TOIL] userId is missing – exiting early');
         setError('No user ID provided');
         setIsLoading(false);
         return;
       }
 
       const toilSummary = getTOILSummary(userId, monthYear);
-      console.log('getTOILSummary result for', userId, monthYear, '=>', toilSummary);
 
       if (!isMountedRef.current) return;
 
       if (!toilSummary) {
+        console.log('[TOIL] No TOIL summary found, setting fallback');
         logger.warn(`No TOIL summary found for ${userId} in ${monthYear}`);
         setSummary({
           userId,
@@ -82,7 +84,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
         return;
       }
 
-      console.log('TOIL summary being set to:', toilSummary);
+      console.log('[TOIL] setSummary(toilSummary)');
       setSummary(toilSummary);
       logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
     } catch (err) {
@@ -101,6 +103,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
         setIsLoading(false); // ✅ also ensure loading ends on error
       }
     } finally {
+      console.log('[TOIL] running finally – setting isLoading false');
       if (isMountedRef.current) {
         setIsLoading(false);
       }
