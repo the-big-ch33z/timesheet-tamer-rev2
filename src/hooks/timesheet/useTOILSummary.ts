@@ -79,6 +79,19 @@ export const useTOILSummary = ({
       const toilSummary = getTOILSummary(userId, monthYear);
       
       if (!isMountedRef.current) return;
+
+      // ✅ PATCH: Add fallback if summary is missing
+      if (!toilSummary) {
+        logger.warn(`No TOIL summary found for ${userId} in ${monthYear}`);
+        setSummary({
+          userId,
+          monthYear,
+          accrued: 0,
+          used: 0,
+          remaining: 0
+        });
+        return;
+      }
       
       // Always set the summary, even if empty
       setSummary(toilSummary);
