@@ -1,5 +1,8 @@
 
 // Export unified implementations
-export * from './TimeEntryProvider';
-export * from './useTimeEntryContext';
+import { TimeEntryProvider } from './TimeEntryProvider';
+import { useTimeEntryContext } from './useTimeEntryContext';
+import * as types from './types';
+
+export { TimeEntryProvider, useTimeEntryContext };
 export * from './types';

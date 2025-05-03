@@ -10,6 +10,10 @@ import { createSeedData } from './utils/seedData';
 import './utils/react-is-polyfill';
 import './utils/prop-types-polyfill';
 
+// Enhanced error logging for troubleshooting
+console.log("React version:", React.version);
+console.log("Application initializing...");
+
 // Mount the app with proper browser checks
 const mount = () => {
   const rootElement = document.getElementById("root");
@@ -21,13 +25,16 @@ const mount = () => {
 
   // Initialize seed data for first-time users
   try {
+    console.log("Initializing seed data...");
     createSeedData();
+    console.log("Seed data initialized successfully");
   } catch (error) {
     console.error("Error initializing seed data:", error);
     // Continue loading app even if seed data fails
   }
   
   try {
+    console.log("Creating React root and rendering app...");
     // Create root and render app
     createRoot(rootElement).render(
       <React.StrictMode>
@@ -36,6 +43,7 @@ const mount = () => {
         </BrowserRouter>
       </React.StrictMode>
     );
+    console.log("App rendered successfully");
     
     // Register service worker for production
     if (import.meta.env.PROD) {
@@ -48,4 +56,5 @@ const mount = () => {
 };
 
 // Initialize app
+console.log("Starting mount process...");
 mount();

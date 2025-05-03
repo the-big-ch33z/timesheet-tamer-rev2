@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 // Re-export individual context hooks for easier access from components
 export { useCalendarContext } from './calendar-context/CalendarContext';
 export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
-export { useTimeEntryContext as useEntriesContext } from './entries-context/useTimeEntryContext';
+export { useTimeEntryContext } from './entries-context/useTimeEntryContext';
 export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 
