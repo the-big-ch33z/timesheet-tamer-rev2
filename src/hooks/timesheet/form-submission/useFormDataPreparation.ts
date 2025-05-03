@@ -1,6 +1,9 @@
 
 import { useCallback, useMemo } from 'react';
 import { ensureDate } from '@/utils/time/validation';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('useFormDataPreparation');
 
 /**
  * Hook for preparing form data before submission
@@ -23,23 +26,53 @@ export const useFormDataPreparation = ({
     taskNumber: string;
     formEdited: boolean;
   }) => {
-    console.debug("[useFormDataPreparation] Preparing form data");
+    logger.debug("[useFormDataPreparation] Preparing form data:", formState);
     
     if (!selectedDate) {
-      console.warn("[useFormDataPreparation] No selected date provided");
+      logger.warn("[useFormDataPreparation] No selected date provided");
       throw new Error("No date selected");
     }
     
     // Parse numerical hours from string
-    const hours = parseFloat(formState.hours) || 0;
+    let hours;
+    if (typeof formState.hours === 'string') {
+      // Improved parsing with validation
+      const trimmedHours = formState.hours.trim();
+      
+      // Log the raw value
+      logger.debug(`[useFormDataPreparation] Raw hours value: '${formState.hours}', trimmed: '${trimmedHours}'`);
+      
+      if (trimmedHours === '') {
+        logger.warn("[useFormDataPreparation] Empty hours value");
+        throw new Error("Hours must be provided");
+      }
+      
+      hours = parseFloat(trimmedHours);
+      
+      if (isNaN(hours)) {
+        logger.warn(`[useFormDataPreparation] Invalid hours value: ${formState.hours}`);
+        throw new Error("Hours must be a valid number");
+      }
+      
+      // Snap to quarter hour
+      hours = Math.round(hours * 4) / 4;
+      
+      logger.debug(`[useFormDataPreparation] Parsed hours: ${hours}`);
+    } else if (typeof formState.hours === 'number') {
+      hours = formState.hours;
+      logger.debug(`[useFormDataPreparation] Using numeric hours: ${hours}`);
+    } else {
+      logger.warn(`[useFormDataPreparation] Missing hours value`);
+      throw new Error("Hours must be provided");
+    }
     
     if (hours <= 0) {
-      console.warn("[useFormDataPreparation] Invalid hours value:", hours);
+      logger.warn(`[useFormDataPreparation] Invalid hours value: ${hours} (must be > 0)`);
       throw new Error("Hours must be greater than zero");
     }
     
     // Create the processed form data
-    return {
+    const formData = {
       ...initialData,
       hours,
       description: formState.description,
@@ -50,6 +83,10 @@ export const useFormDataPreparation = ({
       date: selectedDate,
       project: initialData.project || 'General'
     };
+    
+    logger.debug(`[useFormDataPreparation] Prepared form data:`, formData);
+    
+    return formData;
   }, [initialData, selectedDate, userId]);
 
   // Memoize the return value to prevent unnecessary re-renders

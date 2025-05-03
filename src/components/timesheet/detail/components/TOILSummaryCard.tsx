@@ -11,6 +11,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/ui/tooltip";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('TOILSummaryCard');
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -23,6 +26,9 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
   used: number;
   remaining: number;
 }) => {
+  // Log the values we're rendering
+  logger.debug(`TOILSummaryBoxes rendering with: accrued=${accrued}, used=${used}, remaining=${remaining}`);
+  
   // Ensure we always have valid numbers
   const safeAccrued = isFinite(accrued) ? accrued : 0;
   const safeUsed = isFinite(used) ? used : 0;
@@ -77,6 +83,8 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
           formattedValue = formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '');
         }
         
+        logger.debug(`TOILSummaryBoxes formatting ${label}: ${value} -> ${formattedValue}`);
+        
         return (
           <div
             key={label}
@@ -130,9 +138,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   loading = false,
   monthName
 }) => {
-  // Debugging to help identify issues with summary data
+  // Enhanced debugging to help identify issues with summary data
   useEffect(() => {
-    console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
+    logger.debug('TOILSummaryCard received summary:', summary, 'loading:', loading);
+    
+    if (summary) {
+      logger.debug(`TOIL values: accrued=${summary.accrued}, used=${summary.used}, remaining=${summary.remaining}`);
+    } else {
+      logger.debug('No TOIL summary data available');
+    }
   }, [summary, loading]);
 
   // Ensure we have valid and safe values to display
@@ -185,6 +199,12 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <CircleCheck className="w-10 h-10 mb-2 opacity-80" />
             <p className="text-center text-base font-medium">No TOIL activity for this month.</p>
             <span className="text-sm text-blue-500/70 mt-1">Earn TOIL by working overtime. Log TOIL time off as "TOIL".</span>
+            
+            <div className="mt-4 text-xs text-gray-500 p-2 bg-blue-50/70 rounded-md">
+              <div className="font-medium">Debug Info:</div>
+              <div>User has no TOIL records for this month.</div>
+              <div>Summary data: {JSON.stringify({accrued, used, remaining})}</div>
+            </div>
           </div>
         ) : (
           <>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "@/hooks/form/useFormState";
@@ -7,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Loader2, Trash2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('EntryFormItem');
 
 const FIELD_TYPES = {
   HOURS: "hours",
@@ -21,7 +25,10 @@ const VALIDATION_RULES = {
     required: true,
     rules: [
       {
-        validate: (value: string) => parseFloat(value) > 0,
+        validate: (value: string) => {
+          const parsedValue = parseFloat(value);
+          return !isNaN(parsedValue) && parsedValue > 0;
+        },
         message: "Hours must be greater than 0"
       }
     ]
@@ -85,12 +92,16 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
   const { isSubmitting, handleSubmit } = useFormSubmission({
     onSubmit: async () => {
       if (validateForm() && !overLimit) {
+        logger.debug(`[EntryFormItem] Submitting form with hours: ${formState.fields.hours.value}`);
         handleSave();
+      } else {
+        logger.debug(`[EntryFormItem] Form validation failed or over limit. Valid: ${formState.isValid}, overLimit: ${overLimit}`);
       }
     }
   });
 
   const handleFieldChangeCallback = useCallback((field: string, value: string) => {
+    logger.debug(`[EntryFormItem] Field changed: ${field}, value: ${value}`);
     setFieldValue(field, value);
     parentHandleFieldChange(field, value);
   }, [setFieldValue, parentHandleFieldChange]);
@@ -107,33 +118,98 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     };
   }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
 
+  // FIX: Improved hours input handler with better validation and logging
   const handleHoursInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = e.target.value;
-    let numValue = parseFloat(newValue);
-    if (!isNaN(numValue)) {
-      numValue = Math.round(numValue * 4) / 4;
-      if (numValue < 0.25) numValue = 0.25;
-      if (numValue > 24) numValue = 24;
-      newValue = numValue.toString();
+    
+    // First log what we received
+    logger.debug(`[EntryFormItem] Raw hours input: '${newValue}'`);
+    
+    // Handle empty input
+    if (!newValue) {
+      logger.debug(`[EntryFormItem] Empty hours input, setting to empty string`);
+      handleFieldChangeCallback(FIELD_TYPES.HOURS, '');
+      return;
     }
+    
+    // Parse the numeric value
+    let numValue = parseFloat(newValue);
+    
+    if (isNaN(numValue)) {
+      logger.debug(`[EntryFormItem] Invalid numeric input: ${newValue}`);
+      return; // Don't update with invalid input
+    }
+    
+    // Apply validations
+    if (numValue < 0.25) {
+      logger.debug(`[EntryFormItem] Hours too small (${numValue}), setting to 0.25`);
+      numValue = 0.25;
+    } else if (numValue > 24) {
+      logger.debug(`[EntryFormItem] Hours too large (${numValue}), setting to 24`);
+      numValue = 24;
+    } else {
+      // Snap to quarter hour
+      const snapped = Math.round(numValue * 4) / 4;
+      if (snapped !== numValue) {
+        logger.debug(`[EntryFormItem] Snapping hours from ${numValue} to ${snapped}`);
+        numValue = snapped;
+      }
+    }
+    
+    // Convert back to string and update
+    newValue = numValue.toString();
+    logger.debug(`[EntryFormItem] Final hours value: ${newValue}`);
     handleFieldChangeCallback(FIELD_TYPES.HOURS, newValue);
   };
 
-  const hourValue = parseFloat(formState.fields.hours.value || "0");
+  // Parse the hour value for validation - with improved error handling
+  const hourValue = useMemo(() => {
+    const rawValue = formState.fields.hours.value;
+    
+    if (!rawValue) {
+      return 0;
+    }
+    
+    const parsedValue = parseFloat(rawValue);
+    if (isNaN(parsedValue)) {
+      logger.warn(`[EntryFormItem] Invalid hours value: ${rawValue}`);
+      return 0;
+    }
+    
+    return parsedValue;
+  }, [formState.fields.hours.value]);
+  
+  // Debug logging for hours value
+  useEffect(() => {
+    logger.debug(`[EntryFormItem] Current hours value: ${hourValue}`);
+  }, [hourValue]);
+  
   const scheduled = typeof scheduledHours === "number" && !isNaN(scheduledHours) ? scheduledHours : undefined;
   const overLimit = scheduled !== undefined && hourValue > scheduled;
 
   const onSaveCallback = useCallback(() => {
     if (!disabled && validateForm() && !overLimit) {
+      logger.debug(`[EntryFormItem] Save button clicked, current hours: ${hourValue}`);
       handleSubmit(formState);
+    } else {
+      logger.debug(`[EntryFormItem] Save prevented - disabled: ${disabled}, valid: ${formState.isValid}, overLimit: ${overLimit}`);
     }
-  }, [disabled, validateForm, handleSubmit, formState, overLimit]);
+  }, [disabled, validateForm, handleSubmit, formState, overLimit, hourValue]);
 
   const hoursWarnMsg = useMemo(() => {
     if (overLimit && !isNaN(hourValue))
       return `You entered more hours (${hourValue}) than are scheduled (${scheduled}). Please reduce.`;
     return null;
   }, [overLimit, hourValue, scheduled]);
+  
+  // Additional debugging for form validation state
+  useEffect(() => {
+    logger.debug(`[EntryFormItem] Form validation state: valid=${formState.isValid}, edited=${formState.formEdited}`);
+    
+    if (formState.fields.hours.error) {
+      logger.debug(`[EntryFormItem] Hours field error: ${formState.fields.hours.error}`);
+    }
+  }, [formState.isValid, formState.formEdited, formState.fields.hours.error]);
 
   return (
     <div 
@@ -172,6 +248,9 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="relative">
+                      <label htmlFor={`hours-${entryId}`} className="block text-sm font-medium mb-1">
+                        Hours <span className="text-red-500">*</span>
+                      </label>
                       <Input
                         id={`hours-${entryId}`}
                         type="number"
@@ -191,7 +270,16 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
                         aria-invalid={warning}
                         aria-describedby={warning ? `hours-tooltip-${entryId}` : undefined}
                         style={warning ? { boxShadow: "0 0 0 2px #f87171" } : undefined}
+                        onBlur={() => {
+                          // Ensure we have at least 0.25 on blur if the field has content
+                          if (formState.fields.hours.value && parseFloat(formState.fields.hours.value) < 0.25) {
+                            handleFieldChangeCallback(FIELD_TYPES.HOURS, "0.25");
+                          }
+                        }}
                       />
+                      {formState.fields.hours.error && (
+                        <p className="text-red-500 text-xs mt-1">{formState.fields.hours.error}</p>
+                      )}
                       {warning && (
                         <div className="absolute top-full left-0 w-max text-xs text-red-600 mt-0.5 bg-white border border-red-200 rounded p-1 shadow-sm z-10">
                           {hoursWarnMsg}

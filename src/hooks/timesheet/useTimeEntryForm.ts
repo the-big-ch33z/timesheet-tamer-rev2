@@ -6,6 +6,9 @@ import { useFormSubmission } from './useFormSubmission';
 import { useAutoSave } from './useAutoSave';
 import { UseTimeEntryFormProps, UseTimeEntryFormReturn, TimeEntryFormState } from './types/timeEntryTypes';
 import { useToast } from "@/hooks/use-toast";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('useTimeEntryForm');
 
 /**
  * Main hook for managing time entry form state and submission
@@ -22,7 +25,7 @@ export const useTimeEntryForm = ({
 }: UseTimeEntryFormProps): UseTimeEntryFormReturn => {
   const { toast } = useToast();
   
-  console.debug("[useTimeEntryForm] Initializing with props:", { 
+  logger.debug("[useTimeEntryForm] Initializing with props:", { 
     initialData, 
     formKey, 
     selectedDate: selectedDate?.toISOString(),
@@ -34,7 +37,7 @@ export const useTimeEntryForm = ({
   
   // Track when disabled flag changes
   useEffect(() => {
-    console.debug(`[useTimeEntryForm] Disabled state changed to: ${disabled}`);
+    logger.debug(`[useTimeEntryForm] Disabled state changed to: ${disabled}`);
   }, [disabled]);
   
   // Use specialized hooks
@@ -74,19 +77,19 @@ export const useTimeEntryForm = ({
         selectedDate && 
         lastSelectedDateRef.current.getTime() !== selectedDate.getTime() && 
         formState.formEdited) {
-      console.debug("[useTimeEntryForm] Date changed with unsaved form data - auto-saving");
+      logger.debug("[useTimeEntryForm] Date changed with unsaved form data - auto-saving");
       // Don't auto-save if we're missing required fields
       if (formState.hours) {
         handleSaveInternal(formState, resetFormEdited);
       } else {
-        console.debug("[useTimeEntryForm] Date changed but skipping auto-save due to missing required fields");
+        logger.debug("[useTimeEntryForm] Date changed but skipping auto-save due to missing required fields");
         // Just reset the form edited state since we're not saving
         resetFormEdited();
       }
     } else if (lastSelectedDateRef.current && 
         selectedDate && 
         lastSelectedDateRef.current.getTime() !== selectedDate.getTime()) {
-      console.debug("[useTimeEntryForm] Date changed but no unsaved changes to auto-save");
+      logger.debug("[useTimeEntryForm] Date changed but no unsaved changes to auto-save");
     }
     
     // Update the ref with current date
@@ -97,7 +100,7 @@ export const useTimeEntryForm = ({
   const hasContent = useMemo(() => {
     const hasData = !!(formState.hours || formState.description || formState.jobNumber || 
               formState.rego || formState.taskNumber);
-    console.debug("[useTimeEntryForm] Form has content:", hasData);
+    logger.debug("[useTimeEntryForm] Form has content:", hasData);
     return hasData;
   }, [formState]);
 
@@ -113,7 +116,7 @@ export const useTimeEntryForm = ({
 
   // Create a method to check and save any pending changes
   const saveIfEdited = useCallback(() => {
-    console.debug("[useTimeEntryForm] saveIfEdited called - checking for changes", {
+    logger.debug("[useTimeEntryForm] saveIfEdited called - checking for changes", {
       formEdited: formState.formEdited,
       hasContent,
       hasHours: !!formState.hours,
@@ -124,7 +127,7 @@ export const useTimeEntryForm = ({
     if (formState.formEdited && hasContent && !disabled && !isSubmitting) {
       // Check for required hours field
       if (!formState.hours) {
-        console.debug("[useTimeEntryForm] Missing required hours field - cannot save");
+        logger.debug("[useTimeEntryForm] Missing required hours field - cannot save");
         toast({
           title: "Hours are required",
           description: "Please enter the number of hours before saving",
@@ -133,7 +136,7 @@ export const useTimeEntryForm = ({
         return false;
       }
       
-      console.debug("[useTimeEntryForm] Form has unsaved changes - saving before action");
+      logger.debug("[useTimeEntryForm] Form has unsaved changes - saving before action");
       submittingRef.current = true;
       
       try {
@@ -146,20 +149,35 @@ export const useTimeEntryForm = ({
       }
     }
     
-    console.debug("[useTimeEntryForm] No changes to save or unable to save");
+    logger.debug("[useTimeEntryForm] No changes to save or unable to save");
     return false;
   }, [formState, hasContent, disabled, isSubmitting, handleSaveInternal, resetFormEdited, toast]);
 
   // Create wrapper functions
   const handleSave = useCallback(() => {
-    console.debug("[useTimeEntryForm] handleSave called");
+    logger.debug("[useTimeEntryForm] handleSave called");
     
     // Check for required hours field
     if (!formState.hours) {
-      console.debug("[useTimeEntryForm] Missing required hours field - cannot save");
+      logger.debug("[useTimeEntryForm] Missing required hours field - cannot save");
       toast({
         title: "Hours are required",
         description: "Please enter the number of hours before saving",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Log hours value before submission
+    logger.debug(`[useTimeEntryForm] Submitting with hours value: ${formState.hours}`);
+    
+    // Validate that hours is a number greater than 0
+    const parsedHours = parseFloat(formState.hours);
+    if (isNaN(parsedHours) || parsedHours <= 0) {
+      logger.debug(`[useTimeEntryForm] Invalid hours value: ${formState.hours}`);
+      toast({
+        title: "Invalid hours",
+        description: "Hours must be a number greater than 0",
         variant: "destructive"
       });
       return;
@@ -176,7 +194,7 @@ export const useTimeEntryForm = ({
   }, [formState, handleSaveInternal, resetFormEdited, toast]);
 
   const getFormData = useCallback(() => {
-    console.debug("[useTimeEntryForm] getFormData called");
+    logger.debug("[useTimeEntryForm] getFormData called");
     return getFormDataInternal(formState);
   }, [formState, getFormDataInternal]);
 
