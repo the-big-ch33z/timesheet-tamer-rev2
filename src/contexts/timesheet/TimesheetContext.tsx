@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 export { useCalendarContext } from './calendar-context/CalendarContext';
 export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
 export { useTimeEntryContext } from './entries-context/useTimeEntryContext';
+export { useEntriesContext } from './entries-context/EntriesContext';
 export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 

@@ -3,13 +3,13 @@ import React from 'react';
 import { render, screen } from './utils/test-utils';
 import './utils/setupTests'; // Import the setup file for Jest DOM matchers
 import TabContent from '../TabContent';
-import { useCalendarContext, useUserTimesheetContext, useEntriesContext } from '@/contexts/timesheet';
+import { useCalendarContext, useUserTimesheetContext, useTimeEntryContext } from '@/contexts/timesheet';
 
 // Mock the hooks
 jest.mock('@/contexts/timesheet', () => ({
   useCalendarContext: jest.fn(),
   useUserTimesheetContext: jest.fn(),
-  useEntriesContext: jest.fn(),
+  useTimeEntryContext: jest.fn(),
 }));
 
 // Mock the nested components to avoid testing their implementation
@@ -36,7 +36,7 @@ describe('TabContent', () => {
       canEditTimesheet: true,
     });
     
-    (useEntriesContext as jest.Mock).mockReturnValue({
+    (useTimeEntryContext as jest.Mock).mockReturnValue({
       entries: [],
       createEntry: jest.fn(),
       getDayEntries: jest.fn().mockReturnValue([]),
