@@ -11,9 +11,6 @@ import {
   TooltipTrigger
 } from "@/components/ui/tooltip";
 
-import { useTOILSummary } from '@/hooks/timesheet/useTOILSummary';
-import { useTimesheetUIContext } from '@/contexts/timesheet/ui-context/TimesheetUIContext';
-
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
   loading?: boolean;
@@ -126,10 +123,7 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
   );
 });
 
-const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({ monthName }) => {
-  const { userId } = useTimesheetUIContext();
-  const date = new Date();
-  const { summary, isLoading: loading } = useTOILSummary({ userId, date });
+const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({ summary, loading = false, monthName }) => {
   try {
     console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
 
@@ -138,8 +132,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({ monthName }) => 
     const remaining = summary?.remaining ?? 0;
     const total = Math.max(accrued + Math.abs(used), 1);
     const isNegativeBalance = remaining < 0;
-    const loading = false;
-  const hasNoTOILActivity = false;
+    const hasNoTOILActivity = loading;
     const progressColor = isNegativeBalance ? "bg-[#ea384c]" : "bg-green-500";
     const progressBgColor = isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60";
 
