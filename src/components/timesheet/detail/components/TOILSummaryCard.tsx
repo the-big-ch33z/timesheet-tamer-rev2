@@ -138,8 +138,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({ monthName }) => 
     const remaining = summary?.remaining ?? 0;
     const total = Math.max(accrued + Math.abs(used), 1);
     const isNegativeBalance = remaining < 0;
-    const hasNoTOILActivity = false;
-  const loading = false;
+    const loading = false;
+  const hasNoTOILActivity = false;
     const progressColor = isNegativeBalance ? "bg-[#ea384c]" : "bg-green-500";
     const progressBgColor = isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60";
 
