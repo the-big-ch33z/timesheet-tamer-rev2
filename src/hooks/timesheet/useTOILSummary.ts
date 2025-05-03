@@ -1,13 +1,13 @@
 
-export const useTOILSummary = () => {
+import { getTOILSummary } from '@/utils/time/services/toil/storage';
+
+export const useTOILSummary = ({ userId, date }) => {
+  const monthYear = date.toISOString().slice(0, 7); // 'YYYY-MM'
+
+  const summary = getTOILSummary(userId, monthYear);
+
   return {
-    summary: {
-      userId: 'test',
-      monthYear: '2025-05',
-      accrued: 0,
-      used: 0,
-      remaining: 0
-    },
+    summary,
     isLoading: false,
     error: null,
     refreshSummary: () => {}
