@@ -1,4 +1,3 @@
-
 import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
@@ -23,12 +22,9 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
   used: number;
   remaining: number;
 }) => {
-  // Ensure we always have valid numbers
   const safeAccrued = isFinite(accrued) ? accrued : 0;
   const safeUsed = isFinite(used) ? used : 0;
   const safeRemaining = isFinite(remaining) ? remaining : 0;
-  
-  // Check if we have a negative balance
   const isNegativeBalance = safeRemaining < 0;
 
   const box = [
@@ -47,7 +43,7 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
       border: "border-red-100 bg-red-50",
       icon: <CircleMinus className="w-5 h-5 text-red-400" />,
       displaySign: false,
-      forceNegative: true // Always show as negative
+      forceNegative: true
     },
     {
       label: "Remaining",
@@ -65,18 +61,15 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
     <div className="grid grid-cols-3 gap-3 mb-6">
       {box.map(({ label, value, color, border, icon, displaySign, forceNegative }) => {
         let formattedValue;
-        
+
         if (forceNegative) {
-          // For "Used", always show as negative
           formattedValue = `-${formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '')}`;
         } else if (displaySign) {
-          // For "Earned" and "Remaining", show actual sign
           formattedValue = formatDisplayHours(value);
         } else {
-          // For cases where we don't want a sign
           formattedValue = formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '');
         }
-        
+
         return (
           <div
             key={label}
@@ -89,7 +82,7 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
               {formattedValue}
             </span>
             <span className="text-xs text-gray-500 font-medium">hours</span>
-            
+
             {label === "Earned" && (
               <TooltipProvider>
                 <Tooltip>
@@ -112,7 +105,7 @@ const TOILSummaryBoxes = memo(({ accrued, used, remaining }: {
                 </Tooltip>
               </TooltipProvider>
             )}
-            
+
             {label === "Remaining" && isNegativeBalance && (
               <div className="mt-1 text-xs text-[#ea384c] font-medium animate-pulse">
                 Negative balance
@@ -130,35 +123,26 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   loading = false,
   monthName
 }) => {
-  // Debugging to help identify issues with summary data
   useEffect(() => {
     console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
   }, [summary, loading]);
 
-  // Ensure we have valid and safe values to display
   const accrued = summary?.accrued ?? 0;
   const used = summary?.used ?? 0;
   const remaining = summary?.remaining ?? 0;
-  
-  // Prevent division by zero
   const total = Math.max(accrued + Math.abs(used), 1);
-  
-  // Check if there's a negative balance
   const isNegativeBalance = remaining < 0;
 
-  // Check if there's no TOIL activity - always show the empty state if all values are zero
-  const hasNoTOILActivity = accrued === 0 && used === 0 && remaining === 0 && !loading;
-  
-  // Define progress color based on remaining balance
+  // PATCHED: always show summary cards, even if values are 0
+  const hasNoTOILActivity = loading; 
+
   const progressColor = isNegativeBalance ? "bg-[#ea384c]" : "bg-green-500";
   const progressBgColor = isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60";
 
   return (
     <Card
       className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl transition-shadow hover:shadow-xl group"
-      style={{
-        minWidth: 300
-      }}
+      style={{ minWidth: 300 }}
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-xl font-semibold text-blue-700 tracking-tight flex items-center gap-2 mb-2">
@@ -189,7 +173,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
         ) : (
           <>
             <TOILSummaryBoxes accrued={accrued} used={used} remaining={remaining} />
-            
+
             {isNegativeBalance && (
               <div className="mb-4 p-2 rounded-md bg-red-50 border border-red-100 text-sm text-[#ea384c]">
                 <div className="flex items-center gap-2">
@@ -201,7 +185,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
                 </p>
               </div>
             )}
-            
+
             <div className="mb-3 flex items-center justify-between text-xs font-medium text-gray-600 px-2">
               <span>Balance</span>
               <span className={`font-bold tracking-tight ${isNegativeBalance ? "text-[#ea384c]" : ""}`}>
