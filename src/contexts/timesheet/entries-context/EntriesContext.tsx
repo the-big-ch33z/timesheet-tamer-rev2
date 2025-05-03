@@ -13,7 +13,7 @@ export interface EntriesContextValue {
   updateEntry: (id: string, updates: Partial<TimeEntry>) => void;
   deleteEntry: (id: string) => Promise<boolean>;
   getDayEntries: (date: Date) => TimeEntry[];
-  getMonthEntries: (date: Date) => TimeEntry[];
+  getMonthEntries: (date: Date, userId?: string) => TimeEntry[]; // Updated to match the function signature
 }
 
 export const EntriesContext = createContext<EntriesContextValue | undefined>(undefined);
@@ -23,6 +23,15 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Use the new context
   const timeEntryContext = useTimeEntryContext();
   
+  // Create adapter functions to ensure signature compatibility
+  const getDayEntriesAdapter = (date: Date) => {
+    return timeEntryContext.getDayEntries(date);
+  };
+  
+  const getMonthEntriesAdapter = (date: Date, userId?: string) => {
+    return timeEntryContext.getMonthEntries(date, userId || '');
+  };
+  
   // Map to the old interface
   const value: EntriesContextValue = {
     entries: timeEntryContext.entries,
@@ -30,8 +39,8 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createEntry: timeEntryContext.createEntry,
     updateEntry: timeEntryContext.updateEntry,
     deleteEntry: timeEntryContext.deleteEntry,
-    getDayEntries: timeEntryContext.getDayEntries,
-    getMonthEntries: timeEntryContext.getMonthEntries,
+    getDayEntries: getDayEntriesAdapter,
+    getMonthEntries: getMonthEntriesAdapter,
   };
   
   return (
@@ -47,7 +56,18 @@ export const useEntriesContext = (): EntriesContextValue => {
   
   // If no context is available, delegate to the new context directly
   if (!ctx) {
-    return useTimeEntryContext();
+    // Create adapter wrapper when using the new context directly
+    const timeEntryContext = useTimeEntryContext();
+    
+    return {
+      entries: timeEntryContext.entries,
+      isLoading: timeEntryContext.isLoading,
+      createEntry: timeEntryContext.createEntry,
+      updateEntry: timeEntryContext.updateEntry,
+      deleteEntry: timeEntryContext.deleteEntry,
+      getDayEntries: (date: Date) => timeEntryContext.getDayEntries(date),
+      getMonthEntries: (date: Date, userId?: string) => timeEntryContext.getMonthEntries(date, userId || ''),
+    };
   }
   
   return ctx;
