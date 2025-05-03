@@ -1,61 +1,37 @@
 
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext } from 'react';
 import { TimeEntry } from '@/types';
+import { useTimeEntryContext } from './useTimeEntryContext';
 
-// Import newly created hooks
-import { useInitialEntries } from './hooks/useInitialEntries';
-import { useEntryOperations } from './hooks/useEntryOperations';
-import { useEntryQueries } from './hooks/useEntryQueries';
-import { useStorageSync } from './hooks/useStorageSync';
+// This is a compatibility layer for legacy code using the old EntriesContext
+// It wraps the new TimeEntryContext and provides the same interface
 
-interface EntriesContextValue {
+export interface EntriesContextValue {
   entries: TimeEntry[];
-  getUserEntries: (userId?: string) => TimeEntry[];
-  getDayEntries: (date: Date, userId?: string) => TimeEntry[];
+  isLoading: boolean;
   createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
-  deleteEntry: (entryId: string) => Promise<boolean>;
+  updateEntry: (id: string, updates: Partial<TimeEntry>) => void;
+  deleteEntry: (id: string) => Promise<boolean>;
+  getDayEntries: (date: Date) => TimeEntry[];
+  getMonthEntries: (date: Date) => TimeEntry[];
 }
 
-const EntriesContext = createContext<EntriesContextValue | undefined>(undefined);
+export const EntriesContext = createContext<EntriesContextValue | undefined>(undefined);
 
-export const useEntriesContext = () => {
-  const context = useContext(EntriesContext);
-  if (!context) {
-    throw new Error('useEntriesContext must be used within an EntriesProvider');
-  }
-  return context;
-};
-
-interface EntriesProviderProps {
-  children: React.ReactNode;
-  userId?: string;
-}
-
-export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, userId }) => {
-  // Load initial entries
-  const { entries, setEntries, isLoading, isInitialized } = useInitialEntries();
+// Provider that wraps TimeEntryContext and exposes it through the old interface
+export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Use the new context
+  const timeEntryContext = useTimeEntryContext();
   
-  // Setup storage sync
-  useStorageSync(entries, isInitialized, isLoading);
-  
-  // Get entry operations - pass both parameters
-  const { addEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
-  
-  // Get query functions
-  const { getDayEntries, getMonthEntries, calculateTotalHours } = useEntryQueries(entries, userId);
-  
-  // Create a getUserEntries function
-  const getUserEntries = useCallback((userId?: string) => {
-    if (!userId) return [];
-    return entries.filter(entry => entry.userId === userId);
-  }, [entries]);
-  
-  const value = {
-    entries,
-    getUserEntries, 
-    getDayEntries,
-    createEntry,
-    deleteEntry
+  // Map to the old interface
+  const value: EntriesContextValue = {
+    entries: timeEntryContext.entries,
+    isLoading: timeEntryContext.isLoading,
+    createEntry: timeEntryContext.createEntry,
+    updateEntry: timeEntryContext.updateEntry,
+    deleteEntry: timeEntryContext.deleteEntry,
+    getDayEntries: timeEntryContext.getDayEntries,
+    getMonthEntries: timeEntryContext.getMonthEntries,
   };
   
   return (
@@ -63,4 +39,16 @@ export const EntriesProvider: React.FC<EntriesProviderProps> = ({ children, user
       {children}
     </EntriesContext.Provider>
   );
+};
+
+// Hook for accessing the EntriesContext
+export const useEntriesContext = (): EntriesContextValue => {
+  const ctx = useContext(EntriesContext);
+  
+  // If no context is available, delegate to the new context directly
+  if (!ctx) {
+    return useTimeEntryContext();
+  }
+  
+  return ctx;
 };

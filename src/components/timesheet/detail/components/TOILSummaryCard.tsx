@@ -1,3 +1,4 @@
+
 import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
@@ -129,6 +130,11 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   loading = false,
   monthName
 }) => {
+  // Debugging to help identify issues with summary data
+  useEffect(() => {
+    console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
+  }, [summary, loading]);
+
   // Ensure we have valid and safe values to display
   const accrued = summary?.accrued ?? 0;
   const used = summary?.used ?? 0;

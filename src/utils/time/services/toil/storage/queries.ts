@@ -1,3 +1,4 @@
+
 import { TOILRecord } from "@/types/toil";
 import { format, isSameDay } from "date-fns";
 import { loadTOILRecords, loadTOILUsage } from './core';
@@ -136,9 +137,11 @@ export function clearTOILStorageForMonth(userId: string, monthYear: string): boo
   }
 }
 
-// Get TOIL summary for a user and month - IMPROVED version
+// Get TOIL summary for a user and month - consistent implementation
 export function getTOILSummary(userId: string, monthYear: string) {
   try {
+    logger.debug(`Getting TOIL summary for ${userId}, month ${monthYear}`);
+    
     const records = loadTOILRecords();
     const usages = loadTOILUsage();
     
@@ -170,13 +173,17 @@ export function getTOILSummary(userId: string, monthYear: string) {
     const used = userUsages.reduce((sum, usage) => sum + usage.hours, 0);
     const remaining = accrued - used;
     
-    return {
+    const summary = {
       userId,
       monthYear,
       accrued,
       used,
       remaining
     };
+    
+    logger.debug(`TOIL summary for ${userId}, month ${monthYear}:`, summary);
+    
+    return summary;
   } catch (error) {
     logger.error('Error getting TOIL summary:', error);
     return {

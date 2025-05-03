@@ -1,11 +1,15 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
 import MonthSummary from "./MonthSummary";
 import TOILSummaryCard from "./detail/components/TOILSummaryCard";
 import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import { format } from "date-fns";
+import { createTimeLogger } from "@/utils/time/errors";
+
+// Create a logger for this component
+const logger = createTimeLogger('MonthlyHours');
 
 interface MonthlyHoursProps {
   user: User;
@@ -20,13 +24,32 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
 }) => {
   // Get TOIL summary for the current month, using monthOnly=true to ensure
   // it doesn't change when day selection changes
-  const { summary: toilSummary, isLoading: toilLoading } = useTOILSummary({
+  const { summary: toilSummary, isLoading: toilLoading, error: toilError, refreshSummary } = useTOILSummary({
     userId: user.id,
     date: currentMonth,
     monthOnly: true // Explicitly set to use month-only mode
   });
 
   const monthName = format(currentMonth, 'MMMM yyyy');
+  
+  // Add logging to help debug the TOIL summary
+  useEffect(() => {
+    logger.debug(`MonthlyHours component for ${monthName}:`, {
+      userId: user.id,
+      toilSummary,
+      toilLoading,
+      toilError
+    });
+    
+    if (toilError) {
+      logger.error(`Error loading TOIL summary for ${monthName}:`, toilError);
+    }
+  }, [toilSummary, toilLoading, toilError, monthName, user.id]);
+  
+  // Force a refresh when the component mounts to ensure data is loaded
+  useEffect(() => {
+    refreshSummary();
+  }, [refreshSummary]);
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -49,11 +72,23 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
       </div>
       {/* 2. TOIL Summary card below */}
       <div className="w-full max-w-full">
-        <TOILSummaryCard
-          summary={toilSummary}
-          loading={toilLoading}
-          monthName={monthName}
-        />
+        {toilError ? (
+          <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg">
+            Failed to load TOIL summary: {toilError}
+            <button 
+              onClick={refreshSummary} 
+              className="ml-2 underline text-blue-500"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <TOILSummaryCard
+            summary={toilSummary}
+            loading={toilLoading}
+            monthName={monthName}
+          />
+        )}
       </div>
     </div>
   );

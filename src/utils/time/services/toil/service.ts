@@ -21,6 +21,7 @@ import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
 import { dispatchTOILEvent } from "./events";
 import { createTimeLogger } from "../../errors/timeLogger";
 import { storeTOILRecord, storeTOILUsage } from "./storage/record-management";
+import { getTOILSummary as getStorageTOILSummary } from "./storage/queries";
 
 const logger = createTimeLogger('TOILService');
 
@@ -39,10 +40,6 @@ export class TOILService {
   // Clear all TOIL-related caches
   public clearCache(): void {
     try {
-      // Don't remove stored records, just clear the cache
-      // localStorage.removeItem(TOIL_RECORDS_KEY);
-      // localStorage.removeItem(TOIL_USAGE_KEY);
-      
       // Clear all summary caches
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -132,34 +129,23 @@ export class TOILService {
     }
   }
 
-  // Get TOIL summary for a user and month
-  public getTOILSummary(userId: string, monthYear: string): TOILSummary | null {
+  // Get TOIL summary for a user and month - use the unified function from queries.ts
+  public getTOILSummary(userId: string, monthYear: string): TOILSummary {
     try {
-      const records = loadTOILRecords();
-      const usages = loadTOILUsage();
-      
-      // Filter records and usages for the specified user and month
-      const userRecords = records.filter(record => record.userId === userId && record.monthYear === monthYear);
-      const userUsages = usages.filter(usage => usage.userId === userId && usage.monthYear === monthYear);
-      
-      // Calculate total accrued and used hours
-      const accrued = userRecords.reduce((sum, record) => sum + record.hours, 0);
-      const used = userUsages.reduce((sum, usage) => sum + usage.hours, 0);
-      const remaining = accrued - used;
-      
-      const summary: TOILSummary = {
-        userId: userId,
-        monthYear: monthYear,
-        accrued: accrued,
-        used: used,
-        remaining: remaining
-      };
-      
-      logger.debug(`TOIL summary for ${userId} - ${monthYear}:`, summary);
+      // Use the unified implementation from storage/queries.ts
+      const summary = getStorageTOILSummary(userId, monthYear);
+      logger.debug(`TOIL service returning summary for ${userId} - ${monthYear}:`, summary);
       return summary;
     } catch (error) {
-      logger.error('Error getting TOIL summary:', error);
-      return null;
+      logger.error('Error getting TOIL summary from service:', error);
+      // Return a valid but empty summary on error
+      return {
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
     }
   }
 
@@ -210,7 +196,7 @@ export class TOILService {
       
       if (stored) {
         // Get updated summary
-        const summary = await this.getTOILSummary(entry.userId, usage.monthYear);
+        const summary = this.getTOILSummary(entry.userId, usage.monthYear);
         
         // Dispatch TOIL update event
         dispatchTOILEvent(summary);
