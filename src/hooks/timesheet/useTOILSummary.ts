@@ -1,82 +1,150 @@
-
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { getSafeTOILSummary } from '@/utils/time/services/toil/storage/getSafeTOILSummary';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { TOILSummary } from '@/types/toil';
+import { toilService } from '@/utils/time/services/toil';
+import { format } from 'date-fns';
+import { useLogger } from '@/hooks/useLogger';
+import {
+  getTOILSummary,
+  clearTOILStorageForMonth,
+  cleanupDuplicateTOILRecords
+} from '@/utils/time/services/toil/storage';
+import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
-export const useTOILSummary = ({ userId, date }) => {
-  const [summary, setSummary] = useState(null);
-  const isMounted = useRef(false);
-  const debounceTimeout = useRef(null);
-  const lastHash = useRef('');
+export interface UseTOILSummaryProps {
+  userId: string;
+  date: Date;
+  monthOnly?: boolean;
+}
 
-  const monthYear = useMemo(() => date.toISOString().slice(0, 7), [date]);
+export interface UseTOILSummaryResult {
+  summary: TOILSummary | null;
+  isLoading: boolean;
+  error: string | null;
+  refreshSummary: () => void;
+}
 
-  const getHash = (data) => {
-    if (!data) return '';
-    return \`\${data.userId}-\${data.monthYear}-\${data.accrued}-\${data.used}-\${data.remaining}\`;
-  };
+export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummaryProps): UseTOILSummaryResult => {
+  const logger = useMemo(() => (typeof window !== 'undefined' ? createTimeLogger('useTOILSummary') : null), []);
+  const [summary, setSummary] = useState<TOILSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const isMountedRef = useRef(true);
 
-  const loadSummary = useCallback(() => {
-    if (!userId || !monthYear) return;
+  const monthYear = format(date, 'yyyy-MM');
 
-    try {
-      const result = getSafeTOILSummary(userId, monthYear);
-      const newHash = getHash(result);
-      if (newHash !== lastHash.current && isMounted.current) {
-        console.log('[TOIL] Summary changed, updating state');
-        setSummary(result);
-        lastHash.current = newHash;
-      }
-    } catch (error) {
-      console.error('[TOIL] Error loading summary:', error);
-    }
+  useEffect(() => {
+    logger?.debug(`TOIL Summary hook initialized for user ${userId}, month ${monthYear}`);
   }, [userId, monthYear]);
 
   useEffect(() => {
-    isMounted.current = true;
+    toilService.clearCache();
+    if (userId) {
+      cleanupDuplicateTOILRecords(userId)
+        .then(count => {
+          if (count > 0) {
+            logger?.debug(`Cleaned up ${count} duplicate TOIL records for ${userId}`);
+          }
+        })
+        .catch(err => logger?.error('Error cleaning up duplicates:', err));
+    }
+    logger?.debug(`Month changed to ${monthYear}, cache cleared and duplicates cleaned`);
+  }, [monthYear, userId]);
+
+  const loadSummary = useCallback(() => {
+    if (!userId) {
+      logger?.warn('No userId provided');
+      setError('No user ID provided');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const toilSummary = getTOILSummary(userId, monthYear);
+      if (!isMountedRef.current) return;
+
+      if (!toilSummary) {
+        logger?.warn(`No TOIL summary found for ${userId} in ${monthYear}`);
+        setSummary({ userId, monthYear, accrued: 0, used: 0, remaining: 0 });
+      } else {
+        setSummary(toilSummary);
+        logger?.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error loading TOIL summary';
+      logger?.error(errorMessage);
+      setError(errorMessage);
+      setSummary({ userId, monthYear, accrued: 0, used: 0, remaining: 0 });
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [userId, monthYear, refreshCounter]);
+
+  const refreshSummary = useCallback(() => {
+    logger?.debug(`Manual refresh requested for ${userId}, month=${monthYear}`);
+    setRefreshCounter(prev => prev + 1);
+  }, [userId, monthYear]);
+
+  useEffect(() => {
     loadSummary();
-    return () => {
-      isMounted.current = false;
-    };
   }, [loadSummary]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const debouncedRefresh = (label) => {
-      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-      debounceTimeout.current = setTimeout(() => {
-        if (!isMounted.current) return;
-        console.log('[TOIL] Debounced refresh from:', label);
-        loadSummary();
-      }, 250);
+    return () => {
+      isMountedRef.current = false;
     };
+  }, []);
 
-    const domHandler = (e) => {
-      const d = e.detail;
-      if (d?.userId === userId && (!d.monthYear || d.monthYear === monthYear)) {
-        debouncedRefresh('DOM event toil:summary-updated');
+  useEffect(() => {
+    const handleTOILUpdate = (event: CustomEvent) => {
+      if (!isMountedRef.current) return;
+      const eventData = event.detail;
+      const isRelevant = eventData?.userId === userId && (!eventData.monthYear || eventData.monthYear === monthYear);
+
+      if (isRelevant) {
+        logger?.debug('Received TOIL update event, refreshing summary');
+
+        if (typeof eventData.accrued === 'number') {
+          setSummary({
+            userId: eventData.userId,
+            monthYear: eventData.monthYear || monthYear,
+            accrued: eventData.accrued,
+            used: eventData.used,
+            remaining: eventData.remaining
+          });
+          setIsLoading(false);
+        } else {
+          refreshSummary();
+        }
       }
     };
 
-    const sub = timeEventsService.subscribe('toil-updated', (d) => {
-      if (d?.userId === userId && d?.date) {
-        debouncedRefresh('Service event toil-updated');
+    window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+
+    const subscription = timeEventsService.subscribe('toil-updated', data => {
+      logger?.debug('Received toil-updated event via timeEventsService:', data);
+      const shouldUpdate = data?.userId === userId && data?.date;
+      if (shouldUpdate) {
+        refreshSummary();
       }
     });
 
-    window.addEventListener('toil:summary-updated', domHandler);
     return () => {
-      window.removeEventListener('toil:summary-updated', domHandler);
-      sub.unsubscribe();
-      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+      window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+      subscription.unsubscribe();
     };
-  }, [userId, monthYear, loadSummary]);
+  }, [userId, monthYear, refreshSummary]);
 
   return {
     summary,
-    isLoading: false,
-    error: null,
-    refreshSummary: loadSummary
+    isLoading,
+    error,
+    refreshSummary
   };
 };
