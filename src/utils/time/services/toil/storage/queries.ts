@@ -142,29 +142,8 @@ export function getTOILSummary(userId: string, monthYear: string) {
   try {
     logger.debug(`Getting TOIL summary for ${userId}, month ${monthYear}`);
     
-    // Initialize with zero values
-    const defaultSummary = {
-      userId,
-      monthYear,
-      accrued: 0,
-      used: 0,
-      remaining: 0
-    };
-    
-    // Validate inputs
-    if (!userId || !monthYear) {
-      logger.warn('Invalid userId or monthYear in getTOILSummary');
-      return defaultSummary;
-    }
-    
     const records = loadTOILRecords();
     const usages = loadTOILUsage();
-    
-    // Check if we have any TOIL records or usage
-    if (!records.length && !usages.length) {
-      logger.debug('No TOIL records or usage found in storage, returning default summary');
-      return defaultSummary;
-    }
     
     // More strict filtering to avoid duplicates
     const uniqueDates = new Map<string, TOILRecord>();
@@ -173,11 +152,6 @@ export function getTOILSummary(userId: string, monthYear: string) {
     records
       .filter(record => record.userId === userId && record.monthYear === monthYear)
       .forEach(record => {
-        if (!record.date) {
-          logger.warn('Record missing date:', record);
-          return;
-        }
-        
         const dateKey = format(new Date(record.date), 'yyyy-MM-dd');
         
         if (!uniqueDates.has(dateKey) || 
@@ -186,11 +160,9 @@ export function getTOILSummary(userId: string, monthYear: string) {
         }
       });
     
-    logger.debug(`Found ${uniqueDates.size} unique TOIL record dates`);
-    
     // Calculate with unique records only
     const accrued = Array.from(uniqueDates.values())
-      .reduce((sum, record) => sum + (typeof record.hours === 'number' ? record.hours : 0), 0);
+      .reduce((sum, record) => sum + record.hours, 0);
     
     // Filter usages for this user and month
     const userUsages = usages.filter(usage => 
@@ -198,7 +170,7 @@ export function getTOILSummary(userId: string, monthYear: string) {
     );
     
     // Calculate used hours
-    const used = userUsages.reduce((sum, usage) => sum + (typeof usage.hours === 'number' ? usage.hours : 0), 0);
+    const used = userUsages.reduce((sum, usage) => sum + usage.hours, 0);
     const remaining = accrued - used;
     
     const summary = {

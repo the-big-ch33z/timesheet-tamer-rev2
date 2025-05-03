@@ -11,9 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/ui/tooltip";
-import { createTimeLogger } from "@/utils/time/errors";
-
-const logger = createTimeLogger('TOILSummaryCard');
 
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
@@ -135,7 +132,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
 }) => {
   // Debugging to help identify issues with summary data
   useEffect(() => {
-    logger.debug('TOILSummaryCard received summary:', summary, 'loading:', loading);
+    console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
   }, [summary, loading]);
 
   // Ensure we have valid and safe values to display

@@ -7,7 +7,6 @@ import TOILSummaryCard from "./detail/components/TOILSummaryCard";
 import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
-import { Button } from "@/components/ui/button";
 
 // Create a logger for this component
 const logger = createTimeLogger('MonthlyHours');
@@ -49,9 +48,8 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   
   // Force a refresh when the component mounts to ensure data is loaded
   useEffect(() => {
-    logger.debug(`MonthlyHours component mounted, forcing refresh for ${user.id}, ${monthName}`);
     refreshSummary();
-  }, [refreshSummary, user.id, monthName]);
+  }, [refreshSummary]);
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -77,14 +75,12 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
         {toilError ? (
           <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg">
             Failed to load TOIL summary: {toilError}
-            <Button 
+            <button 
               onClick={refreshSummary} 
               className="ml-2 underline text-blue-500"
-              variant="ghost"
-              size="sm"
             >
               Retry
-            </Button>
+            </button>
           </div>
         ) : (
           <TOILSummaryCard
