@@ -7,7 +7,13 @@ export const useTOILSummary = ({ userId, date }) => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const isMountedRef = useRef(true);
 
-  const monthYear = useMemo(() => date.toISOString().slice(0, 7), [date]);
+  // 🛡️ Memoize the date and monthYear to prevent re-computation
+  const stableDate = useMemo(() => date, [date.getFullYear(), date.getMonth()]);
+  const monthYear = useMemo(() => stableDate.toISOString().slice(0, 7), [stableDate]);
+
+  useEffect(() => {
+    console.log('[TOIL hook] Render triggered by:', { userId, monthYear, refreshCounter });
+  });
 
   useEffect(() => {
     isMountedRef.current = true;
