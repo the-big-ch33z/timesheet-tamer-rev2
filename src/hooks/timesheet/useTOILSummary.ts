@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getTOILSummary } from '@/utils/time/services/toil/storage';
 
 export const useTOILSummary = ({ userId, date }) => {
@@ -7,16 +7,20 @@ export const useTOILSummary = ({ userId, date }) => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const isMountedRef = useRef(true);
 
-  const monthYear = date.toISOString().slice(0, 7);
+  // Memoize monthYear to prevent unnecessary effect reruns
+  const monthYear = useMemo(() => date.toISOString().slice(0, 7), [date]);
 
   useEffect(() => {
     isMountedRef.current = true;
+
+    if (!userId || !monthYear) return;
+
+    console.log('🔄 TOIL useEffect running:', { userId, monthYear, refreshCounter });
 
     try {
       const result = getTOILSummary(userId, monthYear);
 
       if (isMountedRef.current) {
-        console.log('TOIL summary loaded:', result);
         setSummary(result ?? {
           userId,
           monthYear,
@@ -26,7 +30,7 @@ export const useTOILSummary = ({ userId, date }) => {
         });
       }
     } catch (err) {
-      console.error('Error loading TOIL summary:', err);
+      console.error('TOIL load error:', err);
     }
 
     return () => {
