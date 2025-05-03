@@ -7,7 +7,7 @@ import WorkHoursInterface from "./WorkHoursInterface";
 import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { useUserTimesheetContext } from "@/contexts/timesheet/user-context/UserTimesheetContext";
-import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToilEffects"; // ✅ PATCH: import the hook
+import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToilEffects"; // ✅ PATCH: import the new version
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -44,7 +44,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 
   const dayEntries = getDayEntries(date);
 
-  // ✅ PATCH: Add TOIL recalculation hook
+  // ✅ Updated PATCH: Call TOIL recalculation hook with safe arguments
   useToilEffects({
     userId,
     date,
