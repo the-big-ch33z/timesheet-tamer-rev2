@@ -65,6 +65,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
       }
 
       const toilSummary = getTOILSummary(userId, monthYear);
+      console.log('getTOILSummary result for', userId, monthYear, '=>', toilSummary);
 
       if (!isMountedRef.current) return;
 
@@ -81,6 +82,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
         return;
       }
 
+      console.log('TOIL summary being set to:', toilSummary);
       setSummary(toilSummary);
       logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
     } catch (err) {
