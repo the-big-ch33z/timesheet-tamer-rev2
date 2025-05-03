@@ -25,7 +25,10 @@ export interface UseTOILSummaryResult {
 }
 
 export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummaryProps): UseTOILSummaryResult => {
-  const logger = useMemo(() => createTimeLogger('useTOILSummary'), []);
+  let logger = null;
+  if (typeof window !== 'undefined') {
+    logger = createTimeLogger('useTOILSummary');
+  }
   const [summary, setSummary] = useState<TOILSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
   const monthYear = format(date, 'yyyy-MM');
 
   useEffect(() => {
-    logger.debug(`TOIL Summary hook initialized for user ${userId}, month ${monthYear}`);
+    logger?.debug(`TOIL Summary hook initialized for user ${userId}, month ${monthYear}`);
   }, [userId, monthYear]);
 
   useEffect(() => {
@@ -44,23 +47,21 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
       cleanupDuplicateTOILRecords(userId)
         .then(count => {
           if (count > 0) {
-            logger.debug(`Cleaned up ${count} duplicate TOIL records for ${userId}`);
+            logger?.debug(`Cleaned up ${count} duplicate TOIL records for ${userId}`);
           }
         })
-        .catch(err => logger.error('Error cleaning up duplicates:', err));
+        .catch(err => logger?.error('Error cleaning up duplicates:', err));
     }
-    logger.debug(`Month changed to ${monthYear}, cache cleared and duplicates cleaned`);
+    logger?.debug(`Month changed to ${monthYear}, cache cleared and duplicates cleaned`);
   }, [monthYear, userId]);
 
   const loadSummary = useCallback(() => {
-    console.log('[TOIL] top of loadSummary');
     try {
-      logger.debug(`Loading TOIL summary for ${userId}, month=${monthYear}, attempt=${refreshCounter}`);
+      logger?.debug(`Loading TOIL summary for ${userId}, month=${monthYear}, attempt=${refreshCounter}`);
       setIsLoading(true);
       setError(null);
 
       if (!userId) {
-        console.log('[TOIL] userId is missing – exiting early');
         setError('No user ID provided');
         setIsLoading(false);
         return;
@@ -71,8 +72,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
       if (!isMountedRef.current) return;
 
       if (!toilSummary) {
-        console.log('[TOIL] No TOIL summary found, setting fallback');
-        logger.warn(`No TOIL summary found for ${userId} in ${monthYear}`);
+        logger?.warn(`No TOIL summary found for ${userId} in ${monthYear}`);
         setSummary({
           userId,
           monthYear,
@@ -84,12 +84,11 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
         return;
       }
 
-      console.log('[TOIL] setSummary(toilSummary)');
       setSummary(toilSummary);
-      logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
+      logger?.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading TOIL summary';
-      logger.error(errorMessage);
+      logger?.error(errorMessage);
 
       if (isMountedRef.current) {
         setError(errorMessage);
@@ -103,7 +102,6 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
         setIsLoading(false); // ✅ also ensure loading ends on error
       }
     } finally {
-      console.log('[TOIL] running finally – setting isLoading false');
       if (isMountedRef.current) {
         setIsLoading(false);
       }
@@ -111,7 +109,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
   }, [userId, monthYear, refreshCounter]);
 
   const refreshSummary = useCallback(() => {
-    logger.debug(`Manual refresh requested for ${userId}, month=${monthYear}`);
+    logger?.debug(`Manual refresh requested for ${userId}, month=${monthYear}`);
     setRefreshCounter(prev => prev + 1);
   }, [userId, monthYear]);
 
@@ -133,7 +131,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
       const shouldRefresh = eventData?.userId === userId && (!eventData.monthYear || eventData.monthYear === monthYear);
 
       if (shouldRefresh) {
-        logger.debug('Received TOIL update event, refreshing summary');
+        logger?.debug('Received TOIL update event, refreshing summary');
 
         if (eventData.accrued !== undefined) {
           setSummary({
@@ -153,7 +151,7 @@ export const useTOILSummary = ({ userId, date, monthOnly = true }: UseTOILSummar
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
 
     const subscription = timeEventsService.subscribe('toil-updated', (data) => {
-      logger.debug('Received toil-updated event via timeEventsService:', data);
+      logger?.debug('Received toil-updated event via timeEventsService:', data);
       if (data?.userId === userId && data?.date) {
         setTimeout(() => loadSummary(), 10);
       }
