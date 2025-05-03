@@ -36,6 +36,7 @@ export default defineConfig(({ mode }) => ({
       "react/jsx-runtime": path.resolve(__dirname, "node_modules/react/jsx-runtime"),
       "react-is": path.resolve(__dirname, "node_modules/react-is"),
       "prop-types": path.resolve(__dirname, "node_modules/prop-types"),
+      "eventemitter3": path.resolve(__dirname, "node_modules/eventemitter3"),
       "@radix-ui": path.resolve(__dirname, "node_modules/@radix-ui"),
     },
     // Ensure proper module extension resolution
@@ -50,6 +51,7 @@ export default defineConfig(({ mode }) => ({
       "react-router-dom",
       "react-is",
       "prop-types",
+      "eventemitter3",
       "date-fns",
       "@radix-ui/react-slot",
       "@radix-ui/react-primitive",
@@ -82,6 +84,7 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/recharts\//,
         /node_modules\/lodash\//,
         /node_modules\/react-smooth\//,
+        /node_modules\/eventemitter3\//,
       ],
       // Force specific Recharts dependency to be considered as requiring
       requireReturnsDefault: 'auto',
@@ -100,7 +103,8 @@ export default defineConfig(({ mode }) => ({
             return 'radix';
           }
           if (id.includes('node_modules/recharts') || id.includes('node_modules/lodash') || 
-              id.includes('node_modules/prop-types') || id.includes('node_modules/react-smooth')) {
+              id.includes('node_modules/prop-types') || id.includes('node_modules/react-smooth') ||
+              id.includes('node_modules/eventemitter3')) {
             return 'charts';
           }
           if (id.includes('src/components/ui')) {
