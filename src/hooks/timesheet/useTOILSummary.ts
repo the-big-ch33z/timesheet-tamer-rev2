@@ -78,8 +78,6 @@ export const useTOILSummary = ({
       // Use the unified getTOILSummary function
       const toilSummary = getTOILSummary(userId, monthYear);
       
-      logger.debug(`Retrieved TOIL summary data: ${JSON.stringify(toilSummary)}`);
-      
       if (!isMountedRef.current) return;
       
       // Always set the summary, even if empty
