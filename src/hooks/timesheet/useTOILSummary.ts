@@ -44,7 +44,18 @@ export const useTOILSummary = ({
   // Debug log the hook initialization
   useEffect(() => {
     logger.debug(`TOIL Summary hook initialized for user ${userId}, month ${monthYear}`);
-  }, [userId, monthYear]);
+    
+    // Return a default empty summary while loading to prevent flashing of "no data"
+    if (isLoading && !summary) {
+      setSummary({
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      });
+    }
+  }, [userId, monthYear, isLoading, summary]);
   
   // Clear caches when month changes to ensure we get fresh data
   useEffect(() => {
@@ -80,12 +91,13 @@ export const useTOILSummary = ({
       
       if (!isMountedRef.current) return;
       
+      logger.debug(`Received TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
+      
       // Always set the summary, even if empty
       setSummary(toilSummary);
-      logger.debug(`Loaded TOIL summary for ${userId}, month=${monthYear}:`, toilSummary);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading TOIL summary';
-      logger.error(errorMessage);
+      logger.error(`Error in loadSummary: ${errorMessage}`);
       
       if (isMountedRef.current) {
         setError(errorMessage);
@@ -114,6 +126,7 @@ export const useTOILSummary = ({
   
   // Load summary when userId or month changes - now only depends on monthYear, not the full date
   useEffect(() => {
+    logger.debug(`Effect triggered to load summary for ${userId}, month=${monthYear}, refresh=${refreshCounter}`);
     loadSummary();
   }, [userId, monthYear, loadSummary, refreshCounter]);
   
