@@ -1,168 +1,181 @@
 
 import { TOILRecord, TOILUsage } from "@/types/toil";
 import { format } from "date-fns";
-import { v4 as uuidv4 } from "uuid";
-import { createTimeLogger } from '@/utils/time/errors';
-import { 
-  loadTOILRecords, 
-  loadTOILUsage,
-  clearSummaryCache, 
-  TOIL_RECORDS_KEY,
-  TOIL_USAGE_KEY
-} from './core';
-import { dispatchTOILEvent } from "../events";
+import { createTimeLogger } from "../../../errors/timeLogger";
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY } from "./constants";
 
-const logger = createTimeLogger('TOILRecordManagement');
+const logger = createTimeLogger('TOILStorage');
 
-// Store a TOIL record
-export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
+/**
+ * Load TOIL records from localStorage with enhanced error handling and logging
+ */
+export function loadTOILRecords(): TOILRecord[] {
   try {
-    const records = loadTOILRecords();
+    logger.debug('Loading TOIL records from localStorage');
     
-    // Check for duplicate by date and userId
-    const existingIndex = records.findIndex(r => 
-      r.userId === record.userId && 
-      format(new Date(r.date), 'yyyy-MM-dd') === format(new Date(record.date), 'yyyy-MM-dd')
-    );
-    
-    if (existingIndex >= 0) {
-      // Update existing record
-      records[existingIndex] = record;
-      logger.debug(`Updated existing TOIL record for ${format(new Date(record.date), 'yyyy-MM-dd')}`);
-    } else {
-      // Add new record
-      records.push(record);
-      logger.debug(`Added new TOIL record for ${format(new Date(record.date), 'yyyy-MM-dd')}`);
+    const recordsString = localStorage.getItem(TOIL_RECORDS_KEY);
+    if (!recordsString) {
+      logger.debug('No TOIL records found in localStorage');
+      return [];
     }
     
-    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
+    const records = JSON.parse(recordsString);
+    if (!Array.isArray(records)) {
+      logger.error('Invalid TOIL records data structure:', records);
+      return [];
+    }
     
-    // Clear the summary cache for this month
-    clearSummaryCache(record.userId, record.monthYear);
+    // Convert date strings to Date objects
+    const convertedRecords = records.map(record => ({
+      ...record,
+      date: record.date instanceof Date ? record.date : new Date(record.date)
+    }));
+    
+    logger.debug(`Successfully loaded ${convertedRecords.length} TOIL records`);
+    return convertedRecords;
+    
+  } catch (error) {
+    logger.error('Error loading TOIL records:', error);
+    return [];
+  }
+}
+
+/**
+ * Load TOIL usage records from localStorage with enhanced error handling and logging
+ */
+export function loadTOILUsage(): TOILUsage[] {
+  try {
+    logger.debug('Loading TOIL usage from localStorage');
+    
+    const usageString = localStorage.getItem(TOIL_USAGE_KEY);
+    if (!usageString) {
+      logger.debug('No TOIL usage found in localStorage');
+      return [];
+    }
+    
+    const usages = JSON.parse(usageString);
+    if (!Array.isArray(usages)) {
+      logger.error('Invalid TOIL usage data structure:', usages);
+      return [];
+    }
+    
+    // Convert date strings to Date objects
+    const convertedUsages = usages.map(usage => ({
+      ...usage,
+      date: usage.date instanceof Date ? usage.date : new Date(usage.date)
+    }));
+    
+    logger.debug(`Successfully loaded ${convertedUsages.length} TOIL usage records`);
+    return convertedUsages;
+    
+  } catch (error) {
+    logger.error('Error loading TOIL usage:', error);
+    return [];
+  }
+}
+
+/**
+ * Store a TOIL record with enhanced error handling and logging
+ */
+export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
+  try {
+    logger.debug(`Storing TOIL record: ${format(record.date, 'yyyy-MM-dd')} - ${record.hours} hours`);
+    
+    if (!record || !record.userId || !record.date || record.hours === undefined) {
+      logger.error('Invalid TOIL record:', record);
+      return false;
+    }
+    
+    // Get existing records first
+    const existingRecords = loadTOILRecords();
+    
+    // Check for duplicates - same user, date, hours and status
+    const isDuplicate = existingRecords.some(r => 
+      r.userId === record.userId && 
+      format(r.date, 'yyyy-MM-dd') === format(record.date, 'yyyy-MM-dd') &&
+      r.hours === record.hours &&
+      r.status === record.status
+    );
+    
+    if (isDuplicate) {
+      logger.debug('Skipping duplicate TOIL record');
+      return true; // Consider this a success to prevent multiple attempts
+    }
+    
+    // Add the new record
+    existingRecords.push(record);
+    
+    // Save back to localStorage
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(existingRecords));
+    
+    logger.debug(`TOIL record stored successfully, total records: ${existingRecords.length}`);
+    
+    // Check storage was successful by reading back
+    const verifyRecords = loadTOILRecords();
+    const verified = verifyRecords.some(r => r.id === record.id);
+    
+    if (!verified) {
+      logger.error('TOIL record verification failed - could not find record after saving');
+      return false;
+    }
     
     return true;
+    
   } catch (error) {
     logger.error('Error storing TOIL record:', error);
     return false;
   }
 }
 
-// Store TOIL usage - FIXED to prevent duplicates
+/**
+ * Store a TOIL usage record with enhanced error handling and logging
+ */
 export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
   try {
-    const usages = loadTOILUsage();
+    logger.debug(`Storing TOIL usage: ${format(usage.date, 'yyyy-MM-dd')} - ${usage.hours} hours`);
     
-    // Check for existing usage for the same entry
-    const existingIndex = usages.findIndex(u => u.entryId === usage.entryId);
-    if (existingIndex >= 0) {
-      // Update existing usage
-      usages[existingIndex] = usage;
-      logger.debug(`Updated existing TOIL usage for entry ${usage.entryId}`);
-    } else {
-      // Check for duplicate by date and userId to avoid multiple usage entries for same day
-      const sameDay = usages.find(u => 
-        u.userId === usage.userId && 
-        format(new Date(u.date), 'yyyy-MM-dd') === format(new Date(usage.date), 'yyyy-MM-dd') &&
-        Math.abs(u.hours - usage.hours) < 0.01 // Same hours (within tolerance)
-      );
-      
-      if (sameDay) {
-        logger.debug(`Skipping duplicate TOIL usage for same day: ${format(new Date(usage.date), 'yyyy-MM-dd')}`);
-        return true; // Consider it stored successfully (prevents duplicates)
-      }
-      
-      // Add new usage
-      usages.push(usage);
-      logger.debug(`Added new TOIL usage record for entry ${usage.entryId}`);
-    }
-    
-    localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usages));
-    
-    // Clear the summary cache for this month
-    clearSummaryCache(usage.userId, usage.monthYear);
-    
-    return true;
-  } catch (error) {
-    logger.error('Error storing TOIL usage:', error);
-    return false;
-  }
-}
-
-// Delete a TOIL record associated with a specific entry ID
-export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolean> {
-  try {
-    if (!entryId) {
-      logger.error('No entry ID provided for TOIL record deletion');
+    if (!usage || !usage.userId || !usage.date || usage.hours === undefined) {
+      logger.error('Invalid TOIL usage:', usage);
       return false;
     }
     
-    const allRecords = loadTOILRecords();
-    const recordIndex = allRecords.findIndex(record => record.entryId === entryId);
+    // Get existing usage records first
+    const existingUsages = loadTOILUsage();
     
-    // Also check for usage records - FIX: deleting the TOIL entry should delete the usage
-    const allUsages = loadTOILUsage();
-    const usageIndex = allUsages.findIndex(usage => usage.entryId === entryId);
+    // Check for duplicates
+    const isDuplicate = existingUsages.some(u => 
+      u.entryId === usage.entryId || 
+      (u.userId === usage.userId && 
+       format(u.date, 'yyyy-MM-dd') === format(usage.date, 'yyyy-MM-dd') &&
+       u.hours === usage.hours)
+    );
     
-    let deleted = false;
-    let userId = '';
-    let monthYear = '';
-    
-    // Handle TOIL record deletion
-    if (recordIndex !== -1) {
-      // Store the user and month before deletion for cache clearing
-      userId = allRecords[recordIndex].userId;
-      monthYear = allRecords[recordIndex].monthYear;
-      
-      // Remove the record
-      allRecords.splice(recordIndex, 1);
-      
-      // Save the updated records
-      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
-      
-      deleted = true;
-      logger.debug(`Deleted TOIL record for entry ID ${entryId}`);
+    if (isDuplicate) {
+      logger.debug('Skipping duplicate TOIL usage');
+      return true; // Consider this a success to prevent multiple attempts
     }
     
-    // Handle TOIL usage deletion
-    if (usageIndex !== -1) {
-      // If we didn't get userId/monthYear from record, get it from usage
-      if (!userId) {
-        userId = allUsages[usageIndex].userId;
-        monthYear = allUsages[usageIndex].monthYear;
-      }
-      
-      // Remove the usage entry
-      allUsages.splice(usageIndex, 1);
-      
-      // Save the updated usages
-      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(allUsages));
-      
-      deleted = true;
-      logger.debug(`Deleted TOIL usage for entry ID ${entryId}`);
+    // Add the new usage record
+    existingUsages.push(usage);
+    
+    // Save back to localStorage
+    localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(existingUsages));
+    
+    logger.debug(`TOIL usage stored successfully, total records: ${existingUsages.length}`);
+    
+    // Verify storage was successful
+    const verifyUsages = loadTOILUsage();
+    const verified = verifyUsages.some(u => u.id === usage.id);
+    
+    if (!verified) {
+      logger.error('TOIL usage verification failed - could not find record after saving');
+      return false;
     }
     
-    // Clear the summary cache if we deleted something
-    if (deleted && userId && monthYear) {
-      clearSummaryCache(userId, monthYear);
-      
-      // Get updated summary to send with the event
-      const summary = {
-        userId,
-        monthYear,
-        accrued: 0,
-        used: 0,
-        remaining: 0
-      };
-      
-      // Dispatch updated summary event
-      dispatchTOILEvent(summary);
-      
-      return true;
-    }
+    return true;
     
-    return deleted;
   } catch (error) {
-    logger.error('Error deleting TOIL record:', error);
+    logger.error('Error storing TOIL usage:', error);
     return false;
   }
 }

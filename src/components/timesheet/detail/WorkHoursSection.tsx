@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/useTimeEntryContext";
@@ -7,7 +8,8 @@ import WorkHoursInterface from "./WorkHoursInterface";
 import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { useUserTimesheetContext } from "@/contexts/timesheet/user-context/UserTimesheetContext";
-import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToilEffects"; // ✅ PATCH: import the new version
+import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToilEffects";
+import { TOILDebugPanel } from "@/components/debug/TOILDebugPanel"; // Import the new debug panel
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -33,6 +35,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 
   const userContext = useUserTimesheetContext();
   const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   useEffect(() => {
     if (effectiveWorkSchedule) {
@@ -40,11 +43,16 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     } else {
       logger.debug(`[WorkHoursSection] No work schedule available`);
     }
+    
+    // Check for developer mode by looking for URL param or localStorage flag
+    const isDevMode = window.location.search.includes('devMode=true') || 
+                      localStorage.getItem('timesheet-dev-mode') === 'true';
+    setShowDebugPanel(isDevMode);
   }, [effectiveWorkSchedule]);
 
   const dayEntries = getDayEntries(date);
 
-  // ✅ Updated PATCH: Call TOIL recalculation hook with safe arguments
+  // Call updated hook with object-based parameters
   useToilEffects({
     userId,
     date,
@@ -88,6 +96,10 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 
   return (
     <div className="space-y-6 w-full">
+      {showDebugPanel && (
+        <TOILDebugPanel userId={userId} date={date} />
+      )}
+      
       <Card className="p-0 m-0 w-full rounded-lg shadow-sm border border-gray-200">
         <WorkHoursInterface 
           date={date} 
