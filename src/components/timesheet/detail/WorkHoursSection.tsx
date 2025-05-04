@@ -10,6 +10,9 @@ import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { useUserTimesheetContext } from "@/contexts/timesheet/user-context/UserTimesheetContext";
 import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToilEffects";
 import { TOILDebugPanel } from "@/components/debug/TOILDebugPanel"; // Import the new debug panel
+import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
+import { toilService } from "@/utils/time/services/toil";
+import { getHolidays } from "@/lib/holidays";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -36,6 +39,24 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const userContext = useUserTimesheetContext();
   const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [manualCalculationTrigger, setManualCalculationTrigger] = useState(0);
+  
+  // Get the holidays once
+  const holidays = React.useMemo(() => getHolidays(), []);
+  
+  // Get day entries
+  const dayEntries = getDayEntries(date);
+  
+  // Get TOIL calculation tools
+  const { calculateToilForDay, isCalculating } = useTOILCalculations({
+    userId,
+    date,
+    entries: dayEntries,
+    workSchedule: effectiveWorkSchedule
+  });
+
+  // Track entries count for change detection
+  const [entriesCount, setEntriesCount] = useState(dayEntries.length);
 
   useEffect(() => {
     if (effectiveWorkSchedule) {
@@ -50,8 +71,6 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     setShowDebugPanel(isDevMode);
   }, [effectiveWorkSchedule]);
 
-  const dayEntries = getDayEntries(date);
-
   // Call updated hook with object-based parameters
   useToilEffects({
     userId,
@@ -59,8 +78,6 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     entries: dayEntries,
     schedule: effectiveWorkSchedule
   });
-
-  const [entriesCount, setEntriesCount] = useState(dayEntries.length);
 
   useEffect(() => {
     logger.debug(`[WorkHoursSection] Selected date: ${date.toISOString()}, entries: ${dayEntries.length}`);
@@ -71,13 +88,66 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       logger.debug(`[WorkHoursSection] Entries count changed from ${entriesCount} to ${dayEntries.length}`);
       setEntriesCount(dayEntries.length);
 
+      // Publish event about hours change
       timeEventsService.publish('hours-updated', {
         entriesCount: dayEntries.length,
         date: date.toISOString(),
         userId
       });
+      
+      // Explicitly trigger TOIL calculation when entries change
+      if (dayEntries.length > 0 && effectiveWorkSchedule) {
+        logger.debug('[WorkHoursSection] Triggering TOIL calculation due to entries change');
+        
+        // Properly debounced call via useTOILCalculations hook
+        calculateToilForDay()
+          .then(summary => {
+            if (summary) {
+              logger.debug('[WorkHoursSection] TOIL calculation successful:', summary);
+              // Dispatch additional event to ensure UI updates
+              timeEventsService.publish('toil-updated', {
+                userId,
+                date: date.toISOString(),
+                summary
+              });
+            }
+          })
+          .catch(err => {
+            logger.error('[WorkHoursSection] TOIL calculation failed:', err);
+          });
+      }
     }
-  }, [dayEntries.length, entriesCount, date, userId]);
+  }, [dayEntries.length, entriesCount, date, userId, calculateToilForDay, effectiveWorkSchedule]);
+
+  // Manual TOIL calculation trigger
+  useEffect(() => {
+    if (manualCalculationTrigger > 0 && effectiveWorkSchedule) {
+      logger.debug('[WorkHoursSection] Manual TOIL calculation triggered');
+      
+      // Direct call to TOIL service for immediate calculation
+      toilService.calculateAndStoreTOIL(
+        dayEntries,
+        date,
+        userId,
+        effectiveWorkSchedule,
+        holidays
+      ).then(summary => {
+        logger.debug('[WorkHoursSection] Manual TOIL calculation complete:', summary);
+        
+        // Dispatch both event types for maximum compatibility
+        timeEventsService.publish('toil-updated', {
+          userId,
+          date: date.toISOString(),
+          summary
+        });
+        
+        // Also dispatch through the DOM event system
+        window.dispatchEvent(new CustomEvent('toil:summary-updated', { 
+          detail: summary
+        }));
+      });
+    }
+  }, [manualCalculationTrigger, dayEntries, date, userId, effectiveWorkSchedule, holidays]);
 
   const handleCreateEntry = useCallback((startTime: string, endTime: string, hours: number) => {
     if (onCreateEntry) {
@@ -94,10 +164,20 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     }
   }, [onCreateEntry, userId, date]);
 
+  // Manual TOIL calculation trigger function
+  const triggerTOILCalculation = useCallback(() => {
+    setManualCalculationTrigger(prev => prev + 1);
+  }, []);
+
   return (
     <div className="space-y-6 w-full">
       {showDebugPanel && (
-        <TOILDebugPanel userId={userId} date={date} />
+        <TOILDebugPanel 
+          userId={userId} 
+          date={date}
+          onCalculateTOIL={triggerTOILCalculation}
+          isCalculating={isCalculating}
+        />
       )}
       
       <Card className="p-0 m-0 w-full rounded-lg shadow-sm border border-gray-200">

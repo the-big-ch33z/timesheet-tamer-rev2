@@ -2,17 +2,25 @@
 import { useEffect } from 'react';
 import { createTimeLogger } from "@/utils/time/errors";
 import { TimeEntry, WorkSchedule } from "@/types";
+import { toilService } from "@/utils/time/services/toil";
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useToilEffects');
 
+// Type for unified parameter object
+export interface UseToilEffectsParams {
+  userId: string;
+  date: Date;
+  entries: TimeEntry[];
+  schedule?: WorkSchedule;
+  leaveActive?: boolean;
+  toilActive?: boolean;
+  isComplete?: boolean;
+}
+
 // Updated hook that supports both object and individual parameters
 export const useToilEffects = (
-  arg1: boolean | {
-    userId: string;
-    date: Date;
-    entries: TimeEntry[];
-    schedule?: WorkSchedule;
-  },
+  arg1: UseToilEffectsParams | boolean,
   arg2?: boolean,
   arg3?: boolean,
   arg4?: boolean,
@@ -24,16 +32,54 @@ export const useToilEffects = (
 
   // Extract parameters accordingly
   const hasEntries = isObjectFormat ? (arg1.entries && arg1.entries.length > 0) : !!arg1;
-  const leaveActive = isObjectFormat ? false : !!arg2; // We don't have this in object format yet
-  const toilActive = isObjectFormat ? false : !!arg3;  // We don't have this in object format yet
-  const isComplete = isObjectFormat ? true : !!arg4;   // We don't have this in object format yet
-  const calculateToilForDay = isObjectFormat ? async () => {
-    logger.debug('Calculated TOIL for day (object format) - entries:', arg1.entries?.length); 
-    return null;
-  } : (arg5 || (async () => {
-    logger.debug('Calculated TOIL for day (legacy format)');
-    return null;
-  }));
+  const leaveActive = isObjectFormat ? !!arg1.leaveActive : !!arg2; 
+  const toilActive = isObjectFormat ? !!arg1.toilActive : !!arg3;  
+  const isComplete = isObjectFormat ? (arg1.isComplete !== false) : !!arg4;   
+  
+  // For object format, create a function that calls toilService directly
+  // For legacy format, use the provided function or a no-op
+  const calculateToilForDay = isObjectFormat 
+    ? async () => {
+        if (!arg1.userId || !arg1.date || !arg1.entries || !arg1.entries.length) {
+          logger.debug('Skipping TOIL calculation - missing required data');
+          return null;
+        }
+        
+        const holidays = await import('@/lib/holidays').then(m => m.getHolidays());
+        
+        logger.debug(`Calculating TOIL for ${arg1.userId} on ${arg1.date.toISOString()} with ${arg1.entries.length} entries`);
+        
+        try {
+          const result = await toilService.calculateAndStoreTOIL(
+            arg1.entries,
+            arg1.date,
+            arg1.userId,
+            arg1.schedule!,
+            holidays
+          );
+          
+          if (result) {
+            logger.debug('TOIL calculation successful:', result);
+            
+            // Dispatch event for UI updates
+            timeEventsService.publish('toil-updated', {
+              userId: arg1.userId,
+              date: arg1.date.toISOString(),
+              summary: result
+            });
+          }
+          
+          return result;
+        } catch (err) {
+          logger.error('TOIL calculation failed:', err);
+          return null;
+        }
+      } 
+    : (arg5 || (async () => {
+        logger.debug('Calculated TOIL for day (legacy format)');
+        return null;
+      }));
+      
   const entriesLength = isObjectFormat ? (arg1.entries?.length || 0) : (arg6 || 0);
   
   // Log parameters for debugging

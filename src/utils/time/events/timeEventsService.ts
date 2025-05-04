@@ -38,6 +38,10 @@ const eventBatchQueues = new WeakMap<EventHandler, Map<string, any>>();
 // Key: eventType-eventKey, Value: setTimeout id
 const DEBOUNCE_THRESHOLD = 200; // ms
 
+// Track event dispatch history for debugging
+const eventHistory: Array<{type: string, time: number, data: any}> = [];
+const MAX_EVENT_HISTORY = 50;
+
 // Helper for unique event key for batching
 function getEventKey(eventType: TimeEventType, data: any) {
   return `${eventType}-${data?.id || data?.userId || data?.date || ''}`;
@@ -61,6 +65,9 @@ const subscribe = (eventType: TimeEventType, handler: EventHandler): Subscriptio
     eventBatchQueues.set(handler, new Map());
   }
 
+  // Log successful subscription
+  console.debug(`[TimeEvents] Subscribed to '${eventType}' events. Active listeners: ${handlers.size}`);
+
   // Cleanup logic
   return {
     unsubscribe: () => {
@@ -71,6 +78,8 @@ const subscribe = (eventType: TimeEventType, handler: EventHandler): Subscriptio
         if (handlers.size === 0) {
           eventListeners.delete(eventType);
         }
+        
+        console.debug(`[TimeEvents] Unsubscribed from '${eventType}' events. Remaining listeners: ${handlers.size}`);
       }
       // Clean up batching timeouts and queues for this handler
       const timeouts = eventBatchTimeouts.get(handler);
@@ -95,17 +104,30 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
   const eventKey = getEventKey(eventType, data);
   const now = Date.now();
   
+  // Record in history for debugging
+  eventHistory.unshift({ type: eventType, time: now, data });
+  if (eventHistory.length > MAX_EVENT_HISTORY) {
+    eventHistory.pop();
+  }
+  
   const handlers = eventListeners.get(eventType);
+  const handlerCount = handlers?.size || 0;
 
-  if (!handlers || handlers.size === 0) {
+  console.debug(`[TimeEvents] Publishing '${eventType}' event. Handlers: ${handlerCount}`, data);
+
+  if (!handlerCount) {
     // No handler, fire DOM event for legacy/other listeners
-    const event = new CustomEvent(eventType, { detail: data });
-    window.dispatchEvent(event);
+    try {
+      const event = new CustomEvent(eventType, { detail: data });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error(`[TimeEvents] Error dispatching DOM event for ${eventType}:`, error);
+    }
     return true;
   }
 
   try {
-    handlers.forEach(handler => {
+    handlers!.forEach(handler => {
       // Per-handler batching logic
       const timeouts = eventBatchTimeouts.get(handler);
       const queues = eventBatchQueues.get(handler);
@@ -113,15 +135,16 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
         if (timeouts.has(eventKey)) {
           // Already scheduled, replace queued data (to pass up-to-date last object)
           queues.set(eventKey, data);
+          console.debug(`[TimeEvents] Event '${eventType}' debounced, updated queue`);
         } else {
           queues.set(eventKey, data);
           // Schedule uniquely for this handler-eventKey pair
           const timeoutId = setTimeout(() => {
             try {
               const mostRecentData = queues.get(eventKey);
+              console.debug(`[TimeEvents] Executing handler for '${eventType}' after debounce`);
               handler(mostRecentData);
             } catch(e) {
-              // eslint-disable-next-line no-console
               console.error(`[TimeEvents] Error in batched event handler for ${eventType}:`, e);
             } finally {
               timeouts.delete(eventKey);
@@ -131,22 +154,30 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
           timeouts.set(eventKey, timeoutId as any);
         }
       } else {
+        console.debug(`[TimeEvents] Direct execution of handler for '${eventType}'`);
         handler(data); // Fallback: call immediately if batching broke
       }
     });
 
     // Still dispatch legacy DOM event for compatibility
-    const event = new CustomEvent(eventType, { detail: data });
-    window.dispatchEvent(event);
+    try {
+      const event = new CustomEvent(eventType, { detail: data });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error(`[TimeEvents] Error dispatching DOM event for ${eventType}:`, error);
+    }
     
     return true;
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error(`[TimeEvents] Error publishing ${eventType}:`, error);
     return false;
   }
 };
 
+/**
+ * Get recent event history for debugging
+ */
+const getEventHistory = () => [...eventHistory];
 
 /**
  * Clear all event listeners for cleanup
@@ -174,10 +205,12 @@ const clearAllListeners = (): void => {
 
   // Finally, clear the eventListeners map
   eventListeners.clear();
+  console.debug('[TimeEvents] All event listeners cleared');
 };
 
 export const timeEventsService = {
   subscribe,
   publish,
+  getEventHistory,
   clearAllListeners
 };

@@ -3,11 +3,22 @@
  * Constants for TOIL storage keys
  */
 
-// Main storage keys
-export const TOIL_RECORDS_KEY = 'toil-records';
-export const TOIL_USAGE_KEY = 'toil-usage';
-export const TOIL_SUMMARY_CACHE_KEY = 'toil-summary-';
+// Primary keys for TOIL records
+export const TOIL_RECORDS_KEY = 'toilRecords';
+export const TOIL_USAGE_KEY = 'toilUsage';
+export const TOIL_SUMMARY_CACHE_KEY = 'toilSummaryCache';
 
-// Additional constants for debug logging
-export const TOIL_DEBUG_ENABLED = 'toil-debug-enabled';
-export const TOIL_LAST_CALCULATION = 'toil-last-calculation';
+// Time periods for storage operations
+export const STORAGE_RETRY_DELAY = 200; // ms
+export const STORAGE_MAX_RETRIES = 3;
+export const DEBOUNCE_PERIOD = 300; // ms
+
+// Fixed export for consistent reference
+export default {
+  TOIL_RECORDS_KEY,
+  TOIL_USAGE_KEY,
+  TOIL_SUMMARY_CACHE_KEY,
+  STORAGE_RETRY_DELAY,
+  STORAGE_MAX_RETRIES,
+  DEBOUNCE_PERIOD
+};

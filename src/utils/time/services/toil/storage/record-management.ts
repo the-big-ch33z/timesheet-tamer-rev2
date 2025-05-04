@@ -75,107 +75,159 @@ export function loadTOILUsage(): TOILUsage[] {
 }
 
 /**
- * Store a TOIL record with enhanced error handling and logging
+ * Store a TOIL record with enhanced error handling, logging and retry mechanism
  */
 export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
-  try {
-    logger.debug(`Storing TOIL record: ${format(record.date, 'yyyy-MM-dd')} - ${record.hours} hours`);
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  
+  while (attempt < MAX_RETRIES) {
+    attempt++;
     
-    if (!record || !record.userId || !record.date || record.hours === undefined) {
-      logger.error('Invalid TOIL record:', record);
-      return false;
+    try {
+      logger.debug(`Storing TOIL record (attempt ${attempt}/${MAX_RETRIES}): ${format(record.date, 'yyyy-MM-dd')} - ${record.hours} hours`);
+      
+      if (!record || !record.userId || !record.date || record.hours === undefined) {
+        logger.error('Invalid TOIL record:', record);
+        return false;
+      }
+      
+      // Get existing records first
+      const existingRecords = loadTOILRecords();
+      
+      // Check for duplicates - same user, date, hours and status
+      const isDuplicate = existingRecords.some(r => 
+        r.userId === record.userId && 
+        format(r.date, 'yyyy-MM-dd') === format(record.date, 'yyyy-MM-dd') &&
+        r.hours === record.hours &&
+        r.status === record.status
+      );
+      
+      if (isDuplicate) {
+        logger.debug('Skipping duplicate TOIL record');
+        return true; // Consider this a success to prevent multiple attempts
+      }
+      
+      // Verify record integrity before adding
+      if (record.hours < 0 || record.hours > 24) {
+        logger.error(`Invalid TOIL hours value: ${record.hours}. Must be between 0 and 24.`);
+        return false;
+      }
+      
+      // Add the new record
+      existingRecords.push(record);
+      
+      // Save back to localStorage
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(existingRecords));
+      
+      logger.debug(`TOIL record stored successfully, total records: ${existingRecords.length}`);
+      
+      // Check storage was successful by reading back
+      const verifyRecords = loadTOILRecords();
+      const verified = verifyRecords.some(r => r.id === record.id);
+      
+      if (!verified) {
+        logger.error('TOIL record verification failed - could not find record after saving');
+        if (attempt < MAX_RETRIES) {
+          logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+          continue;
+        }
+        return false;
+      }
+      
+      return true;
+      
+    } catch (error) {
+      logger.error(`Error storing TOIL record (attempt ${attempt}/${MAX_RETRIES}):`, error);
+      
+      if (attempt < MAX_RETRIES) {
+        logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+      } else {
+        return false;
+      }
     }
-    
-    // Get existing records first
-    const existingRecords = loadTOILRecords();
-    
-    // Check for duplicates - same user, date, hours and status
-    const isDuplicate = existingRecords.some(r => 
-      r.userId === record.userId && 
-      format(r.date, 'yyyy-MM-dd') === format(record.date, 'yyyy-MM-dd') &&
-      r.hours === record.hours &&
-      r.status === record.status
-    );
-    
-    if (isDuplicate) {
-      logger.debug('Skipping duplicate TOIL record');
-      return true; // Consider this a success to prevent multiple attempts
-    }
-    
-    // Add the new record
-    existingRecords.push(record);
-    
-    // Save back to localStorage
-    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(existingRecords));
-    
-    logger.debug(`TOIL record stored successfully, total records: ${existingRecords.length}`);
-    
-    // Check storage was successful by reading back
-    const verifyRecords = loadTOILRecords();
-    const verified = verifyRecords.some(r => r.id === record.id);
-    
-    if (!verified) {
-      logger.error('TOIL record verification failed - could not find record after saving');
-      return false;
-    }
-    
-    return true;
-    
-  } catch (error) {
-    logger.error('Error storing TOIL record:', error);
-    return false;
   }
+  
+  return false;
 }
 
 /**
- * Store a TOIL usage record with enhanced error handling and logging
+ * Store a TOIL usage record with enhanced error handling, logging and retry mechanism
  */
 export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
-  try {
-    logger.debug(`Storing TOIL usage: ${format(usage.date, 'yyyy-MM-dd')} - ${usage.hours} hours`);
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  
+  while (attempt < MAX_RETRIES) {
+    attempt++;
     
-    if (!usage || !usage.userId || !usage.date || usage.hours === undefined) {
-      logger.error('Invalid TOIL usage:', usage);
-      return false;
+    try {
+      logger.debug(`Storing TOIL usage (attempt ${attempt}/${MAX_RETRIES}): ${format(usage.date, 'yyyy-MM-dd')} - ${usage.hours} hours`);
+      
+      if (!usage || !usage.userId || !usage.date || usage.hours === undefined) {
+        logger.error('Invalid TOIL usage:', usage);
+        return false;
+      }
+      
+      // Get existing usage records first
+      const existingUsages = loadTOILUsage();
+      
+      // Check for duplicates
+      const isDuplicate = existingUsages.some(u => 
+        u.entryId === usage.entryId || 
+        (u.userId === usage.userId && 
+         format(u.date, 'yyyy-MM-dd') === format(usage.date, 'yyyy-MM-dd') &&
+         u.hours === usage.hours)
+      );
+      
+      if (isDuplicate) {
+        logger.debug('Skipping duplicate TOIL usage');
+        return true; // Consider this a success to prevent multiple attempts
+      }
+      
+      // Verify usage integrity before adding
+      if (usage.hours < 0 || usage.hours > 24) {
+        logger.error(`Invalid TOIL usage hours value: ${usage.hours}. Must be between 0 and 24.`);
+        return false;
+      }
+      
+      // Add the new usage record
+      existingUsages.push(usage);
+      
+      // Save back to localStorage
+      localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(existingUsages));
+      
+      logger.debug(`TOIL usage stored successfully, total records: ${existingUsages.length}`);
+      
+      // Verify storage was successful
+      const verifyUsages = loadTOILUsage();
+      const verified = verifyUsages.some(u => u.id === usage.id);
+      
+      if (!verified) {
+        logger.error('TOIL usage verification failed - could not find record after saving');
+        if (attempt < MAX_RETRIES) {
+          logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+          continue;
+        }
+        return false;
+      }
+      
+      return true;
+      
+    } catch (error) {
+      logger.error(`Error storing TOIL usage (attempt ${attempt}/${MAX_RETRIES}):`, error);
+      
+      if (attempt < MAX_RETRIES) {
+        logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+      } else {
+        return false;
+      }
     }
-    
-    // Get existing usage records first
-    const existingUsages = loadTOILUsage();
-    
-    // Check for duplicates
-    const isDuplicate = existingUsages.some(u => 
-      u.entryId === usage.entryId || 
-      (u.userId === usage.userId && 
-       format(u.date, 'yyyy-MM-dd') === format(usage.date, 'yyyy-MM-dd') &&
-       u.hours === usage.hours)
-    );
-    
-    if (isDuplicate) {
-      logger.debug('Skipping duplicate TOIL usage');
-      return true; // Consider this a success to prevent multiple attempts
-    }
-    
-    // Add the new usage record
-    existingUsages.push(usage);
-    
-    // Save back to localStorage
-    localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(existingUsages));
-    
-    logger.debug(`TOIL usage stored successfully, total records: ${existingUsages.length}`);
-    
-    // Verify storage was successful
-    const verifyUsages = loadTOILUsage();
-    const verified = verifyUsages.some(u => u.id === usage.id);
-    
-    if (!verified) {
-      logger.error('TOIL usage verification failed - could not find record after saving');
-      return false;
-    }
-    
-    return true;
-    
-  } catch (error) {
-    logger.error('Error storing TOIL usage:', error);
-    return false;
   }
+  
+  return false;
 }

@@ -1,56 +1,15 @@
 
 import { TOILRecord, TOILUsage } from "@/types/toil";
 import { createTimeLogger } from '@/utils/time/errors';
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
 
 const logger = createTimeLogger('TOILStorageCore');
-
-// Storage keys
-export const TOIL_RECORDS_KEY = 'toilRecords';
-export const TOIL_USAGE_KEY = 'toilUsage';
-export const TOIL_SUMMARY_CACHE_KEY = 'toilSummaryCache';
-
-// Load TOIL records from storage
-export function loadTOILRecords(): TOILRecord[] {
-  try {
-    const stored = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (!stored) return [];
-
-    const parsed = JSON.parse(stored);
-    
-    // Ensure dates are properly parsed from storage
-    return Array.isArray(parsed) ? parsed.map(record => ({
-      ...record,
-      date: new Date(record.date)
-    })) : [];
-  } catch (error) {
-    logger.error('Error loading TOIL records:', error);
-    return [];
-  }
-}
-
-// Load TOIL usage from storage
-export function loadTOILUsage(): TOILUsage[] {
-  try {
-    const stored = localStorage.getItem(TOIL_USAGE_KEY);
-    if (!stored) return [];
-    
-    const parsed = JSON.parse(stored);
-    
-    // Ensure dates are properly parsed from storage
-    return Array.isArray(parsed) ? parsed.map(usage => ({
-      ...usage,
-      date: new Date(usage.date)
-    })) : [];
-  } catch (error) {
-    logger.error('Error loading TOIL usage:', error);
-    return [];
-  }
-}
 
 // Clear the summary cache for a specific user and month
 export function clearSummaryCache(userId: string, monthYear?: string): void {
   try {
     const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}${monthYear ? `-${monthYear}` : ''}`;
+    logger.debug(`Clearing summary cache for key: ${cacheKey}`);
     localStorage.removeItem(cacheKey);
   } catch (error) {
     logger.error('Error clearing summary cache:', error);

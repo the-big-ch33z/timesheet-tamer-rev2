@@ -1,6 +1,7 @@
 
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOILSummary } from '@/types/toil';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('TOILEvents');
 
@@ -23,9 +24,19 @@ export const triggerTOILSave = () => {
   return true;
 };
 
-// Renamed function to match what's imported in service.ts
+// Dispatch TOIL event both through DOM events and the timeEventsService
 export const dispatchTOILEvent = (summary: TOILSummary) => {
+  // Dispatch old-style DOM event for backward compatibility
   const event = new CustomEvent('toil:summary-updated', { detail: summary });
   window.dispatchEvent(event);
-  logger.debug('TOIL summary update event dispatched');
+  
+  // Also dispatch through the improved event service
+  timeEventsService.publish('toil-updated', {
+    userId: summary.userId,
+    monthYear: summary.monthYear,
+    summary
+  });
+  
+  logger.debug('TOIL summary update events dispatched:', summary);
+  return true;
 };

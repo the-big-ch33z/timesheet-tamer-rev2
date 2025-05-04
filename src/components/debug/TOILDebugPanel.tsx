@@ -1,202 +1,272 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { createTimeLogger } from "@/utils/time/errors";
-import { toilService } from "@/utils/time/services/toil";
-import { format } from "date-fns";
-import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import { toilService } from '@/utils/time/services/toil';
+import { TOILRecord, TOILSummary } from '@/types/toil';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('TOILDebugPanel');
-
-// Helper function to read data from localStorage
-const readFromLocalStorage = (key: string): any => {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    logger.error(`Failed to read ${key} from localStorage:`, e);
-    return null;
-  }
-};
 
 interface TOILDebugPanelProps {
   userId: string;
   date: Date;
+  onCalculateTOIL?: () => void;
+  isCalculating?: boolean;
 }
 
-export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({ userId, date }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [toilRecords, setToilRecords] = useState<any[]>([]);
-  const [toilUsages, setToilUsages] = useState<any[]>([]);
-  const [storageKeys, setStorageKeys] = useState<string[]>([]);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
+  userId,
+  date,
+  onCalculateTOIL,
+  isCalculating = false
+}) => {
+  const [toilRecords, setToilRecords] = useState<TOILRecord[]>([]);
+  const [summary, setSummary] = useState<TOILSummary | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [tab, setTab] = useState('records');
+  const [eventHistory, setEventHistory] = useState<any[]>([]);
+  const [refreshCount, setRefreshCount] = useState(0);
   
-  const { summary, refreshSummary } = useTOILSummary({
-    userId,
-    date,
-    monthOnly: true
-  });
-
-  // Function to refresh all data
-  const refreshData = () => {
-    logger.debug('Refreshing TOIL debug data');
-    
-    // Get all localStorage keys
-    const allKeys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) allKeys.push(key);
-    }
-    setStorageKeys(allKeys);
-    
-    // Get TOIL records and usages
-    const records = readFromLocalStorage('toil-records') || [];
-    const usages = readFromLocalStorage('toil-usage') || [];
-    
-    setToilRecords(records.filter((r: any) => r.userId === userId));
-    setToilUsages(usages.filter((u: any) => u.userId === userId));
-    
-    // Update refresh timestamp
-    setLastRefresh(new Date());
-  };
-
-  // Refresh when props change or panel expands
+  // Load TOIL data
   useEffect(() => {
-    if (isExpanded) {
-      refreshData();
+    try {
+      const loadData = async () => {
+        // Load TOIL records
+        const { loadTOILRecords } = await import('@/utils/time/services/toil/storage/record-management');
+        const allRecords = loadTOILRecords();
+        
+        // Filter for this user
+        const userRecords = allRecords.filter(r => r.userId === userId);
+        setToilRecords(userRecords);
+        
+        // Get summary
+        const monthYear = format(date, 'yyyy-MM');
+        const userSummary = toilService.getTOILSummary(userId, monthYear);
+        setSummary(userSummary);
+        
+        // Get event history
+        const history = timeEventsService.getEventHistory?.() || [];
+        setEventHistory(history);
+      };
+      
+      loadData();
+    } catch (error) {
+      logger.error('Error loading TOIL debug data:', error);
     }
-  }, [userId, date, isExpanded]);
+  }, [userId, date, refreshCount]);
   
-  // Force TOIL calculation (for testing)
-  const forceTOILCalculation = async () => {
-    logger.debug('Manually forcing TOIL calculation');
-    refreshSummary();
-  };
+  // Listen for TOIL updates
+  useEffect(() => {
+    const subscription = timeEventsService.subscribe('toil-updated', (data) => {
+      if (data.userId === userId) {
+        logger.debug('TOIL update detected in debug panel:', data);
+        // Trigger refresh
+        setRefreshCount(prev => prev + 1);
+      }
+    });
+    
+    // Also listen to DOM events for backward compatibility
+    const handleTOILUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const data = customEvent.detail;
+      if (data?.userId === userId) {
+        logger.debug('TOIL DOM event detected in debug panel:', data);
+        setRefreshCount(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('toil:summary-updated', handleTOILUpdate);
+    
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('toil:summary-updated', handleTOILUpdate);
+    };
+  }, [userId]);
   
-  // Clear TOIL cache
-  const clearTOILCache = () => {
-    logger.debug('Manually clearing TOIL cache');
+  // Handle manual calculation
+  const handleCalculate = useCallback(() => {
+    if (onCalculateTOIL) {
+      onCalculateTOIL();
+    } else {
+      // Dispatch generic event to trigger calculation
+      timeEventsService.publish('toil-calculated', {
+        userId,
+        date: date.toISOString(),
+        manual: true
+      });
+    }
+    
+    // Refresh after a short delay
+    setTimeout(() => setRefreshCount(prev => prev + 1), 500);
+  }, [onCalculateTOIL, userId, date]);
+  
+  // Handle cache clear
+  const handleClearCache = useCallback(() => {
     toilService.clearCache();
-    refreshData();
-  };
-
+    logger.debug('TOIL cache cleared');
+    setRefreshCount(prev => prev + 1);
+  }, []);
+  
+  // Format date for display
+  const formatDate = useCallback((date: Date) => {
+    return format(date instanceof Date ? date : new Date(date), 'yyyy-MM-dd HH:mm');
+  }, []);
+  
   return (
-    <Card className="border-amber-500 bg-amber-50">
-      <CardHeader className="py-2 px-4">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-sm font-medium">TOIL Debug Panel</CardTitle>
-          <Badge variant="outline" className="text-xs">DEV ONLY</Badge>
+    <Card className="w-full bg-slate-50 border border-slate-200">
+      <CardHeader className="p-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">
+            TOIL Debug Panel {isCalculating ? '(Calculating...)' : ''}
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}>
+            {expanded ? 'Hide' : 'Show'}
+          </Button>
         </div>
+        {!expanded && summary && (
+          <CardDescription className="text-xs">
+            User: {userId} | Month: {format(date, 'yyyy-MM')} | 
+            Accrued: {summary.accrued.toFixed(2)}h | 
+            Used: {summary.used.toFixed(2)}h | 
+            Remaining: {summary.remaining.toFixed(2)}h
+          </CardDescription>
+        )}
       </CardHeader>
       
-      <CardContent className="pb-2 px-4">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full text-xs"
-        >
-          {isExpanded ? "Hide Details" : "Show TOIL Debug Info"}
-        </Button>
-        
-        {isExpanded && (
-          <div className="pt-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-sm font-medium">Current TOIL Summary</h3>
-                <p className="text-xs text-gray-500">
-                  Month: {format(date, 'MMMM yyyy')}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs">
-                  <span className="font-medium">Accrued:</span> {summary?.accrued || 0} hrs
-                </p>
-                <p className="text-xs">
-                  <span className="font-medium">Used:</span> {summary?.used || 0} hrs
-                </p>
-                <p className="text-xs">
-                  <span className="font-medium">Remaining:</span> {summary?.remaining || 0} hrs
-                </p>
-              </div>
+      {expanded && (
+        <>
+          <Tabs value={tab} className="w-full" onValueChange={setTab}>
+            <div className="px-4 pt-2">
+              <TabsList className="grid grid-cols-3">
+                <TabsTrigger value="records">Records</TabsTrigger>
+                <TabsTrigger value="summary">Summary</TabsTrigger>
+                <TabsTrigger value="events">Events</TabsTrigger>
+              </TabsList>
             </div>
-            
-            <Accordion type="single" collapsible>
-              <AccordionItem value="toilRecords">
-                <AccordionTrigger className="text-xs py-1">
-                  TOIL Records ({toilRecords.length})
-                </AccordionTrigger>
-                <AccordionContent className="max-h-40 overflow-y-auto">
-                  {toilRecords.length === 0 ? (
-                    <p className="text-xs text-gray-500 italic">No records found</p>
-                  ) : (
-                    toilRecords.map((record, i) => (
-                      <div key={record.id || i} className="text-xs border-b py-1">
-                        <p><span className="font-medium">Date:</span> {format(new Date(record.date), 'yyyy-MM-dd')}</p>
-                        <p><span className="font-medium">Hours:</span> {record.hours}</p>
-                        <p><span className="font-medium">Status:</span> {record.status}</p>
-                      </div>
-                    ))
-                  )}
-                </AccordionContent>
-              </AccordionItem>
+
+            <CardContent className="p-4">
+              <TabsContent value="records">
+                <div className="max-h-60 overflow-y-auto text-xs">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-100">
+                      <tr>
+                        <th className="p-2">Date</th>
+                        <th className="p-2">Hours</th>
+                        <th className="p-2">Entry ID</th>
+                        <th className="p-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {toilRecords.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="p-2 text-center">No TOIL records found</td>
+                        </tr>
+                      )}
+                      {toilRecords.map(record => (
+                        <tr key={record.id} className="border-t border-slate-200">
+                          <td className="p-2">{formatDate(record.date)}</td>
+                          <td className="p-2">{record.hours.toFixed(2)}</td>
+                          <td className="p-2 font-mono text-[10px]">
+                            {record.entryId.substring(0, 8)}...
+                          </td>
+                          <td className="p-2">{record.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </TabsContent>
               
-              <AccordionItem value="toilUsage">
-                <AccordionTrigger className="text-xs py-1">
-                  TOIL Usage ({toilUsages.length})
-                </AccordionTrigger>
-                <AccordionContent className="max-h-40 overflow-y-auto">
-                  {toilUsages.length === 0 ? (
-                    <p className="text-xs text-gray-500 italic">No usage records found</p>
-                  ) : (
-                    toilUsages.map((usage, i) => (
-                      <div key={usage.id || i} className="text-xs border-b py-1">
-                        <p><span className="font-medium">Date:</span> {format(new Date(usage.date), 'yyyy-MM-dd')}</p>
-                        <p><span className="font-medium">Hours:</span> {usage.hours}</p>
-                      </div>
-                    ))
-                  )}
-                </AccordionContent>
-              </AccordionItem>
+              <TabsContent value="summary">
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2 bg-green-50 rounded">
+                      <div className="font-medium">Accrued</div>
+                      <div className="text-2xl font-bold">{summary?.accrued.toFixed(2)}h</div>
+                    </div>
+                    <div className="p-2 bg-red-50 rounded">
+                      <div className="font-medium">Used</div>
+                      <div className="text-2xl font-bold">{summary?.used.toFixed(2)}h</div>
+                    </div>
+                    <div className="p-2 bg-blue-50 rounded">
+                      <div className="font-medium">Remaining</div>
+                      <div className="text-2xl font-bold">{summary?.remaining.toFixed(2)}h</div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-2 bg-slate-100 rounded text-xs">
+                    <div className="font-medium">Details</div>
+                    <div>User: {summary?.userId}</div>
+                    <div>Month: {summary?.monthYear}</div>
+                    <div>Records: {toilRecords.length}</div>
+                  </div>
+                </div>
+              </TabsContent>
               
-              <AccordionItem value="localStorage">
-                <AccordionTrigger className="text-xs py-1">
-                  LocalStorage Keys ({storageKeys.length})
-                </AccordionTrigger>
-                <AccordionContent className="max-h-40 overflow-y-auto">
-                  <ul className="text-xs">
-                    {storageKeys.map((key, i) => (
-                      <li key={i} className="py-0.5">
-                        {key.includes('toil') ? <strong>{key}</strong> : key}
-                      </li>
-                    ))}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            
-            <p className="text-xs text-gray-500 pt-2">
-              Last refreshed: {format(lastRefresh, 'HH:mm:ss')}
-            </p>
-          </div>
-        )}
-      </CardContent>
-      
-      {isExpanded && (
-        <CardFooter className="flex gap-2 py-2 px-4">
-          <Button size="sm" variant="outline" className="text-xs" onClick={refreshData}>
-            Refresh Data
-          </Button>
-          <Button size="sm" variant="outline" className="text-xs" onClick={forceTOILCalculation}>
-            Force TOIL Calculation
-          </Button>
-          <Button size="sm" variant="outline" className="text-xs" onClick={clearTOILCache}>
-            Clear TOIL Cache
-          </Button>
-        </CardFooter>
+              <TabsContent value="events">
+                <div className="max-h-60 overflow-y-auto text-xs">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-100">
+                      <tr>
+                        <th className="p-2">Time</th>
+                        <th className="p-2">Event</th>
+                        <th className="p-2">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eventHistory.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="p-2 text-center">No events recorded</td>
+                        </tr>
+                      )}
+                      {eventHistory.filter(evt => evt.type.includes('toil')).map((evt, index) => (
+                        <tr key={index} className="border-t border-slate-200">
+                          <td className="p-2">{new Date(evt.time).toLocaleTimeString()}</td>
+                          <td className="p-2">{evt.type}</td>
+                          <td className="p-2 font-mono text-[10px]">
+                            {JSON.stringify(evt.data).substring(0, 50)}...
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </TabsContent>
+            </CardContent>
+          </Tabs>
+          
+          <CardFooter className="p-3 bg-slate-100 flex gap-2 justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setRefreshCount(prev => prev + 1)}
+            >
+              Refresh
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleClearCache}
+            >
+              Clear Cache
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={handleCalculate}
+              disabled={isCalculating}
+            >
+              {isCalculating ? 'Calculating...' : 'Calculate TOIL'}
+            </Button>
+          </CardFooter>
+        </>
       )}
     </Card>
   );
