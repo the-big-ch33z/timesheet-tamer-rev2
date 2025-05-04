@@ -16,7 +16,7 @@ export const useToilEffects = (
   arg2?: boolean,
   arg3?: boolean,
   arg4?: boolean,
-  arg5?: () => void,
+  arg5?: () => Promise<any>,
   arg6?: number
 ) => {
   // Determine if we're using the new object-based format or the old individual parameters
@@ -30,9 +30,9 @@ export const useToilEffects = (
   const calculateToilForDay = isObjectFormat ? async () => {
     logger.debug('Calculated TOIL for day (object format) - entries:', arg1.entries?.length); 
     return null;
-  } : (arg5 || (() => {
+  } : (arg5 || (async () => {
     logger.debug('Calculated TOIL for day (legacy format)');
-    return Promise.resolve(null);
+    return null;
   }));
   const entriesLength = isObjectFormat ? (arg1.entries?.length || 0) : (arg6 || 0);
   

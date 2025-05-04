@@ -51,6 +51,38 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
   }
 }
 
+// NEW: Delete TOIL records by entry ID
+export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolean> {
+  if (!entryId) {
+    logger.error('No entry ID provided for TOIL record deletion');
+    return false;
+  }
+  
+  try {
+    const allRecords = loadTOILRecords();
+    const recordsToDelete = allRecords.filter(record => record.entryId === entryId);
+    
+    if (recordsToDelete.length === 0) {
+      logger.debug(`No TOIL records found for entry ID: ${entryId}`);
+      return false;
+    }
+    
+    logger.debug(`Found ${recordsToDelete.length} TOIL records to delete for entry ID: ${entryId}`);
+    
+    // Filter out the records with matching entry ID
+    const updatedRecords = allRecords.filter(record => record.entryId !== entryId);
+    
+    // Save the updated records back to localStorage
+    localStorage.setItem('toilRecords', JSON.stringify(updatedRecords));
+    
+    logger.debug(`Successfully deleted ${recordsToDelete.length} TOIL records for entry ID: ${entryId}`);
+    return true;
+  } catch (error) {
+    logger.error(`Error deleting TOIL records for entry ID: ${entryId}`, error);
+    return false;
+  }
+}
+
 // Check if a user has TOIL records for a specific day
 export function hasTOILForDay(userId: string, date: Date): { 
   hasAccrued: boolean; 

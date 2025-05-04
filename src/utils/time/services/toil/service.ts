@@ -7,21 +7,22 @@ import { Holiday } from "@/lib/holidays";
 import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
 import { 
-  loadTOILRecords, 
-  loadTOILUsage,
   clearSummaryCache,
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
   TOIL_SUMMARY_CACHE_KEY,
   cleanupDuplicateTOILRecords,
-  cleanupDuplicateTOILUsage
+  cleanupDuplicateTOILUsage,
+  storeTOILRecord,
+  storeTOILUsage,
+  loadTOILRecords,
+  loadTOILUsage,
+  getTOILSummary as getStorageTOILSummary
 } from "./storage";
 import { calculateTOILHours } from "./calculation";
 import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
 import { dispatchTOILEvent } from "./events";
 import { createTimeLogger } from "../../errors/timeLogger";
-import { storeTOILRecord, storeTOILUsage } from "./storage/record-management";
-import { getTOILSummary as getStorageTOILSummary } from "./storage/queries";
 
 const logger = createTimeLogger('TOILService');
 

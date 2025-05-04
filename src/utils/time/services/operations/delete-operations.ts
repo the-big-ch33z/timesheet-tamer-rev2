@@ -5,7 +5,7 @@ import { createTimeLogger } from "../../errors/timeLogger";
 import { dispatchEntryEvent, dispatchErrorEvent } from "./event-utils";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
-import { deleteTOILRecordByEntryId } from "../../services/toil/storage";
+import { findTOILRecordsByEntryId, deleteTOILRecordByEntryId } from "../../services/toil/storage";
 import { timeEventsService } from "../../events/timeEventsService";
 
 const logger = createTimeLogger('DeleteOperations');
