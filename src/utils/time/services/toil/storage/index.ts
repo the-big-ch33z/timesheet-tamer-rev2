@@ -1,5 +1,5 @@
 
-// Export constants from constants.ts
+// Export constants from constants.ts directly
 export {
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
@@ -12,14 +12,13 @@ export {
 // Export core cache clearing functions
 export {
   clearSummaryCache,
-  clearAllTOILCaches,
-  // Re-export from core (which gets them from record-management)
-  loadTOILRecords,
-  loadTOILUsage
+  clearAllTOILCaches
 } from './core';
 
-// Export storage operations
+// Export record management functions
 export {
+  loadTOILRecords,
+  loadTOILUsage,
   storeTOILRecord,
   storeTOILUsage
 } from './record-management';

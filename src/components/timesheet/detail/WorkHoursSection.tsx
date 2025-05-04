@@ -9,7 +9,8 @@ import { Card } from "@/components/ui/card";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { useUserTimesheetContext } from "@/contexts/timesheet/user-context/UserTimesheetContext";
 import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToilEffects";
-import { TOILDebugPanel } from "@/components/debug/TOILDebugPanel"; // Import the new debug panel
+import { TOILDebugPanel } from "@/components/debug/TOILDebugPanel"; 
+import { TOILDataValidator } from "@/components/debug/DataValidator";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { toilService } from "@/utils/time/services/toil";
 import { getHolidays } from "@/lib/holidays";
@@ -76,7 +77,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     userId,
     date,
     entries: dayEntries,
-    schedule: effectiveWorkSchedule
+    schedule: effectiveWorkSchedule,
+    isComplete: true
   });
 
   useEffect(() => {
@@ -172,12 +174,15 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   return (
     <div className="space-y-6 w-full">
       {showDebugPanel && (
-        <TOILDebugPanel 
-          userId={userId} 
-          date={date}
-          onCalculateTOIL={triggerTOILCalculation}
-          isCalculating={isCalculating}
-        />
+        <>
+          <TOILDebugPanel 
+            userId={userId} 
+            date={date}
+            onCalculateTOIL={triggerTOILCalculation}
+            isCalculating={isCalculating}
+          />
+          <TOILDataValidator userId={userId} />
+        </>
       )}
       
       <Card className="p-0 m-0 w-full rounded-lg shadow-sm border border-gray-200">

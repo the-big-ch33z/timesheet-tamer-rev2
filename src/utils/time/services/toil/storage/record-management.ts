@@ -2,7 +2,12 @@
 import { TOILRecord, TOILUsage } from "@/types/toil";
 import { format } from "date-fns";
 import { createTimeLogger } from "../../../errors/timeLogger";
-import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY } from "./constants";
+import { 
+  TOIL_RECORDS_KEY, 
+  TOIL_USAGE_KEY,
+  STORAGE_MAX_RETRIES,
+  STORAGE_RETRY_DELAY 
+} from "./constants";
 
 const logger = createTimeLogger('TOILStorage');
 
@@ -78,7 +83,7 @@ export function loadTOILUsage(): TOILUsage[] {
  * Store a TOIL record with enhanced error handling, logging and retry mechanism
  */
 export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = STORAGE_MAX_RETRIES;
   let attempt = 0;
   
   while (attempt < MAX_RETRIES) {
@@ -130,7 +135,7 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
         logger.error('TOIL record verification failed - could not find record after saving');
         if (attempt < MAX_RETRIES) {
           logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
-          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, STORAGE_RETRY_DELAY * Math.pow(2, attempt))); // Exponential backoff
           continue;
         }
         return false;
@@ -143,7 +148,7 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
       
       if (attempt < MAX_RETRIES) {
         logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
-        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, STORAGE_RETRY_DELAY * Math.pow(2, attempt))); // Exponential backoff
       } else {
         return false;
       }
@@ -157,7 +162,7 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
  * Store a TOIL usage record with enhanced error handling, logging and retry mechanism
  */
 export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = STORAGE_MAX_RETRIES;
   let attempt = 0;
   
   while (attempt < MAX_RETRIES) {
@@ -209,7 +214,7 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
         logger.error('TOIL usage verification failed - could not find record after saving');
         if (attempt < MAX_RETRIES) {
           logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
-          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, STORAGE_RETRY_DELAY * Math.pow(2, attempt))); // Exponential backoff
           continue;
         }
         return false;
@@ -222,7 +227,7 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
       
       if (attempt < MAX_RETRIES) {
         logger.debug(`Retrying storage operation, attempt ${attempt + 1}`);
-        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, STORAGE_RETRY_DELAY * Math.pow(2, attempt))); // Exponential backoff
       } else {
         return false;
       }

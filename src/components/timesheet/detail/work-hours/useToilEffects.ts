@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { createTimeLogger } from "@/utils/time/errors";
 import { TimeEntry, WorkSchedule } from "@/types";
 import { toilService } from "@/utils/time/services/toil";
@@ -35,61 +35,67 @@ export const useToilEffects = (
   const leaveActive = isObjectFormat ? !!arg1.leaveActive : !!arg2; 
   const toilActive = isObjectFormat ? !!arg1.toilActive : !!arg3;  
   const isComplete = isObjectFormat ? (arg1.isComplete !== false) : !!arg4;   
+  const entriesLength = isObjectFormat ? (arg1.entries?.length || 0) : (arg6 || 0);
   
   // For object format, create a function that calls toilService directly
   // For legacy format, use the provided function or a no-op
-  const calculateToilForDay = isObjectFormat 
-    ? async () => {
-        if (!arg1.userId || !arg1.date || !arg1.entries || !arg1.entries.length) {
-          logger.debug('Skipping TOIL calculation - missing required data');
-          return null;
-        }
-        
-        const holidays = await import('@/lib/holidays').then(m => m.getHolidays());
-        
-        logger.debug(`Calculating TOIL for ${arg1.userId} on ${arg1.date.toISOString()} with ${arg1.entries.length} entries`);
-        
-        try {
-          const result = await toilService.calculateAndStoreTOIL(
-            arg1.entries,
-            arg1.date,
-            arg1.userId,
-            arg1.schedule!,
-            holidays
-          );
-          
-          if (result) {
-            logger.debug('TOIL calculation successful:', result);
+  const calculateToilForDay = useRef(
+    isObjectFormat 
+      ? async () => {
+          try {
+            if (!arg1.userId || !arg1.date || !arg1.entries || !arg1.entries.length) {
+              logger.debug('Skipping TOIL calculation - missing required data');
+              return null;
+            }
             
-            // Dispatch event for UI updates
-            timeEventsService.publish('toil-updated', {
-              userId: arg1.userId,
-              date: arg1.date.toISOString(),
-              summary: result
-            });
+            if (!arg1.schedule) {
+              logger.debug('Skipping TOIL calculation - no work schedule available');
+              return null;
+            }
+            
+            const holidays = await import('@/lib/holidays').then(m => m.getHolidays());
+            
+            logger.debug(`Calculating TOIL for ${arg1.userId} on ${arg1.date.toISOString()} with ${arg1.entries.length} entries`);
+            
+            const result = await toilService.calculateAndStoreTOIL(
+              arg1.entries,
+              arg1.date,
+              arg1.userId,
+              arg1.schedule!,
+              holidays
+            );
+            
+            if (result) {
+              logger.debug('TOIL calculation successful:', result);
+              
+              // Dispatch event for UI updates
+              timeEventsService.publish('toil-updated', {
+                userId: arg1.userId,
+                date: arg1.date.toISOString(),
+                summary: result
+              });
+            }
+            
+            return result;
+          } catch (err) {
+            logger.error('TOIL calculation failed:', err);
+            return null;
           }
-          
-          return result;
-        } catch (err) {
-          logger.error('TOIL calculation failed:', err);
-          return null;
         }
-      } 
-    : (arg5 || (async () => {
-        logger.debug('Calculated TOIL for day (legacy format)');
-        return null;
-      }));
-      
-  const entriesLength = isObjectFormat ? (arg1.entries?.length || 0) : (arg6 || 0);
+      : (arg5 || (async () => {
+          logger.debug('Using legacy TOIL calculation function');
+          return null;
+        }))
+  ).current;
   
   // Log parameters for debugging
   useEffect(() => {
     if (isObjectFormat) {
       logger.debug('useToilEffects called with object parameters:', {
-        userId: (arg1 as any).userId,
-        date: (arg1 as any).date?.toISOString?.(),
+        userId: (arg1 as UseToilEffectsParams).userId,
+        date: (arg1 as UseToilEffectsParams).date?.toISOString?.(),
         entriesCount: entriesLength,
-        hasSchedule: !!(arg1 as any).schedule
+        hasSchedule: !!(arg1 as UseToilEffectsParams).schedule
       });
     } else {
       logger.debug('useToilEffects called with individual parameters:', {
@@ -100,7 +106,7 @@ export const useToilEffects = (
         entriesLength
       });
     }
-  }, [isObjectFormat, hasEntries, leaveActive, toilActive, isComplete, entriesLength]);
+  }, [isObjectFormat, hasEntries, leaveActive, toilActive, isComplete, entriesLength, arg1]);
 
   // Trigger TOIL calculation when conditions are met
   useEffect(() => {
