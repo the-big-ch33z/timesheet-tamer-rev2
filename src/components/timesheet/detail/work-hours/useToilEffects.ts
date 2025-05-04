@@ -118,9 +118,7 @@ export const useToilEffects = (
     
     const timeoutId = setTimeout(() => {
       logger.debug('Initiating TOIL calculation based on completed timesheet');
-      calculateToilForDay().then(result => {
-        logger.debug('TOIL calculation completed:', result);
-      }).catch(error => {
+      calculateToilForDay().catch(error => {
         logger.error('TOIL calculation failed:', error);
       });
     }, 400);

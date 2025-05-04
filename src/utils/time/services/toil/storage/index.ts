@@ -1,8 +1,5 @@
 
-// Export all storage functionality from the individual modules
-export * from './cleanup';
-
-// Export constants
+// Export constants from constants.ts
 export {
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
@@ -15,15 +12,16 @@ export {
 // Export core cache clearing functions
 export {
   clearSummaryCache,
-  clearAllTOILCaches
+  clearAllTOILCaches,
+  // Re-export from core (which gets them from record-management)
+  loadTOILRecords,
+  loadTOILUsage
 } from './core';
 
 // Export storage operations
 export {
   storeTOILRecord,
-  storeTOILUsage,
-  loadTOILRecords,
-  loadTOILUsage
+  storeTOILUsage
 } from './record-management';
 
 // Export query functions
@@ -35,3 +33,10 @@ export {
   hasTOILForMonth,
   getTOILSummary
 } from './queries';
+
+// Export cleanup functions
+export {
+  cleanupDuplicateTOILRecords,
+  cleanupDuplicateTOILUsage,
+  clearTOILStorageForMonth
+} from './cleanup';

@@ -2,6 +2,7 @@
 import { TOILRecord } from "@/types/toil";
 import { format, isSameDay } from "date-fns";
 import { loadTOILRecords, loadTOILUsage } from './core';
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
 import { createTimeLogger } from "@/utils/time/errors";
 
 const logger = createTimeLogger('TOILQueries');
@@ -40,7 +41,7 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
         return uniqueDates.get(dateKey)?.id === record.id;
       });
       
-      localStorage.setItem('toilRecords', JSON.stringify(cleanedRecords));
+      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(cleanedRecords));
       logger.debug(`Removed ${duplicatesRemoved} duplicate TOIL records for user ${userId}`);
     }
     
@@ -73,7 +74,7 @@ export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolea
     const updatedRecords = allRecords.filter(record => record.entryId !== entryId);
     
     // Save the updated records back to localStorage
-    localStorage.setItem('toilRecords', JSON.stringify(updatedRecords));
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(updatedRecords));
     
     logger.debug(`Successfully deleted ${recordsToDelete.length} TOIL records for entry ID: ${entryId}`);
     return true;
@@ -156,11 +157,11 @@ export function clearTOILStorageForMonth(userId: string, monthYear: string): boo
     );
     
     // Save filtered data back to storage
-    localStorage.setItem('toilRecords', JSON.stringify(filteredRecords));
-    localStorage.setItem('toilUsage', JSON.stringify(filteredUsage));
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+    localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsage));
     
     // Clear the summary cache
-    localStorage.removeItem(`toilSummaryCache-${userId}-${monthYear}`);
+    localStorage.removeItem(`${TOIL_SUMMARY_CACHE_KEY}-${userId}-${monthYear}`);
     
     return true;
   } catch (error) {
