@@ -2,7 +2,7 @@
 import { TOILRecord, TOILSummary } from "@/types/toil";
 import { format, isSameDay } from "date-fns";
 import { loadTOILRecords, loadTOILUsage } from './record-management';
-import { TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { TOIL_SUMMARY_CACHE_KEY, TOIL_RECORDS_KEY } from './constants';
 import { createTimeLogger } from "@/utils/time/errors";
 import { cleanupDuplicateTOILRecords } from "./cleanup";
 

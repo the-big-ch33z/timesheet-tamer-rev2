@@ -31,8 +31,10 @@ export {
   hasTOILForDay,
   hasTOILForMonth,
   getTOILSummary,
-  TOILDayInfo // Export the interface too!
 } from './queries';
+
+// Export the interface with the correct syntax
+export type { TOILDayInfo } from './queries';
 
 // Export cleanup functions
 export {
