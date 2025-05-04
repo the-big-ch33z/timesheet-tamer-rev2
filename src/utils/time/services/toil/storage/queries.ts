@@ -2,7 +2,7 @@
 import { TOILRecord, TOILSummary } from "@/types/toil";
 import { format, isSameDay } from "date-fns";
 import { loadTOILRecords, loadTOILUsage } from './record-management';
-import { TOIL_RECORDS_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { TOIL_SUMMARY_CACHE_KEY } from './constants';
 import { createTimeLogger } from "@/utils/time/errors";
 import { cleanupDuplicateTOILRecords } from "./cleanup";
 
@@ -92,24 +92,57 @@ export function deleteTOILRecordByEntryId(entryId: string): boolean {
 
 /**
  * Check if there is TOIL for a specific day
+ * @returns Object with TOIL status for the day
  */
-export function hasTOILForDay(userId: string, date: Date): boolean {
+export interface TOILDayInfo {
+  hasAccrued: boolean;
+  hasUsed: boolean;
+  toilHours: number;
+}
+
+export function hasTOILForDay(userId: string, date: Date): TOILDayInfo {
   try {
     logger.debug(`Checking for TOIL on date: ${format(date, 'yyyy-MM-dd')} for user: ${userId}`);
     
     // Get all records for this user
     const userRecords = getUserTOILRecords(userId);
+    const userUsage = loadTOILUsage().filter(usage => usage.userId === userId);
     
-    // Check if there is a record for this day
-    const hasTOIL = userRecords.some(record => 
-      isSameDay(record.date, date) && record.status === 'active'
+    // Check if there is any accrual for this day
+    const hasAccrued = userRecords.some(record => 
+      isSameDay(new Date(record.date), date) && record.status === 'active'
     );
     
-    logger.debug(`TOIL for day ${format(date, 'yyyy-MM-dd')}: ${hasTOIL ? 'Yes' : 'No'}`);
-    return hasTOIL;
+    // Check if there is any usage for this day
+    const hasUsed = userUsage.some(usage => 
+      isSameDay(new Date(usage.date), date)
+    );
+    
+    // Calculate total TOIL hours for the day (accrued - used)
+    const accrualHours = userRecords
+      .filter(record => isSameDay(new Date(record.date), date) && record.status === 'active')
+      .reduce((sum, record) => sum + record.hours, 0);
+    
+    const usageHours = userUsage
+      .filter(usage => isSameDay(new Date(usage.date), date))
+      .reduce((sum, usage) => sum + usage.hours, 0);
+    
+    const toilHours = accrualHours - usageHours;
+    
+    logger.debug(`TOIL for day ${format(date, 'yyyy-MM-dd')}: Accrued=${hasAccrued}, Used=${hasUsed}, Hours=${toilHours}`);
+    
+    return {
+      hasAccrued,
+      hasUsed,
+      toilHours
+    };
   } catch (error) {
     logger.error('Error checking if day has TOIL:', error);
-    return false;
+    return {
+      hasAccrued: false,
+      hasUsed: false,
+      toilHours: 0
+    };
   }
 }
 

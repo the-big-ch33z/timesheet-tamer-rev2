@@ -188,9 +188,9 @@ export const DataValidator: React.FC<DataValidatorProps> = ({
 // TOIL Specific Validator
 export const TOILDataValidator: React.FC<{userId: string}> = ({ userId }) => {
   // Create TOIL-specific validators
-  const toilValidators = [
+  const toilValidators: ValidatorFunction[] = [
     // Check localStorage access
-    () => {
+    (): ValidationResult => {
       try {
         const testKey = '_test_storage_access';
         localStorage.setItem(testKey, 'test');
@@ -216,7 +216,7 @@ export const TOILDataValidator: React.FC<{userId: string}> = ({ userId }) => {
     },
     
     // Check TOIL records structure
-    () => {
+    (): ValidationResult => {
       try {
         const toilRecords = localStorage.getItem('toilRecords');
         
@@ -262,7 +262,7 @@ export const TOILDataValidator: React.FC<{userId: string}> = ({ userId }) => {
     },
     
     // Check TOIL usage structure
-    () => {
+    (): ValidationResult => {
       try {
         const toilUsage = localStorage.getItem('toilUsage');
         

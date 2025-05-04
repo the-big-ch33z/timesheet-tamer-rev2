@@ -30,7 +30,8 @@ export {
   deleteTOILRecordByEntryId,
   hasTOILForDay,
   hasTOILForMonth,
-  getTOILSummary
+  getTOILSummary,
+  TOILDayInfo // Export the interface too!
 } from './queries';
 
 // Export cleanup functions
