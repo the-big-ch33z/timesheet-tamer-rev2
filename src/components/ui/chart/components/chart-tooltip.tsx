@@ -170,4 +170,3 @@ const ChartTooltipContent = React.forwardRef<
 ChartTooltipContent.displayName = "ChartTooltipContent";
 
 export { ChartTooltip, ChartTooltipContent };
-

@@ -78,9 +78,7 @@ const Reports = () => {
               <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <XAxis dataKey="name" />
                 <YAxis />
-                <ChartTooltip 
-                  content={(props) => <ChartTooltipContent {...props} />} 
-                />
+                <ChartTooltip content={ChartTooltipContent} />
                 <Bar dataKey="hours" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
