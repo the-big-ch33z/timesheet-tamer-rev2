@@ -8,6 +8,7 @@ import { useStorageSync } from './hooks/useStorageSync';
 import { createTimeLogger } from '@/utils/time/errors';
 import { EntryDataContext } from './EntryDataContext';
 import { EntryOperationsContext } from './EntryOperationsContext';
+import { TOILEventProvider } from '@/utils/time/events/toilEventService';
 
 const logger = createTimeLogger('TimeEntryProvider');
 
@@ -50,12 +51,14 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
     createEntry
   };
 
-  // Wrap both context providers
+  // Wrap both context providers along with the TOILEventProvider
   return (
-    <EntryDataContext.Provider value={dataValue}>
-      <EntryOperationsContext.Provider value={operationsValue}>
-        {children}
-      </EntryOperationsContext.Provider>
-    </EntryDataContext.Provider>
+    <TOILEventProvider>
+      <EntryDataContext.Provider value={dataValue}>
+        <EntryOperationsContext.Provider value={operationsValue}>
+          {children}
+        </EntryOperationsContext.Provider>
+      </EntryDataContext.Provider>
+    </TOILEventProvider>
   );
 };
