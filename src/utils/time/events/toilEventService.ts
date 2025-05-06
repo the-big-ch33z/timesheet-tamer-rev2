@@ -149,10 +149,10 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     lastEvent
   };
   
-  return (
-    <TOILEventContext.Provider value={value}>
-      {children}
-    </TOILEventContext.Provider>
+  return React.createElement(
+    TOILEventContext.Provider,
+    { value },
+    children
   );
 };
 
