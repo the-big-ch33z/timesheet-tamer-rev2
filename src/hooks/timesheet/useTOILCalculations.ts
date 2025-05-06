@@ -48,13 +48,35 @@ export const useTOILCalculations = ({
   
   // Clear caches when month changes
   useEffect(() => {
+    logger.debug(`Month changed to ${currentMonthYear}, clearing TOIL cache`);
     toilService.clearCache();
-  }, [currentMonthYear]);
+  }, [currentMonthYear, logger]);
   
   // Check if an entry is a TOIL usage entry
   const isToilEntry = useCallback((entry: TimeEntry): boolean => {
     return entry.jobNumber === TOIL_JOB_NUMBER;
   }, []);
+  
+  // Initialize TOIL summary when component mounts or user/date changes
+  useEffect(() => {
+    if (!userId || !date) return;
+    
+    const fetchInitialSummary = async () => {
+      try {
+        logger.debug(`Fetching initial TOIL summary for ${userId}, ${format(date, 'yyyy-MM')}`);
+        const summary = toilService.getTOILSummary(userId, format(date, 'yyyy-MM'));
+        
+        if (isMountedRef.current) {
+          logger.debug(`Setting initial TOIL summary:`, summary);
+          setToilSummary(summary);
+        }
+      } catch (error) {
+        logger.error('Error fetching initial TOIL summary:', error);
+      }
+    };
+    
+    fetchInitialSummary();
+  }, [userId, date, logger]);
   
   // Debounced calculator for TOIL updates
   const calculateToilForDay = useCallback(async (): Promise<TOILSummary | null> => {
@@ -64,9 +86,21 @@ export const useTOILCalculations = ({
         setIsCalculating(true);
       }
       
+      logger.debug(`calculateToilForDay called for date ${format(date, 'yyyy-MM-dd')}`);
+      
       // Return early if missing required data or component unmounted
       if (!userId || !date || !workSchedule || !isMountedRef.current) {
-        logger.debug('Missing required data for TOIL calculation or component unmounted');
+        logger.debug('Missing required data for TOIL calculation or component unmounted', {
+          hasUserId: !!userId,
+          hasDate: !!date,
+          hasWorkSchedule: !!workSchedule,
+          isMounted: isMountedRef.current
+        });
+        
+        if (isMountedRef.current) {
+          setIsCalculating(false);
+        }
+        
         return null;
       }
       
@@ -83,6 +117,7 @@ export const useTOILCalculations = ({
         
         if (isMountedRef.current) {
           setToilSummary(zeroSummary);
+          setIsCalculating(false);
         }
         
         return zeroSummary;
@@ -99,12 +134,16 @@ export const useTOILCalculations = ({
       const toilUsageEntries = entries.filter(isToilEntry);
       const nonToilEntries = entries.filter(entry => !isToilEntry(entry));
       
+      logger.debug(`Found ${toilUsageEntries.length} TOIL usage entries and ${nonToilEntries.length} regular entries`);
+      
       // Process each TOIL usage entry
       for (const entry of toilUsageEntries) {
+        logger.debug(`Processing TOIL usage entry: ${entry.id}, hours: ${entry.hours}`);
         await toilService.recordTOILUsage(entry);
       }
       
       // Calculate and store TOIL accrual with holidays - this uses the optimized service
+      logger.debug(`Calculating TOIL accrual for ${nonToilEntries.length} entries`);
       const summary = await toilService.calculateAndStoreTOIL(
         nonToilEntries,
         date,
@@ -112,6 +151,8 @@ export const useTOILCalculations = ({
         workSchedule,
         holidays
       );
+      
+      logger.debug(`TOIL summary after calculation:`, summary);
       
       // Update internal state if component still mounted
       if (isMountedRef.current) {
@@ -134,6 +175,8 @@ export const useTOILCalculations = ({
   useEffect(() => {
     if (!userId || !date) return;
     
+    logger.debug(`Entries changed (${entries?.length ?? 0} entries), debouncing TOIL calculation`);
+    
     // Clear any existing timeout
     if (calculationRequestRef.current) {
       clearTimeout(calculationRequestRef.current);
@@ -145,8 +188,13 @@ export const useTOILCalculations = ({
     const dateChanged = dateKey !== prevDateRef.current;
     prevDateRef.current = dateKey;
     
+    if (dateChanged) {
+      logger.debug('Date changed, will calculate TOIL immediately');
+    }
+    
     // If no entries, set zero summary immediately
     if (!entries || entries.length === 0) {
+      logger.debug('No entries, setting zero TOIL summary');
       if (isMountedRef.current) {
         setToilSummary({
           userId,
@@ -164,6 +212,7 @@ export const useTOILCalculations = ({
     
     calculationRequestRef.current = setTimeout(() => {
       if (isMountedRef.current) {
+        logger.debug('Debounce time elapsed, calculating TOIL');
         calculateToilForDay().catch(error => {
           logger.error('Calculation request failed:', error);
           if (isMountedRef.current) {
@@ -185,12 +234,13 @@ export const useTOILCalculations = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      logger.debug('TOIL calculations hook unmounting');
       isMountedRef.current = false;
       if (calculationRequestRef.current) {
         clearTimeout(calculationRequestRef.current);
       }
     };
-  }, []);
+  }, [logger]);
   
   return {
     toilSummary,

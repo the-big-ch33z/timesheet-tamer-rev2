@@ -1,3 +1,4 @@
+
 import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
@@ -5,11 +6,13 @@ import { formatDisplayHours } from "@/utils/time/formatting";
 import { Clock, CircleMinus, CirclePlus, CircleCheck, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
   loading?: boolean;
   monthName?: string;
 }
+
 const TOILSummaryBoxes = memo(({
   accrued,
   used,
@@ -19,10 +22,14 @@ const TOILSummaryBoxes = memo(({
   used: number;
   remaining: number;
 }) => {
+  // Guard against invalid inputs
   const safeAccrued = isFinite(accrued) ? accrued : 0;
   const safeUsed = isFinite(used) ? used : 0;
   const safeRemaining = isFinite(remaining) ? remaining : 0;
   const isNegativeBalance = safeRemaining < 0;
+
+  console.log('TOILSummaryBoxes rendering with values:', { safeAccrued, safeUsed, safeRemaining, isNegativeBalance });
+  
   const box = [{
     label: "Earned",
     value: safeAccrued,
@@ -46,6 +53,7 @@ const TOILSummaryBoxes = memo(({
     icon: isNegativeBalance ? <AlertTriangle className="w-4 h-4 text-[#ea384c]" /> : <CircleCheck className="w-5 h-5 text-green-400" />,
     displaySign: true
   }];
+  
   return <div className="grid grid-cols-3 gap-3 mb-6">
       {box.map(({
       label,
@@ -106,6 +114,7 @@ const TOILSummaryBoxes = memo(({
     })}
     </div>;
 });
+
 const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   summary,
   loading = false,
@@ -113,14 +122,27 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
 }) => {
   try {
     console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
+    
+    // Safety checks for null or invalid summary
+    if (!summary && !loading) {
+      console.warn('TOILSummaryCard received null summary and not in loading state');
+    }
+    
     const accrued = summary?.accrued ?? 0;
     const used = summary?.used ?? 0;
     const remaining = summary?.remaining ?? 0;
-    const total = Math.max(accrued + Math.abs(used), 1);
+    
+    // Additional validation
+    if (summary && (isNaN(accrued) || isNaN(used) || isNaN(remaining))) {
+      console.error('TOILSummaryCard received invalid numeric values:', { accrued, used, remaining });
+    }
+    
+    const total = Math.max(accrued + Math.abs(used), 1); // Prevent division by zero
     const isNegativeBalance = remaining < 0;
     const hasNoTOILActivity = loading;
     const progressColor = isNegativeBalance ? "bg-[#ea384c]" : "bg-green-500";
     const progressBgColor = isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60";
+    
     return <Card className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl transition-shadow hover:shadow-xl group" style={{
       minWidth: 300
     }}>
@@ -169,7 +191,11 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       </Card>;
   } catch (err) {
     console.error("TOILSummaryCard crashed while rendering:", err);
-    return <div className="text-red-600 p-4">Error displaying TOIL summary.</div>;
+    return <div className="text-red-600 p-4 border border-red-300 rounded-md">
+      <div className="font-bold mb-2">Error displaying TOIL summary</div>
+      <div className="text-sm">{String(err)}</div>
+    </div>;
   }
 });
+
 export default memo(TOILSummaryCard);
