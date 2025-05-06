@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { TimeEntry } from '@/types';
-import ExistingEntriesList from '../detail/components/ExistingEntriesList';
 import { useLogger } from '@/hooks/useLogger';
 import TimeEntryForm from '../entry-dialog/form/TimeEntryForm';
 
@@ -32,6 +31,13 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       hours: entry.hours,
       hasDescription: !!entry.description
     });
+    
+    // Validate hours before submitting
+    if (typeof entry.hours !== 'number' || isNaN(entry.hours) || entry.hours <= 0) {
+      logger.error("[EntryInterface] Invalid hours value:", entry.hours);
+      return;
+    }
+    
     // Pure pass-through to parent handler
     onCreateEntry(entry);
   };

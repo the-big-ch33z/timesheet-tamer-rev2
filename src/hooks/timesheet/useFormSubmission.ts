@@ -29,7 +29,27 @@ export const useFormSubmission = ({
     try {
       startSubmission();
       
+      // Validate hours
+      if (!formState.hours || parseFloat(formState.hours) <= 0) {
+        throw new Error("Hours must be greater than zero");
+      }
+      
+      // Log the form state to help debug
+      console.debug("[useFormSubmission] Form state before submission:", { 
+        hours: formState.hours,
+        description: formState.description,
+        jobNumber: formState.jobNumber
+      });
+      
+      // Prepare form data
       const formData = getFormData(formState);
+      
+      // Log the prepared data
+      console.debug("[useFormSubmission] Prepared form data:", { 
+        hours: formData.hours,
+        description: formData.description,
+        jobNumber: formData.jobNumber
+      });
       
       if (onSave) {
         onSave(formData);
@@ -39,7 +59,7 @@ export const useFormSubmission = ({
       
       toast({
         title: "Entry saved",
-        description: "Your time entry has been saved successfully",
+        description: `Your time entry of ${formData.hours} hours has been saved successfully`,
       });
       
       endSubmission();

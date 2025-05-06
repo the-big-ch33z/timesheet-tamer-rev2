@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -53,11 +54,22 @@ const TimeEntryController: React.FC<TimeEntryControllerProps> = ({
       // Check if this is a TOIL usage entry
       const isToilUsage = entryData.jobNumber === "TOIL";
       
-      if (isToilUsage) {
-        logger.debug('[TimeEntryController] Creating TOIL usage entry:', entryData.hours);
+      // Make sure hours is a valid number
+      if (typeof entryData.hours !== 'number' || isNaN(entryData.hours) || entryData.hours <= 0) {
+        logger.error('[TimeEntryController] Invalid hours value:', entryData.hours);
+        toast({
+          title: "Invalid hours",
+          description: "Hours must be a positive number",
+          variant: "destructive"
+        });
+        return;
       }
       
-      logger.debug('[TimeEntryController] Submitting entry:', entryData);
+      logger.debug('[TimeEntryController] Submitting entry:', {
+        date: entryData.date,
+        hours: entryData.hours,
+        description: entryData.description
+      });
 
       const newEntryId = createEntry({
         ...entryData,

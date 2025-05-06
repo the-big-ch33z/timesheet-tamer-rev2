@@ -23,20 +23,23 @@ export const useFormDataPreparation = ({
     taskNumber: string;
     formEdited: boolean;
   }) => {
-    console.debug("[useFormDataPreparation] Preparing form data");
+    console.debug("[useFormDataPreparation] Preparing form data", formState);
     
     if (!selectedDate) {
       console.warn("[useFormDataPreparation] No selected date provided");
       throw new Error("No date selected");
     }
     
-    // Parse numerical hours from string
-    const hours = parseFloat(formState.hours) || 0;
+    // Parse numerical hours from string and ensure it's valid
+    const hoursString = formState.hours;
+    const hours = parseFloat(hoursString);
     
-    if (hours <= 0) {
-      console.warn("[useFormDataPreparation] Invalid hours value:", hours);
+    if (isNaN(hours) || hours <= 0) {
+      console.warn("[useFormDataPreparation] Invalid hours value:", hours, "from string:", hoursString);
       throw new Error("Hours must be greater than zero");
     }
+    
+    console.debug("[useFormDataPreparation] Parsed hours:", hours);
     
     // Create the processed form data
     return {

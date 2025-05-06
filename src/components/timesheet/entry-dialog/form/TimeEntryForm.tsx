@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useFormState } from "@/hooks/form/useFormState";
 import HoursField from "../fields/field-types/HoursField";
@@ -102,7 +103,21 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     }
 
     try {
-      const hoursNum = parseFloat(formState.fields.hours.value);
+      // Explicitly convert hours to a number and ensure it's valid
+      const hoursValue = formState.fields.hours.value;
+      const hoursNum = parseFloat(hoursValue);
+      
+      if (isNaN(hoursNum) || hoursNum <= 0) {
+        toast({
+          title: "Invalid hours",
+          description: "Hours must be a positive number",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.debug(`[TimeEntryForm] Submitting entry with hours: ${hoursNum}`);
+      
       const entry: Omit<TimeEntry, "id"> = {
         date,
         userId,

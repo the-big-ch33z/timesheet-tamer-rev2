@@ -23,8 +23,12 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
   // Load initial entries and get state management
   const { entries, setEntries, isLoading, isInitialized } = useInitialEntries();
   useStorageSync(entries, isInitialized, isLoading);
+  
+  // Set up operations and queries
   const { addEntry, updateEntry, deleteEntry, createEntry } = useEntryOperations(entries, setEntries);
   const { getDayEntries, getMonthEntries, calculateTotalHours } = useEntryQueries(entries, userId);
+  
+  // Get entries for the current day
   const dayEntries = selectedDate ? getDayEntries(selectedDate) : [];
   
   // Log when selectedDate changes to track updates
