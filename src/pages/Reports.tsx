@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -79,7 +79,7 @@ const Reports = () => {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <ChartTooltip 
-                  content={props => <ChartTooltipContent {...props} />}
+                  content={(props) => <ChartTooltipContent {...props} />} 
                 />
                 <Bar dataKey="hours" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
               </BarChart>
