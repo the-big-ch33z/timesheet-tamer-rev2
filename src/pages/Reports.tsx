@@ -2,7 +2,13 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
+// Sample data for the weekly charts
 const data = [
   { name: "Mon", hours: 6.5 },
   { name: "Tue", hours: 8 },
@@ -13,7 +19,17 @@ const data = [
   { name: "Sun", hours: 0 },
 ];
 
+// Chart configuration
+const chartConfig = {
+  hours: {
+    label: "Hours",
+    color: "#0ea5e9", // Using the brand blue color
+  }
+};
+
 const Reports = () => {
+  console.debug("[Reports] Rendering Reports page");
+
   return (
     <div className="container py-8">
       <h1 className="text-3xl font-bold text-brand-800 mb-6">Reports</h1>
@@ -58,14 +74,16 @@ const Reports = () => {
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={chartConfig}>
               <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip />
+                <ChartTooltip 
+                  content={props => <ChartTooltipContent {...props} />}
+                />
                 <Bar dataKey="hours" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </CardContent>
       </Card>
