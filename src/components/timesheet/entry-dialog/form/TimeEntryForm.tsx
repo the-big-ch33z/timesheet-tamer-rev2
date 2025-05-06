@@ -93,6 +93,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!validateForm()) {
       toast({
         title: "Invalid form data",
@@ -103,11 +104,24 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     }
 
     try {
-      // Explicitly convert hours to a number and ensure it's valid
+      // Get the hours value as a string
       const hoursValue = formState.fields.hours.value;
-      const hoursNum = parseFloat(hoursValue);
+      console.debug(`[TimeEntryForm] Raw hours value from form: "${hoursValue}" (${typeof hoursValue})`);
       
-      if (isNaN(hoursNum) || hoursNum <= 0) {
+      // Explicit conversion to number with parseFloat
+      const hoursNum = parseFloat(hoursValue);
+      console.debug(`[TimeEntryForm] Parsed hours: ${hoursNum} (${typeof hoursNum})`);
+      
+      if (isNaN(hoursNum)) {
+        toast({
+          title: "Invalid hours format",
+          description: "Hours must be a valid number",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (hoursNum <= 0) {
         toast({
           title: "Invalid hours",
           description: "Hours must be a positive number",
@@ -116,8 +130,9 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         return;
       }
       
-      console.debug(`[TimeEntryForm] Submitting entry with hours: ${hoursNum}`);
+      console.debug(`[TimeEntryForm] Submitting entry with validated hours: ${hoursNum}`);
       
+      // Create entry object with explicit numeric hours
       const entry: Omit<TimeEntry, "id"> = {
         date,
         userId,
@@ -128,6 +143,12 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         rego: formState.fields.rego.value || undefined,
         project: "General"
       };
+      
+      // Add success toast before submission
+      toast({
+        title: "Submitting entry",
+        description: `Saving ${hoursNum} hours for ${date.toLocaleDateString()}`,
+      });
       
       onSubmit(entry);
       resetForm();
@@ -218,6 +239,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
               type="submit" 
               disabled={isSubmitting || !formState.isValid}
               className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
+              data-testid="save-timeentry-button"
             >
               {isSubmitting ? (
                 <>

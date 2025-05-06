@@ -32,14 +32,25 @@ const EntryInterface: React.FC<EntryInterfaceProps> = ({
       hasDescription: !!entry.description
     });
     
-    // Validate hours before submitting
-    if (typeof entry.hours !== 'number' || isNaN(entry.hours) || entry.hours <= 0) {
-      logger.error("[EntryInterface] Invalid hours value:", entry.hours);
+    // Ensure hours is a number and valid before submitting
+    const numericHours = typeof entry.hours === 'string' 
+      ? parseFloat(entry.hours) 
+      : entry.hours;
+    
+    if (isNaN(numericHours) || numericHours <= 0) {
+      logger.error("[EntryInterface] Invalid hours value:", entry.hours, "parsed as:", numericHours);
       return;
     }
     
-    // Pure pass-through to parent handler
-    onCreateEntry(entry);
+    // Create a new entry object with validated hours value
+    const validatedEntry = {
+      ...entry,
+      hours: numericHours
+    };
+    
+    // Pass the validated entry to parent handler
+    logger.debug("[EntryInterface] Submitting validated entry with hours:", numericHours);
+    onCreateEntry(validatedEntry);
   };
 
   const handleCancelForm = () => {
