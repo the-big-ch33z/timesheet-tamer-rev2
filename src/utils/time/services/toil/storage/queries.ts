@@ -2,11 +2,11 @@
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
-import { attemptStorageOperation } from './utils';
+import { attemptStorageOperation, safelyParseJSON } from './utils';
 
 const logger = createTimeLogger('TOILStorageQueries');
 
-// Define the TOILDayInfo interface
+// Export TOILDayInfo interface
 export interface TOILDayInfo {
   hasAccrued: boolean;
   hasUsed: boolean;

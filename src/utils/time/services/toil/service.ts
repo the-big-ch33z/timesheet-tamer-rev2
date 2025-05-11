@@ -1,4 +1,3 @@
-
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -56,6 +55,8 @@ export class TOILService {
           console.log(`[TOILService] Removed cache key: ${key}`);
         }
       }
+      
+      clearSummaryCache();
       
       logger.debug('TOIL cache cleared successfully');
       console.log('[TOILService] TOIL cache cleared successfully');
@@ -138,7 +139,7 @@ export class TOILService {
       const toilRecord: TOILRecord = {
         id: uuidv4(),
         userId: userId,
-        date: date,
+        date: new Date(date), // Ensure date is a Date object
         hours: toilHours,
         monthYear: monthYear,
         entryId: nonToilEntries[0].id, // Reference first entry for simplicity
@@ -360,14 +361,14 @@ export class TOILService {
   }
 
   // Process TOIL calculation immediately
-  private processCalculation(
+  private async processCalculation(
     userId: string,
     date: Date,
     entries: TimeEntry[],
     workSchedule: WorkSchedule,
     holidays: Holiday[],
     resolve: (summary: TOILSummary | null) => void
-  ): void {
+  ): Promise<void> {
     try {
       logger.debug(`Processing TOIL calculation for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
       console.log(`[TOILService] Processing TOIL calculation for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
@@ -423,46 +424,25 @@ export class TOILService {
       console.log(`[TOILService] Created TOIL record: ${JSON.stringify(toilRecord)}`);
       
       // Store the TOIL record
-      this.storeTOILRecord(toilRecord)
-        .then(stored => {
-          if (!stored) {
-            logger.error('Failed to store TOIL record');
-            console.error('[TOILService] Failed to store TOIL record');
-            resolve(null);
-            return;
-          }
-          
-          logger.debug('TOIL record stored successfully');
-          console.log('[TOILService] TOIL record stored successfully');
-          
-          // Run cleanup
-          cleanupDuplicateTOILRecords(userId)
-            .then(() => {
-              logger.debug('Duplicate TOIL records cleaned up');
-              console.log('[TOILService] Duplicate TOIL records cleaned up');
-              
-              // Get updated summary
-              const summary = this.getTOILSummary(userId, monthYear);
-              
-              // Dispatch TOIL update event
-              dispatchTOILEvent(summary);
-              
-              logger.debug(`TOIL calculation complete. Summary: ${JSON.stringify(summary)}`);
-              console.log(`[TOILService] TOIL calculation complete. Summary: ${JSON.stringify(summary)}`);
-              
-              resolve(summary);
-            })
-            .catch(error => {
-              logger.error('Error cleaning up duplicate TOIL records:', error);
-              console.error('[TOILService] Error cleaning up duplicate TOIL records:', error);
-              resolve(null);
-            });
-        })
-        .catch(error => {
-          logger.error('Error storing TOIL record:', error);
-          console.error('[TOILService] Error storing TOIL record:', error);
-          resolve(null);
-        });
+      const stored = await this.storeTOILRecord(toilRecord);
+      
+      if (!stored) {
+        logger.error('Failed to store TOIL record');
+        console.error('[TOILService] Failed to store TOIL record');
+        resolve(null);
+        return;
+      }
+      
+      // Run cleanup
+      await cleanupDuplicateTOILRecords(userId);
+      
+      // Get updated summary - this is not a Promise, so no need for await
+      const summary = this.getTOILSummary(userId, monthYear);
+      
+      // Dispatch TOIL update event
+      dispatchTOILEvent(summary);
+      
+      resolve(summary);
     } catch (error) {
       logger.error(`Error in processCalculation: ${error instanceof Error ? error.message : String(error)}`, error);
       console.error(`[TOILService] Error in processCalculation: ${error instanceof Error ? error.message : String(error)}`, error);

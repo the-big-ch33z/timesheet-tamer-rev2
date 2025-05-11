@@ -1,3 +1,4 @@
+
 import { TimeEntry } from "@/types";
 import { TimeEntryOperationsConfig, TimeEntryBaseOperations } from "./operations/types";
 import { CreateOperations } from "./operations/create-operations";
@@ -16,7 +17,7 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
     private getAllEntries: () => TimeEntry[],
     private eventManager: EventManager
   ) {
-    // Initialize with correct parameters
+    // Initialize with correct parameters - pass config and eventManager separately
     this.createOps = new CreateOperations(config, this.eventManager);
     this.updateOps = new UpdateOperations(config, this.eventManager);
     this.deleteOps = new DeleteOperations(config, this.eventManager);

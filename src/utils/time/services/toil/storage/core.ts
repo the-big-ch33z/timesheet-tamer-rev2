@@ -1,33 +1,42 @@
 
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { attemptStorageOperation } from './utils';
 
 const logger = createTimeLogger('TOILStorageCore');
 
-// Clear the summary cache for a specific user and month
-export function clearSummaryCache(userId: string, monthYear?: string): void {
-  try {
-    const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}${monthYear ? `-${monthYear}` : ''}`;
-    logger.debug(`Clearing summary cache for key: ${cacheKey}`);
-    localStorage.removeItem(cacheKey);
-  } catch (error) {
-    logger.error('Error clearing summary cache:', error);
-  }
-}
-
-// Clear all TOIL caches for all users
-export function clearAllTOILCaches(): void {
-  try {
-    // Find and remove all TOIL summary cache keys
+/**
+ * Clear TOIL summary cache
+ */
+export const clearSummaryCache = async (): Promise<boolean> => {
+  return attemptStorageOperation(async () => {
+    logger.debug('Clearing TOIL summary cache');
+    
+    // Find all cache keys that start with the summary prefix
+    const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
-        localStorage.removeItem(key);
+        keysToRemove.push(key);
       }
     }
     
-    logger.debug('All TOIL caches cleared');
-  } catch (error) {
-    logger.error('Error clearing all TOIL caches:', error);
-  }
-}
+    // Remove all identified keys
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      logger.debug(`Removed TOIL cache key: ${key}`);
+    });
+    
+    logger.debug(`Cleared ${keysToRemove.length} TOIL summary cache entries`);
+    return true;
+  }, 'clearSummaryCache');
+};
+
+/**
+ * Clear all TOIL-related caches
+ */
+export const clearAllTOILCaches = async (): Promise<boolean> => {
+  await clearSummaryCache();
+  logger.debug('Cleared all TOIL caches');
+  return true;
+};
