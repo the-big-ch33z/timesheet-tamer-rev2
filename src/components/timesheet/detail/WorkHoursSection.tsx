@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { WorkSchedule } from "@/types";
-import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/useTimeEntryContext";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import TimeEntryController from "../entry-control/TimeEntryController";
 import { createTimeLogger } from "@/utils/time/errors";
 import WorkHoursInterface from "./WorkHoursInterface";
