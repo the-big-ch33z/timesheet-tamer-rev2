@@ -29,12 +29,13 @@ export * from './services';
 export { formatDateForComparison } from './validation/dateValidation';
 export { 
   calculateHoursFromTimes,
-  calculateMonthlyTargetHours 
+  calculateMonthlyTargetHours,
+  calculateAdjustedFortnightHours
 } from './calculations/hoursCalculations';
 export { 
   calculateHoursVariance, 
   isUndertime 
-} from './calculations/varianceCalculations';
+} from './calculations/timeCalculations';
 export { formatTimeForDisplay, formatHours, formatDate } from './formatting/timeFormatting';
 // Updated to use the unified service from the new structure
 export { unifiedTimeEntryService } from './services';

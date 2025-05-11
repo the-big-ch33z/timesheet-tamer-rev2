@@ -1,12 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHoursContext } from '@/contexts/timesheet';
-import { 
-  calculateHoursFromTimes, 
-  calculateHoursVariance, 
-  isUndertime
-} from '@/utils/time/calculations/hoursCalculations';
+import { calculateHoursFromTimes } from '@/utils/time/calculations/hoursCalculations';
+import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useTimeEntryState');
