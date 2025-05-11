@@ -29,13 +29,16 @@ export type TimeEntryEventType =
   | 'entry-updated'
   | 'entry-deleted'
   | 'entries-loaded'
-  | 'error';
+  | 'error'
+  | 'storage-sync'
+  | 'all';
 
 // Structure for time entry events
 export interface TimeEntryEvent {
   type: TimeEntryEventType;
   timestamp: Date;
   payload: Record<string, any>;
+  userId?: string;
 }
 
 // Work schedule day configuration
@@ -46,3 +49,6 @@ export interface WorkScheduleDayConfig {
   breakDuration?: number;
   totalHours?: number;
 }
+
+// Event listener type
+export type TimeEntryEventListener = (event: TimeEntryEvent) => void;

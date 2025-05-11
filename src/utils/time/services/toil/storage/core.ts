@@ -1,33 +1,73 @@
 
-import { createTimeLogger } from '@/utils/time/errors';
-import { TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from "./constants";
+import { createTimeLogger } from "../../../errors/timeLogger";
 
-const logger = createTimeLogger('TOILStorageCore');
+const logger = createTimeLogger('toil-storage-core');
 
-// Clear the summary cache for a specific user and month
-export function clearSummaryCache(userId: string, monthYear?: string): void {
+/**
+ * Clear summary cache for a specific user and month
+ */
+export const clearSummaryCache = (userId: string, monthYear?: string): boolean => {
   try {
-    const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}${monthYear ? `-${monthYear}` : ''}`;
-    logger.debug(`Clearing summary cache for key: ${cacheKey}`);
-    localStorage.removeItem(cacheKey);
+    if (monthYear) {
+      // Clear specific month
+      localStorage.removeItem(`${TOIL_SUMMARY_CACHE_KEY}_${userId}_${monthYear}`);
+    } else {
+      // Clear all months for this user
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`${TOIL_SUMMARY_CACHE_KEY}_${userId}`)) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+    return true;
   } catch (error) {
-    logger.error('Error clearing summary cache:', error);
+    logger.error(`Error clearing TOIL summary cache for ${userId}:`, error);
+    return false;
   }
-}
+};
 
-// Clear all TOIL caches for all users
-export function clearAllTOILCaches(): void {
+/**
+ * Clear all TOIL caches
+ */
+export const clearAllTOILCaches = (): boolean => {
   try {
-    // Find and remove all TOIL summary cache keys
+    // Find all TOIL-related keys and remove them
+    const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
-        localStorage.removeItem(key);
+      if (key && (
+        key.startsWith(TOIL_RECORDS_KEY) || 
+        key.startsWith(TOIL_USAGE_KEY) || 
+        key.startsWith(TOIL_SUMMARY_CACHE_KEY)
+      )) {
+        keysToRemove.push(key);
       }
     }
     
-    logger.debug('All TOIL caches cleared');
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    return true;
   } catch (error) {
     logger.error('Error clearing all TOIL caches:', error);
+    return false;
   }
-}
+};
+
+/**
+ * Clear TOIL cache for a specific user
+ */
+export const clearTOILCache = (userId: string): boolean => {
+  try {
+    // Clear user-specific caches
+    clearSummaryCache(userId);
+    
+    return true;
+  } catch (error) {
+    logger.error(`Error clearing TOIL cache for user ${userId}:`, error);
+    return false;
+  }
+};

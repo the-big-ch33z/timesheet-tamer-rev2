@@ -1,90 +1,79 @@
 
 import { TimeEntry } from "@/types";
-import { v4 as uuidv4 } from "uuid";
-import { validateTimeEntry } from "../entry-validation";
-import { TimeEntryEvent } from "../types";
 import { saveEntriesToStorage } from "../storage-operations";
 import { createTimeLogger } from "../../errors/timeLogger";
+import { dispatchEntryEvent, dispatchErrorEvent } from "./event-utils";
+import { EventManager } from "../event-handling";
+import { TimeEntryOperationsConfig } from "./types";
+import { v4 as uuidv4 } from "uuid";
 
 const logger = createTimeLogger('CreateOperations');
 
-/**
- * Create a new time entry
- */
-export const createTimeEntry = async (
-  entryData: Omit<TimeEntry, "id">,
-  allEntries: TimeEntry[],
-  deletedEntryIds: string[],
-  storageKey: string,
-  dispatchEvent: (event: TimeEntryEvent) => void
-): Promise<string | null> => {
-  try {
-    // Validate the entry data
-    const validationResult = validateTimeEntry(entryData);
-    
-    if (!validationResult.valid) {
-      logger.warn('Invalid time entry data:', validationResult.errors);
+export class CreateOperations {
+  constructor(
+    private config: Required<TimeEntryOperationsConfig>,
+    private invalidateCache: () => void,
+    private getAllEntries: () => TimeEntry[],
+    private eventManager: EventManager
+  ) {}
+
+  public async createEntry(entry: Partial<TimeEntry>, deletedEntryIds: string[]): Promise<string | null> {
+    try {
+      const allEntries = this.getAllEntries();
       
-      dispatchEvent({
-        type: 'error',
-        timestamp: new Date(),
-        payload: { 
-          context: 'createTimeEntry', 
-          errors: validationResult.errors
+      // Generate ID if not provided
+      const newId = entry.id || uuidv4();
+      
+      // Create new entry
+      const newEntry: TimeEntry = {
+        id: newId,
+        userId: entry.userId || 'unknown',
+        date: entry.date || new Date(),
+        hours: typeof entry.hours === 'number' ? entry.hours : 0,
+        description: entry.description || '',
+        entryType: entry.entryType || 'manual',
+        jobNumber: entry.jobNumber || '',
+        project: entry.project || '',
+        synthetic: !!entry.synthetic,
+        created: new Date(),
+        updated: new Date()
+      };
+      
+      // Add to collection
+      allEntries.push(newEntry);
+      
+      try {
+        // Save to storage
+        const saved = await saveEntriesToStorage(allEntries, this.config.storageKey, deletedEntryIds);
+        
+        if (!saved) {
+          logger.error(`Failed to save after creating entry ${newId}`);
+          return null;
         }
-      });
-      
-      return null;
-    }
-    
-    // Create a new entry with an ID
-    const newEntryId = uuidv4();
-    const newEntry: TimeEntry = {
-      ...entryData,
-      id: newEntryId
-    };
-    
-    // Add to entries
-    const updatedEntries = [...allEntries, newEntry];
-    
-    // Save to storage
-    const savedSuccessfully = await saveEntriesToStorage(updatedEntries, storageKey, deletedEntryIds);
-    
-    if (!savedSuccessfully) {
-      logger.error('Failed to save new entry to storage');
-      
-      dispatchEvent({
-        type: 'error',
-        timestamp: new Date(),
-        payload: { 
-          context: 'createTimeEntry', 
-          message: 'Failed to save entry to storage'
+        
+        // Invalidate cache
+        this.invalidateCache();
+        
+        // Dispatch events
+        dispatchEntryEvent(this.eventManager, 'entry-created', { entryId: newId, entry: newEntry }, newEntry.userId);
+        
+        // Also dispatch DOM event for legacy code
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('timesheet:entry-created', {
+            detail: { entry: newEntry }
+          }));
         }
-      });
-      
-      return null;
-    }
-    
-    // Dispatch event
-    dispatchEvent({
-      type: 'entry-created',
-      timestamp: new Date(),
-      payload: { entry: newEntry }
-    });
-    
-    return newEntryId;
-  } catch (error) {
-    logger.error('Error creating time entry:', error);
-    
-    dispatchEvent({
-      type: 'error',
-      timestamp: new Date(),
-      payload: { 
-        context: 'createTimeEntry',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        
+        return newId;
+      } catch (saveError) {
+        logger.error(`Error saving after creating entry:`, saveError);
+        dispatchErrorEvent(this.eventManager, saveError, 'createEntry');
+        return null;
       }
-    });
-    
-    return null;
+    } catch (error) {
+      logger.error(`Error creating entry`, error);
+      dispatchErrorEvent(this.eventManager, error, 'createEntry');
+      return null;
+    }
   }
-};
+}

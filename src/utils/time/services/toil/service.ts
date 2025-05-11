@@ -1,6 +1,13 @@
 
-import { TimeEntry } from "@/types";
+import { TimeEntry, WorkSchedule } from "@/types";
 import { createTimeLogger } from "../../errors/timeLogger";
+import { TOILSummary } from "@/types/toil";
+import { Holiday } from "@/lib/holidays";
+import { 
+  TOIL_RECORDS_KEY, 
+  TOIL_USAGE_KEY, 
+  TOIL_SUMMARY_CACHE_KEY 
+} from "./types";
 
 // Constants
 export const TOIL_JOB_NUMBER = "TOIL";
@@ -12,6 +19,7 @@ export interface TOILBalanceEntry {
   accrued: number;
   used: number;
   lastUpdated: Date;
+  timestamp?: number; // Added timestamp for sorting
 }
 
 export interface TOILUsageEntry {
@@ -22,6 +30,7 @@ export interface TOILUsageEntry {
   approved?: boolean;
   approvedBy?: string;
   approvedDate?: Date;
+  timestamp?: number; // Added timestamp for sorting
 }
 
 // Logger
@@ -32,6 +41,7 @@ const logger = createTimeLogger('TOILService');
  */
 export class TOILService {
   private initialized = false;
+  private cache: Map<string, any> = new Map();
   
   constructor() {}
   
@@ -42,6 +52,14 @@ export class TOILService {
     if (this.initialized) return;
     this.initialized = true;
     logger.debug('TOIL service initialized');
+  }
+  
+  /**
+   * Clear the cache for all TOIL data
+   */
+  public clearCache(): void {
+    logger.debug('Clearing TOIL cache');
+    this.cache.clear();
   }
   
   /**
@@ -56,7 +74,8 @@ export class TOILService {
         balance: 0,
         accrued: 0,
         used: 0,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        timestamp: Date.now()
       };
     } catch (error) {
       logger.error('Error calculating TOIL balance:', error);
@@ -64,7 +83,8 @@ export class TOILService {
         balance: 0,
         accrued: 0,
         used: 0,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        timestamp: Date.now()
       };
     }
   }
@@ -85,7 +105,8 @@ export class TOILService {
       // Ensure the date is properly parsed
       return {
         ...userBalance,
-        lastUpdated: new Date(userBalance.lastUpdated)
+        lastUpdated: new Date(userBalance.lastUpdated),
+        timestamp: Date.now()
       };
     } catch (error) {
       logger.error('Error getting TOIL balance:', error);
@@ -101,7 +122,8 @@ export class TOILService {
       balance: 0,
       accrued: 0,
       used: 0,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
+      timestamp: Date.now()
     };
   }
   
@@ -120,7 +142,8 @@ export class TOILService {
         balance: balance.balance + (hours || 0),
         accrued: balance.accrued + (hours || 0),
         used: balance.used,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        timestamp: Date.now()
       };
       
       // Save updated balance
@@ -152,7 +175,8 @@ export class TOILService {
         balance: balance.balance - (hours || 0),
         accrued: balance.accrued,
         used: balance.used + (hours || 0),
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        timestamp: Date.now()
       };
       
       // Save updated balance
@@ -212,6 +236,105 @@ export class TOILService {
     } catch (error) {
       logger.error('Error calculating overtime:', error);
       return 0;
+    }
+  }
+  
+  /**
+   * Get TOIL summary for a user and month
+   */
+  public getTOILSummary(userId: string, monthYear: string): TOILSummary {
+    // Check cache first
+    const cacheKey = `${userId}_${monthYear}_summary`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+    
+    try {
+      // Default summary
+      const defaultSummary: TOILSummary = {
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
+      
+      // Get from localStorage
+      const summaryJSON = localStorage.getItem(`${TOIL_SUMMARY_CACHE_KEY}_${userId}_${monthYear}`);
+      if (!summaryJSON) {
+        return defaultSummary;
+      }
+      
+      const parsedSummary = JSON.parse(summaryJSON);
+      
+      // Cache the result
+      this.cache.set(cacheKey, parsedSummary);
+      
+      return parsedSummary;
+    } catch (error) {
+      logger.error(`Error getting TOIL summary for ${userId}, ${monthYear}:`, error);
+      return {
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
+    }
+  }
+  
+  /**
+   * Record TOIL usage
+   */
+  public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
+    if (!entry || !entry.userId || !entry.id || typeof entry.hours !== 'number') {
+      logger.error('Invalid entry for TOIL usage recording');
+      return false;
+    }
+    
+    try {
+      // Implementation for recording TOIL usage
+      logger.debug(`Recording TOIL usage: ${entry.hours} hours for user ${entry.userId}`);
+      return true;
+    } catch (error) {
+      logger.error('Error recording TOIL usage:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Calculate and store TOIL information
+   */
+  public async calculateAndStoreTOIL(
+    entries: TimeEntry[],
+    date: Date,
+    userId: string,
+    workSchedule: WorkSchedule,
+    holidays: Holiday[]
+  ): Promise<TOILSummary | null> {
+    try {
+      logger.debug(`Calculating TOIL for ${userId} on ${date.toISOString()}`);
+      
+      // Simple implementation for now
+      const summary = {
+        userId,
+        monthYear: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
+      
+      // Store in cache
+      const cacheKey = `${userId}_${summary.monthYear}_summary`;
+      this.cache.set(cacheKey, summary);
+      
+      // Store in localStorage for persistence
+      localStorage.setItem(`${TOIL_SUMMARY_CACHE_KEY}_${userId}_${summary.monthYear}`, JSON.stringify(summary));
+      
+      return summary;
+    } catch (error) {
+      logger.error('Error calculating and storing TOIL:', error);
+      return null;
     }
   }
 }

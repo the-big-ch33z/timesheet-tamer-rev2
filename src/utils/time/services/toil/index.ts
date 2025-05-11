@@ -27,28 +27,25 @@ export {
   getAvailableTOILHours
 } from './calculation';
 
-// Re-export batch processing functions from batch-processing.ts
-export {
-  processTOILBatch,
-  validateTOILBatchItem
-} from './batch-processing';
-
 // Re-export storage functions from storage.ts
 export {
   loadTOILData,
   saveTOILData,
-} from './storage';
-
-// Export clean utility functions
-export { clearAllTOILCaches } from './storage';
-
-// Cleanup functions for TOILRecords
-export { 
+  clearTOILCache,
+  clearAllTOILCaches,
   cleanupDuplicateTOILRecords,
   cleanupDuplicateTOILUsage,
   loadTOILRecords,
-  loadTOILUsage
+  loadTOILUsage,
+  getTOILSummary,
+  findTOILRecordsByEntryId,
+  deleteTOILRecordByEntryId,
+  hasTOILForDay,
+  hasTOILForMonth
 } from './storage';
+
+// Export TOILDayInfo interface
+export type { TOILDayInfo } from './storage/queries';
 
 // Export event functionality from events.ts
 export {
