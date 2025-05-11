@@ -20,8 +20,7 @@ import {
   findTOILRecordsByEntryId,
   deleteTOILRecordByEntryId,
   hasTOILForDay,
-  hasTOILForMonth,
-  TOILDayInfo
+  hasTOILForMonth
 } from './storage';
 
 // Re-export them
@@ -30,9 +29,11 @@ export {
   findTOILRecordsByEntryId,
   deleteTOILRecordByEntryId,
   hasTOILForDay,
-  hasTOILForMonth,
-  TOILDayInfo
+  hasTOILForMonth
 };
+
+// Use export type to fix the TypeScript 'isolatedModules' issue
+export type { TOILDayInfo } from './storage';
 
 // Add debugging exports for tracking calls
 console.log('[TOIL-INDEX] TOIL module loaded and configured');

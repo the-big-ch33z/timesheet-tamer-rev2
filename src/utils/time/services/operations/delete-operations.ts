@@ -4,7 +4,7 @@ import { createTimeLogger } from "../../errors";
 import { DELETED_ENTRIES_KEY } from "../storage-operations";
 import { addToDeletedEntries, loadEntriesFromStorage, saveEntriesToStorage, STORAGE_KEY } from "../storage-operations";
 import { EventManager } from "../event-handling";
-import { TimeEntryOperationsConfig } from "./types";
+import { TimeEntryOperationsConfig, TimeEntryEventType } from "./types";
 import { timeEventsService } from "../../events/timeEventsService";
 import { toilService } from "../toil/service";
 
@@ -16,6 +16,7 @@ const logger = createTimeLogger('DeleteOperations');
 export class DeleteOperations {
   private eventManager: EventManager;
   private serviceName: string;
+  private storageKey: string;
   private config: TimeEntryOperationsConfig;
   
   constructor(
@@ -24,6 +25,7 @@ export class DeleteOperations {
   ) {
     this.eventManager = eventManager;
     this.serviceName = config.serviceName ?? "TimeEntryService";
+    this.storageKey = config.storageKey ?? STORAGE_KEY;
     this.config = config;
     
     logger.debug(`DeleteOperations initialized for ${this.serviceName}`);
@@ -88,7 +90,7 @@ export class DeleteOperations {
         
         // Dispatch event
         this.eventManager.dispatchEvent({
-          type: 'delete',
+          type: 'delete' as TimeEntryEventType,
           timestamp: new Date(),
           payload: { id, entry: entryToDelete }
         });
@@ -110,6 +112,18 @@ export class DeleteOperations {
     } catch (error) {
       logger.error(`Error deleting entry ${id}:`, error);
       console.error(`[DeleteOperations] Error deleting entry ${id}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Delete entry adapter method for compatibility with TimeEntryBaseOperations
+   */
+  public async deleteEntry(entryId: string, deletedEntryIds: string[]): Promise<boolean> {
+    try {
+      return await this.deleteEntryById(entryId);
+    } catch (error) {
+      logger.error('Failed to delete entry:', error);
       return false;
     }
   }

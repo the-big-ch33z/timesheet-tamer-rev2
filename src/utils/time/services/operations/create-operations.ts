@@ -3,7 +3,7 @@ import { TimeEntry } from "@/types";
 import { createTimeLogger } from "../../errors";
 import { v4 as uuidv4 } from "uuid";
 import { EventManager } from "../event-handling";
-import { TimeEntryOperationsConfig } from "./types";
+import { TimeEntryOperationsConfig, TimeEntryEventType } from "./types";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 
 const logger = createTimeLogger('CreateOperations');
@@ -14,6 +14,7 @@ const logger = createTimeLogger('CreateOperations');
 export class CreateOperations {
   private eventManager: EventManager;
   private serviceName: string;
+  private storageKey: string;
   
   constructor(
     eventManager: EventManager,
@@ -21,6 +22,7 @@ export class CreateOperations {
   ) {
     this.eventManager = eventManager;
     this.serviceName = config.serviceName ?? "TimeEntryService";
+    this.storageKey = config.storageKey ?? "timeEntries";
     
     logger.debug(`CreateOperations initialized for ${this.serviceName}`);
     console.log(`[CreateOperations] CreateOperations initialized for ${this.serviceName}`);
@@ -41,12 +43,11 @@ export class CreateOperations {
       userId: entry.userId || '',
       date: entry.date || now,
       jobNumber: entry.jobNumber || '',
-      location: entry.location || '',
       hours: entry.hours || 0,
       description: entry.description || '',
       createdAt: now,
       updatedAt: now,
-      // Don't include created: true as it's not in the TimeEntry type
+      // Don't include location or other properties not in TimeEntry type
       ...entry
     };
     
@@ -55,7 +56,7 @@ export class CreateOperations {
     
     // Dispatch event
     this.eventManager.dispatchEvent({
-      type: 'create',
+      type: 'create' as TimeEntryEventType,
       timestamp: now,
       payload: { entry: newEntry }
     });
@@ -68,5 +69,18 @@ export class CreateOperations {
     });
     
     return newEntry;
+  }
+  
+  /**
+   * Create entry adapter method for compatibility with TimeEntryBaseOperations
+   */
+  public createEntry(entryData: Omit<TimeEntry, "id">, deletedEntryIds: string[]): string | null {
+    try {
+      const newEntry = this.createNewEntry(entryData);
+      return newEntry.id;
+    } catch (error) {
+      logger.error('Failed to create entry:', error);
+      return null;
+    }
   }
 }
