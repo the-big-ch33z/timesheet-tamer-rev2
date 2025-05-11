@@ -33,16 +33,14 @@ export const useTimeEntryFormHandling = ({
 }: UseTimeEntryFormHandlingProps) => {
   const { toast } = useToast();
   
-  // Use useMemo for stable time values instead of refs
   const timeValues = useMemo(() => ({
     startTime: initialStartTime,
     endTime: initialEndTime,
-    calculatedHours: 8 // Default value
+    calculatedHours: 8
   }), [initialStartTime, initialEndTime]);
   
   const prevEntriesRef = useRef<TimeEntry[]>([]);
-  
-  // Create form handlers with fixed pattern - pass memoized values
+
   const { fixedHandlers, emptyHandlers } = useEntryFormHandlers({
     date,
     userId,
@@ -50,11 +48,9 @@ export const useTimeEntryFormHandling = ({
     startTime: timeValues.startTime,
     endTime: timeValues.endTime
   });
-  
-  // Tracking state with refs to avoid re-renders
+
   const previousDateRef = useRef<Date | null>(null);
-  
-  // Use the improved visibility management hook
+
   const { 
     formVisibility, 
     setFormVisibility,
@@ -62,8 +58,7 @@ export const useTimeEntryFormHandling = ({
     resetVisibility,
     getFormClass
   } = useEntryFormVisibility();
-  
-  // Use the form handler pool
+
   const {
     formHandlers,
     addHandler,
@@ -74,8 +69,7 @@ export const useTimeEntryFormHandling = ({
     emptyHandlers,
     interactive
   });
-  
-  // Use the form actions hook with updated interface
+
   const {
     handleSaveEntry,
     saveAllPendingChanges,
@@ -85,115 +79,88 @@ export const useTimeEntryFormHandling = ({
     formVisibility,
     interactive
   });
-  
-  // Memoize the entries comparison to prevent unnecessary re-renders
+
   const entriesChanged = useMemo(() => {
-    if (entries.length !== prevEntriesRef.current.length) {
-      return true;
-    }
-    
-    // Compare entry IDs to determine if the entries array has changed substantively
+    if (entries.length !== prevEntriesRef.current.length) return true;
+
     const currentIds = new Set(entries.map(e => e.id));
     const prevIds = new Set(prevEntriesRef.current.map(e => e.id));
     
-    if (currentIds.size !== prevIds.size) {
-      return true;
-    }
-    
+    if (currentIds.size !== prevIds.size) return true;
     for (const id of currentIds) {
-      if (!prevIds.has(id)) {
-        return true;
-      }
+      if (!prevIds.has(id)) return true;
     }
-    
     return false;
   }, [entries]);
-  
-  // Initialize only when entries change substantively
+
+  // ✅ PATCH 1: Initialize visibility using handler IDs
   useEffect(() => {
     if (!interactive || !entriesChanged) return;
-    
+
     logger.debug(`[useTimeEntryFormHandling] Initializing with ${entries.length} entries`);
-    
-    // Initialize visibility with form IDs
-    const newVisibility: Record<string, boolean> = {};
-    entries.forEach((_, index) => {
-      newVisibility[`entry-form-${index}`] = true;
-    });
-    
-    // Initialize handlers
+
     initializeHandlers(entries);
-    
-    // Set visibility state
+
+    const newVisibility: Record<string, boolean> = {};
+    fixedHandlers.forEach(handler => {
+      newVisibility[handler.id] = true;
+    });
+
     resetVisibility(newVisibility);
-    
-    // Update the previous entries reference
+
     prevEntriesRef.current = [...entries];
-  }, [entriesChanged, interactive, initializeHandlers, resetVisibility, entries]);
-  
-  // Reset when date changes
+  }, [entriesChanged, interactive, initializeHandlers, resetVisibility, entries, fixedHandlers]);
+
   useEffect(() => {
-    if (previousDateRef.current && date && 
+    if (previousDateRef.current && date &&
         previousDateRef.current.toDateString() !== date.toDateString()) {
       logger.debug('[useTimeEntryFormHandling] Date changed, resetting forms');
-      
-      // Reset visibility to empty object
       resetVisibility({});
-      
-      // Re-initialize with empty entries
       initializeHandlers([]);
-      
-      // Clear previous entries
       prevEntriesRef.current = [];
     }
-    
-    // Update ref
     previousDateRef.current = date;
   }, [date, resetVisibility, initializeHandlers]);
-  
-  // Add entry form with stable ID - using stable callback
+
+  // ✅ PATCH 2: addEntryForm using handler.id
   const addEntryForm = useCallback(() => {
     if (!interactive) return;
-    
+
     logger.debug('[useTimeEntryFormHandling] Adding new entry form');
-    
-    // Add a new handler from the pool
+
     const newHandler = addHandler();
-    
+
     if (newHandler) {
-      // Generate a stable form ID
-      const formId = `entry-form-${formHandlers.length}`;
-      
-      // Set up the new handler with time values
+      const formId = newHandler.id;
+
       newHandler.handleFieldChange('startTime', timeValues.startTime);
       newHandler.handleFieldChange('endTime', timeValues.endTime);
-      
-      // Make the form visible
+
       setFormVisibility(formId, true);
     }
-  }, [interactive, addHandler, formHandlers.length, setFormVisibility, timeValues]);
-  
-  // Remove entry form but keep it mounted - stabilized with useCallback
+  }, [interactive, addHandler, setFormVisibility, timeValues]);
+
+  // ✅ PATCH 3: removeEntryForm using handler.id
   const removeEntryForm = useCallback((index: number) => {
     if (!interactive) return;
-    
+
     try {
-      const formId = `entry-form-${index}`;
+      const handler = formHandlers[index];
+      if (!handler) return;
+
+      const formId = handler.id;
       logger.debug(`[useTimeEntryFormHandling] Hiding form ${formId}`);
-      
-      // Save if edited before hiding
-      if (formHandlers[index]?.formState.formEdited) {
-        formHandlers[index].handleSave();
+
+      if (handler.formState.formEdited) {
+        handler.handleSave();
       }
-      
-      // Just hide the form, don't unmount it
+
       setFormVisibility(formId, false);
-      
-      // Return handler to pool if it was a new handler
+
       if (index >= entries.length) {
         removeHandler(index);
       }
-      
+
     } catch (error) {
       logger.error(`[useTimeEntryFormHandling] Error removing entry form ${index}:`, error);
     }
