@@ -9,16 +9,16 @@ const logger = createTimeLogger('useEntryFormVisibility');
  * conditional rendering to prevent unmounting
  */
 export const useEntryFormVisibility = (initialVisibility: boolean[] = []) => {
-  const [formVisibility, setFormVisibility] = useState<Record<string, boolean>>({});
+  const [formVisibility, setFormVisibilityState] = useState<Record<string, boolean>>({});
   
   // Track visible forms count
   const visibleFormsCount = Object.values(formVisibility).filter(Boolean).length;
   
-  // Toggle form visibility
+  // Update form visibility
   const setFormVisibility = useCallback((formId: string, isVisible: boolean) => {
     logger.debug(`[useEntryFormVisibility] Setting form ${formId} visibility to ${isVisible}`);
     
-    setFormVisibility(prev => ({
+    setFormVisibilityState(prev => ({
       ...prev,
       [formId]: isVisible
     }));
@@ -37,7 +37,7 @@ export const useEntryFormVisibility = (initialVisibility: boolean[] = []) => {
   // Reset all form visibility
   const resetVisibility = useCallback((initialForms: Record<string, boolean> = {}) => {
     logger.debug(`[useEntryFormVisibility] Resetting visibility to ${Object.keys(initialForms).length} forms`);
-    setFormVisibility(initialForms);
+    setFormVisibilityState(initialForms);
   }, []);
 
   // Generate CSS classes for forms
