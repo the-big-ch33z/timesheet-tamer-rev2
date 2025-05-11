@@ -6,7 +6,6 @@
 import { 
   timeEntryService,
   unifiedTimeEntryService,
-  TimeEntryService,
   createTimeEntryService,
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
@@ -20,7 +19,6 @@ import {
 export { 
   timeEntryService,
   unifiedTimeEntryService,
-  TimeEntryService,
   createTimeEntryService,
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
@@ -39,4 +37,3 @@ export type {
 
 // Export singleton instance as default
 export default timeEntryService;
-

@@ -8,13 +8,13 @@ const logger = createTimeLogger('TimeEntryEvents');
  * Manages event listeners and event dispatch for time entry operations
  */
 export class EventManager {
-  private eventListeners: Map<TimeEntryEventType, Set<TimeEntryEventListener>> = new Map();
+  private eventListeners: Map<TimeEntryEventType | string, Set<TimeEntryEventListener>> = new Map();
 
   /**
    * Add event listener
    */
   public addEventListener(
-    type: TimeEntryEventType, 
+    type: TimeEntryEventType | string, 
     listener: TimeEntryEventListener
   ): () => void {
     if (!this.eventListeners.has(type)) {
@@ -37,7 +37,7 @@ export class EventManager {
    * Dispatch an event to all listeners
    */
   public dispatchEvent(event: TimeEntryEvent): void {
-    const listeners = this.eventListeners.get(event.type);
+    const listeners = this.eventListeners.get(event.type as TimeEntryEventType | string);
     if (listeners) {
       listeners.forEach(listener => {
         try {
@@ -113,7 +113,7 @@ export class EventManager {
   /**
    * Get the count of listeners for a specific event type
    */
-  public getListenerCount(type: TimeEntryEventType): number {
+  public getListenerCount(type: TimeEntryEventType | string): number {
     const listeners = this.eventListeners.get(type);
     return listeners ? listeners.size : 0;
   }

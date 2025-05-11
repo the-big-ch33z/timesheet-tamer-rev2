@@ -1,4 +1,3 @@
-
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { TimeEntryServiceConfig } from './types';
@@ -11,7 +10,8 @@ import {
   loadEntriesFromStorage,
   saveEntriesToStorage,
   loadDeletedEntries,
-  addToDeletedEntries
+  addToDeletedEntries,
+  storageWriteLock
 } from "./storage-operations";
 import { validateTimeEntry, autoCalculateHours, calculateTotalHours } from './entry-validation';
 import { TimeEntryOperations } from "./time-entry-operations";
@@ -109,7 +109,7 @@ export class TimeEntryService {
     logger.debug('Service destroyed');
   }
 
-  public addEventListener(type: string, listener: (event: any) => void): () => void {
+  public addEventListener(type: string | TimeEntryEventType, listener: (event: any) => void): () => void {
     return this.eventManager.addEventListener(type, listener);
   }
 
@@ -335,10 +335,11 @@ if (typeof window !== 'undefined') {
   timeEntryService.init();
 }
 
-// Export constants - no duplicate exports now
+// Export constants
 export { 
   STORAGE_KEY,
-  DELETED_ENTRIES_KEY
+  DELETED_ENTRIES_KEY,
+  storageWriteLock
 };
 
 // Factory function to create a new service instance
@@ -358,9 +359,5 @@ export {
 // Also export the singleton as unifiedTimeEntryService for backward compatibility
 export const unifiedTimeEntryService = timeEntryService;
 
-// Export the storageWriteLock for other modules to use
-export { storageWriteLock } from './storage-operations';
-
 // Export the TimeEntryEvent type for consuming modules
 export type { TimeEntryEvent } from './types';
-
