@@ -7,7 +7,11 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { format, isSameMonth } from 'date-fns';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { calculateTOILHours } from "./calculation";
-import { storeTOILRecord, getTOILSummary, cleanupDuplicateTOILRecords } from "./storage";
+import { 
+  storeTOILRecord, 
+  getTOILSummary, 
+  cleanupDuplicateTOILRecords 
+} from "./storage/index";
 
 const logger = createTimeLogger('TOILBatchProcessor');
 

@@ -18,7 +18,7 @@ import {
   loadTOILRecords,
   loadTOILUsage,
   getTOILSummary as getStorageTOILSummary
-} from "./storage";
+} from "./storage/index";
 import { calculateTOILHours } from "./calculation";
 import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
 import { dispatchTOILEvent } from "./events";
