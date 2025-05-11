@@ -2,21 +2,8 @@
 /**
  * Re-export all calculation utilities for easier imports
  */
-export * from './hoursCalculations';
-export * from './varianceCalculations';
 export * from './timeCalculations';
+export * from './scheduleUtils';
 
-// To avoid ambiguous exports, explicitly re-export key functions
-export {
-  calculateHoursFromTimes,
-  calculateMonthlyTargetHours,
-  calculateAdjustedFortnightHours,
-  calculateFortnightHoursFromSchedule
-} from './hoursCalculations';
-
-export {
-  calculateHoursVariance,
-  isUndertime,
-  safeCalculateVariance
-} from './varianceCalculations';
-
+// For backward compatibility, also re-export from specialized files
+export * from './varianceCalculations';

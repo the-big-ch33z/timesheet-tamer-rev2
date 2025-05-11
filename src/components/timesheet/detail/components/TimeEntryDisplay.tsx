@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
-import { formatHours } from "@/utils/time/formatting/timeFormatting";
 import { Clock } from "lucide-react";
 import { format } from "date-fns";
 
@@ -65,7 +64,7 @@ const TimeEntryDisplay: React.FC<TimeEntryDisplayProps> = ({
             />
           ) : (
             <span className="text-lg">
-              {format(new Date(`2000-01-01T${localStartTime}`), "h:mm a")}
+              {localStartTime ? format(new Date(`2000-01-01T${localStartTime}`), "h:mm a") : "--:--"}
             </span>
           )}
           <Clock className="h-4 w-4 ml-2 text-gray-400" />
@@ -85,7 +84,7 @@ const TimeEntryDisplay: React.FC<TimeEntryDisplayProps> = ({
             />
           ) : (
             <span className="text-lg">
-              {format(new Date(`2000-01-01T${localEndTime}`), "h:mm a")}
+              {localEndTime ? format(new Date(`2000-01-01T${localEndTime}`), "h:mm a") : "--:--"}
             </span>
           )}
           <Clock className="h-4 w-4 ml-2 text-gray-400" />

@@ -21,7 +21,7 @@ export const calculateFortnightHoursFromSchedule = (schedule: WorkSchedule): num
     // Loop through each day in the week
     Object.entries(week).forEach(([day, dayConfig]) => {
       // Skip if it's a non-working day or an RDO
-      if (!dayConfig || schedule.rdoDays[weekNumber].includes(day)) {
+      if (!dayConfig || !dayConfig.startTime || !dayConfig.endTime || schedule.rdoDays[weekNumber].includes(day)) {
         return;
       }
       
@@ -41,11 +41,8 @@ export const calculateFortnightHoursFromSchedule = (schedule: WorkSchedule): num
       }
       
       totalHours += Math.max(0, hours);
-      
-      logger.debug(`Day ${day} in week ${weekNum}: +${hours} hours`);
     });
   });
   
-  logger.debug(`Total fortnight hours calculated: ${totalHours}`);
   return totalHours;
 };

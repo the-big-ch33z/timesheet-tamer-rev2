@@ -1,6 +1,6 @@
 
-import { useCallback, useMemo } from 'react';
-import { calculateHoursFromTimes } from '@/utils/time/calculations';
+import { useCallback } from 'react';
+import { calculateHoursFromTimes } from '@/utils/time/calculations/timeCalculations';
 import { validateTimeOrder } from '@/utils/time/validation';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 
