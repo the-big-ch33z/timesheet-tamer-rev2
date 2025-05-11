@@ -9,6 +9,7 @@ import { WorkSchedule } from '@/types';
 
 /**
  * Calculate hours between two time strings
+ * @deprecated Use equivalent function in hoursCalculations.ts instead
  */
 export const calculateHoursFromTimes = (startTime: string, endTime: string): number => {
   if (!startTime || !endTime) return 0;
@@ -33,6 +34,7 @@ export const calculateHoursFromTimes = (startTime: string, endTime: string): num
 
 /**
  * Calculate monthly target hours based on FTE and period
+ * @deprecated Use equivalent function in hoursCalculations.ts instead
  */
 export const calculateMonthlyTargetHours = (
   fortnightHours: number,

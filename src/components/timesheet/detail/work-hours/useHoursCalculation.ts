@@ -1,6 +1,5 @@
-
 import { useMemo } from 'react';
-import { calculateHoursFromTimes } from "@/utils/time/calculations/timeCalculations";
+import { calculateHoursFromTimes } from "@/utils/time/calculations/hoursCalculations";
 
 export const useHoursCalculation = (
   startTime: string, 

@@ -1,6 +1,5 @@
-
 import { useCallback } from 'react';
-import { calculateHoursFromTimes } from '@/utils/time/calculations/timeCalculations';
+import { calculateHoursFromTimes } from '@/utils/time/calculations/hoursCalculations';
 
 // Define Timeout type to match NodeJS.Timeout
 type Timeout = ReturnType<typeof setTimeout>;

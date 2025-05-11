@@ -6,7 +6,7 @@ import {
   calculateHoursFromTimes, 
   calculateHoursVariance, 
   isUndertime
-} from '@/utils/time/calculations';
+} from '@/utils/time/calculations/hoursCalculations';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useTimeEntryState');

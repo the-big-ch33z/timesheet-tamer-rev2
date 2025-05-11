@@ -2,10 +2,27 @@
 /**
  * Re-export all calculation utilities for easier imports
  */
-export * from './timeCalculations';
+
+// Explicitly export from timeCalculations to avoid conflicts
+export { 
+  calculateHoursVariance,
+  isUndertime,
+  safeCalculateVariance
+} from './timeCalculations';
+
+// Explicitly export from hoursCalculations - these take precedence over timeCalculations versions
+export { 
+  calculateHoursFromTimes,
+  calculateMonthlyTargetHours,
+  calculateAdjustedFortnightHours,
+  calculateFortnightHoursFromSchedule,
+  countRdoDaysInMonth
+} from './hoursCalculations';
+
+// Export variance calculations for backward compatibility
 export * from './varianceCalculations';
 
-// Export scheduleUtils but exclude the functions that might cause ambiguity
+// Export schedule utilities but exclude the functions that might cause ambiguity
 export { 
   getDayScheduleInfo,
   isWorkingDay,
@@ -19,9 +36,3 @@ export {
   getFortnightWeek,
   getWorkdaysInMonth
 } from '../scheduleUtils';
-
-// Export hoursCalculations functions
-export * from './hoursCalculations';
-
-// These functions are now exported from scheduleUtils.ts and hoursCalculations.ts
-// This comment helps prevent accidental re-export of same functions
