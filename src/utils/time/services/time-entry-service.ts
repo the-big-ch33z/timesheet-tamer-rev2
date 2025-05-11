@@ -1,6 +1,7 @@
+
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import { TimeEntryServiceConfig } from './types';
+import { TimeEntryServiceConfig, TimeEntryEventType } from './types';
 import { createTimeLogger } from '../errors/timeLogger';
 import { ensureDate } from '../validation/dateValidation';
 import { EventManager } from "./event-handling";
