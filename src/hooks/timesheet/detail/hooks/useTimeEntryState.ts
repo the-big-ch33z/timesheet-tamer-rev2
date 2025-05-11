@@ -5,7 +5,7 @@ import { useWorkHoursContext } from '@/contexts/timesheet';
 import { 
   calculateHoursFromTimes, 
   calculateHoursVariance, 
-  isUndertime as checkIsUndertime
+  isUndertime
 } from '@/utils/time/calculations/timeCalculations';
 import { createTimeLogger } from '@/utils/time/errors';
 
@@ -52,9 +52,11 @@ export const useTimeEntryState = ({
   // Calculate target hours for the day based on workSchedule
   const targetHours = 8; // Default to 8 hours if no schedule
   
-  // Calculate hours variance
+  // Calculate hours variance - Pass both actual and target hours to the function
   const hoursVariance = calculateHoursVariance(totalEnteredHours, targetHours);
-  const isUndertime = checkIsUndertime(hoursVariance);
+  
+  // Check for undertime - Pass both actual and target hours to the function
+  const isUndertimeValue = isUndertime(totalEnteredHours, targetHours);
   
   // Flag if we have entries
   const hasEntries = entries.length > 0;
@@ -146,7 +148,7 @@ export const useTimeEntryState = ({
     totalEnteredHours,
     hasEntries,
     hoursVariance,
-    isUndertime,
+    isUndertime: isUndertimeValue,
     handleTimeChange
   };
 };

@@ -6,7 +6,7 @@ import {
 } from '../calculations';
 import { TimeCalculationError } from '../errors/timeErrorHandling';
 import { createTestWorkSchedule } from '@/utils/testing/mockUtils';
-import { WorkSchedule } from '@/types';  // Added WorkSchedule import
+import { WorkSchedule } from '@/types';
 
 describe('Time Calculations', () => {
   describe('calculateHoursFromTimes', () => {
@@ -34,6 +34,7 @@ describe('Time Calculations', () => {
       const mockDate = new Date('2023-01-01'); // January 2023
       jest.spyOn(require('../../time/scheduleUtils'), 'getWorkdaysInMonth').mockReturnValue(20);
       
+      // Pass fortnightHours as first parameter, date as second parameter
       expect(calculateMonthlyTargetHours(70, mockDate)).toBe(140.0); // 70 hours per fortnight * 2
       expect(calculateMonthlyTargetHours(35, mockDate)).toBe(70.0);
     });
@@ -46,6 +47,7 @@ describe('Time Calculations', () => {
         .mockReturnValueOnce(22)  // First call returns 22
         .mockReturnValueOnce(19); // Second call returns 19
       
+      // Pass fortnightHours as first parameter, date as second parameter
       expect(calculateMonthlyTargetHours(70, mockDate1)).toBe(154.0); // 70 * (22/10) = 154
       expect(calculateMonthlyTargetHours(38, mockDate2)).toBe(72.2); // 38 * (19/10) = 72.2
     });
@@ -55,7 +57,7 @@ describe('Time Calculations', () => {
       expect(() => calculateMonthlyTargetHours(-5, mockDate)).toThrow(TimeCalculationError);
       
       // Use actual Date objects for these too
-      const invalidDate1 = new Date('2000-01-01'); // Using actual dates instead of numbers
+      const invalidDate1 = new Date('2000-01-01');
       const invalidDate2 = new Date('2000-01-01');
       
       // Mock getWorkdaysInMonth to return -1 and 32 for these cases
@@ -63,6 +65,7 @@ describe('Time Calculations', () => {
         .mockReturnValueOnce(-1)  // First call returns invalid -1
         .mockReturnValueOnce(32); // Second call returns invalid 32
       
+      // Pass fortnightHours as first parameter, date as second parameter
       expect(() => calculateMonthlyTargetHours(70, invalidDate1)).toThrow(TimeCalculationError);
       expect(() => calculateMonthlyTargetHours(70, invalidDate2)).toThrow(TimeCalculationError);
     });
