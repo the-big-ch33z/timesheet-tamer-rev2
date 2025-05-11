@@ -1,4 +1,3 @@
-
 import React, { memo } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormsList from "./EntryFormsList";
@@ -13,20 +12,16 @@ interface EntryFormsSectionProps {
   getFormClass: (formId: string) => string;
 }
 
-const EntryFormsSection = ({
+const EntryFormsSection: React.FC<EntryFormsSectionProps> = ({
   formVisibility,
   formHandlers,
   handleSaveEntry,
   removeEntryForm,
   interactive,
   getFormClass
-}: EntryFormsSectionProps) => {
-  // Check if we have any visible forms
-  const hasVisibleForms = Object.values(formVisibility).some(Boolean);
-  
-  if (!hasVisibleForms || !interactive) {
-    return null;
-  }
+}) => {
+  // Always render the section if interactive is true
+  if (!interactive) return null;
 
   return (
     <div data-testid="entry-forms-section">
