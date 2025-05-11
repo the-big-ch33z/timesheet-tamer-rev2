@@ -1,42 +1,49 @@
 
 /**
  * Time services index
- * Exports the unified time entry service and its constants
+ * Central export point for all time-related service functions
+ * 
+ * This module provides a unified interface to time services
+ * while maintaining backward compatibility.
  */
-import { 
-  unifiedTimeEntryService,
-  timeEntryService,
-  UnifiedTimeEntryService,
-  createTimeEntryService,
-  STORAGE_KEY,
-  DELETED_ENTRIES_KEY,
-  storageWriteLock,
-  validateTimeEntry,
-  autoCalculateHours,
-  calculateTotalHours
-} from './index-unified';
 
-// Export the singleton instance as the default export
-export { unifiedTimeEntryService as default };
+// Export the unified service as the main interface
+export { unifiedTimeEntryService } from './unified-service';
 
-// Export for backward compatibility
-export { 
-  unifiedTimeEntryService,
-  timeEntryService,
-  createTimeEntryService,
-  UnifiedTimeEntryService,
-  STORAGE_KEY,
-  DELETED_ENTRIES_KEY,
-  storageWriteLock,
-  validateTimeEntry,
-  autoCalculateHours,
-  calculateTotalHours
-};
+// Export service class for advanced usage
+export { UnifiedTimeEntryService } from './unified-service';
 
-// Export type definitions
+// Re-export types for external consumption
 export type {
   TimeEntryEvent,
   TimeEntryEventType,
   ValidationResult,
   TimeEntryServiceConfig
 } from './unified-service';
+
+// Export storage constants
+export { 
+  STORAGE_KEY,
+  DELETED_ENTRIES_KEY,
+  storageWriteLock
+} from './unified-service';
+
+// Export utility functions
+export {
+  validateTimeEntry,
+  autoCalculateHours,
+  calculateTotalHours
+} from './unified-service';
+
+// Export legacy services for backward compatibility
+// These will be deprecated in future versions
+export { timeEntryService, createTimeEntryService } from './timeEntryService';
+
+// Add deprecation notices using console warnings in development
+if (process.env.NODE_ENV === 'development') {
+  console.warn(
+    'Some time service exports are deprecated and will be removed in a future version.\n' +
+    'Please use unifiedTimeEntryService instead of timeEntryService.\n' +
+    'See documentation for migration guidance.'
+  );
+}

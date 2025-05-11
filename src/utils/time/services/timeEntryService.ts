@@ -1,10 +1,12 @@
 
 /**
  * @deprecated This file is provided for backward compatibility.
- * Please use unifiedTimeEntryService instead.
+ * Please use UnifiedTimeEntryService from @/utils/time/services instead.
+ * 
+ * This file will be removed in a future version.
  */
 
-import { unifiedTimeEntryService } from './core';
+import { unifiedTimeEntryService } from './unified-service';
 
 // Re-export the storage key constants for compatibility
 export const STORAGE_KEY = 'timeEntries';
