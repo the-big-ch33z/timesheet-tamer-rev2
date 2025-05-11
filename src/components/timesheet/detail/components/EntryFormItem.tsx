@@ -153,40 +153,13 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
       data-disabled={disabled ? 'true' : 'false'}
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Job Number */}
-          <div>
-            <label htmlFor={`job-${formId}`} className="block text-sm font-medium mb-1">Job Number</label>
-            <Input
-              id={`job-${formId}`}
-              value={formState.jobNumber || ""}
-              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.JOB_NUMBER, e.target.value)}
-              disabled={disabled}
-              placeholder="Job Number"
-              data-field-name="jobNumber"
-            />
-          </div>
-          
-          {/* Task Number */}
-          <div>
-            <label htmlFor={`task-${formId}`} className="block text-sm font-medium mb-1">Task Number</label>
-            <Input
-              id={`task-${formId}`}
-              value={formState.taskNumber || ""}
-              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.TASK_NUMBER, e.target.value)}
-              disabled={disabled}
-              placeholder="Task Number"
-              data-field-name="taskNumber"
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Hours */}
+        {/* Updated layout: All fields in a single row on desktop */}
+        <div className="flex flex-col md:flex-row gap-4 items-start">
+          {/* Hours - Smallest width */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="relative">
+                <div className="w-full md:w-24 flex-shrink-0">
                   <label htmlFor={`hours-${formId}`} className="block text-sm font-medium mb-1">Hours</label>
                   <Input
                     id={`hours-${formId}`}
@@ -222,8 +195,34 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
             </Tooltip>
           </TooltipProvider>
 
-          {/* Registration Number */}
-          <div>
+          {/* Job Number - Medium width */}
+          <div className="w-full md:w-40 flex-shrink-0">
+            <label htmlFor={`job-${formId}`} className="block text-sm font-medium mb-1">Job Number</label>
+            <Input
+              id={`job-${formId}`}
+              value={formState.jobNumber || ""}
+              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.JOB_NUMBER, e.target.value)}
+              disabled={disabled}
+              placeholder="Job Number"
+              data-field-name="jobNumber"
+            />
+          </div>
+          
+          {/* Task Number - Medium width */}
+          <div className="w-full md:w-40 flex-shrink-0">
+            <label htmlFor={`task-${formId}`} className="block text-sm font-medium mb-1">Task Number</label>
+            <Input
+              id={`task-${formId}`}
+              value={formState.taskNumber || ""}
+              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.TASK_NUMBER, e.target.value)}
+              disabled={disabled}
+              placeholder="Task Number"
+              data-field-name="taskNumber"
+            />
+          </div>
+
+          {/* Registration Number - Medium width */}
+          <div className="w-full md:w-36 flex-shrink-0">
             <label htmlFor={`rego-${formId}`} className="block text-sm font-medium mb-1">Rego</label>
             <Input
               id={`rego-${formId}`}
@@ -234,20 +233,21 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
               data-field-name="rego"
             />
           </div>
-        </div>
-        
-        {/* Description */}
-        <div>
-          <label htmlFor={`desc-${formId}`} className="block text-sm font-medium mb-1">Description</label>
-          <Textarea
-            id={`desc-${formId}`}
-            value={formState.description || ""}
-            onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.DESCRIPTION, e.target.value)}
-            disabled={disabled}
-            placeholder="Entry description"
-            rows={2}
-            data-field-name="description"
-          />
+          
+          {/* Description - Flexible width (takes remaining space) */}
+          <div className="w-full md:flex-1">
+            <label htmlFor={`desc-${formId}`} className="block text-sm font-medium mb-1">Description</label>
+            <Textarea
+              id={`desc-${formId}`}
+              value={formState.description || ""}
+              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.DESCRIPTION, e.target.value)}
+              disabled={disabled}
+              placeholder="Entry description"
+              rows={1}
+              className="min-h-[38px] resize-y"
+              data-field-name="description"
+            />
+          </div>
         </div>
       </div>
       
