@@ -3,6 +3,8 @@
  * Re-export all calculation utilities for easier imports
  */
 export * from './timeCalculations';
+export * from './varianceCalculations';
+
 // Export scheduleUtils but exclude the functions that might cause ambiguity
 export { 
   getDayScheduleInfo,
@@ -18,11 +20,8 @@ export {
   getWorkdaysInMonth
 } from '../scheduleUtils';
 
-// These specific functions are now only exported from scheduleUtils to avoid ambiguity
-export { 
-  calculateFortnightHoursFromSchedule,
-  calculateAdjustedFortnightHours 
-} from '../scheduleUtils';
+// Export hoursCalculations functions
+export * from './hoursCalculations';
 
-// For backward compatibility, also re-export from specialized files
-export * from './varianceCalculations';
+// These functions are now exported from scheduleUtils.ts and hoursCalculations.ts
+// This comment helps prevent accidental re-export of same functions

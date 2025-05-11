@@ -1,10 +1,9 @@
-
 import { useMemo } from 'react';
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
 import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
-import { calculateFortnightHoursFromSchedule } from '@/utils/time/calculations/scheduleUtils';
+import { calculateFortnightHoursFromSchedule } from '@/utils/time/scheduleUtils';
 
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],

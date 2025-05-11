@@ -1,8 +1,9 @@
-import { calculateFortnightHoursFromSchedule } from "../scheduleUtils";
-import { TimeCalculationError } from "../errors/timeErrorHandling";
-import { getWorkdaysInMonth, getFortnightWeek } from "../scheduleUtils";
+
+import { TimeCalculationError } from '../errors/timeErrorHandling';
 import { WorkSchedule, WeekDay } from "@/types";
+import { getWorkdaysInMonth, getFortnightWeek } from "../scheduleUtils";
 import { eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
+import { calculateFortnightHoursFromSchedule } from "../scheduleUtils";
 
 /**
  * Calculate hours difference between two time strings (HH:MM format)
@@ -47,7 +48,7 @@ export const calculateHoursFromTimes = (start: string, end: string): number => {
     return roundedHours;
   } catch (error) {
     console.error("Error calculating hours from times:", error);
-    throw new Error(`Failed to calculate hours from ${start} to ${end}: ${error}`);
+    throw new TimeCalculationError(`Failed to calculate hours from ${start} to ${end}: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
