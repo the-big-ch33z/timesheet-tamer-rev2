@@ -1,41 +1,70 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { TimeEntry } from '@/types';
 import { useInitialEntries } from './hooks/useInitialEntries';
 import { useEntryOperations } from './hooks/useEntryOperations';
 import { useEntryQueries } from './hooks/useEntryQueries';
 import { useStorageSync } from './hooks/useStorageSync';
 import { createTimeLogger } from '@/utils/time/errors';
-import { TOILEventProvider } from '@/utils/time/events/toilEventService';
-import { TimeEntryContextType } from '../types';
+import { eventBus } from '@/utils/events/EventBus';
+import { TIME_ENTRY_EVENTS } from '@/utils/events/eventTypes';
+import { BaseContextProvider, BaseContextState, createBaseContextType } from '@/contexts/base/BaseContext';
+import { useErrorContext } from '@/contexts/error/ErrorContext';
+import { ContextLoader } from '@/components/ui/context-loader';
 
 const logger = createTimeLogger('TimeEntryContext');
 
+export interface TimeEntryContextType extends BaseContextState {
+  // Data
+  entries: TimeEntry[];
+  dayEntries: TimeEntry[];
+  isLoading: boolean;
+  
+  // Queries
+  getDayEntries: (date: Date) => TimeEntry[];
+  getMonthEntries: (date: Date, userId?: string) => TimeEntry[];
+  calculateTotalHours: (entries?: TimeEntry[]) => number;
+  
+  // Operations
+  addEntry: (entry: TimeEntry) => void;
+  updateEntry: (id: string, updates: Partial<TimeEntry>) => void;
+  deleteEntry: (id: string) => Promise<boolean>;
+  createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
+}
+
 export interface TimeEntryProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   selectedDate?: Date | null;
   userId?: string;
 }
 
-// Create the context
-export const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefined);
+// Create the context with base context functionality
+const TimeEntryContext = createBaseContextType<Omit<TimeEntryContextType, keyof BaseContextState>>();
 
 /**
  * TimeEntryProvider
  * 
  * Provides access to time entries and operations to manipulate them
- * 
- * @dependency None - This is a root-level context that doesn't depend on other contexts
- * 
- * Dependencies Flow:
- * - Other contexts may depend on TimeEntryContext
- * - This context uses services directly without requiring other contexts
  */
 export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({ 
   children, 
   selectedDate, 
   userId 
 }) => {
+  const { handleError } = useErrorContext();
+  
+  // Initialization function for the context
+  const initializeEntries = useCallback(async () => {
+    try {
+      // This is where we would do any async initialization
+      logger.debug("Initializing time entry service");
+      return true; // Return success
+    } catch (error) {
+      logger.error("Failed to initialize time entry service:", error);
+      throw error;
+    }
+  }, []);
+
   // Load initial entries and get state management
   const { entries, setEntries, isLoading, isInitialized } = useInitialEntries();
   
@@ -47,56 +76,75 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
   const { getDayEntries, getMonthEntries, calculateTotalHours } = useEntryQueries(entries, userId);
   
   // Get entries for the current day
-  const dayEntries = selectedDate ? getDayEntries(selectedDate) : [];
+  const dayEntries = useMemo(() => {
+    return selectedDate ? getDayEntries(selectedDate) : [];
+  }, [selectedDate, getDayEntries]);
   
   // Log when selectedDate changes to track updates
   React.useEffect(() => {
     if (selectedDate) {
       logger.debug(`Selected date in TimeEntryProvider: ${selectedDate.toISOString()}, entries: ${dayEntries.length}`);
+      
+      // Notify subscribers of day entries change
+      eventBus.publish(TIME_ENTRY_EVENTS.LOADED, {
+        date: selectedDate,
+        userId: userId,
+        entries: dayEntries
+      });
     }
-  }, [selectedDate, dayEntries.length]);
+  }, [selectedDate, dayEntries.length, userId]);
 
-  // Create unified context value
-  const contextValue: TimeEntryContextType = {
-    // Data
-    entries,
-    dayEntries,
-    isLoading,
-    
-    // Queries
-    getDayEntries,
-    getMonthEntries,
-    calculateTotalHours,
-    
-    // Operations
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    createEntry
-  };
-
-  // Simplified provider structure
   return (
-    <TOILEventProvider>
-      <TimeEntryContext.Provider value={contextValue}>
-        {children}
-      </TimeEntryContext.Provider>
-    </TOILEventProvider>
+    <BaseContextProvider
+      contextName="TimeEntry"
+      initializer={initializeEntries}
+      autoInitialize={true}
+    >
+      {(baseContext: BaseContextState) => (
+        <ContextLoader
+          status={baseContext.status}
+          contextName="Time Entries"
+          retry={baseContext.initialize}
+        >
+          <TimeEntryContext.Provider 
+            value={{
+              // Base context props
+              ...baseContext,
+              
+              // Data
+              entries,
+              dayEntries,
+              isLoading,
+              
+              // Queries
+              getDayEntries,
+              getMonthEntries,
+              calculateTotalHours,
+              
+              // Operations
+              addEntry,
+              updateEntry,
+              deleteEntry,
+              createEntry
+            }}
+          >
+            {children}
+          </TimeEntryContext.Provider>
+        </ContextLoader>
+      )}
+    </BaseContextProvider>
   );
 };
 
 /**
- * useTimeEntryContext
- * 
  * Hook to access time entry data and operations
- * 
- * @returns {TimeEntryContextType} Time entry context value
- * @throws {Error} If used outside of a TimeEntryProvider
  */
 export const useTimeEntryContext = (): TimeEntryContextType => {
   const context = useContext(TimeEntryContext);
+  
   if (!context) {
     throw new Error('useTimeEntryContext must be used within a TimeEntryProvider');
   }
+  
   return context;
 };

@@ -1,7 +1,8 @@
 
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
-import { timeEventsService } from "@/utils/time/events/timeEventsService";
+import { eventBus } from "@/utils/events/EventBus";
+import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 const logger = createTimeLogger('TOILEventService');
@@ -86,12 +87,8 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
       
-      // Also dispatch through timeEventsService for system-wide integration
-      timeEventsService.publish(event.type as any, event.data);
-      
-      // Dispatch DOM event for backward compatibility
-      const domEvent = new CustomEvent(`toil:${event.type}`, { detail: event.data });
-      window.dispatchEvent(domEvent);
+      // Use the new centralized EventBus
+      eventBus.publish(TOIL_EVENTS.UPDATED, event.data);
       
       return true;
     } catch (error) {
@@ -124,9 +121,9 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, []);
   
-  // Subscribe to timeEventsService events
+  // Subscribe to eventBus events
   useEffect(() => {
-    const subscription = timeEventsService.subscribe('toil-updated', (data) => {
+    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.UPDATED, (data) => {
       if (!data) return;
       
       setLastEvent({
@@ -138,7 +135,7 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
     
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
   
@@ -161,34 +158,10 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
  * Integrates with legacy event system
  */
 export const dispatchTOILSummaryEvent = (summary: TOILSummary) => {
-  // First try to use the context if available
-  try {
-    // This will only work if inside provider, otherwise fall back to direct dispatch
-    const { dispatchTOILEvent } = useTOILEvents();
-    dispatchTOILEvent({
-      type: 'toil-updated',
-      data: summary,
-      userId: summary.userId
-    });
-    return true;
-  } catch (error) {
-    // Fall back to direct dispatch methods
-    logger.debug('Context not available, using direct dispatch methods');
-    
-    // Dispatch DOM event for backward compatibility
-    const event = new CustomEvent('toil:summary-updated', { detail: summary });
-    window.dispatchEvent(event);
-    
-    // Dispatch through timeEventsService
-    timeEventsService.publish('toil-updated', {
-      userId: summary.userId,
-      monthYear: summary.monthYear,
-      summary
-    });
-    
-    logger.debug('TOIL summary update events dispatched:', summary);
-    return true;
-  }
+  // Use the central event bus directly
+  eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary);
+  logger.debug('TOIL summary update dispatched:', summary);
+  return true;
 };
 
 // Export the enhanced dispatch function to replace the original one

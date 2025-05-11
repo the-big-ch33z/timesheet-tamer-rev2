@@ -6,3 +6,6 @@ export {
   DebugPanel,
   WorkHoursContent
 };
+
+// Re-export from work-hours directory for backward compatibility
+export { WorkHoursInterface } from '../work-hours';
