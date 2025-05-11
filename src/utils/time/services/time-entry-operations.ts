@@ -27,9 +27,8 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
     };
     
     // Initialize with correct parameters order
-    // Pass eventManager first, then the config to match the constructor signature
     this.createOps = new CreateOperations(this.eventManager, completeConfig);
-    this.updateOps = new UpdateOperations(config, this.invalidateCache, this.getAllEntries, this.eventManager);
+    this.updateOps = new UpdateOperations(completeConfig, this.invalidateCache, this.getAllEntries, this.eventManager);
     this.deleteOps = new DeleteOperations(this.eventManager, completeConfig);
     
     console.log("[TimeEntryOperations] Initialized with config:", {
