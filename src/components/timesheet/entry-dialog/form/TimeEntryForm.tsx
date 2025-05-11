@@ -133,7 +133,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
           <FormFields 
             formState={formState} 
             onChange={handleFieldChange} 
-            disabled={disabled || isSubmitting}
+            disabled={isSubmitting}
           />
           
           <FormButtons 
