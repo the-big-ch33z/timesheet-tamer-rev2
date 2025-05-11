@@ -50,6 +50,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   // Memoize days calculation
   const days = useMemo(() => {
     if (DEBUG_CALENDAR) logger.debug("Calculating calendar grid days");
+    console.log("[CalendarGrid] Calculating calendar days for", format(currentMonth, 'MMMM yyyy'));
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
@@ -59,12 +60,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
 
   // Memoize RDO shift calculation
   const shiftedRDOMap = useMemo(() => {
+    console.log("[CalendarGrid] Calculating shifted RDOs");
     return getShiftedRDOsForMonth(days, workSchedule, holidays);
   }, [days, workSchedule, holidays]);
 
   // Memoize heavy day data calculations
   const daysData = useMemo(() => {
     if (DEBUG_CALENDAR) logger.debug("Pre-calculating calendar days data");
+    console.log("[CalendarGrid] Pre-calculating all day data");
     const monthStart = startOfMonth(currentMonth);
     const calculatedData = [];
     
@@ -113,8 +116,27 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         shiftReason = shiftInfo.reason;
       }
 
-      // NEW: Check for TOIL records for this day
-      const toilInfo: TOILDayInfo = hasTOILForDay(userId, day);
+      // Add logging for TOIL check
+      console.log(`[CalendarGrid] Checking TOIL for day: ${format(day, 'yyyy-MM-dd')}`);
+      
+      // Check for TOIL records for this day
+      let toilInfo: TOILDayInfo = {
+        hasAccrued: false,
+        hasUsed: false,
+        toilHours: 0
+      };
+
+      try {
+        // Use the hasTOILForDay function if available
+        if (typeof hasTOILForDay === 'function') {
+          toilInfo = hasTOILForDay(userId, day);
+          console.log(`[CalendarGrid] TOIL for ${format(day, 'yyyy-MM-dd')}: accrued=${toilInfo.hasAccrued}, used=${toilInfo.hasUsed}, hours=${toilInfo.toilHours}`);
+        } else {
+          console.log(`[CalendarGrid] hasTOILForDay function not available, using default values`);
+        }
+      } catch (error) {
+        console.error(`[CalendarGrid] Error checking TOIL for day ${format(day, 'yyyy-MM-dd')}:`, error);
+      }
 
       calculatedData.push({
         day,
@@ -141,6 +163,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       });
     }
     
+    console.log(`[CalendarGrid] Completed calculation for ${calculatedData.length} days`);
     return calculatedData;
   }, [
     days,

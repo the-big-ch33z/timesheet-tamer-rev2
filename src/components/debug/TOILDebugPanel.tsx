@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,27 +51,34 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       setIsProcessing(true);
       
       const loadData = async () => {
-        // Load TOIL records
+        // Load TOIL records with proper logging
         try {
-          const allRecords = loadTOILRecords();
-          const userRecords = allRecords.filter(r => r.userId === userId);
-          setToilRecords(userRecords);
+          console.log(`[TOILDebugPanel] Loading TOIL records for user ${userId}`);
+          const allRecords = loadTOILRecords(userId) as TOILRecord[];
+          console.log(`[TOILDebugPanel] Loaded ${allRecords.length} TOIL records`);
+          setToilRecords(allRecords || []);
           
-          const allUsage = loadTOILUsage();
-          const userUsage = allUsage.filter(u => u.userId === userId);
-          setToilUsage(userUsage);
+          console.log(`[TOILDebugPanel] Loading TOIL usage for user ${userId}`);
+          const allUsage = loadTOILUsage(userId) as TOILUsage[];
+          console.log(`[TOILDebugPanel] Loaded ${allUsage.length} TOIL usage records`);
+          setToilUsage(allUsage || []);
           
           // Get summary
+          console.log(`[TOILDebugPanel] Getting TOIL summary for user ${userId}`);
           const userSummary = toilService.getTOILSummary(userId, monthYear);
+          console.log(`[TOILDebugPanel] TOIL summary:`, userSummary);
           setSummary(userSummary);
           
           // Get event history
           const history = timeEventsService.getEventHistory?.() || [];
-          setEventHistory(history.filter(evt => evt.type.includes('toil')));
+          const filteredHistory = history.filter(evt => evt.type.includes('toil'));
+          console.log(`[TOILDebugPanel] Found ${filteredHistory.length} TOIL events`);
+          setEventHistory(filteredHistory);
           
           setStatus({message: 'Data loaded successfully', type: 'success'});
         } catch (error) {
           logger.error('Error loading TOIL debug data:', error);
+          console.error(`[TOILDebugPanel] Error loading TOIL debug data:`, error);
           setStatus({message: 'Error loading data', type: 'error'});
         } finally {
           setIsProcessing(false);
@@ -82,6 +88,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       loadData();
     } catch (error) {
       logger.error('Error in TOIL debug panel setup:', error);
+      console.error(`[TOILDebugPanel] Error in TOIL debug panel setup:`, error);
       setStatus({message: 'Error in debug panel setup', type: 'error'});
       setIsProcessing(false);
     }
@@ -92,6 +99,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     const subscription = timeEventsService.subscribe('toil-updated', (data) => {
       if (data.userId === userId) {
         logger.debug('TOIL update detected in debug panel:', data);
+        console.log('[TOILDebugPanel] TOIL update detected:', data);
         // Trigger refresh
         setRefreshCount(prev => prev + 1);
         setStatus({message: 'TOIL update detected', type: 'info'});
@@ -104,6 +112,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       const data = customEvent.detail;
       if (data?.userId === userId) {
         logger.debug('TOIL DOM event detected in debug panel:', data);
+        console.log('[TOILDebugPanel] TOIL DOM event detected:', data);
         setRefreshCount(prev => prev + 1);
         setStatus({message: 'TOIL DOM event detected', type: 'info'});
       }
@@ -123,6 +132,8 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     setIsProcessing(true);
     
     try {
+      console.log('[TOILDebugPanel] Manual TOIL calculation triggered');
+      
       if (onCalculateTOIL) {
         onCalculateTOIL();
       } else {
@@ -142,6 +153,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       }, 500);
     } catch (error) {
       logger.error('Error in manual TOIL calculation:', error);
+      console.error('[TOILDebugPanel] Error in manual TOIL calculation:', error);
       setStatus({message: 'Error calculating TOIL', type: 'error'});
       setIsProcessing(false);
     }
@@ -153,6 +165,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       setStatus({message: 'Clearing cache...', type: 'info'});
       setIsProcessing(true);
       
+      console.log('[TOILDebugPanel] Clearing TOIL cache');
       toilService.clearCache();
       logger.debug('TOIL cache cleared');
       
@@ -163,6 +176,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       }, 300);
     } catch (error) {
       logger.error('Error clearing TOIL cache:', error);
+      console.error('[TOILDebugPanel] Error clearing TOIL cache:', error);
       setStatus({message: 'Error clearing cache', type: 'error'});
       setIsProcessing(false);
     }
@@ -174,8 +188,10 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       setStatus({message: 'Running cleanup...', type: 'info'});
       setIsProcessing(true);
       
+      console.log(`[TOILDebugPanel] Running cleanup for user ${userId}`);
       const recordsRemoved = await cleanupDuplicateTOILRecords(userId);
       const usageRemoved = await cleanupDuplicateTOILUsage(userId);
+      console.log(`[TOILDebugPanel] Cleanup removed ${recordsRemoved} records and ${usageRemoved} usage entries`);
       
       setTimeout(() => {
         setRefreshCount(prev => prev + 1);
@@ -187,6 +203,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       }, 300);
     } catch (error) {
       logger.error('Error during TOIL cleanup:', error);
+      console.error('[TOILDebugPanel] Error during TOIL cleanup:', error);
       setStatus({message: 'Error during cleanup', type: 'error'});
       setIsProcessing(false);
     }
@@ -245,20 +262,26 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
       </CardHeader>
       
       {expanded && (
-        <>
-          {status && (
-            <Alert variant={status.type === 'error' ? 'destructive' : 'default'} className="mx-4 mt-2 py-2">
-              <div className="flex gap-2 items-center">
-                {status.type === 'error' && <AlertCircle className="h-4 w-4" />}
-                {status.type === 'success' && <Check className="h-4 w-4" />}
-                {status.type === 'info' && <RefreshCw className="h-4 w-4" />}
-                <AlertTitle className="text-sm">{status.message}</AlertTitle>
-              </div>
-            </Alert>
-          )}
+        <div>
+          <div className="px-4 pt-2">
+            {status && (
+              <Alert variant={status.type === 'error' ? 'destructive' : 'default'} className="mb-4 py-2">
+                <div className="flex gap-2 items-center">
+                  {status.type === 'error' && <AlertCircle className="h-4 w-4" />}
+                  {status.type === 'success' && <Check className="h-4 w-4" />}
+                  {status.type === 'info' && <RefreshCw className="h-4 w-4" />}
+                  <AlertTitle className="text-sm">{status.message}</AlertTitle>
+                </div>
+              </Alert>
+            )}
+            
+            <div className="text-sm mb-2">
+              <span className="font-medium">Current State:</span> {toilRecords.length} records, {toilUsage.length} usage entries
+            </div>
+          </div>
           
           <Tabs value={tab} className="w-full" onValueChange={setTab}>
-            <div className="px-4 pt-2">
+            <div className="px-4">
               <TabsList className="grid grid-cols-4">
                 <TabsTrigger value="records">Records ({toilRecords.length})</TabsTrigger>
                 <TabsTrigger value="usage">Usage ({toilUsage.length})</TabsTrigger>
@@ -270,69 +293,57 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
             <CardContent className="p-4">
               <TabsContent value="records">
                 <div className="max-h-60 overflow-y-auto text-xs">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="p-2">Date</th>
-                        <th className="p-2">Hours</th>
-                        <th className="p-2">Entry ID</th>
-                        <th className="p-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {toilRecords.length === 0 && (
+                  {toilRecords.length === 0 ? (
+                    <div className="p-4 text-center bg-gray-50">No TOIL records found</div>
+                  ) : (
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-100">
                         <tr>
-                          <td colSpan={4} className="p-2 text-center">No TOIL records found</td>
+                          <th className="p-2">Date</th>
+                          <th className="p-2">Hours</th>
+                          <th className="p-2">ID</th>
+                          <th className="p-2">Status</th>
                         </tr>
-                      )}
-                      {toilRecords.map(record => (
-                        <tr key={record.id} className="border-t border-slate-200">
-                          <td className="p-2">{formatDate(record.date)}</td>
-                          <td className="p-2">{record.hours.toFixed(2)}</td>
-                          <td className="p-2 font-mono text-[10px]">
-                            {record.entryId.substring(0, 8)}...
-                          </td>
-                          <td className="p-2">
-                            <Badge variant={record.status === 'active' ? 'default' : 
-                                           record.status === 'used' ? 'secondary' : 
-                                           'outline'}>
-                              {record.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {toilRecords.map((record, i) => (
+                          <tr key={record.id || i} className="border-t border-slate-200">
+                            <td className="p-2">{formatDate(record.date)}</td>
+                            <td className="p-2">{record.hours?.toFixed(2) || 'N/A'}</td>
+                            <td className="p-2 font-mono text-[10px]">{record.id?.substring(0, 8) || 'N/A'}</td>
+                            <td className="p-2">{record.status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </TabsContent>
               
               <TabsContent value="usage">
                 <div className="max-h-60 overflow-y-auto text-xs">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="p-2">Date</th>
-                        <th className="p-2">Hours</th>
-                        <th className="p-2">Entry ID</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {toilUsage.length === 0 && (
+                  {toilUsage.length === 0 ? (
+                    <div className="p-4 text-center bg-gray-50">No TOIL usage found</div>
+                  ) : (
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-100">
                         <tr>
-                          <td colSpan={3} className="p-2 text-center">No TOIL usage found</td>
+                          <th className="p-2">Date</th>
+                          <th className="p-2">Hours</th>
+                          <th className="p-2">Entry ID</th>
                         </tr>
-                      )}
-                      {toilUsage.map(usage => (
-                        <tr key={usage.id} className="border-t border-slate-200">
-                          <td className="p-2">{formatDate(usage.date)}</td>
-                          <td className="p-2">{usage.hours.toFixed(2)}</td>
-                          <td className="p-2 font-mono text-[10px]">
-                            {usage.entryId.substring(0, 8)}...
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {toilUsage.map((usage, i) => (
+                          <tr key={usage.id || i} className="border-t border-slate-200">
+                            <td className="p-2">{formatDate(usage.date)}</td>
+                            <td className="p-2">{usage.hours?.toFixed(2) || 'N/A'}</td>
+                            <td className="p-2 font-mono text-[10px]">{usage.entryId?.substring(0, 8) || 'N/A'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </TabsContent>
               
@@ -341,15 +352,15 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
                   <div className="grid grid-cols-3 gap-2">
                     <div className="p-2 bg-green-50 rounded">
                       <div className="font-medium">Accrued</div>
-                      <div className="text-2xl font-bold">{summary?.accrued.toFixed(2)}h</div>
+                      <div className="text-2xl font-bold">{summary?.accrued.toFixed(2) || '0.00'}h</div>
                     </div>
                     <div className="p-2 bg-red-50 rounded">
                       <div className="font-medium">Used</div>
-                      <div className="text-2xl font-bold">{summary?.used.toFixed(2)}h</div>
+                      <div className="text-2xl font-bold">{summary?.used.toFixed(2) || '0.00'}h</div>
                     </div>
                     <div className="p-2 bg-blue-50 rounded">
                       <div className="font-medium">Remaining</div>
-                      <div className="text-2xl font-bold">{summary?.remaining.toFixed(2)}h</div>
+                      <div className="text-2xl font-bold">{summary?.remaining.toFixed(2) || '0.00'}h</div>
                     </div>
                   </div>
                   
@@ -377,33 +388,30 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
               
               <TabsContent value="events">
                 <div className="max-h-60 overflow-y-auto text-xs">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="p-2">Time</th>
-                        <th className="p-2">Event</th>
-                        <th className="p-2">Data</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {eventHistory.length === 0 && (
+                  {eventHistory.length === 0 ? (
+                    <div className="p-4 text-center bg-gray-50">No events recorded</div>
+                  ) : (
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-100">
                         <tr>
-                          <td colSpan={3} className="p-2 text-center">No events recorded</td>
+                          <th className="p-2">Time</th>
+                          <th className="p-2">Event</th>
+                          <th className="p-2">Data</th>
                         </tr>
-                      )}
-                      {eventHistory.map((evt, index) => (
-                        <tr key={index} className="border-t border-slate-200">
-                          <td className="p-2">{new Date(evt.time).toLocaleTimeString()}</td>
-                          <td className="p-2">
-                            <Badge variant="outline">{evt.type}</Badge>
-                          </td>
-                          <td className="p-2 font-mono text-[10px]">
-                            {JSON.stringify(evt.data).substring(0, 50)}...
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {eventHistory.map((evt, i) => (
+                          <tr key={i} className="border-t border-slate-200">
+                            <td className="p-2">{new Date(evt.time).toLocaleTimeString()}</td>
+                            <td className="p-2">{evt.type}</td>
+                            <td className="p-2 font-mono text-[10px]">
+                              {JSON.stringify(evt.data).substring(0, 30)}...
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </TabsContent>
             </CardContent>
@@ -413,7 +421,10 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => setRefreshCount(prev => prev + 1)}
+              onClick={() => {
+                console.log('[TOILDebugPanel] Manual refresh triggered');
+                setRefreshCount(prev => prev + 1);
+              }}
               disabled={isProcessing}
               className="flex gap-1 items-center"
             >
@@ -447,7 +458,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
               Calculate TOIL
             </Button>
           </CardFooter>
-        </>
+        </div>
       )}
     </Card>
   );

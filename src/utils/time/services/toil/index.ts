@@ -13,3 +13,26 @@ export {
   // TOIL_RECORDS_KEY, 
   // TOIL_USAGE_KEY
 } from './types';
+
+// Make sure the critical functions are properly exported
+import { 
+  getTOILSummary,
+  findTOILRecordsByEntryId,
+  deleteTOILRecordByEntryId,
+  hasTOILForDay,
+  hasTOILForMonth,
+  TOILDayInfo
+} from './storage';
+
+// Re-export them
+export {
+  getTOILSummary,
+  findTOILRecordsByEntryId,
+  deleteTOILRecordByEntryId,
+  hasTOILForDay,
+  hasTOILForMonth,
+  TOILDayInfo
+};
+
+// Add debugging exports for tracking calls
+console.log('[TOIL-INDEX] TOIL module loaded and configured');

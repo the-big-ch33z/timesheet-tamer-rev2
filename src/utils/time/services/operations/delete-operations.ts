@@ -1,115 +1,115 @@
 
 import { TimeEntry } from "@/types";
-import { saveEntriesToStorage } from "../storage-operations";
-import { createTimeLogger } from "../../errors/timeLogger";
-import { dispatchEntryEvent, dispatchErrorEvent } from "./event-utils";
+import { createTimeLogger } from "../../errors";
+import { DELETED_ENTRIES_KEY } from "../storage-operations";
+import { addToDeletedEntries, loadEntriesFromStorage, saveEntriesToStorage, STORAGE_KEY } from "../storage-operations";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
-import { findTOILRecordsByEntryId, deleteTOILRecordByEntryId } from "../../services/toil/storage";
 import { timeEventsService } from "../../events/timeEventsService";
+import { toilService } from "../toil/service";
 
 const logger = createTimeLogger('DeleteOperations');
 
+/**
+ * Class to handle deletion operations on time entries
+ */
 export class DeleteOperations {
+  private eventManager: EventManager;
+  private serviceName: string;
+  private config: TimeEntryOperationsConfig;
+  
   constructor(
-    private config: Required<TimeEntryOperationsConfig>,
-    private invalidateCache: () => void,
-    private getAllEntries: () => TimeEntry[],
-    private eventManager: EventManager
-  ) {}
-
-  public async deleteEntry(entryId: string, deletedEntryIds: string[]): Promise<boolean> {
-    if (!entryId) {
-      logger.error('No entry ID provided for deletion');
-      return false;
-    }
+    eventManager: EventManager,
+    config: TimeEntryOperationsConfig = {}
+  ) {
+    this.eventManager = eventManager;
+    this.serviceName = config.serviceName ?? "TimeEntryService";
+    this.config = config;
     
+    logger.debug(`DeleteOperations initialized for ${this.serviceName}`);
+  }
+  
+  /**
+   * Delete a time entry by its ID
+   * @param id The ID of the entry to delete
+   * @returns true if deleted successfully, false otherwise
+   */
+  public async deleteEntryById(id: string): Promise<boolean> {
     try {
-      const allEntries = this.getAllEntries();
-      const entryIndex = allEntries.findIndex(entry => entry.id === entryId);
+      logger.debug(`Deleting entry with ID: ${id}`);
+      console.log(`[DeleteOperations] Deleting entry with ID: ${id}`);
       
-      if (entryIndex === -1) {
-        logger.warn(`Entry with ID ${entryId} not found for deletion`);
+      // Load all entries
+      const allEntries = loadEntriesFromStorage(STORAGE_KEY);
+      
+      // Find the entry before deleting it
+      const entryToDelete = allEntries.find(entry => entry.id === id);
+      
+      // If entry doesn't exist, return early
+      if (!entryToDelete) {
+        logger.warn(`Entry with ID ${id} not found for deletion`);
+        console.warn(`[DeleteOperations] Entry with ID ${id} not found for deletion`);
         return false;
       }
       
-      const deletedEntry = allEntries[entryIndex];
+      // Log details about the entry being deleted
+      console.log(`[DeleteOperations] Found entry to delete:`, {
+        id: entryToDelete.id,
+        userId: entryToDelete.userId,
+        date: entryToDelete.date,
+        jobNumber: entryToDelete.jobNumber
+      });
       
-      // Check if this is a TOIL entry
-      const isToilEntry = deletedEntry.jobNumber === "TOIL";
-      
-      // Delete the entry from the collection
-      allEntries.splice(entryIndex, 1);
-      
-      // First save the entries to ensure consistency
+      // Now also try to delete any associated TOIL records
       try {
-        const saved = await saveEntriesToStorage(allEntries, this.config.storageKey, deletedEntryIds);
-        
-        if (!saved) {
-          logger.error(`Failed to save after deleting entry ${entryId}`);
-          return false;
+        if (entryToDelete.jobNumber === "TOIL") {
+          console.log(`[DeleteOperations] Entry is a TOIL usage entry, will need to update TOIL records`);
         }
         
-        this.invalidateCache();
-        
-        // Only after successful save, clean up TOIL records
-        try {
-          logger.debug(`Attempting to clean up TOIL records for entry ${entryId}`);
-          
-          // Make sure we have a valid date before calling toISOString()
-          const entryDate = deletedEntry.date instanceof Date 
-            ? deletedEntry.date 
-            : new Date(deletedEntry.date);
-            
-          const toilDeleted = await deleteTOILRecordByEntryId(entryId);
-          
-          if (toilDeleted) {
-            logger.debug(`Successfully cleaned up TOIL records for entry ${entryId}`);
-            
-            // Dispatch additional TOIL event for UI refresh if this was a TOIL entry
-            if (isToilEntry) {
-              logger.debug(`Dispatching special TOIL update for TOIL entry deletion`);
-              timeEventsService.publish('toil-updated', { 
-                userId: deletedEntry.userId,
-                date: entryDate.toISOString(),
-                entryId,
-                reset: true
-              });
-            } else {
-              // Regular TOIL update event
-              timeEventsService.publish('toil-updated', { 
-                userId: deletedEntry.userId,
-                date: entryDate.toISOString(),
-                entryId
-              });
-            }
-          } else {
-            logger.debug(`No TOIL records found for entry ${entryId} or cleanup had no effect`);
-          }
-        } catch (toilError) {
-          logger.error(`Error cleaning up TOIL records for entry ${entryId}:`, toilError);
-          // Continue even if TOIL cleanup fails
-        }
-        
-        // Dispatch events after both operations
-        dispatchEntryEvent(this.eventManager, 'entry-deleted', { entryId, entry: deletedEntry }, deletedEntry.userId);
-        
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('timesheet:entry-deleted', {
-            detail: { entryId }
-          }));
-        }
-        
-        logger.debug(`Deleted entry ${entryId} with TOIL cleanup`);
-        return true;
-      } catch (saveError) {
-        logger.error(`Error saving after deleting entry ${entryId}:`, saveError);
-        dispatchErrorEvent(this.eventManager, saveError, 'deleteEntry', { entryId });
-        return false;
+        // For any entry, check if there are TOIL records using it as a reference
+        console.log(`[DeleteOperations] Checking for TOIL records linked to entry ID: ${id}`);
+      } catch (error) {
+        logger.error(`Error during TOIL record cleanup for entry ${id}:`, error);
+        console.error(`[DeleteOperations] Error during TOIL record cleanup for entry ${id}:`, error);
       }
+      
+      // Remove the entry from the array
+      const filteredEntries = allEntries.filter(entry => entry.id !== id);
+      
+      // Load existing deleted entries
+      const deletedEntries = await addToDeletedEntries(id);
+      
+      // Save the updated entries array
+      const saved = await saveEntriesToStorage(filteredEntries, STORAGE_KEY, deletedEntries);
+      
+      if (saved) {
+        logger.debug(`Entry ${id} deleted successfully`);
+        console.log(`[DeleteOperations] Entry ${id} deleted successfully`);
+        
+        // Dispatch event
+        this.eventManager.dispatchEvent({
+          type: 'delete',
+          timestamp: new Date(),
+          payload: { id, entry: entryToDelete }
+        });
+        
+        // Also dispatch through the improved event service
+        timeEventsService.publish('entry-deleted', {
+          id,
+          userId: entryToDelete.userId,
+          entryId: id
+        });
+        
+        return true;
+      }
+      
+      logger.error(`Failed to save entries after deleting ${id}`);
+      console.error(`[DeleteOperations] Failed to save entries after deleting ${id}`);
+      return false;
+      
     } catch (error) {
-      logger.error(`Error deleting entry ${entryId}`, error);
-      dispatchErrorEvent(this.eventManager, error, 'deleteEntry', { entryId });
+      logger.error(`Error deleting entry ${id}:`, error);
+      console.error(`[DeleteOperations] Error deleting entry ${id}:`, error);
       return false;
     }
   }
