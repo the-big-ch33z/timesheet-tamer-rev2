@@ -23,6 +23,7 @@ export interface UseTimeEntryFormProps {
 }
 
 export interface UseTimeEntryFormReturn {
+  id: string; // Added the id property to fix TypeScript errors
   formState: TimeEntryFormState;
   handleFieldChange: (field: string, value: string) => void;
   handleSave: () => void;
