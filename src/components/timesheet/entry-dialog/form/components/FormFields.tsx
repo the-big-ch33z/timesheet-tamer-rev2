@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { FormState } from '@/hooks/form/useFormState';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +11,14 @@ type FormFieldsProps = {
   onChange: (field: string, value: string) => void;
   disabled?: boolean;
 };
+
+// Define the FormState type locally since it's not exported from useFormState
+interface FormState {
+  fields: Record<string, FormField>;
+  isValid: boolean;
+  isDirty: boolean;
+  formEdited: boolean;
+}
 
 interface FormField {
   name?: string;
