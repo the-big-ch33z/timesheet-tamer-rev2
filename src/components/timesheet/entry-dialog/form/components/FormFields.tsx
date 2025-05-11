@@ -3,6 +3,7 @@ import React from "react";
 import HoursField from "../../fields/field-types/HoursField";
 import EntryField from "../../fields/EntryField";
 import { Textarea } from "@/components/ui/textarea";
+import { FormState } from "@/contexts/form/types";
 
 const FIELD_TYPES = {
   JOB_NUMBER: "jobNumber",
@@ -13,24 +14,15 @@ const FIELD_TYPES = {
 };
 
 interface FormFieldsProps {
-  formState: {
-    fields: {
-      hours: { value: string; error?: string },
-      description: { value: string; error?: string },
-      jobNumber: { value: string; error?: string },
-      taskNumber: { value: string; error?: string },
-      rego: { value: string; error?: string }
-    }
-  };
+  formState: FormState;
   setFieldValue: (field: string, value: string) => void;
 }
 
 const renderFormField = (
   fieldType: string, 
-  value: string, 
+  formField: { value: any, error?: string }, 
   onChange: (value: string) => void, 
-  required = false, 
-  error?: string
+  required = false
 ) => {
   const fieldConfig = {
     [FIELD_TYPES.JOB_NUMBER]: {
@@ -54,13 +46,13 @@ const renderFormField = (
         <EntryField 
           id={fieldType} 
           name={config.name} 
-          value={value} 
+          value={formField.value} 
           onChange={onChange} 
           placeholder={config.placeholder} 
           required={required} 
           {...(fieldType === FIELD_TYPES.HOURS ? { type: "number", min: "0.25", step: "0.25" } : {})}
         />
-        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+        {formField.error && <p className="text-red-500 text-sm mt-1">{formField.error}</p>}
       </div>
     );
   }
@@ -68,13 +60,20 @@ const renderFormField = (
 };
 
 export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue }) => {
+  // Extract the fields from formState or provide fallbacks for safety
+  const hoursField = formState.fields[FIELD_TYPES.HOURS] || { value: '', touched: false };
+  const descriptionField = formState.fields[FIELD_TYPES.DESCRIPTION] || { value: '', touched: false };
+  const jobNumberField = formState.fields[FIELD_TYPES.JOB_NUMBER] || { value: '', touched: false };
+  const regoField = formState.fields[FIELD_TYPES.REGO] || { value: '', touched: false };
+  const taskNumberField = formState.fields[FIELD_TYPES.TASK_NUMBER] || { value: '', touched: false };
+
   return (
     <>
       <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full md:w-24">
           <HoursField 
             id="hours" 
-            value={formState.fields.hours.value}
+            value={hoursField.value}
             onChange={(value) => {
               let numValue = parseFloat(value);
               if (!isNaN(numValue)) {
@@ -87,15 +86,15 @@ export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue
             }} 
             required={true} 
           />
-          {formState.fields.hours.error && (
-            <p className="text-red-500 text-sm mt-1">{formState.fields.hours.error}</p>
+          {hoursField.error && (
+            <p className="text-red-500 text-sm mt-1">{hoursField.error}</p>
           )}
         </div>
         
         <div className="w-full md:w-32">
           {renderFormField(
             FIELD_TYPES.JOB_NUMBER, 
-            formState.fields.jobNumber.value, 
+            jobNumberField, 
             value => setFieldValue(FIELD_TYPES.JOB_NUMBER, value)
           )}
         </div>
@@ -103,7 +102,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue
         <div className="w-full md:w-24">
           {renderFormField(
             FIELD_TYPES.REGO, 
-            formState.fields.rego.value, 
+            regoField, 
             value => setFieldValue(FIELD_TYPES.REGO, value)
           )}
         </div>
@@ -111,7 +110,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue
         <div className="w-full md:w-32">
           {renderFormField(
             FIELD_TYPES.TASK_NUMBER, 
-            formState.fields.taskNumber.value, 
+            taskNumberField, 
             value => setFieldValue(FIELD_TYPES.TASK_NUMBER, value)
           )}
         </div>
@@ -120,7 +119,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue
       <div>
         <label className="block text-sm font-medium mb-1">Description</label>
         <Textarea 
-          value={formState.fields.description.value} 
+          value={descriptionField.value} 
           onChange={e => setFieldValue(FIELD_TYPES.DESCRIPTION, e.target.value)}
           placeholder="Enter description"
           className="w-full"

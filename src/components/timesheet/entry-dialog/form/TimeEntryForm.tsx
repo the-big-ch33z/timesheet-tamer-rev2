@@ -63,7 +63,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
 
     try {
       // Get the hours value as a string
-      const hoursValue = formState.fields.hours.value;
+      const hoursValue = formState.fields.hours?.value || '';
       console.debug(`[TimeEntryForm] Raw hours value from form: "${hoursValue}" (${typeof hoursValue})`);
       
       if (!validateSubmission(hoursValue)) {
@@ -79,10 +79,10 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         date,
         userId,
         hours: hoursNum,
-        description: formState.fields.description.value || "",
-        jobNumber: formState.fields.jobNumber.value || undefined,
-        taskNumber: formState.fields.taskNumber.value || undefined,
-        rego: formState.fields.rego.value || undefined,
+        description: formState.fields.description?.value || "",
+        jobNumber: formState.fields.jobNumber?.value || undefined,
+        taskNumber: formState.fields.taskNumber?.value || undefined,
+        rego: formState.fields.rego?.value || undefined,
         project: "General"
       };
       
