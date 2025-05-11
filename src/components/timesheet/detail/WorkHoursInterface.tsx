@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useWorkHoursActions } from "./hooks/useWorkHoursActions";
@@ -10,11 +11,6 @@ import { useHoursCalculation } from "./work-hours/useHoursCalculation";
 import { useBreakAdjustments } from "./work-hours/useBreakAdjustments";
 import { useToilEffects } from "./work-hours/useToilEffects";
 
-/**
- * WorkHoursInterface Component
- * Main component for displaying and managing work hours
- * Uses a collection of specialized hooks for different functionalities
- */
 const logger = createTimeLogger('WorkHoursInterface');
 
 const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
