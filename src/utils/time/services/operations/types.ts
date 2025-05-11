@@ -3,8 +3,8 @@ import { TimeEntry } from "@/types";
 
 // Define comprehensive configuration for TimeEntry operations
 export interface TimeEntryOperationsConfig {
-  serviceName?: string;
-  storageKey?: string;
+  serviceName: string;
+  storageKey: string;
   validateOnSave?: boolean;
   enableAuditing?: boolean;
   enableCache?: boolean;
@@ -17,5 +17,5 @@ export interface TimeEntryBaseOperations {
   deleteEntry: (entryId: string, deletedEntryIds: string[]) => Promise<boolean>;
 }
 
-// Event system types
+// Event system types - Ensure it's compatible with the system's event types
 export type TimeEntryEventType = 'create' | 'update' | 'delete' | 'validation';

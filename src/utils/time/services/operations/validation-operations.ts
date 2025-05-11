@@ -11,8 +11,8 @@ const logger = createTimeLogger('ValidationOperations');
 export class ValidationOperations {
   private serviceName: string;
   
-  constructor(config: TimeEntryOperationsConfig = {}) {
-    this.serviceName = config.serviceName ?? "TimeEntryService";
+  constructor(config: TimeEntryOperationsConfig) {
+    this.serviceName = config.serviceName;
     logger.debug(`ValidationOperations initialized for ${this.serviceName}`);
     console.log(`[ValidationOperations] ValidationOperations initialized for ${this.serviceName}`);
   }

@@ -18,11 +18,11 @@ export class CreateOperations {
   
   constructor(
     eventManager: EventManager,
-    config: TimeEntryOperationsConfig = {}
+    config: TimeEntryOperationsConfig
   ) {
     this.eventManager = eventManager;
-    this.serviceName = config.serviceName ?? "TimeEntryService";
-    this.storageKey = config.storageKey ?? "timeEntries";
+    this.serviceName = config.serviceName;
+    this.storageKey = config.storageKey;
     
     logger.debug(`CreateOperations initialized for ${this.serviceName}`);
     console.log(`[CreateOperations] CreateOperations initialized for ${this.serviceName}`);
@@ -45,7 +45,6 @@ export class CreateOperations {
       jobNumber: entry.jobNumber || '',
       hours: entry.hours || 0,
       description: entry.description || '',
-      createdAt: now,
       updatedAt: now,
       // Don't include location or other properties not in TimeEntry type
       ...entry

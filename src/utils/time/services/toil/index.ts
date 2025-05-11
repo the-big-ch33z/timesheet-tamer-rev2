@@ -33,7 +33,7 @@ export {
 };
 
 // Use export type to fix the TypeScript 'isolatedModules' issue
-export type { TOILDayInfo } from './storage';
+export type { TOILDayInfo } from './storage/queries';
 
 // Add debugging exports for tracking calls
 console.log('[TOIL-INDEX] TOIL module loaded and configured');

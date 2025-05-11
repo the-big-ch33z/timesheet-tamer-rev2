@@ -12,7 +12,7 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
   private deleteOps: DeleteOperations;
 
   constructor(
-    config: Required<TimeEntryOperationsConfig>,
+    config: TimeEntryOperationsConfig,
     private invalidateCache: () => void,
     private getAllEntries: () => TimeEntry[],
     private eventManager: EventManager
@@ -24,12 +24,12 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
   }
 
   public createEntry(entryData: Omit<TimeEntry, "id">, deletedEntryIds: string[]): string | null {
-    // Call createNewEntry and return the ID
-    const newEntry = this.createOps.createNewEntry(entryData);
-    if (newEntry && newEntry.id) {
+    // Call createEntry on CreateOperations
+    const newEntryId = this.createOps.createEntry(entryData, deletedEntryIds);
+    if (newEntryId) {
       // Invalidate cache after successful creation
       this.invalidateCache();
-      return newEntry.id;
+      return newEntryId;
     }
     return null;
   }
@@ -42,8 +42,8 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
   }
 
   public async deleteEntry(entryId: string, deletedEntryIds: string[]): Promise<boolean> {
-    // Call deleteEntryById and return the result
-    const result = await this.deleteOps.deleteEntryById(entryId);
+    // Call deleteEntry on DeleteOperations
+    const result = await this.deleteOps.deleteEntry(entryId, deletedEntryIds);
     if (result) {
       // Invalidate cache after successful deletion
       this.invalidateCache();
