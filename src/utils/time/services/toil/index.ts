@@ -5,7 +5,7 @@
  */
 
 // Export the main TOIL service
-export { toilService } from './toilService';
+export { toilService, TOIL_JOB_NUMBER } from './toilService';
 
 // Re-export types
 export type { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
@@ -35,8 +35,8 @@ export {
   hasTOILForMonth,
   getTOILSummary,
   
-  // Types
-  TOILDayInfo,
+  // Types - fix isolated modules error
+  type TOILDayInfo,
   
   // Cleanup
   cleanupDuplicateTOILRecords,

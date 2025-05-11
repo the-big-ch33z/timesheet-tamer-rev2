@@ -1,29 +1,92 @@
 
 /**
- * Centralized validation logic for TOIL hours.
+ * TOIL validation utilities
+ * 
+ * These functions help ensure TOIL records contain valid data
  */
 
-const MIN_TOIL_HOURS = 0;
-const MAX_TOIL_HOURS = 24; // Assuming a person cannot accrue/use more than 24h per day.
+import { TOILRecord, TOILUsage } from '@/types/toil';
+import { createTimeLogger } from '../errors/timeLogger';
 
-export function isValidTOILHours(hours: any): boolean {
-  // Must be a finite number, not NaN, not null, not undefined.
-  if (typeof hours !== "number" || !isFinite(hours)) return false;
-  // Must be within plausible range.
-  if (hours < MIN_TOIL_HOURS || hours > MAX_TOIL_HOURS) return false;
+const logger = createTimeLogger('TOILValidation');
+
+/**
+ * Validate that TOIL hours are within acceptable range
+ * @param hours Hours to validate
+ * @returns boolean True if hours are valid
+ */
+export const isValidTOILHours = (hours: number): boolean => {
+  // Hours must be positive and no more than 24
+  if (isNaN(hours) || hours < 0 || hours > 24) {
+    logger.debug(`Invalid TOIL hours: ${hours}`);
+    return false;
+  }
+  
   return true;
-}
+};
 
-export function getSanitizedTOILHours(hours: any): number {
-  // Clamp hours to [MIN, MAX], fallback to 0 for invalid input.
-  if (!isValidTOILHours(hours)) return 0;
-  return Number(hours);
-}
+/**
+ * Validate a complete TOIL record
+ * @param record TOIL record to validate
+ * @returns boolean True if record is valid
+ */
+export const validateTOILRecord = (record: TOILRecord): boolean => {
+  try {
+    if (!record) return false;
+    
+    // Check required fields
+    if (!record.id || !record.userId || !record.date || !record.monthYear) {
+      logger.debug(`Missing required fields in TOIL record`);
+      return false;
+    }
+    
+    // Validate hours
+    if (!isValidTOILHours(record.hours)) {
+      return false;
+    }
+    
+    // Check if entryId is present
+    if (!record.entryId) {
+      logger.debug(`TOIL record is missing entryId`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    logger.error(`Error validating TOIL record: ${error}`);
+    return false;
+  }
+};
 
-// Validation messages for UI or logs
-export function getTOILHoursValidationMessage(hours: any): string | null {
-  if (typeof hours !== "number" || isNaN(hours)) return "TOIL hours must be a number";
-  if (hours < MIN_TOIL_HOURS) return "TOIL hours cannot be negative";
-  if (hours > MAX_TOIL_HOURS) return `TOIL hours cannot exceed ${MAX_TOIL_HOURS} per day`;
-  return null;
-}
+/**
+ * Validate a TOIL usage record
+ * @param usage TOIL usage record to validate
+ * @returns boolean True if usage record is valid
+ */
+export const validateTOILUsage = (usage: TOILUsage): boolean => {
+  try {
+    if (!usage) return false;
+    
+    // Check required fields
+    if (!usage.id || !usage.userId || !usage.date || !usage.monthYear) {
+      logger.debug(`Missing required fields in TOIL usage`);
+      return false;
+    }
+    
+    // Validate hours
+    if (!isValidTOILHours(usage.hours)) {
+      return false;
+    }
+    
+    // Check if entryId is present
+    if (!usage.entryId) {
+      logger.debug(`TOIL usage is missing entryId`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    logger.error(`Error validating TOIL usage: ${error}`);
+    return false;
+  }
+};

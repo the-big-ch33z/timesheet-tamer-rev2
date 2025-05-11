@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
-import { toilService, TOIL_JOB_NUMBER } from '@/utils/time/services/toil';
+import { toilService } from '@/utils/time/services/toil';
+import { TOIL_JOB_NUMBER } from '@/utils/time/services/toil/toilService'; // Fixed import path
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';

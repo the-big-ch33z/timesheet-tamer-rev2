@@ -1,11 +1,10 @@
-
 import React, { useEffect } from "react";
 import { TimeEntry } from "@/types";
 import EntryList from "./EntryList";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
-import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil-service";
+import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil/toilService"; // Fixed import path
 
 const logger = createTimeLogger('ExistingEntriesList');
 

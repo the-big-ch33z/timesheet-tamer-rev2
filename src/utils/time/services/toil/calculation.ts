@@ -140,130 +140,54 @@ export function calculateDailyTOIL(
       date: new Date(date),
       hours: roundedToilHours,
       monthYear: format(date, 'yyyy-MM'),
-      entryId: primaryEntry.id,  // Link to the entry that generated this TOIL
+      entryId: primaryEntry.id,  
       status: 'active'
     };
     
-    logger.debug(`Created TOIL record for ${dateString}: ${roundedToilHours} hours`, toilRecord);
+    logger.debug(`Created TOIL record: ${JSON.stringify(toilRecord)}`);
+    
     return toilRecord;
   } catch (error) {
-    logger.error(`Error in calculateDailyTOIL: ${error instanceof Error ? error.message : String(error)}`, error);
+    logger.error(`Error calculating daily TOIL: ${error instanceof Error ? error.message : String(error)}`, error);
     return null;
   }
 }
 
 /**
- * Calculate TOIL hours for a given set of time entries
- * FIXED: Similar fix to ensure TOIL is only calculated for excess hours
+ * Calculate TOIL hours for a set of time entries
+ * This is a wrapper around calculateDailyTOIL that extracts just the hours
  */
-export function calculateTOILHours(
+export const calculateTOILHours = (
   entries: TimeEntry[],
   date: Date,
-  workSchedule: WorkSchedule, 
+  workSchedule: WorkSchedule,
   holidays: any[] = []
-): number {
+): number => {
   try {
-    // Filter only entries for the date
-    const dateString = format(date, 'yyyy-MM-dd');
-    const dayEntries = entries.filter(entry => {
-      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-      return format(entryDate, 'yyyy-MM-dd') === dateString;
-    });
-
-    if (!dayEntries.length) {
-      logger.debug(`No entries for date ${dateString}`);
-      return 0;
-    }
+    // First check if this is a holiday
+    const isHolidayDay = isHoliday(date, holidays);
     
-    // IMPORTANT: Filter out synthetic TOIL entries to prevent circular calculation
-    const nonToilEntries = dayEntries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
+    // Get the user ID from the first entry (they should all be the same)
+    const userId = entries[0]?.userId;
+    if (!userId) return 0;
     
-    if (nonToilEntries.length === 0) {
-      logger.debug(`Only synthetic TOIL entries found for ${dateString}, skipping TOIL calculation`);
-      return 0;
-    }
-    
-    // Check if it's a holiday or weekend
-    const isHolidayDay = isHoliday(date);
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    
-    // Get the scheduled hours for the day
-    const dayOfWeek = date.getDay();
-    const weekNumber = Math.floor(date.getDate() / 7);
-    let scheduledHours = 0;
-    
-    try {
-      // Calculate scheduled hours based on work schedule
-      const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
-      const week = weekNumber % 2;
-      const dayConfig = workSchedule.weeks[week]?.[weekday];
-      
-      if (dayConfig && dayConfig.startTime && dayConfig.endTime) {
-        scheduledHours = calculateDayHoursWithBreaks(
-          dayConfig.startTime, 
-          dayConfig.endTime, 
-          { 
-            lunch: !!dayConfig.breaks?.lunch, 
-            smoko: !!dayConfig.breaks?.smoko 
-          }
-        );
-      }
-      
-      // Enhanced logging
-      logger.debug(`Calculated scheduled hours for ${dateString}: ${scheduledHours}`);
-    } catch (error) {
-      logger.error('Error calculating TOIL hours:', error);
-      scheduledHours = 7.6; // Default
-    }
-    
-    // Calculate total hours worked from non-TOIL entries only
-    const totalHours = nonToilEntries.reduce((sum, entry) => sum + entry.hours, 0);
-    
-    // FIXED: Only count hours over scheduled hours as TOIL, unless weekend or holiday
-    // For holidays or weekends, count all hours as TOIL
-    const toilHours = (isHolidayDay || isWeekend) ? totalHours : Math.max(0, totalHours - scheduledHours);
-    
-    // Add more detailed logging
-    logger.debug(`
-      TOIL hours calculation:
-      - Date: ${dateString}
-      - Total hours: ${totalHours}
-      - Scheduled hours: ${scheduledHours}
-      - Is holiday: ${isHolidayDay}
-      - Is weekend: ${isWeekend}
-      - TOIL hours: ${toilHours}
-      - Entries count: ${nonToilEntries.length}
-    `);
-    
-    // Round to nearest quarter hour
-    const roundedToilHours = Math.round(toilHours * 4) / 4;
-    
-    // Don't return insignificant TOIL amounts (less than 0.01)
-    return isValidTOILHours(roundedToilHours) && roundedToilHours > 0.01 ? roundedToilHours : 0;
+    const record = calculateDailyTOIL(entries, date, userId, workSchedule);
+    return record ? record.hours : 0;
   } catch (error) {
-    logger.error(`Error in calculateTOILHours: ${error instanceof Error ? error.message : String(error)}`, error);
+    logger.error(`Error in calculateTOILHours: ${error instanceof Error ? error.message : String(error)}`);
     return 0;
   }
-}
+};
 
 /**
- * Create a new TOIL record
+ * Create a helper for holiday utility (in case the imported one is missing)
  */
-export function createTOILRecord(
-  userId: string, 
-  date: Date, 
-  hours: number,
-  entryId?: string
-): TOILRecord {
-  logger.debug(`Creating TOIL record: ${userId}, date: ${format(date, 'yyyy-MM-dd')}, hours: ${hours}`);
+export const isWeekendOrHoliday = (date: Date, holidays: any[] = []): boolean => {
+  // Check if it's a weekend (0 = Sunday, 6 = Saturday)
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
   
-  return {
-    id: uuidv4(),
-    userId,
-    date: new Date(date),
-    hours,
-    monthYear: format(date, 'yyyy-MM'),
-    entryId: entryId || uuidv4(), // If no entry ID provided, create a synthetic one
-    status: 'active'
-  };
-}
+  // Check if it's a defined holiday
+  const isHolidayDay = isHoliday(date, holidays);
+  
+  return isWeekend || isHolidayDay;
+};

@@ -1,9 +1,9 @@
 
 import React from "react";
 import EntryField from "../EntryField";
-import { TOIL_JOB_NUMBER } from "@/types/toil";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { TOIL_JOB_NUMBER } from "@/utils/time/services/toil/toilService"; // Fixed import path
 
 interface JobNumberFieldProps {
   id: string;
