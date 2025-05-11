@@ -1,160 +1,222 @@
 
-import { TimeEntry } from "@/types";
-import { TOILService, TOILBalanceEntry, TOILUsageEntry, TOIL_JOB_NUMBER } from '../service';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toilService } from '../toilService';
+import { 
+  clearAllTOILCaches, 
+  clearTOILStorageForMonth,
+  TOIL_RECORDS_KEY,
+  TOIL_USAGE_KEY
+} from '../storage';
+import { TOILRecord, TOILUsage } from '@/types/toil';
+import { TimeEntry } from '@/types';
+import { createTestEntry } from '@/utils/testing/mockUtils';
 
-// Create a mock WorkSchedule type that matches what the test needs
-interface WorkSchedule {
-  id: string;
-  name: string;
-  userId: string;
-  weeks: Record<1 | 2, Record<string, any>>;
-  rdoDays: Record<1 | 2, string[]>;
-}
+// Mock localStorage
+const mockLocalStorage = (() => {
+  let store: { [key: string]: string } = {};
+  return {
+    getItem: jest.fn((key: string) => store[key] || null),
+    setItem: jest.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
+    removeItem: jest.fn((key: string) => {
+      delete store[key];
+    })
+  };
+})();
 
-// Mock implementation for testing
-describe('TOILService', () => {
-  let toilService: TOILService;
+// Mock date functions
+const mockDateFns = {
+  format: jest.fn((date: Date, format: string) => '2025-05'),
+  isSameDay: jest.fn((date1: Date, date2: Date) => 
+    date1.toDateString() === date2.toDateString()
+  ),
+  isWeekend: jest.fn((date: Date) => {
+    const day = date.getDay();
+    return day === 0 || day === 6;
+  })
+};
+
+// Mock workday functions
+jest.mock('../../../scheduleUtils', () => ({
+  isWorkingDay: jest.fn(() => true),
+  calculateDayHours: jest.fn(() => 8),
+  isNonWorkingDay: jest.fn(() => false),
+  isHolidayDate: jest.fn(() => false)
+}));
+
+Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
+jest.mock('date-fns', () => mockDateFns);
+
+describe('TOIL Service', () => {
+  const userId = 'test-user';
+  const testDate = new Date('2025-05-10');
   
-  // Mock localStorage
   beforeEach(() => {
-    vi.resetAllMocks();
-    
-    // Mock localStorage
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-      key: vi.fn(),
-      length: 0
-    });
-    
-    // Initialize the service
-    toilService = new TOILService();
-    vi.spyOn(toilService, 'calculateBalance');
+    mockLocalStorage.clear();
+    clearAllTOILCaches();
+    jest.clearAllMocks();
   });
   
-  describe('initializing', () => {
-    it('should initialize properly', () => {
-      expect(toilService).toBeDefined();
-      expect(typeof toilService.calculateBalance).toBe('function');
-    });
-  });
-  
-  describe('Calculating TOIL from overtime', () => {
-    it('should calculate overtime hours correctly', async () => {
-      const originalFn = toilService.calculateBalance;
-      vi.spyOn(toilService, 'calculateBalance').mockImplementation(async (userId: string, date: Date) => {
-        return {
-          balance: 10,
-          accrued: 15,
-          used: 5,
-          lastUpdated: new Date()
-        };
-      });
+  describe('TOIL Record Management', () => {
+    it('should calculate and store TOIL for overtime entries', async () => {
+      // Create a test entry with overtime
+      const entries: TimeEntry[] = [
+        createTestEntry({
+          id: 'entry-1',
+          userId,
+          date: testDate,
+          hours: 10, // 2 hours overtime
+          description: 'Overtime work'
+        })
+      ];
       
-      // Get schedule for user
+      // Create a mock work schedule
       const mockSchedule = {
-        id: 'test-schedule',
-        name: 'Test Schedule',
-        userId: 'test-user',
-        weeks: [{}, {}],  // Simplified for test
-        rdoDays: [[], []] // Simplified for test
-      } as unknown as WorkSchedule;
+        userId,
+        defaultHours: 8,
+        schedule: [
+          { dayOfWeek: 1, hours: 8 },
+          { dayOfWeek: 2, hours: 8 },
+          { dayOfWeek: 3, hours: 8 },
+          { dayOfWeek: 4, hours: 8 },
+          { dayOfWeek: 5, hours: 8 }
+        ]
+      };
       
-      // Check if it calculates correctly
-      const result = await toilService.calculateOvertimeHours('test-user', new Date(), 9, mockSchedule);
-      expect(result).toBeDefined();
-      expect(typeof result).toBe('number');
+      // Calculate TOIL
+      const result = await toilService.calculateAndStoreTOIL(
+        entries,
+        testDate,
+        userId,
+        mockSchedule,
+        []
+      );
       
-      // Restore original function
-      vi.spyOn(toilService, 'calculateBalance').mockImplementation(originalFn);
+      // Verify the result
+      expect(result).toBeTruthy();
+      expect(result.accrued).toBe(2); // 2 hours of TOIL accrued
+      
+      // Verify localStorage was called to store the record
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        TOIL_RECORDS_KEY,
+        expect.any(String)
+      );
     });
     
-    it('should handle missing schedule gracefully', async () => {
-      const result = await toilService.calculateOvertimeHours('test-user', new Date(), 9, null as any);
-      expect(result).toBe(0); // Expect 0 when no schedule is provided
+    it('should handle no TOIL when hours match schedule', async () => {
+      // Create a test entry with exact scheduled hours
+      const entries: TimeEntry[] = [
+        createTestEntry({
+          id: 'entry-1',
+          userId,
+          date: testDate,
+          hours: 8, // Exactly scheduled hours
+          description: 'Regular work'
+        })
+      ];
+      
+      // Create a mock work schedule
+      const mockSchedule = {
+        userId,
+        defaultHours: 8,
+        schedule: [
+          { dayOfWeek: 1, hours: 8 },
+          { dayOfWeek: 2, hours: 8 },
+          { dayOfWeek: 3, hours: 8 },
+          { dayOfWeek: 4, hours: 8 },
+          { dayOfWeek: 5, hours: 8 }
+        ]
+      };
+      
+      // Calculate TOIL
+      const result = await toilService.calculateAndStoreTOIL(
+        entries,
+        testDate,
+        userId,
+        mockSchedule,
+        []
+      );
+      
+      // Verify the result
+      expect(result).toBeTruthy();
+      expect(result.accrued).toBe(0); // No TOIL accrued
+      
+      // Verify localStorage was not called to store a record
+      expect(mockLocalStorage.setItem).not.toHaveBeenCalledWith(
+        TOIL_RECORDS_KEY,
+        expect.any(String)
+      );
+    });
+    
+    it('should clear TOIL for a month', async () => {
+      // Setup: Add some mock TOIL data
+      const mockRecords: TOILRecord[] = [
+        { 
+          id: 'toil-1', 
+          userId, 
+          date: testDate.toISOString(), 
+          hours: 2, 
+          entryId: 'entry-1' 
+        }
+      ];
+      
+      mockLocalStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(mockRecords));
+      
+      // Clear TOIL for the month
+      await clearTOILStorageForMonth(userId, '2025-05');
+      
+      // Verify localStorage was called to update records
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        TOIL_RECORDS_KEY,
+        '[]'
+      );
     });
   });
   
-  describe('TOIL balance management', () => {
-    it('should get balance for a user', async () => {
-      const mockTOILData = JSON.stringify({
-        'user123': {
-          balance: 5,
-          accrued: 10,
-          used: 5,
-          lastUpdated: new Date().toISOString()
+  describe('TOIL Queries', () => {
+    it('should get TOIL summary', async () => {
+      // Setup: Add some mock TOIL data
+      const mockRecords: TOILRecord[] = [
+        { 
+          id: 'toil-1', 
+          userId, 
+          date: testDate.toISOString(), 
+          hours: 2, 
+          entryId: 'entry-1' 
+        },
+        { 
+          id: 'toil-2', 
+          userId, 
+          date: new Date('2025-05-11').toISOString(), 
+          hours: 3, 
+          entryId: 'entry-2' 
         }
-      });
+      ];
       
-      vi.spyOn(localStorage, 'getItem').mockReturnValue(mockTOILData);
+      const mockUsage: TOILUsage[] = [
+        {
+          id: 'usage-1',
+          userId,
+          date: new Date('2025-05-15').toISOString(),
+          hours: 1,
+          entryId: 'leave-1'
+        }
+      ];
       
-      const balance = await toilService.getBalance('user123');
-      expect(balance).toBeDefined();
-      expect(balance.balance).toBe(5);
-    });
-    
-    it('should handle adding TOIL accrual', async () => {
-      // Create a mock entry that is compatible with TimeEntry interface
-      const mockEntry = {
-        id: 'entry1',
-        userId: 'user123',
-        date: new Date(),
-        hours: 2,
-        jobNumber: TOIL_JOB_NUMBER,
-        description: 'Test TOIL entry',
-        project: 'TOIL'
-      } as TimeEntry;
+      mockLocalStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(mockRecords));
+      mockLocalStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(mockUsage));
       
-      await toilService.addAccrualEntry(mockEntry);
+      // Get the summary
+      const summary = await toilService.getMonthSummary(userId, '2025-05');
       
-      // Should have attempted to update localStorage
-      expect(localStorage.setItem).toHaveBeenCalled();
-    });
-    
-    it('should track TOIL balance over time', async () => {
-      const balance1 = await toilService.calculateBalance('user123', new Date('2023-01-01'));
-      expect(balance1.balance).toBeDefined();
-      
-      const mockEntry = {
-        id: 'entry2',
-        userId: 'user123',
-        date: new Date('2023-01-02'),
-        hours: 3,
-        jobNumber: TOIL_JOB_NUMBER,
-        description: 'Test TOIL accrual',
-        project: 'TOIL'
-      } as TimeEntry;
-      
-      await toilService.addAccrualEntry(mockEntry);
-      
-      const balance2 = await toilService.calculateBalance('user123', new Date('2023-01-03'));
-      expect(balance2.balance).toBeGreaterThanOrEqual(balance1.balance);
-    });
-    
-    it('should process TOIL usage', async () => {
-      vi.spyOn(toilService, 'getBalance').mockResolvedValue({
-        balance: 10,
-        accrued: 15, 
-        used: 5,
-        lastUpdated: new Date()
-      });
-      
-      const mockEntry = {
-        id: 'entry3',
-        userId: 'user123',
-        date: new Date(),
-        hours: 4,
-        jobNumber: TOIL_JOB_NUMBER,
-        description: 'Using TOIL',
-        project: 'TOIL'
-      } as TimeEntry;
-      
-      const result = await toilService.processUsage(mockEntry);
-      expect(result).toBe(true);
-      expect(localStorage.setItem).toHaveBeenCalled();
+      // Verify the summary
+      expect(summary).toBeTruthy();
+      expect(summary.accrued).toBe(5); // 2 + 3 hours accrued
+      expect(summary.used).toBe(1); // 1 hour used
+      expect(summary.remaining).toBe(4); // 5 - 1 = 4 hours remaining
     });
   });
 });

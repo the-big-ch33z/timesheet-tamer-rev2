@@ -1,4 +1,3 @@
-
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -20,9 +19,9 @@ import {
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
   loadEntriesFromStorage,
-  saveEntriesToStorage as saveToStorage,
+  saveEntriesToStorage,
   loadDeletedEntries,
-  addToDeletedEntries as addToDeleted
+  addToDeletedEntries
 } from "./storage-operations";
 import { validateTimeEntry, autoCalculateHours, calculateTotalHours } from "./entry-validation";
 import { TimeEntryOperations } from "./time-entry-operations";
@@ -149,10 +148,6 @@ export class UnifiedTimeEntryService {
     }
   }
 
-  public getEntries(): TimeEntry[] {
-    return this.getAllEntries();
-  }
-
   public getUserEntries(userId: string): TimeEntry[] {
     return this.queries.getUserEntries(userId, this.getAllEntries());
   }
@@ -189,10 +184,9 @@ export class UnifiedTimeEntryService {
     return validateTimeEntry(entry);
   }
 
-  // Added methods for saving/deleting entries directly
   public async saveEntriesToStorage(entriesToSave: TimeEntry[]): Promise<boolean> {
     try {
-      const result = await saveToStorage(entriesToSave, this.config.storageKey, this.deletedEntryIds);
+      const result = await saveEntriesToStorage(entriesToSave, this.config.storageKey, this.deletedEntryIds);
       
       if (result) {
         this.invalidateCache();
@@ -209,7 +203,7 @@ export class UnifiedTimeEntryService {
     logger.debug("Direct deletion of entry from storage:", entryId);
     
     try {
-      const updatedIds = await addToDeleted(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY);
+      const updatedIds = await addToDeletedEntries(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY);
       this.deletedEntryIds = updatedIds;
       
       this.invalidateCache();
@@ -223,6 +217,5 @@ export class UnifiedTimeEntryService {
 
   public cleanupDeletedEntries(maxAgeDays: number = 30): void {
     logger.debug(`Cleanup requested for entries older than ${maxAgeDays} days`);
-    // Actual implementation would clean up deleted entries based on age
   }
 }

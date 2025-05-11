@@ -1,5 +1,5 @@
 
-// Export constants from constants.ts
+// Export constants from constants.ts directly
 export {
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
@@ -12,8 +12,7 @@ export {
 // Export core cache clearing functions
 export {
   clearSummaryCache,
-  clearAllTOILCaches,
-  clearTOILCache
+  clearAllTOILCaches
 } from './core';
 
 // Export record management functions
@@ -31,10 +30,10 @@ export {
   deleteTOILRecordByEntryId,
   hasTOILForDay,
   hasTOILForMonth,
-  getTOILSummary
+  getTOILSummary,
 } from './queries';
 
-// Export the TOILDayInfo interface
+// Export the interface with the correct syntax
 export type { TOILDayInfo } from './queries';
 
 // Export cleanup functions

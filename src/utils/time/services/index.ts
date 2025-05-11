@@ -37,7 +37,7 @@ export {
 
 // Export legacy services for backward compatibility
 // These will be deprecated in future versions
-export { timeEntryService, createTimeEntryService } from './unified-service';
+export { timeEntryService, createTimeEntryService } from './timeEntryService';
 
 // Add deprecation notices using console warnings in development
 if (process.env.NODE_ENV === 'development') {

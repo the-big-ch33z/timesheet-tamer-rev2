@@ -1,29 +1,28 @@
 
-import { TimeEntryOperationsConfig } from './types';
-import { EventManager } from '../event-handling';
-import { TimeEntry } from '@/types';
-import { UpdateOperations } from './update-operations';
-import { ReadOperations } from './read-operations';
-import { DeleteOperations } from './delete-operations';
-import { CreateOperations } from './create-operations';
+/**
+ * Time Entry Operations
+ * 
+ * This module consolidates all time entry operations into a single file for easier imports.
+ * It is deprecated and will be removed in favor of the unified service.
+ */
 
-export { TimeEntryOperationsConfig } from './types';
+// Export all operation classes
+export { CreateOperations } from './create-operations';
+export { UpdateOperations } from './update-operations';
+export { DeleteOperations } from './delete-operations';
+export { TimeEntryOperations } from '../time-entry-operations';
 
-export class TimeEntryOperations {
-  public create: CreateOperations;
-  public read: ReadOperations;
-  public update: UpdateOperations;
-  public delete: DeleteOperations;
-  
-  constructor(
-    config: Required<TimeEntryOperationsConfig>,
-    invalidateCache: () => void,
-    getAllEntries: () => TimeEntry[],
-    eventManager: EventManager
-  ) {
-    this.create = new CreateOperations(config, invalidateCache, getAllEntries, eventManager);
-    this.read = new ReadOperations(config, getAllEntries);
-    this.update = new UpdateOperations(config, invalidateCache, getAllEntries, eventManager);
-    this.delete = new DeleteOperations(config, invalidateCache, getAllEntries, eventManager);
-  }
+// Export types
+export type { TimeEntryBaseOperations, TimeEntryOperationsConfig } from './types';
+
+// Export utility functions
+export { dispatchEntryEvent, dispatchErrorEvent } from './event-utils';
+
+// Add deprecation notice
+if (process.env.NODE_ENV !== 'test') {
+  console.warn(
+    'The operations modules in src/utils/time/services/operations are deprecated.\n' +
+    'Please use the UnifiedTimeEntryService class instead.\n' +
+    'These files will be removed in a future version.'
+  );
 }

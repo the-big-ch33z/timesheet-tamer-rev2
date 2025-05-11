@@ -1,58 +1,53 @@
 
 /**
- * TOIL Service Index
- * This file provides a consolidated export of TOIL-related functionality.
+ * TOIL services index
+ * Central export point for all TOIL-related functionality
  */
 
-// Export the TOIL service instance
-import { toilService } from "../toil-service";
-export { toilService };
+// Export the main TOIL service
+export { toilService } from './toilService';
 
-// Export TOIL service and types 
-export { 
-  TOILService, 
-  TOIL_JOB_NUMBER,
-  TOIL_STORAGE_KEY
-} from './service';
+// Re-export types
+export type { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
 
-export type { 
-  TOILBalanceEntry,
-  TOILUsageEntry
-} from './service';
-
-// Re-export calculation functions from calculation.ts
-export { 
-  calculateTOILBalance,
-  calculateTOILAccrual,
-  getAvailableTOILHours
-} from './calculation';
-
-// Re-export storage functions from storage.ts
+// Export storage utilities
 export {
-  loadTOILData,
-  saveTOILData,
-  clearTOILCache,
+  // Storage constants
+  TOIL_RECORDS_KEY,
+  TOIL_USAGE_KEY,
+  TOIL_SUMMARY_CACHE_KEY,
+  
+  // Core functions
+  clearSummaryCache,
   clearAllTOILCaches,
-  cleanupDuplicateTOILRecords,
-  cleanupDuplicateTOILUsage,
+  
+  // Record management
   loadTOILRecords,
   loadTOILUsage,
-  getTOILSummary,
+  storeTOILRecord,
+  storeTOILUsage,
+  
+  // Queries
+  getUserTOILRecords,
   findTOILRecordsByEntryId,
   deleteTOILRecordByEntryId,
   hasTOILForDay,
-  hasTOILForMonth
+  hasTOILForMonth,
+  getTOILSummary,
+  
+  // Types
+  TOILDayInfo,
+  
+  // Cleanup
+  cleanupDuplicateTOILRecords,
+  cleanupDuplicateTOILUsage,
+  clearTOILStorageForMonth
 } from './storage';
 
-// Export TOILDayInfo interface
-export type { TOILDayInfo } from './storage/queries';
-
-// Export event functionality from events.ts
-export {
-  dispatchTOILEvent,
-  addTOILEventListener,
-  removeTOILEventListener
-} from './events';
-
-// Re-export holiday utilities
-export { isHoliday } from './holiday-utils';
+// Add deprecation notices using console warnings in development
+if (process.env.NODE_ENV === 'development') {
+  console.warn(
+    'Direct imports from TOIL storage files are deprecated.\n' +
+    'Please import from @/utils/time/services/toil instead.'
+  );
+}

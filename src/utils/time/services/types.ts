@@ -1,54 +1,60 @@
 
 import { TimeEntry } from "@/types";
 
-// Configuration for time entry service
+/**
+ * Event types for the time entry service
+ */
+export type TimeEntryEventType = 
+  | 'entry-created' 
+  | 'entry-updated'
+  | 'entry-deleted'
+  | 'entries-loaded'
+  | 'storage-sync'
+  | 'error'
+  | 'all';
+
+/**
+ * Event payload for timesheet events
+ */
+export interface TimeEntryEvent {
+  type: TimeEntryEventType;
+  payload?: any;
+  timestamp: Date;
+  userId?: string;
+}
+
+/**
+ * Event listener callback type
+ */
+export type TimeEntryEventListener = (event: TimeEntryEvent) => void;
+
+/**
+ * Configuration options for the service
+ */
 export interface TimeEntryServiceConfig {
   enableCaching?: boolean;
-  cacheTTL?: number;
+  cacheTTL?: number;  // in milliseconds
   validateOnAccess?: boolean;
   enableAuditing?: boolean;
   storageKey?: string;
 }
 
-// Cache for time entries
+/**
+ * Cache container for time entries
+ */
 export interface EntryCache {
   entries: TimeEntry[];
+  userEntries: Record<string, TimeEntry[]>;
+  dayEntries: Record<string, TimeEntry[]>; 
+  monthEntries: Record<string, TimeEntry[]>;
   timestamp: number;
-  valid: boolean;
+  isValid: boolean;
 }
 
-// Result of validation
+/**
+ * Result of entry validation
+ */
 export interface ValidationResult {
   valid: boolean;
-  errors: string[];
+  message?: string;
 }
-
-// Types of events that can be emitted by the time entry service
-export type TimeEntryEventType = 
-  | 'entry-created'
-  | 'entry-updated'
-  | 'entry-deleted'
-  | 'entries-loaded'
-  | 'error'
-  | 'storage-sync'
-  | 'all';
-
-// Structure for time entry events
-export interface TimeEntryEvent {
-  type: TimeEntryEventType;
-  timestamp: Date;
-  payload: Record<string, any>;
-  userId?: string;
-}
-
-// Work schedule day configuration
-export interface WorkScheduleDayConfig {
-  isWorkingDay: boolean;
-  startTime?: string;
-  endTime?: string;
-  breakDuration?: number;
-  totalHours?: number;
-}
-
-// Event listener type
-export type TimeEntryEventListener = (event: TimeEntryEvent) => void;
