@@ -11,7 +11,6 @@ export {
   TimeEntryContext, 
   TimeEntryProvider, 
   useTimeEntryContext,
-  type TimeEntryContextValue,
   type TimeEntryProviderProps
 } from './TimeEntryContext';
 

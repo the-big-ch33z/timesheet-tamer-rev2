@@ -97,15 +97,15 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     return hasEntries ? Math.round(totalEnteredHours * 4) / 4 : 0;
   }, [actionStates.leave, actionStates.sick, scheduledHours, totalEnteredHours, hasEntries]);
 
-  // Set up TOIL calculation effects
-  useToilEffects(
+  // Set up TOIL calculation effects - Fixed to use object parameter pattern
+  useToilEffects({
     hasEntries,
     leaveActive,
     toilActive,
     isComplete,
     calculateToilForDay,
-    entries.length
-  );
+    entriesCount: entries.length
+  });
 
   // Fix: Make sure we're reporting completion status consistently
   const isActuallyComplete = useMemo(() => {
