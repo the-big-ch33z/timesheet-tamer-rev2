@@ -17,7 +17,7 @@ export interface BaseContextState {
 const BaseContext = createContext<BaseContextState | undefined>(undefined);
 
 export interface BaseContextProviderProps {
-  children: ReactNode;
+  children: ReactNode | ((baseContext: BaseContextState) => ReactNode);
   contextName: string;
   initializer: () => Promise<any>;
   autoInitialize?: boolean;
@@ -84,7 +84,9 @@ export const BaseContextProvider: React.FC<BaseContextProviderProps> = ({
 
   return (
     <BaseContext.Provider value={contextValue}>
-      {children}
+      {typeof children === 'function' 
+        ? (children as (baseContext: BaseContextState) => ReactNode)(contextValue) 
+        : children}
     </BaseContext.Provider>
   );
 };
