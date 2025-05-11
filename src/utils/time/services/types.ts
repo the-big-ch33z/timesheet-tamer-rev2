@@ -1,60 +1,71 @@
 
 import { TimeEntry } from "@/types";
 
-/**
- * Event types for the time entry service
- */
-export type TimeEntryEventType = 
-  | 'entry-created' 
-  | 'entry-updated'
-  | 'entry-deleted'
-  | 'entries-loaded'
-  | 'storage-sync'
-  | 'error'
-  | 'all';
+// Storage key constants
+export const STORAGE_KEY = 'timeEntries';
+export const DELETED_ENTRIES_KEY = 'deletedTimeEntries';
 
-/**
- * Event payload for timesheet events
- */
+// Event types
+export type TimeEntryEventType = 
+  'create' | 'update' | 'delete' | 
+  'sync' | 'storage-sync' | 'all' |
+  'entries-loaded' | 'entry-created' | 'entry-updated' | 
+  'entry-deleted' | 'error';
+
 export interface TimeEntryEvent {
   type: TimeEntryEventType;
-  payload?: any;
   timestamp: Date;
   userId?: string;
+  payload?: any;
 }
 
-/**
- * Event listener callback type
- */
 export type TimeEntryEventListener = (event: TimeEntryEvent) => void;
 
-/**
- * Configuration options for the service
- */
+// Validation types
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+// Service configuration
 export interface TimeEntryServiceConfig {
   enableCaching?: boolean;
-  cacheTTL?: number;  // in milliseconds
+  cacheTTL?: number;
   validateOnAccess?: boolean;
   enableAuditing?: boolean;
   storageKey?: string;
 }
 
-/**
- * Cache container for time entries
- */
+// Cache structure
 export interface EntryCache {
   entries: TimeEntry[];
-  userEntries: Record<string, TimeEntry[]>;
-  dayEntries: Record<string, TimeEntry[]>; 
-  monthEntries: Record<string, TimeEntry[]>;
   timestamp: number;
-  isValid: boolean;
+  valid: boolean;
 }
 
-/**
- * Result of entry validation
- */
-export interface ValidationResult {
-  valid: boolean;
-  message?: string;
-}
+// Core calculation functions
+export const calculateTotalHours = (entries: TimeEntry[]): number => {
+  if (!entries || entries.length === 0) return 0;
+  return entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+};
+
+export const autoCalculateHours = (startTime: string, endTime: string, breakMinutes: number = 0): number => {
+  if (!startTime || !endTime) return 0;
+
+  try {
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    // Calculate total minutes, subtracting break time
+    const totalMinutes = endMinutes - startMinutes - breakMinutes;
+    
+    // Convert to hours and round to nearest quarter
+    return Math.round(totalMinutes / 15) / 4;
+  } catch (error) {
+    console.error('Error calculating hours:', error);
+    return 0;
+  }
+};
