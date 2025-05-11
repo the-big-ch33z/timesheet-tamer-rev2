@@ -60,27 +60,27 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [calculateDayHours]);
 
   // Get break adjustments
-  const { breakAdjustment, breakConfig: breakConfigState, displayBreakConfig } = useBreakAdjustments(
+  const { breakAdjustment, breakConfig: breakConfigState, displayBreakConfig } = useBreakAdjustments({
     startTime, 
     endTime, 
     actionStates, 
     hasLunchBreakInSchedule, 
     hasSmokoBreakInSchedule
-  );
+  });
 
   // Determine if leave or TOIL is active
   const leaveActive = actionStates.leave || actionStates.sick;
   const toilActive = actionStates.toil;
 
   // Calculate hours based on entries or time inputs
-  const { calculatedTimeHours, isComplete, isOverScheduled } = useHoursCalculation(
+  const { calculatedTimeHours, isComplete, isOverScheduled } = useHoursCalculation({
     startTime,
     endTime,
-    breakAdjustment,
+    breakAdjustments: breakAdjustment,
     scheduledHours,
-    totalEnteredHours,
+    effectiveHours: totalEnteredHours,
     hasEntries
-  );
+  });
 
   // Calculate effective total hours - FIXED to show 0 when no entries
   const effectiveTotalHours = useMemo(() => {

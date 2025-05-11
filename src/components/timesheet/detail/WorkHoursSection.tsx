@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -68,7 +67,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
                       localStorage.getItem('timesheet-dev-mode') === 'true';
     setShowDebugPanel(isDevMode);
   }, [effectiveWorkSchedule]);
-
+  
   // Call updated hook with object-based parameters
   useToilEffects({
     hasEntries: dayEntries.length > 0,

@@ -1,3 +1,8 @@
 
-export { default as DebugPanel } from './DebugPanel';
-export { default as WorkHoursContent } from './WorkHoursContent';
+import WorkHoursContent from '../work-hours/WorkHoursContent';
+import DebugPanel from './DebugPanel';
+
+export {
+  DebugPanel,
+  WorkHoursContent
+};
