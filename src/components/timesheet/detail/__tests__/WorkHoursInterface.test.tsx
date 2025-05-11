@@ -2,7 +2,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { screen, fireEvent } from '../../__tests__/utils/test-utils';
-import WorkHoursInterface from '../WorkHoursInterface';
+import { WorkHoursInterface } from '../work-hours';
 
 // Mock useWorkHours hook
 jest.mock('@/hooks/timesheet/useWorkHours', () => ({

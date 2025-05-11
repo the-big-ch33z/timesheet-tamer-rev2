@@ -1,8 +1,8 @@
 
 import React, { Suspense } from "react";
-import { WorkSchedule } from "@/types";
+import { WorkSchedule, TimeEntry } from "@/types";
 import { Card } from "@/components/ui/card";
-import WorkHoursInterface from "../WorkHoursInterface";
+import { WorkHoursInterface } from "../work-hours";
 import TimeEntryController from "../../entry-control/TimeEntryController";
 
 /**
@@ -14,7 +14,7 @@ export interface WorkHoursContentProps {
   /** The user ID */
   userId: string;
   /** Time entries for the day */
-  dayEntries: any[];
+  dayEntries: TimeEntry[];
   /** Work schedule for the user */
   workSchedule?: WorkSchedule;
   /** Whether the interface is interactive */
