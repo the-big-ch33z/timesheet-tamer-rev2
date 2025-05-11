@@ -36,6 +36,21 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   const { toast } = useToast();
   const { validateSubmission } = useFormValidation();
   
+  const validations = {
+    hours: {
+      required: true,
+      rules: [
+        {
+          validate: (value: string) => parseFloat(value) > 0,
+          message: "Hours must be greater than 0"
+        }
+      ]
+    },
+    description: {
+      required: true
+    }
+  };
+  
   const {
     formState,
     setFieldValue,
@@ -47,7 +62,9 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     jobNumber: initialData.jobNumber || '',
     taskNumber: initialData.taskNumber || '',
     rego: initialData.rego || ''
-  });
+  }, validations);
+  
+  console.debug('[TimeEntryForm] Form state:', formState);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +122,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   };
 
   const handleFieldChange = (field: string, value: string) => {
+    console.debug(`[TimeEntryForm] Setting field value: ${field} = ${value}`);
     setFieldValue(field, value);
   };
 
@@ -115,6 +133,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
           <FormFields 
             formState={formState} 
             onChange={handleFieldChange} 
+            disabled={disabled || isSubmitting}
           />
           
           <FormButtons 

@@ -47,7 +47,7 @@ const getFieldSafely = (formState: FormState, fieldName: string): FormField => {
 const getFieldError = (formState: FormState, fieldName: string): string | undefined => {
   const field = formState.fields[fieldName];
   if (!field) return undefined;
-  return 'error' in field ? field.error : undefined;
+  return field.error;
 };
 
 /**
@@ -58,6 +58,8 @@ const FormFields: React.FC<FormFieldsProps> = ({
   onChange,
   disabled = false,
 }) => {
+  console.debug('[FormFields] Rendering with formState:', formState);
+  
   // Extract fields from formState
   const hoursField = getFieldSafely(formState, 'hours');
   const descriptionField = getFieldSafely(formState, 'description');
@@ -72,6 +74,11 @@ const FormFields: React.FC<FormFieldsProps> = ({
   const taskNumberError = getFieldError(formState, 'taskNumber');
   const regoError = getFieldError(formState, 'rego');
 
+  const handleFieldChange = (fieldName: string, value: string) => {
+    console.debug(`[FormFields] Field change: ${fieldName} = ${value}`);
+    onChange(fieldName, value);
+  };
+
   return (
     <Card className="p-4 space-y-4">
       {/* Hours Field */}
@@ -84,7 +91,7 @@ const FormFields: React.FC<FormFieldsProps> = ({
           type="text"
           inputMode="decimal"
           value={hoursField.value}
-          onChange={(e) => onChange('hours', e.target.value)}
+          onChange={(e) => handleFieldChange('hours', e.target.value)}
           placeholder="Enter hours"
           className={cn(hoursError ? 'border-destructive' : '')}
           disabled={disabled}
@@ -100,7 +107,7 @@ const FormFields: React.FC<FormFieldsProps> = ({
         <Textarea
           id="description"
           value={descriptionField.value}
-          onChange={(e) => onChange('description', e.target.value)}
+          onChange={(e) => handleFieldChange('description', e.target.value)}
           placeholder="Enter description"
           className={cn(descriptionError ? 'border-destructive' : '')}
           disabled={disabled}
@@ -117,7 +124,7 @@ const FormFields: React.FC<FormFieldsProps> = ({
           id="jobNumber"
           type="text"
           value={jobNumberField.value}
-          onChange={(e) => onChange('jobNumber', e.target.value)}
+          onChange={(e) => handleFieldChange('jobNumber', e.target.value)}
           placeholder="Enter job number"
           className={cn(jobNumberError ? 'border-destructive' : '')}
           disabled={disabled}
@@ -134,7 +141,7 @@ const FormFields: React.FC<FormFieldsProps> = ({
           id="taskNumber"
           type="text"
           value={taskNumberField.value}
-          onChange={(e) => onChange('taskNumber', e.target.value)}
+          onChange={(e) => handleFieldChange('taskNumber', e.target.value)}
           placeholder="Enter task number"
           className={cn(taskNumberError ? 'border-destructive' : '')}
           disabled={disabled}
@@ -151,7 +158,7 @@ const FormFields: React.FC<FormFieldsProps> = ({
           id="rego"
           type="text"
           value={regoField.value}
-          onChange={(e) => onChange('rego', e.target.value)}
+          onChange={(e) => handleFieldChange('rego', e.target.value)}
           placeholder="Enter registration number"
           className={cn(regoError ? 'border-destructive' : '')}
           disabled={disabled}
