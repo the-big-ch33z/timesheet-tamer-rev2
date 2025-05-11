@@ -98,3 +98,4 @@ export const useTimeEntriesEvents = (
     };
   }, [handleServiceEvent]);
 };
+

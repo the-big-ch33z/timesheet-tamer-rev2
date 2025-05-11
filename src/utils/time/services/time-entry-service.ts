@@ -335,9 +335,8 @@ if (typeof window !== 'undefined') {
   timeEntryService.init();
 }
 
-// Export for compatibility with existing code
+// Export constants - no duplicate exports now
 export { 
-  TimeEntryService,
   STORAGE_KEY,
   DELETED_ENTRIES_KEY
 };
@@ -358,3 +357,10 @@ export {
 
 // Also export the singleton as unifiedTimeEntryService for backward compatibility
 export const unifiedTimeEntryService = timeEntryService;
+
+// Export the storageWriteLock for other modules to use
+export { storageWriteLock } from './storage-operations';
+
+// Export the TimeEntryEvent type for consuming modules
+export type { TimeEntryEvent } from './types';
+

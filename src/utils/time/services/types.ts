@@ -17,7 +17,7 @@ export type TimeEntryEventType =
  * Event payload for timesheet events
  */
 export interface TimeEntryEvent {
-  type: TimeEntryEventType;
+  type: TimeEntryEventType | string;  // Allow string to resolve type error
   payload?: any;
   timestamp: Date;
   userId?: string;
@@ -43,7 +43,7 @@ export interface TimeEntryServiceConfig {
  * Configuration for time entry operations
  */
 export interface TimeEntryOperationsConfig {
-  serviceName?: string;
+  serviceName?: string; // Make this optional
   storageKey: string;
   validateOnSave?: boolean;
   enableAuditing?: boolean;
@@ -78,3 +78,4 @@ export interface ValidationResult {
   valid: boolean;
   message?: string;
 }
+

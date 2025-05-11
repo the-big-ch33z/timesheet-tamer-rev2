@@ -12,7 +12,8 @@ import {
   DELETED_ENTRIES_KEY,
   validateTimeEntry,
   autoCalculateHours,
-  calculateTotalHours
+  calculateTotalHours,
+  storageWriteLock
 } from './time-entry-service';
 
 // Re-export everything for backward compatibility
@@ -25,13 +26,17 @@ export {
   DELETED_ENTRIES_KEY,
   validateTimeEntry,
   autoCalculateHours,
-  calculateTotalHours
+  calculateTotalHours,
+  storageWriteLock
 };
+
+// Re-export types for convenience
+export type {
+  TimeEntryEvent,
+  TimeEntryServiceConfig,
+  TimeEntryEventType
+} from './types';
 
 // Export singleton instance as default
 export default timeEntryService;
 
-// Export type definitions for convenience
-export type {
-  TimeEntryServiceConfig
-} from './types';

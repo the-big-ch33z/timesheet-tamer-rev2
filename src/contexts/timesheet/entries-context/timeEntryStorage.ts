@@ -36,3 +36,4 @@ export const addToDeletedEntries = (entryId: string) => unifiedTimeEntryService.
 export const cleanupDeletedEntries = () => unifiedTimeEntryService.cleanupDeletedEntries();
 export const saveEntriesToStorage = (entries: TimeEntry[]) => unifiedTimeEntryService.saveEntriesToStorage(entries);
 export const deleteEntryFromStorage = (entryId: string) => unifiedTimeEntryService.deleteEntryFromStorage(entryId);
+
