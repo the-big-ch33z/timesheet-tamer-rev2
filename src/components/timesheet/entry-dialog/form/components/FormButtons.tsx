@@ -1,7 +1,7 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Clock, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface FormButtonsProps {
   onCancel: () => void;
@@ -9,39 +9,60 @@ interface FormButtonsProps {
   isValid: boolean;
 }
 
-export const FormButtons: React.FC<FormButtonsProps> = ({ 
-  onCancel, 
-  isSubmitting, 
-  isValid 
+const FormButtons: React.FC<FormButtonsProps> = ({
+  onCancel,
+  isSubmitting,
+  isValid
 }) => {
+  // Log props for debugging
+  console.debug('[FormButtons] Rendering with props:', {
+    isSubmitting, 
+    isValid,
+    hasOnCancel: !!onCancel
+  });
+
+  // Track when isSubmitting changes
+  useEffect(() => {
+    console.debug(`[FormButtons:useEffect] isSubmitting changed to: ${isSubmitting}`);
+  }, [isSubmitting]);
+
+  // Track when isValid changes
+  useEffect(() => {
+    console.debug(`[FormButtons:useEffect] isValid changed to: ${isValid}`);
+  }, [isValid]);
+
+  const handleCancel = () => {
+    console.debug('[FormButtons:handleCancel] Cancel button clicked');
+    if (onCancel) {
+      onCancel();
+      console.debug('[FormButtons:handleCancel] onCancel callback executed');
+    } else {
+      console.error('[FormButtons:handleCancel] onCancel is not defined');
+    }
+  };
+
   return (
-    <div className="flex justify-end space-x-2 mt-4">
-      <Button 
-        type="button" 
-        variant="outline" 
-        onClick={onCancel} 
+    <div className="flex justify-end gap-3 pt-2">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleCancel}
         disabled={isSubmitting}
-        className="flex items-center gap-1"
       >
-        <X className="h-4 w-4" />
         Cancel
       </Button>
-      <Button 
-        type="submit" 
+      <Button
+        type="submit"
         disabled={isSubmitting || !isValid}
-        className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
-        data-testid="save-timeentry-button"
+        data-testid="submit-button"
       >
         {isSubmitting ? (
           <>
-            <Clock className="h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Saving...
           </>
         ) : (
-          <>
-            <Check className="h-4 w-4" />
-            Save Entry
-          </>
+          "Save Entry"
         )}
       </Button>
     </div>

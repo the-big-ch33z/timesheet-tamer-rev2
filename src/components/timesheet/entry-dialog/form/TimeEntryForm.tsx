@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useFormState } from "@/hooks/form/useFormState";
 import { Card } from "@/components/ui/card";
 import { TimeEntry } from "@/types";
@@ -36,6 +36,15 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   const { toast } = useToast();
   const { validateSubmission } = useFormValidation();
   
+  console.debug('[TimeEntryForm] Rendering with props:', { 
+    date, 
+    userId, 
+    initialData, 
+    isSubmitting,
+    hasOnSubmit: !!onSubmit,
+    hasOnCancel: !!onCancel
+  });
+  
   const validations = {
     hours: {
       required: true,
@@ -64,12 +73,33 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     rego: initialData.rego || ''
   }, validations);
   
-  console.debug('[TimeEntryForm] Form state:', formState);
+  // Add effect to log formState changes
+  useEffect(() => {
+    console.debug('[TimeEntryForm:useEffect] Form state updated:', formState);
+  }, [formState]);
+  
+  // Add effect to log isSubmitting changes
+  useEffect(() => {
+    console.debug('[TimeEntryForm:useEffect] isSubmitting changed to:', isSubmitting);
+  }, [isSubmitting]);
+  
+  console.debug('[TimeEntryForm] Current form state:', {
+    isValid: formState.isValid,
+    isDirty: formState.isDirty,
+    formEdited: formState.formEdited,
+    fields: formState.fields
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.debug('[TimeEntryForm:handleSubmit] Submit event triggered');
     e.preventDefault();
     
-    if (!validateForm()) {
+    console.debug('[TimeEntryForm:handleSubmit] Validating form...');
+    const isValid = validateForm();
+    console.debug('[TimeEntryForm:handleSubmit] Form validation result:', isValid);
+    
+    if (!isValid) {
+      console.debug('[TimeEntryForm:handleSubmit] Form validation failed');
       toast({
         title: "Invalid form data",
         description: "Please check the form for errors",
@@ -81,15 +111,17 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     try {
       // Get the hours value as a string
       const hoursValue = formState.fields.hours?.value || '';
-      console.debug(`[TimeEntryForm] Raw hours value from form: "${hoursValue}" (${typeof hoursValue})`);
+      console.debug(`[TimeEntryForm:handleSubmit] Raw hours value from form: "${hoursValue}" (${typeof hoursValue})`);
       
+      console.debug('[TimeEntryForm:handleSubmit] Validating submission with hours:', hoursValue);
       if (!validateSubmission(hoursValue)) {
+        console.debug('[TimeEntryForm:handleSubmit] Hours validation failed');
         return;
       }
       
       // Explicit conversion to number with parseFloat
       const hoursNum = parseFloat(hoursValue);
-      console.debug(`[TimeEntryForm] Parsed hours: ${hoursNum} (${typeof hoursNum})`);
+      console.debug(`[TimeEntryForm:handleSubmit] Parsed hours: ${hoursNum} (${typeof hoursNum})`);
       
       // Create entry object with explicit numeric hours
       const entry: Omit<TimeEntry, "id"> = {
@@ -103,6 +135,8 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
         project: "General"
       };
       
+      console.debug('[TimeEntryForm:handleSubmit] Submitting entry:', entry);
+      
       // Add success toast before submission
       toast({
         title: "Submitting entry",
@@ -110,9 +144,12 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
       });
       
       onSubmit(entry);
+      console.debug('[TimeEntryForm:handleSubmit] onSubmit called successfully');
+      
       resetForm();
+      console.debug('[TimeEntryForm:handleSubmit] Form reset completed');
     } catch (error) {
-      console.error("Error submitting entry:", error);
+      console.error("[TimeEntryForm:handleSubmit] Error submitting entry:", error);
       toast({
         title: "Error saving entry",
         description: "There was a problem saving your entry",
@@ -122,8 +159,13 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
   };
 
   const handleFieldChange = (field: string, value: string) => {
-    console.debug(`[TimeEntryForm] Setting field value: ${field} = ${value}`);
-    setFieldValue(field, value);
+    console.debug(`[TimeEntryForm:handleFieldChange] START: Setting field value: ${field} = "${value}"`);
+    try {
+      setFieldValue(field, value);
+      console.debug(`[TimeEntryForm:handleFieldChange] Field ${field} updated to "${value}" successfully`);
+    } catch (error) {
+      console.error(`[TimeEntryForm:handleFieldChange] ERROR updating field ${field}:`, error);
+    }
   };
 
   return (
