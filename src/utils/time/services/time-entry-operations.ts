@@ -17,10 +17,11 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
     private getAllEntries: () => TimeEntry[],
     private eventManager: EventManager
   ) {
-    // Initialize with correct parameters - pass config and eventManager separately
-    this.createOps = new CreateOperations(config, this.eventManager);
-    this.updateOps = new UpdateOperations(config, this.eventManager);
-    this.deleteOps = new DeleteOperations(config, this.eventManager);
+    // Initialize with correct parameters order
+    // Pass eventManager first, then the config to match the constructor signature
+    this.createOps = new CreateOperations(this.eventManager, config);
+    this.updateOps = new UpdateOperations(config, this.invalidateCache, this.getAllEntries, this.eventManager);
+    this.deleteOps = new DeleteOperations(this.eventManager, config);
     
     console.log("[TimeEntryOperations] Initialized with config:", {
       serviceName: config.serviceName || 'default',
