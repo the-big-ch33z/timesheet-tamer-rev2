@@ -3,7 +3,7 @@ import { TimeEntry } from "@/types";
 import { createTimeLogger } from "../../errors";
 import { v4 as uuidv4 } from "uuid";
 import { EventManager } from "../event-handling";
-import { TimeEntryOperationsConfig, TimeEntryEventType } from "./types";
+import { TimeEntryOperationsConfig } from "./types";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 
 const logger = createTimeLogger('CreateOperations');
@@ -21,7 +21,7 @@ export class CreateOperations {
     config: TimeEntryOperationsConfig
   ) {
     this.eventManager = eventManager;
-    this.serviceName = config.serviceName;
+    this.serviceName = config.serviceName || 'default';
     this.storageKey = config.storageKey;
     
     logger.debug(`CreateOperations initialized for ${this.serviceName}`);
@@ -45,9 +45,8 @@ export class CreateOperations {
       jobNumber: entry.jobNumber || '',
       hours: entry.hours || 0,
       description: entry.description || '',
-      updatedAt: now,
-      // Don't include location or other properties not in TimeEntry type
-      ...entry
+      project: entry.project || '', // Added missing required property
+      // Don't include updatedAt or location as they're not in TimeEntry type
     };
     
     logger.debug(`Created new entry with ID: ${newEntry.id}`);
@@ -55,7 +54,7 @@ export class CreateOperations {
     
     // Dispatch event
     this.eventManager.dispatchEvent({
-      type: 'create' as TimeEntryEventType,
+      type: 'entry-created', // Using the correct event type name
       timestamp: now,
       payload: { entry: newEntry }
     });

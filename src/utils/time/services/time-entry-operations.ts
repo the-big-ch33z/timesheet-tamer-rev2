@@ -17,10 +17,15 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
     private getAllEntries: () => TimeEntry[],
     private eventManager: EventManager
   ) {
-    // Initialize with correct parameters
+    // Initialize with correct parameters - pass eventManager first, then config
     this.createOps = new CreateOperations(this.eventManager, config);
-    this.updateOps = new UpdateOperations(this.eventManager, config);
+    this.updateOps = new UpdateOperations(this.eventManager, config); 
     this.deleteOps = new DeleteOperations(this.eventManager, config);
+    
+    console.log("[TimeEntryOperations] Initialized with config:", {
+      serviceName: config.serviceName || 'default',
+      storageKey: config.storageKey
+    });
   }
 
   public createEntry(entryData: Omit<TimeEntry, "id">, deletedEntryIds: string[]): string | null {

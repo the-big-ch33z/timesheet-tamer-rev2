@@ -1,44 +1,27 @@
 
-// Export constants from constants.ts directly
-export {
-  TOIL_RECORDS_KEY,
-  TOIL_USAGE_KEY,
-  TOIL_SUMMARY_CACHE_KEY,
-  STORAGE_RETRY_DELAY,
-  STORAGE_MAX_RETRIES,
-  DEBOUNCE_PERIOD
-} from './constants';
-
-// Export core cache clearing functions
-export {
-  clearSummaryCache,
-  clearAllTOILCaches
-} from './core';
-
-// Export record management functions
-export {
-  loadTOILRecords,
-  loadTOILUsage,
-  storeTOILRecord,
-  storeTOILUsage
-} from './record-management';
-
-// Export query functions
-export {
+// Export key functions from queries
+export { 
   getUserTOILRecords,
   findTOILRecordsByEntryId,
-  deleteTOILRecordByEntryId,
-  hasTOILForDay,
-  hasTOILForMonth,
+  deleteTOILRecordByEntryId, 
   getTOILSummary,
+  hasTOILForDay,
+  hasTOILForMonth
 } from './queries';
 
-// Export the interface with the correct syntax
+// Export types correctly
 export type { TOILDayInfo } from './queries';
 
-// Export cleanup functions
-export {
-  cleanupDuplicateTOILRecords,
-  cleanupDuplicateTOILUsage,
-  clearTOILStorageForMonth
-} from './cleanup';
+// Export utility functions
+export { attemptStorageOperation, safelyParseJSON } from './utils';
+
+// Export constants
+export { 
+  STORAGE_RETRY_DELAY,
+  STORAGE_MAX_RETRIES,
+  TOIL_RECORDS_KEY,
+  TOIL_USAGE_KEY,
+  TOIL_SUMMARY_CACHE_KEY
+} from './constants';
+
+console.log('[TOIL-STORAGE] Storage module initialized');

@@ -1,26 +1,19 @@
-// Add proper export for TOILDayInfo interface
+import { format } from 'date-fns';
+import { createTimeLogger } from '@/utils/time/errors';
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { attemptStorageOperation } from '../storage/utils';
+
+const logger = createTimeLogger('TOILStorageQueries');
+
+// Define the TOILDayInfo interface
 export interface TOILDayInfo {
   hasAccrued: boolean;
   hasUsed: boolean;
   toilHours: number;
 }
 
-import { format } from 'date-fns';
-import { createTimeLogger } from '@/utils/time/errors';
-import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
-import { 
-  TOIL_RECORDS_KEY, 
-  TOIL_USAGE_KEY, 
-  TOIL_SUMMARY_CACHE_KEY,
-  STORAGE_RETRY_DELAY,
-  STORAGE_MAX_RETRIES
-} from './constants';
-import { attemptStorageOperation } from './utils';
-
-const logger = createTimeLogger('TOILStorageQueries');
-
 // Get all TOIL records for a specific user
-export const getUserTOILRecords = (userId: string): TOILRecord[] => {
+export const getUserTOILRecords = (userId: string) => {
   try {
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
     if (!records) {
@@ -28,8 +21,8 @@ export const getUserTOILRecords = (userId: string): TOILRecord[] => {
       return [];
     }
     
-    const allRecords: TOILRecord[] = JSON.parse(records);
-    const userRecords = allRecords.filter(record => record.userId === userId);
+    const allRecords = JSON.parse(records);
+    const userRecords = allRecords.filter((record: any) => record.userId === userId);
     
     logger.debug(`Found ${userRecords.length} TOIL records for user ${userId}`);
     return userRecords;
@@ -39,198 +32,128 @@ export const getUserTOILRecords = (userId: string): TOILRecord[] => {
   }
 };
 
-// Find TOIL records by entry ID
-export const findTOILRecordsByEntryId = (entryId: string): TOILRecord[] => {
+/**
+ * Find TOIL records associated with a specific time entry
+ */
+export const findTOILRecordsByEntryId = (entryId: string) => {
   try {
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
     if (!records) {
-      logger.debug(`No TOIL records found for entry ID ${entryId}`);
+      logger.debug(`No TOIL records found for entry ${entryId}`);
       return [];
     }
     
-    const allRecords: TOILRecord[] = JSON.parse(records);
-    const entryRecords = allRecords.filter(record => record.entryId === entryId);
+    const allRecords = JSON.parse(records);
+    const entryRecords = allRecords.filter((record: any) => record.entryId === entryId);
     
-    logger.debug(`Found ${entryRecords.length} TOIL records for entry ID ${entryId}`);
+    logger.debug(`Found ${entryRecords.length} TOIL records for entry ${entryId}`);
     return entryRecords;
   } catch (error) {
-    logger.error(`Error getting TOIL records for entry ID ${entryId}:`, error);
+    logger.error(`Error getting TOIL records for entry ${entryId}:`, error);
     return [];
   }
 };
 
-// Delete TOIL record by entry ID
+/**
+ * Delete TOIL records associated with a specific time entry
+ */
 export const deleteTOILRecordByEntryId = async (entryId: string): Promise<boolean> => {
+  return attemptStorageOperation(async () => {
+    const records = localStorage.getItem(TOIL_RECORDS_KEY);
+    if (!records) {
+      logger.debug(`No TOIL records found to delete for entry ${entryId}`);
+      return true; // Consider it successful if there's nothing to delete
+    }
+    
+    let allRecords = JSON.parse(records);
+    const initialLength = allRecords.length;
+    
+    // Filter out records associated with the entryId
+    allRecords = allRecords.filter((record: any) => record.entryId !== entryId);
+    
+    if (allRecords.length === initialLength) {
+      logger.debug(`No TOIL records found to delete for entry ${entryId}`);
+      return true; // Consider it successful if there's nothing to delete
+    }
+    
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
+    
+    logger.debug(`Deleted TOIL records for entry ${entryId}`);
+    return true;
+  }, `deleteTOILRecordByEntryId-${entryId}`);
+};
+
+/**
+ * Get a summary of TOIL for a specific user and date
+ */
+export const getTOILSummary = async (userId: string, date: Date): Promise<any | null> => {
+  const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}-${format(date, 'yyyy-MM-dd')}`;
+  
   try {
-    return await attemptStorageOperation(async () => {
-      const records = localStorage.getItem(TOIL_RECORDS_KEY);
-      if (!records) {
-        logger.debug(`No TOIL records found to delete for entry ID ${entryId}`);
-        return true; // Consider it successful if there's nothing to delete
-      }
-      
-      let allRecords: TOILRecord[] = JSON.parse(records);
-      const initialLength = allRecords.length;
-      allRecords = allRecords.filter(record => record.entryId !== entryId);
-      
-      if (allRecords.length === initialLength) {
-        logger.debug(`No TOIL records found to delete for entry ID ${entryId}`);
-        return true; // Consider it successful if no records were deleted
-      }
-      
-      localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
-      logger.debug(`Deleted TOIL records for entry ID ${entryId}`);
-      return true;
-    }, `deleteTOILRecordByEntryId - ${entryId}`);
+    const cachedSummary = localStorage.getItem(cacheKey);
+    if (cachedSummary) {
+      logger.debug(`Returning cached TOIL summary for ${userId} on ${format(date, 'yyyy-MM-dd')}`);
+      return JSON.parse(cachedSummary);
+    }
+    
+    logger.debug(`No cached TOIL summary found for ${userId} on ${format(date, 'yyyy-MM-dd')}`);
+    return null;
   } catch (error) {
-    logger.error(`Error deleting TOIL record for entry ID ${entryId}:`, error);
-    return false;
+    logger.error(`Error getting cached TOIL summary for ${userId} on ${format(date, 'yyyy-MM-dd')}:`, error);
+    return null;
   }
 };
 
-// Check if there is TOIL accrued or used for a specific day
-export const hasTOILForDay = (userId: string, day: Date): TOILDayInfo => {
+/**
+ * Check if a user has any TOIL records for a specific day
+ */
+export const hasTOILForDay = async (userId: string, date: Date): Promise<boolean> => {
   try {
-    const dateString = format(day, 'yyyy-MM-dd');
-    logger.debug(`Checking TOIL for day: ${dateString} for user: ${userId}`);
-    
-    let hasAccrued = false;
-    let hasUsed = false;
-    let toilHours = 0;
-    
-    // Check TOIL records
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (records) {
-      const allRecords: TOILRecord[] = JSON.parse(records);
-      const dayRecords = allRecords.filter(record => 
-        record.userId === userId && format(record.date instanceof Date ? record.date : new Date(record.date), 'yyyy-MM-dd') === dateString
-      );
-      
-      if (dayRecords.length > 0) {
-        hasAccrued = true;
-        toilHours += dayRecords.reduce((sum, record) => sum + record.hours, 0);
-      }
-    }
-    
-    // Check TOIL usage
-    const usage = localStorage.getItem(TOIL_USAGE_KEY);
-    if (usage) {
-      const allUsage: TOILUsage[] = JSON.parse(usage);
-      const dayUsage = allUsage.filter(record => 
-        record.userId === userId && format(record.date instanceof Date ? record.date : new Date(record.date), 'yyyy-MM-dd') === dateString
-      );
-      
-      if (dayUsage.length > 0) {
-        hasUsed = true;
-        toilHours -= dayUsage.reduce((sum, record) => sum + record.hours, 0);
-      }
-    }
-    
-    logger.debug(`TOIL for ${dateString}: Accrued=${hasAccrued}, Used=${hasUsed}, Hours=${toilHours}`);
-    return {
-      hasAccrued,
-      hasUsed,
-      toilHours
-    };
-  } catch (error) {
-    logger.error(`Error checking TOIL for day ${format(day, 'yyyy-MM-dd')} for user ${userId}:`, error);
-    return {
-      hasAccrued: false,
-      hasUsed: false,
-      toilHours: 0
-    };
-  }
-};
-
-// Check if there is any TOIL data for a specific month
-export const hasTOILForMonth = (userId: string, monthYear: string): boolean => {
-  try {
-    logger.debug(`Checking if TOIL exists for ${userId} in ${monthYear}`);
-    
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    const usage = localStorage.getItem(TOIL_USAGE_KEY);
-    
-    if (!records && !usage) {
-      logger.debug(`No TOIL records or usage found for ${userId} in ${monthYear}`);
+    if (!records) {
       return false;
     }
     
-    let hasTOIL = false;
+    const allRecords = JSON.parse(records);
     
-    if (records) {
-      const allRecords: TOILRecord[] = JSON.parse(records);
-      hasTOIL = allRecords.some(record => record.userId === userId && record.monthYear === monthYear);
-    }
+    // Format the date for comparison (assuming records store dates as strings)
+    const formattedDate = format(date, 'yyyy-MM-dd');
     
-    if (!hasTOIL && usage) {
-      const allUsage: TOILUsage[] = JSON.parse(usage);
-      hasTOIL = allUsage.some(record => record.userId === userId && record.monthYear === monthYear);
-    }
+    const hasTOIL = allRecords.some(
+      (record: any) => 
+        record.userId === userId && 
+        format(new Date(record.date), 'yyyy-MM-dd') === formattedDate
+    );
     
-    logger.debug(`TOIL exists for ${userId} in ${monthYear}: ${hasTOIL}`);
     return hasTOIL;
   } catch (error) {
-    logger.error(`Error checking if TOIL exists for ${userId} in ${monthYear}:`, error);
+    logger.error(`Error checking TOIL for day ${date} and user ${userId}:`, error);
     return false;
   }
 };
 
-// Get TOIL summary for a user and month
-export const getTOILSummary = (userId: string, monthYear: string): TOILSummary => {
-  const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}-${monthYear}`;
+/**
+ * Check if a user has any TOIL records for a specific month
+ */
+export const hasTOILForMonth = async (userId: string, date: Date): Promise<boolean> => {
   try {
-    // Check if the summary is already cached
-    const cachedSummary = localStorage.getItem(cacheKey);
-    if (cachedSummary) {
-      const parsedSummary: TOILSummary = JSON.parse(cachedSummary);
-      logger.debug(`Returning cached TOIL summary for ${userId} in ${monthYear}`);
-      return parsedSummary;
-    }
-    
-    logger.debug(`Calculating TOIL summary for ${userId} in ${monthYear}`);
-    
-    let accrued = 0;
-    let used = 0;
-    
-    // Calculate accrued TOIL
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (records) {
-      const allRecords: TOILRecord[] = JSON.parse(records);
-      const monthRecords = allRecords.filter(record => record.userId === userId && record.monthYear === monthYear);
-      accrued = monthRecords.reduce((sum, record) => sum + record.hours, 0);
+    if (!records) {
+      return false;
     }
     
-    // Calculate used TOIL
-    const usage = localStorage.getItem(TOIL_USAGE_KEY);
-    if (usage) {
-      const allUsage: TOILUsage[] = JSON.parse(usage);
-      const monthUsage = allUsage.filter(record => record.userId === userId && record.monthYear === monthYear);
-      used = monthUsage.reduce((sum, record) => sum + record.hours, 0);
-    }
+    const allRecords = JSON.parse(records);
     
-    const remaining = accrued - used;
+    const hasTOIL = allRecords.some(
+      (record: any) => 
+        record.userId === userId &&
+        new Date(record.date).getFullYear() === date.getFullYear() &&
+        new Date(record.date).getMonth() === date.getMonth()
+    );
     
-    const summary: TOILSummary = {
-      userId,
-      monthYear,
-      accrued,
-      used,
-      remaining
-    };
-    
-    // Cache the summary
-    localStorage.setItem(cacheKey, JSON.stringify(summary));
-    logger.debug(`Cached TOIL summary for ${userId} in ${monthYear}`);
-    
-    return summary;
+    return hasTOIL;
   } catch (error) {
-    logger.error(`Error getting TOIL summary for ${userId} in ${monthYear}:`, error);
-    return {
-      userId,
-      monthYear,
-      accrued: 0,
-      used: 0,
-      remaining: 0
-    };
+    logger.error(`Error checking TOIL for month ${date} and user ${userId}:`, error);
+    return false;
   }
 };

@@ -57,7 +57,10 @@ export class UnifiedTimeEntryService {
     
     // Create operations and queries
     this.operations = new TimeEntryOperations(
-      this.config,
+      {
+        serviceName: 'UnifiedTimeEntryService',
+        storageKey: this.config.storageKey
+      }, // Add the required serviceName property
       this.invalidateCache.bind(this),
       () => this.getAllEntries(),
       this.eventManager

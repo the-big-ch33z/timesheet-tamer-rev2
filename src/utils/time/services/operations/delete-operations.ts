@@ -1,7 +1,7 @@
 
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
-import { TimeEntryOperationsConfig, TimeEntryEventType } from "./types";
+import { TimeEntryOperationsConfig } from "./types";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 
 const logger = createTimeLogger('DeleteOperations');
@@ -19,7 +19,7 @@ export class DeleteOperations {
     config: TimeEntryOperationsConfig
   ) {
     this.eventManager = eventManager;
-    this.serviceName = config.serviceName;
+    this.serviceName = config.serviceName || 'default';
     this.storageKey = config.storageKey;
     
     logger.debug(`DeleteOperations initialized for ${this.serviceName}`);
@@ -52,7 +52,7 @@ export class DeleteOperations {
         
         // Dispatch through the event manager
         this.eventManager.dispatchEvent({
-          type: 'delete' as TimeEntryEventType,
+          type: 'entry-deleted', // Using the correct event type name
           timestamp: now,
           payload: { entryId }
         });
