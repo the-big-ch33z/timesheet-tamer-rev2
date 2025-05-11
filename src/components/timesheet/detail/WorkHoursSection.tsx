@@ -75,7 +75,13 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     leaveActive: false,  // Default to false as we don't have this info
     toilActive: false,   // Default to false as we don't have this info
     isComplete: true,    // We assume it's ready for calculation in this context
-    calculateToilForDay
+    calculateToilForDay,
+    entriesCount: dayEntries.length,
+    // Include these parameters for compatibility
+    userId,
+    date,
+    entries: dayEntries,
+    schedule: effectiveWorkSchedule
   });
 
   // Handle entry creation
