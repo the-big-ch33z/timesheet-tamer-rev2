@@ -1,9 +1,9 @@
-
 import React from 'react';
-import { render, screen, fireEvent } from './utils/test-utils';
+import { render } from './utils/test-utils';
 import './utils/setupTests'; // Import the setup file for Jest DOM matchers
 import TimesheetCalendar from '../TimesheetCalendar';
 import { format } from 'date-fns';
+import { screen, fireEvent } from '@testing-library/dom';
 
 // Mock props
 const mockProps = {
@@ -52,4 +52,3 @@ describe('TimesheetCalendar', () => {
     expect(screen.getByText('Sa')).toBeInTheDocument();
   });
 });
-

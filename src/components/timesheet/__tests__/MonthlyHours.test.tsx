@@ -1,5 +1,7 @@
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from './utils/test-utils';
+import { screen } from '@testing-library/dom';
 import MonthlyHours from '../MonthlyHours';
 import { useTimesheetData } from '@/hooks/timesheet/useTimesheetData';
 import { useUserMetrics } from '@/contexts/user-metrics';

@@ -61,11 +61,21 @@ const renderFormField = (
 
 export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue }) => {
   // Extract the fields from formState or provide fallbacks for safety
-  const hoursField = formState.fields[FIELD_TYPES.HOURS] || { value: '', touched: false };
-  const descriptionField = formState.fields[FIELD_TYPES.DESCRIPTION] || { value: '', touched: false };
-  const jobNumberField = formState.fields[FIELD_TYPES.JOB_NUMBER] || { value: '', touched: false };
-  const regoField = formState.fields[FIELD_TYPES.REGO] || { value: '', touched: false };
-  const taskNumberField = formState.fields[FIELD_TYPES.TASK_NUMBER] || { value: '', touched: false };
+  // Use type assertion for safe access to error property
+  const getFieldWithError = (fieldName: string) => {
+    const field = formState.fields[fieldName] || { value: '', touched: false };
+    return {
+      value: field.value ?? '',
+      error: 'error' in field ? field.error : undefined,
+      touched: 'touched' in field ? field.touched : false
+    };
+  };
+
+  const hoursField = getFieldWithError(FIELD_TYPES.HOURS);
+  const descriptionField = getFieldWithError(FIELD_TYPES.DESCRIPTION);
+  const jobNumberField = getFieldWithError(FIELD_TYPES.JOB_NUMBER);
+  const regoField = getFieldWithError(FIELD_TYPES.REGO);
+  const taskNumberField = getFieldWithError(FIELD_TYPES.TASK_NUMBER);
 
   return (
     <>
@@ -125,6 +135,9 @@ export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue
           className="w-full"
           rows={2}
         />
+        {descriptionField.error && (
+          <p className="text-red-500 text-sm mt-1">{descriptionField.error}</p>
+        )}
       </div>
     </>
   );
