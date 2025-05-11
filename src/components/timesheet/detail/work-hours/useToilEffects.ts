@@ -8,12 +8,17 @@ const logger = createTimeLogger('useToilEffects');
  * Interface for the useToilEffects parameters
  */
 export interface UseToilEffectsParams {
-  hasEntries: boolean;
-  leaveActive: boolean;
-  toilActive: boolean;
-  isComplete: boolean;
-  calculateToilForDay: () => Promise<any>;
-  entriesCount: number;
+  hasEntries?: boolean;
+  leaveActive?: boolean;
+  toilActive?: boolean;
+  isComplete?: boolean;
+  calculateToilForDay?: () => Promise<any>;
+  entriesCount?: number;
+  // Add new parameters that were being used in WorkHoursSection.tsx
+  userId?: string;
+  date?: Date;
+  entries?: any[];
+  schedule?: any;
 }
 
 /**
@@ -38,7 +43,7 @@ export const useToilEffects = (params: UseToilEffectsParams): void => {
     // 1. We have entries
     // 2. It's not a leave day
     // 3. Hours are complete or we've explicitly marked this as a TOIL day
-    if (hasEntries && !leaveActive && (isComplete || toilActive)) {
+    if (hasEntries && !leaveActive && (isComplete || toilActive) && calculateToilForDay) {
       logger.debug('TOIL calculation triggered by state change');
       calculateToilForDay().catch(error => {
         logger.error('TOIL calculation failed:', error);

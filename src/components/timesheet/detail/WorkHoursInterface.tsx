@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useWorkHoursActions } from "./hooks/useWorkHoursActions";

@@ -71,11 +71,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 
   // Call updated hook with object-based parameters
   useToilEffects({
-    userId,
-    date,
-    entries: dayEntries,
-    schedule: effectiveWorkSchedule,
-    isComplete: true
+    hasEntries: dayEntries.length > 0,
+    leaveActive: false,  // Default to false as we don't have this info
+    toilActive: false,   // Default to false as we don't have this info
+    isComplete: true,    // We assume it's ready for calculation in this context
+    calculateToilForDay
   });
 
   // Handle entry creation
