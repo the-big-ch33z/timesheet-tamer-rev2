@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
@@ -21,8 +22,8 @@ export class DeleteOperations {
     this.serviceName = config.serviceName || 'default';
     this.storageKey = config.storageKey;
     
-    logger.debug(DeleteOperations initialized for ${this.serviceName});
-    console.log([DeleteOperations] DeleteOperations initialized for ${this.serviceName});
+    logger.debug(`DeleteOperations initialized for ${this.serviceName}`);
+    console.log(`[DeleteOperations] DeleteOperations initialized for ${this.serviceName}`);
   }
 
   /**
@@ -30,8 +31,8 @@ export class DeleteOperations {
    * This will handle properly removing from storage and emitting events
    */
   public async deleteEntryById(entryId: string): Promise<boolean> {
-    logger.debug(Deleting entry with ID: ${entryId});
-    console.log([DeleteOperations] Deleting entry with ID: ${entryId});
+    logger.debug(`Deleting entry with ID: ${entryId}`);
+    console.log(`[DeleteOperations] Deleting entry with ID: ${entryId}`);
     
     try {
       // Logic for deleting an entry would go here.
@@ -61,14 +62,14 @@ export class DeleteOperations {
           entryId
         });
         
-        logger.debug(Successfully deleted entry with ID: ${entryId});
-        console.log([DeleteOperations] Successfully deleted entry with ID: ${entryId});
+        logger.debug(`Successfully deleted entry with ID: ${entryId}`);
+        console.log(`[DeleteOperations] Successfully deleted entry with ID: ${entryId}`);
       }
       
       return success;
     } catch (error) {
-      logger.error(Failed to delete entry with ID: ${entryId}, error);
-      console.error([DeleteOperations] Failed to delete entry:, error);
+      logger.error(`Failed to delete entry with ID: ${entryId}`, error);
+      console.error(`[DeleteOperations] Failed to delete entry:`, error);
       return false;
     }
   }
