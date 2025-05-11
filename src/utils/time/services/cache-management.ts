@@ -3,150 +3,108 @@ import { TimeEntry } from "@/types";
 import { EntryCache } from "./types";
 import { createTimeLogger } from "../errors/timeLogger";
 
-const logger = createTimeLogger('TimeEntryCache');
+const logger = createTimeLogger('cache-management');
 
 /**
  * Create an empty cache object
  */
-export function createEmptyCache(): EntryCache {
+export const createEmptyCache = (): EntryCache => {
   return {
     entries: [],
-    userEntries: {},
-    dayEntries: {},
-    monthEntries: {},
-    timestamp: 0,
-    isValid: false
+    timestamp: Date.now(),
+    valid: false
   };
-}
+};
 
 /**
- * Check if cache is still valid based on TTL
+ * Check if the cache is valid based on configuration
  */
-export function isCacheValid(
+export const isCacheValid = (
   cache: EntryCache,
   enableCaching: boolean,
   cacheTTL: number
-): boolean {
-  if (!enableCaching) return false;
-  if (!cache || !cache.isValid) return false;
+): boolean => {
+  // If caching is disabled, always return false
+  if (!enableCaching) {
+    return false;
+  }
   
+  // If the cache is marked as invalid, return false
+  if (!cache.valid) {
+    return false;
+  }
+  
+  // Check if the cache has expired
   const now = Date.now();
-  return (now - cache.timestamp) < cacheTTL;
-}
+  const ageMs = now - cache.timestamp;
+  
+  return ageMs < cacheTTL;
+};
 
 /**
- * Reset cache to empty state
+ * Invalidate the cache
  */
-export function invalidateCache(cache: EntryCache): EntryCache {
+export const invalidateCache = (cache: EntryCache): EntryCache => {
   return {
     ...cache,
-    isValid: false,
-    timestamp: 0,
-    userEntries: {},
-    dayEntries: {},
-    monthEntries: {}
+    valid: false
   };
-}
+};
 
 /**
- * Update cache with new entries
+ * Update the cache with new entries
  */
-export function updateCacheEntries(
+export const updateCacheEntries = (
   cache: EntryCache,
   entries: TimeEntry[]
-): EntryCache {
+): EntryCache => {
   return {
-    ...cache,
     entries: [...entries],
     timestamp: Date.now(),
-    isValid: true
+    valid: true
   };
-}
+};
 
 /**
- * Get cached entries for a specific user
+ * Update the cache with user entries
  */
-export function getCachedUserEntries(
+export const updateUserEntries = (
   cache: EntryCache,
   userId: string,
-  allEntries: TimeEntry[]
-): TimeEntry[] {
-  if (cache.userEntries[userId]) {
-    logger.debug(`Using cached entries for user ${userId}`);
-    return [...cache.userEntries[userId]];
-  }
-  
-  // Filter entries for the user
-  const userEntries = allEntries.filter(entry => entry.userId === userId);
-  
-  // Update cache
-  cache.userEntries[userId] = userEntries;
-  
-  logger.debug(`Cached ${userEntries.length} entries for user ${userId}`);
-  return [...userEntries];
-}
+  entries: TimeEntry[]
+): EntryCache => {
+  // For now we just store all entries in the main entries array
+  // In a future optimization, we could store per-user entries separately
+  logger.debug(`Updating cache with ${entries.length} entries for user ${userId}`);
+  return updateCacheEntries(cache, entries);
+};
 
 /**
- * Get cached entries for a specific day and user
+ * Update day entries in the cache
  */
-export function getCachedDayEntries(
+export const updateDayEntries = (
   cache: EntryCache,
   date: Date,
   userId: string,
-  userEntries: TimeEntry[]
-): TimeEntry[] {
-  // Generate cache key
-  const cacheKey = `${userId}-${date.toDateString()}`;
-  
-  // Check cache first
-  if (cache.dayEntries[cacheKey]) {
-    logger.debug(`Using cached entries for day ${date.toDateString()}`);
-    return [...cache.dayEntries[cacheKey]];
-  }
-  
-  // Filter by date
-  const dayEntries = userEntries.filter(entry => {
-    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-    return entryDate.toDateString() === date.toDateString();
-  });
-  
-  // Update cache
-  cache.dayEntries[cacheKey] = dayEntries;
-  
-  logger.debug(`Cached ${dayEntries.length} entries for user ${userId} on ${date.toDateString()}`);
-  return [...dayEntries];
-}
+  entries: TimeEntry[]
+): EntryCache => {
+  // For now, we're just updating all entries
+  // In a future optimization, we could store day entries separately
+  logger.debug(`Updating cache with ${entries.length} entries for date ${date.toISOString()} and user ${userId}`);
+  return updateCacheEntries(cache, entries);
+};
 
 /**
- * Get cached entries for a specific month and user
+ * Update month entries in the cache
  */
-export function getCachedMonthEntries(
+export const updateMonthEntries = (
   cache: EntryCache,
   date: Date,
   userId: string,
-  userEntries: TimeEntry[]
-): TimeEntry[] {
-  // Generate cache key
-  const cacheKey = `${userId}-${date.getFullYear()}-${date.getMonth()}`;
-  
-  // Check cache first
-  if (cache.monthEntries[cacheKey]) {
-    logger.debug(`Using cached entries for month ${date.getFullYear()}-${date.getMonth() + 1}`);
-    return [...cache.monthEntries[cacheKey]];
-  }
-  
-  // Filter by month
-  const monthEntries = userEntries.filter(entry => {
-    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-    return (
-      entryDate.getMonth() === date.getMonth() && 
-      entryDate.getFullYear() === date.getFullYear()
-    );
-  });
-  
-  // Update cache
-  cache.monthEntries[cacheKey] = monthEntries;
-  
-  logger.debug(`Cached ${monthEntries.length} entries for month ${date.getFullYear()}-${date.getMonth() + 1}`);
-  return [...monthEntries];
-}
+  entries: TimeEntry[]
+): EntryCache => {
+  // For now, we're just updating all entries
+  // In a future optimization, we could store month entries separately
+  logger.debug(`Updating cache with ${entries.length} entries for month ${date.toISOString().slice(0, 7)} and user ${userId}`);
+  return updateCacheEntries(cache, entries);
+};

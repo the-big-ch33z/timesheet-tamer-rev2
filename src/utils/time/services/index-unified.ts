@@ -5,18 +5,15 @@
  */
 
 import { 
-  UnifiedTimeEntryService,
+  unifiedTimeEntryService,
+  UnifiedTimeEntryService, // This was missing before
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
-  storageWriteLock
+  storageWriteLock,
+  validateTimeEntry, 
+  autoCalculateHours, 
+  calculateTotalHours
 } from './unified-service';
-
-// Create and export a singleton instance 
-export const unifiedTimeEntryService = new UnifiedTimeEntryService({
-  enableCaching: true,
-  validateOnAccess: false,
-  enableAuditing: true
-});
 
 // Export for backward compatibility
 export const timeEntryService = unifiedTimeEntryService;

@@ -1,53 +1,47 @@
 
 /**
- * TOIL services index
- * Central export point for all TOIL-related functionality
+ * TOIL Service Index
+ * This file provides a consolidated export of TOIL-related functionality.
  */
 
-// Export the main TOIL service
-export { toilService, TOIL_JOB_NUMBER } from './toilService';
+// Export TOIL service and types
+export { 
+  TOILService, 
+  TOIL_JOB_NUMBER,
+  TOIL_STORAGE_KEY
+} from './service';
 
-// Re-export types
-export type { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
+export type { 
+  TOILBalanceEntry,
+  TOILUsageEntry
+} from './service';
 
-// Export storage utilities
+// Re-export calculation functions
+export { 
+  calculateTOILBalance,
+  calculateTOILAccrual,
+  getAvailableTOILHours
+} from './calculation';
+
+// Re-export batch processing functions
 export {
-  // Storage constants
-  TOIL_RECORDS_KEY,
-  TOIL_USAGE_KEY,
-  TOIL_SUMMARY_CACHE_KEY,
-  
-  // Core functions
-  clearSummaryCache,
-  clearAllTOILCaches,
-  
-  // Record management
-  loadTOILRecords,
-  loadTOILUsage,
-  storeTOILRecord,
-  storeTOILUsage,
-  
-  // Queries
-  getUserTOILRecords,
-  findTOILRecordsByEntryId,
-  deleteTOILRecordByEntryId,
-  hasTOILForDay,
-  hasTOILForMonth,
-  getTOILSummary,
-  
-  // Types - fix isolated modules error
-  type TOILDayInfo,
-  
-  // Cleanup
-  cleanupDuplicateTOILRecords,
-  cleanupDuplicateTOILUsage,
-  clearTOILStorageForMonth
+  processTOILBatch,
+  validateTOILBatchItem
+} from './batch-processing';
+
+// Re-export storage functions
+export {
+  loadTOILData,
+  saveTOILData,
+  clearTOILCache
 } from './storage';
 
-// Add deprecation notices using console warnings in development
-if (process.env.NODE_ENV === 'development') {
-  console.warn(
-    'Direct imports from TOIL storage files are deprecated.\n' +
-    'Please import from @/utils/time/services/toil instead.'
-  );
-}
+// Export event functionality
+export {
+  dispatchTOILEvent,
+  addTOILEventListener,
+  removeTOILEventListener
+} from './events';
+
+// Re-export holiday utilities
+export { isHoliday } from './holiday-utils';

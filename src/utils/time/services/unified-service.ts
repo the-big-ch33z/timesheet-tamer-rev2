@@ -17,6 +17,9 @@ export const storageWriteLock = {
   lockTimeout: null as NodeJS.Timeout | null
 };
 
+// Export the UnifiedTimeEntryService class (this was missing)
+export { UnifiedTimeEntryService };
+
 // Export types from the types file
 export * from './types';
 
@@ -27,3 +30,6 @@ export const unifiedTimeEntryService = new UnifiedTimeEntryService();
 if (typeof window !== 'undefined') {
   unifiedTimeEntryService.init();
 }
+
+// Export validation functions for backward compatibility
+export { validateTimeEntry, autoCalculateHours, calculateTotalHours } from './entry-validation';

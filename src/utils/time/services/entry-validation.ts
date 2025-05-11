@@ -1,43 +1,23 @@
 
 import { TimeEntry } from "@/types";
+import { ValidationResult, calculateTotalHours, autoCalculateHours } from "./types";
 
-export const validateTimeEntry = (entry: Partial<TimeEntry>): { valid: boolean; message?: string } => {
-  if (!entry.hours || entry.hours <= 0) {
-    return {
-      valid: false,
-      message: "Hours must be greater than 0"
-    };
-  }
-
-  if (!entry.date) {
-    return {
-      valid: false,
-      message: "Date is required"
-    };
-  }
-
-  return { valid: true };
+/**
+ * Validate a time entry for completeness and correctness
+ */
+export const validateTimeEntry = (entry: Partial<TimeEntry>): ValidationResult => {
+  const errors: string[] = [];
+  
+  // Check required fields
+  if (!entry.userId) errors.push("User ID is required");
+  if (!entry.date) errors.push("Date is required");
+  if (typeof entry.hours !== 'number' || entry.hours <= 0) errors.push("Hours must be a positive number");
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 };
 
-// Add these exported functions to fix references in other files
-export const autoCalculateHours = (startTime: string, endTime: string): number => {
-  // Simple implementation to calculate hours between times
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
-  
-  let hours = endHour - startHour;
-  const minutes = endMinute - startMinute;
-  
-  // Adjust for minutes
-  hours += minutes / 60;
-  
-  // Ensure positive value
-  return Math.max(0, parseFloat(hours.toFixed(2)));
-};
-
-export const calculateTotalHours = (entries: TimeEntry[]): number => {
-  return entries.reduce((total, entry) => total + (entry.hours || 0), 0);
-};
-
-// For backward compatibility
-export const validateEntry = validateTimeEntry;
+// Re-export core calculation functions from types
+export { calculateTotalHours, autoCalculateHours };

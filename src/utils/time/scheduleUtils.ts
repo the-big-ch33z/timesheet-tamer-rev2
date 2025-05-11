@@ -1,11 +1,20 @@
-
 /**
  * Work schedule utility functions
  */
-import { WorkSchedule, WorkScheduleDayConfig } from '@/types';
+import { WorkSchedule } from '@/types';
 import { format, isSameDay, isWeekend, isWithinInterval, addDays, getDaysInMonth } from 'date-fns';
 import { createTimeLogger } from './errors/timeLogger';
 import { isHoliday } from './services/toil/holiday-utils';
+
+// Define the WorkScheduleDayConfig interface here since it's not exported from @/types
+interface WorkScheduleDayConfig {
+  startTime: string;
+  endTime: string;
+  breaks?: {
+    lunch: boolean;
+    smoko: boolean;
+  };
+}
 
 const logger = createTimeLogger('scheduleUtils');
 
@@ -115,11 +124,6 @@ export function getDayScheduleInfo(date: Date, workSchedule: WorkSchedule): any 
 
 /**
  * Calculate day hours with break adjustments
- * 
- * @param startTime Start time string in format "HH:MM"
- * @param endTime End time string in format "HH:MM"
- * @param breaks Configuration for breaks (lunch, smoko)
- * @returns number Total hours for the day with breaks subtracted
  */
 export function calculateDayHoursWithBreaks(
   startTime: string,
