@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -181,17 +182,22 @@ export class TOILService {
     }
   }
 
-  // Get TOIL summary for a user and month - use the unified function from queries.ts
-  public getTOILSummary(userId: string, monthYear: string): TOILSummary {
+  // Get TOIL summary for a user and month - non-async method
+  public getTOILSummary(userId: string, monthYear: string | Date): TOILSummary {
     try {
-      logger.debug(`Getting TOIL summary for user ${userId}, month ${monthYear}`);
-      console.log(`[TOILService] Getting TOIL summary for user ${userId}, month ${monthYear}`);
+      // Normalize input to string format
+      const normalizedMonthYear = monthYear instanceof Date 
+        ? format(monthYear, 'yyyy-MM')
+        : monthYear;
       
-      // Use the unified implementation from storage/queries.ts
-      const summary = getStorageTOILSummary(userId, monthYear);
+      logger.debug(`Getting TOIL summary for user ${userId}, month ${normalizedMonthYear}`);
+      console.log(`[TOILService] Getting TOIL summary for user ${userId}, month ${normalizedMonthYear}`);
       
-      logger.debug(`TOIL service returning summary for ${userId} - ${monthYear}:`, summary);
-      console.log(`[TOILService] TOIL service returning summary for ${userId} - ${monthYear}:`, summary);
+      // Use the unified implementation from storage/queries.ts - this returns a TOILSummary directly
+      const summary = getStorageTOILSummary(userId, normalizedMonthYear);
+      
+      logger.debug(`TOIL service returning summary for ${userId} - ${normalizedMonthYear}:`, summary);
+      console.log(`[TOILService] TOIL service returning summary for ${userId} - ${normalizedMonthYear}:`, summary);
       
       // Extra validation to catch potential issues
       if (summary) {
@@ -205,7 +211,7 @@ export class TOILService {
           // Return a corrected summary
           return {
             userId,
-            monthYear,
+            monthYear: normalizedMonthYear,
             accrued: isFinite(accrued) ? accrued : 0,
             used: isFinite(used) ? used : 0,
             remaining: isFinite(remaining) ? remaining : 0
@@ -213,7 +219,13 @@ export class TOILService {
         }
       }
       
-      return summary;
+      return summary || {
+        userId,
+        monthYear: normalizedMonthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      };
     } catch (error) {
       logger.error(`Error getting TOIL summary from service: ${error instanceof Error ? error.message : String(error)}`, error);
       console.error(`[TOILService] Error getting TOIL summary: ${error instanceof Error ? error.message : String(error)}`, error);
@@ -221,7 +233,7 @@ export class TOILService {
       // Return a valid but empty summary on error
       return {
         userId,
-        monthYear,
+        monthYear: typeof monthYear === 'string' ? monthYear : format(monthYear, 'yyyy-MM'),
         accrued: 0,
         used: 0,
         remaining: 0

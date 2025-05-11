@@ -7,8 +7,10 @@ const logger = createTimeLogger('TOILStorageCore');
 
 /**
  * Clear TOIL summary cache
+ * @param userId Optional user ID to clear cache for specific user
+ * @param monthYear Optional month year to clear cache for specific month
  */
-export const clearSummaryCache = async (): Promise<boolean> => {
+export const clearSummaryCache = async (userId?: string, monthYear?: string): Promise<boolean> => {
   return attemptStorageOperation(async () => {
     logger.debug('Clearing TOIL summary cache');
     
@@ -17,6 +19,15 @@ export const clearSummaryCache = async (): Promise<boolean> => {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
+        // Filter by userId and monthYear if provided
+        if (userId && !key.includes(userId)) {
+          continue;
+        }
+        
+        if (monthYear && !key.includes(monthYear)) {
+          continue;
+        }
+        
         keysToRemove.push(key);
       }
     }

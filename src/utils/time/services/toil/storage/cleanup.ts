@@ -1,3 +1,4 @@
+
 import { format } from "date-fns";
 import { createTimeLogger } from '@/utils/time/errors';
 import { clearSummaryCache } from './core';
@@ -68,7 +69,7 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
       const uniqueMonths = [...new Set(months)];
       
       for (const month of uniqueMonths) {
-        clearSummaryCache(userId, month);
+        await clearSummaryCache(userId, month);
       }
       
       logger.debug(`Removed ${duplicatesRemoved} duplicate TOIL records for user ${userId}`);
@@ -144,7 +145,7 @@ export async function cleanupDuplicateTOILUsage(userId: string): Promise<number>
       localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(cleanedUsages));
       
       // Clear the cache for this user
-      clearSummaryCache(userId);
+      await clearSummaryCache(userId);
       
       logger.debug(`Removed ${duplicatesRemoved} duplicate TOIL usage records for user ${userId}`);
     }
@@ -184,7 +185,8 @@ export function clearTOILStorageForMonth(userId: string, monthYear: string): boo
     localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsage));
     
     // Clear the summary cache
-    clearSummaryCache(userId, monthYear);
+    clearSummaryCache(userId, monthYear)
+      .catch(err => logger.error(`Error clearing cache: ${err}`));
     
     return true;
   } catch (error) {

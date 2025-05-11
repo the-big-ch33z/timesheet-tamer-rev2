@@ -138,7 +138,7 @@ export async function performSingleCalculation(
     
     if (filteredEntries.length === 0) {
       logger.debug(`No valid entries for TOIL calculation on ${date.toISOString().slice(0, 10)}`);
-      return getTOILSummary(userId, date.toISOString().slice(0, 7));
+      return getTOILSummary(userId, format(date, 'yyyy-MM'));
     }
 
     logger.debug(`Processing ${filteredEntries.length} entries for TOIL calculation for date: ${format(date, 'yyyy-MM-dd')}`);
@@ -162,7 +162,7 @@ export async function performSingleCalculation(
     // FIXED: Added better validation to prevent insignificant TOIL amounts
     if (toilHours <= 0.01) {
       logger.debug(`No significant TOIL hours (${toilHours}) calculated for ${format(date, 'yyyy-MM-dd')}, skipping record creation`);
-      return getTOILSummary(userId, date.toISOString().slice(0, 7));
+      return getTOILSummary(userId, format(date, 'yyyy-MM'));
     }
     
     // Find the primary entry to associate the TOIL record with
@@ -191,8 +191,8 @@ export async function performSingleCalculation(
       return null;
     }
     
-    // Return the updated TOIL summary
-    const monthYear = date.toISOString().slice(0, 7);
+    // Return the updated TOIL summary - getTOILSummary can accept Date or string
+    const monthYear = format(date, 'yyyy-MM');
     const summary = getTOILSummary(userId, monthYear);
     
     // Dispatch event to notify subscribers of TOIL update
