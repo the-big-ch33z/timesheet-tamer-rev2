@@ -5,6 +5,7 @@ import ErrorBoundary from "../common/ErrorBoundary";
 import { useToast } from "@/components/ui/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "@/components/common/ErrorFallback";
+import { ErrorProvider } from "@/contexts/error/ErrorContext";
 
 const logger = createTimeLogger('TimesheetWithErrorBoundary');
 

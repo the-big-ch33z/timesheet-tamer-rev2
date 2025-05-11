@@ -11,6 +11,7 @@ import { TIME_ENTRY_EVENTS } from '@/utils/events/eventTypes';
 import { BaseContextProvider, BaseContextState, createBaseContextType } from '@/contexts/base/BaseContext';
 import { useErrorContext } from '@/contexts/error/ErrorContext';
 import { ContextLoader } from '@/components/ui/context-loader';
+import { useToast } from '@/components/ui/use-toast';
 
 const logger = createTimeLogger('TimeEntryContext');
 
@@ -51,7 +52,24 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
   selectedDate, 
   userId 
 }) => {
-  const { handleError } = useErrorContext();
+  // Use try/catch to handle cases when ErrorProvider might not be available
+  let errorHandler = { handleError: (error: any) => console.error(error) };
+  try {
+    errorHandler = useErrorContext();
+  } catch (error) {
+    logger.warn("ErrorContext not available, using fallback error handler");
+    const { toast } = useToast();
+    errorHandler = {
+      handleError: (err: any) => {
+        console.error("TimeEntry error:", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: err instanceof Error ? err.message : String(err)
+        });
+      }
+    };
+  }
   
   // Initialization function for the context
   const initializeEntries = useCallback(async () => {
@@ -94,7 +112,6 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
     }
   }, [selectedDate, dayEntries.length, userId]);
 
-  // Fixed: Use a function to render within BaseContextProvider
   return (
     <BaseContextProvider
       contextName="TimeEntry"
