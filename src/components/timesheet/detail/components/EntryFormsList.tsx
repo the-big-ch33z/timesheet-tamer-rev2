@@ -17,26 +17,20 @@ const EntryFormsList: React.FC<EntryFormsListProps> = memo(({
   removeEntryForm,
   getFormClass
 }) => {
-  // Generate stable form IDs (optionally replace with UUIDs if possible)
-  const formIds = useMemo(
-    () => formHandlers.map((_, index) => `entry-form-${index}`),
-    [formHandlers.length]
-  );
-
-  // If all are hidden, don't render container
-  const hasVisibleForms = formIds.some(id => formVisibility[id]);
-
-  if (!hasVisibleForms) return null;
+  console.debug('Current formHandlers:', formHandlers.map(f => f.id)); // ✅ DEBUG: log current form IDs
 
   return (
     <div className="space-y-4 mt-4 mb-4">
       {formHandlers.map((formHandler, index) => {
-        const formId = formIds[index];
+        const formId = formHandler.id;
+        const isVisible = formVisibility[formId];
+
+        console.debug(`Rendering form with id: ${formId}`); // ✅ DEBUG: log per form render
 
         return (
           <div
             key={formId}
-            className={getFormClass(formId)} // CSS controls visibility
+            className={getFormClass(formId)}
             data-form-id={formId}
           >
             <EntryFormItem
