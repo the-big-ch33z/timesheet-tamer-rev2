@@ -1,8 +1,22 @@
 
-export * from './EntryDataContext';
-export * from './EntryOperationsContext';
-export * from './TimeEntryProvider';
-export * from './useTimeEntryContext';
-export * from './EntriesContext';
-// Export legacy context and types for compatibility
+/**
+ * Time Entry Context Module
+ * 
+ * This module provides a unified context for managing time entries.
+ * It serves as the main entry point for the time entry functionality.
+ */
+
+// Export the main context and hook
+export { 
+  TimeEntryContext, 
+  TimeEntryProvider, 
+  useTimeEntryContext,
+  type TimeEntryContextValue,
+  type TimeEntryProviderProps
+} from './TimeEntryContext';
+
+// Re-export EntriesContext for backward compatibility
+export { EntriesContext, useEntriesContext } from './EntriesContext';
+
+// Export types for consumers
 export * from './types';

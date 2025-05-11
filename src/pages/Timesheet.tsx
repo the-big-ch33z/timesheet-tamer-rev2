@@ -8,7 +8,7 @@ import {
 } from "@/contexts/timesheet";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
-import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryProvider";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { initializeService } from "@/utils/time/services/api-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
@@ -28,7 +28,11 @@ const LoadingComponent = () => (
   </div>
 );
 
-// Create a wrapper component that uses the context
+/**
+ * Timesheet Content Component
+ * This component is wrapped by TimesheetWithErrorBoundary and consumes
+ * the timesheet contexts from the provider hierarchy
+ */
 const TimesheetContent = () => {
   const {
     viewedUser,
@@ -100,6 +104,7 @@ const TimesheetContent = () => {
     return <LoadingComponent />;
   }
 
+  // Use the unified TimeEntryProvider directly
   return (
     <TimeEntryProvider selectedDate={selectedDay} userId={viewedUser.id}>
       <div className="container py-6 max-w-7xl">
@@ -121,7 +126,10 @@ const TimesheetContent = () => {
   );
 };
 
-// Main component that provides the context
+/**
+ * Main Timesheet Page Component
+ * Provides error boundary and context providers
+ */
 const Timesheet = () => {
   return (
     <TimesheetWithErrorBoundary>

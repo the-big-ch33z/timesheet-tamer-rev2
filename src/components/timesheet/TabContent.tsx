@@ -1,8 +1,10 @@
+
 import React, { Suspense, lazy, useEffect } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { 
   useCalendarContext,
-  useUserTimesheetContext
+  useUserTimesheetContext,
+  useTimeEntryContext
 } from "@/contexts/timesheet";
 import { useLogger } from "@/hooks/useLogger";
 
@@ -19,16 +21,21 @@ const LoadingComponent = () => (
   </div>
 );
 
+/**
+ * TabContent Component
+ * Renders different content based on the selected tab
+ */
 const TabContent: React.FC = () => {
   const { currentMonth, selectedDay, prevMonth, nextMonth, handleDayClick } = useCalendarContext();
   const { viewedUser, workSchedule, canEditTimesheet } = useUserTimesheetContext();
+  const { dayEntries } = useTimeEntryContext(); // Use the unified context now
   const logger = useLogger('TabContent');
   
   useEffect(() => {
     if (selectedDay) {
-      logger.debug(`Selected day updated: ${selectedDay.toISOString()}`);
+      logger.debug(`Selected day updated: ${selectedDay.toISOString()}, entries: ${dayEntries.length}`);
     }
-  }, [selectedDay, logger]);
+  }, [selectedDay, dayEntries.length, logger]);
 
   if (!viewedUser?.id) {
     return <div>No user selected</div>;
@@ -40,7 +47,7 @@ const TabContent: React.FC = () => {
         {/* Stretch across full width up to max page frame */}
         <div className="flex flex-col xl:flex-row gap-8 w-full px-0 max-w-7xl mx-auto">
           {/* Work hours + calendar: now fill full available width */}
-          <div className="flex-1 w-full min-w-0 xl:pr-0"> {/* Removed pr-6 */}
+          <div className="flex-1 w-full min-w-0 xl:pr-0">
             <Suspense fallback={<LoadingComponent />}>
               <TimesheetCalendar 
                 currentMonth={currentMonth}
@@ -53,7 +60,7 @@ const TabContent: React.FC = () => {
             </Suspense>
             
             {selectedDay && (
-              <div className="mt-6 w-full"> {/* w-full to stretch */}
+              <div className="mt-6 w-full">
                 <Suspense fallback={<LoadingComponent />}>
                   <WorkHoursSection 
                     date={selectedDay}

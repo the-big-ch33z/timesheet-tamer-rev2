@@ -1,17 +1,35 @@
 
-import React, { ReactNode, useState, useCallback } from 'react';
+import React, { ReactNode, useCallback } from 'react';
 import { CalendarProvider, useCalendarContext } from './calendar-context/CalendarContext';
 import { UserTimesheetProvider, useUserTimesheetContext } from './user-context/UserTimesheetContext';
-import { TimeEntryProvider } from './entries-context/TimeEntryProvider';
+import { TimeEntryProvider } from './entries-context/TimeEntryContext';
 import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 import { WorkHoursProvider } from './work-hours-context/WorkHoursContext';
 import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTimesheetContext';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Timesheet Context Module
+ * 
+ * Provides centralized state management for timesheet functionality.
+ * This is the main entry point for timesheet-related components.
+ * 
+ * Context Hierarchy:
+ * - TimesheetProvider (top-level)
+ *   - TimesheetUIProvider (UI state)
+ *   - UserTimesheetProvider (user-specific data)
+ *     - WorkHoursProvider (work hours calculations)
+ *       - CalendarProvider (calendar navigation)
+ *         - TimeEntryProvider* (time entries - supplied separately)
+ * 
+ * *TimeEntryProvider is provided separately in the page component
+ * to have access to route parameters.
+ */
+
 // Re-export individual context hooks for easier access from components
 export { useCalendarContext } from './calendar-context/CalendarContext';
 export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
-export { useTimeEntryContext } from './entries-context/useTimeEntryContext';
+export { useTimeEntryContext } from './entries-context/TimeEntryContext';
 export { useEntriesContext } from './entries-context/EntriesContext';
 export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
@@ -20,6 +38,10 @@ export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 // Enhanced with debounce protection
 let lastTriggerTime = 0;
 
+/**
+ * Triggers a global save event for all timesheet components
+ * Includes debounce protection to prevent multiple calls
+ */
 export const triggerGlobalSave = () => {
   // Prevent multiple triggers in quick succession
   const now = Date.now();
@@ -36,7 +58,10 @@ export const triggerGlobalSave = () => {
   return true;
 };
 
-// This is the main hook that combines all the specialized context hooks
+/**
+ * Main hook to access timesheet functionality
+ * Combines all specialized context hooks into one unified API
+ */
 export const useTimesheetContext = () => {
   const calendar = useCalendarContext();
   const user = useUserTimesheetContext();
@@ -54,9 +79,11 @@ interface TimesheetProviderProps {
   children: ReactNode;
 }
 
-// Provider component that wraps all specialized providers
+/**
+ * Main provider component that manages the timesheet context hierarchy
+ * This wraps all specialized providers in the correct order
+ */
 export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }) => {
-  const { targetUserId } = useTimesheetUser();
   const { toast } = useToast();
   
   // This function will be called before the date changes
@@ -85,6 +112,7 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
     };
   }, []);
   
+  // Simplified provider nesting structure
   return (
     <TimesheetUIProvider>
       <UserTimesheetProvider>
