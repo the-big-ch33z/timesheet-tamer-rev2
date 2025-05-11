@@ -7,14 +7,16 @@ export const useFormState = (
   initialState: Record<string, any> = {},
   validations: FieldValidations = {}
 ) => {
-  const mounted = useRef(true);
   const stateUpdatesCounter = useRef(0);
+  const formInstanceId = useRef<string>(formKey || Math.random().toString(36));
+
   console.debug('[useFormState] Initializing with:', {
     formKey,
+    formInstanceId: formInstanceId.current,
     initialState,
     validations: Object.keys(validations)
   });
-  
+
   const [formState, setFormState] = useState<FormState>(() => {
     const initialFormState = {
       fields: Object.entries(initialState).reduce((acc, [key, value]) => ({
@@ -31,60 +33,26 @@ export const useFormState = (
       isDirty: false,
       formEdited: false
     };
-    
+
     console.debug('[useFormState] Initial form state created:', initialFormState);
     return initialFormState;
   });
 
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      mounted.current = false;
-      console.debug('[useFormState] Cleaning up form state for', formKey);
-    };
-  }, [formKey]);
-
-  // Log when form state changes
-  useEffect(() => {
-    console.debug('[useFormState:useEffect] Form state updated:', {
-      isValid: formState.isValid,
-      isDirty: formState.isDirty,
-      formEdited: formState.formEdited,
-      fieldsCount: Object.keys(formState.fields).length
-    });
-  }, [formState]);
-
   const validateFieldValue = useCallback((fieldName: string, value: any) => {
-    console.debug(`[useFormState:validateFieldValue] Validating field "${fieldName}" with value:`, value);
     const validation = validations[fieldName];
     const error = validateField(value, validation);
-    console.debug(`[useFormState:validateFieldValue] Validation result for "${fieldName}":`, error || 'valid');
     return error;
   }, [validations]);
 
   const setFieldValue = useCallback((fieldName: string, value: any) => {
-    // Increment counter to track state updates
     const updateId = ++stateUpdatesCounter.current;
     console.debug(`[useFormState:setFieldValue] Setting field "${fieldName}" to:`, value, `(update #${updateId})`);
-    
-    if (!mounted.current) {
-      console.warn(`[useFormState:setFieldValue] Component unmounted, ignoring update to "${fieldName}"`);
-      return;
-    }
 
     const error = validateFieldValue(fieldName, value);
-    
+
     setFormState(prev => {
-      // Safety check for race conditions - only proceed if still mounted
-      if (!mounted.current) {
-        console.warn(`[useFormState:setFieldValue] Component unmounted during state update for "${fieldName}"`);
-        return prev;
-      }
-      
-      // Check if the field exists in the current state
       if (!prev.fields[fieldName]) {
-        console.warn(`[useFormState:setFieldValue] Field "${fieldName}" does not exist in form state`);
-        // Create the field if it doesn't exist
+        console.warn(`[useFormState:setFieldValue] Field "${fieldName}" does not exist. Initializing.`);
         prev.fields[fieldName] = {
           name: fieldName,
           value: '',
@@ -92,7 +60,7 @@ export const useFormState = (
           required: validations[fieldName]?.required || false
         };
       }
-      
+
       const newFields = {
         ...prev.fields,
         [fieldName]: {
@@ -102,9 +70,9 @@ export const useFormState = (
           error
         }
       };
-      
+
       const hasErrors = Object.values(newFields).some(field => field.error);
-      
+
       const newState = {
         ...prev,
         fields: newFields,
@@ -112,20 +80,19 @@ export const useFormState = (
         formEdited: true,
         isValid: !hasErrors
       };
-      
-      console.debug(`[useFormState:setFieldValue] Updated state for field "${fieldName}":`, {
+
+      console.debug(`[useFormState:setFieldValue] Updated state for "${fieldName}":`, {
         value,
         error,
         isValid: !hasErrors,
         updateId
       });
-      
+
       return newState;
     });
   }, [validateFieldValue, validations]);
 
   const validateForm = useCallback(() => {
-    console.debug('[useFormState:validateForm] Validating entire form');
     const newFields = { ...formState.fields };
     let isValid = true;
 
@@ -133,13 +100,8 @@ export const useFormState = (
       const field = newFields[key];
       const error = validateFieldValue(key, field.value);
       newFields[key] = { ...field, error };
-      if (error) {
-        console.debug(`[useFormState:validateForm] Field "${key}" failed validation with error:`, error);
-        isValid = false;
-      }
+      if (error) isValid = false;
     });
-
-    console.debug('[useFormState:validateForm] Overall validation result:', isValid ? 'VALID' : 'INVALID');
 
     setFormState(prev => ({
       ...prev,
@@ -168,7 +130,6 @@ export const useFormState = (
         isValid: true,
         formEdited: false
       };
-      console.debug('[useFormState:resetForm] Form reset complete');
       return resetState;
     });
   }, [initialState]);
@@ -178,6 +139,6 @@ export const useFormState = (
     setFieldValue,
     validateForm,
     resetForm,
-    isMounted: () => mounted.current
+    isMounted: () => true // always allow
   };
 };
