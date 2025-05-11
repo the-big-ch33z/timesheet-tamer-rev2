@@ -6,9 +6,8 @@
  * It serves as the main entry point for the time entry functionality.
  */
 
-// Export the main context and hook
+// Export the main context provider and hook
 export { 
-  TimeEntryContext, 
   TimeEntryProvider, 
   useTimeEntryContext,
   type TimeEntryProviderProps

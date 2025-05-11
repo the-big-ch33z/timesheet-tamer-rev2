@@ -94,13 +94,14 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
     }
   }, [selectedDate, dayEntries.length, userId]);
 
+  // Fixed: Use a function to render within BaseContextProvider
   return (
     <BaseContextProvider
       contextName="TimeEntry"
       initializer={initializeEntries}
       autoInitialize={true}
     >
-      {(baseContext: BaseContextState) => (
+      {(baseContext) => (
         <ContextLoader
           status={baseContext.status}
           contextName="Time Entries"
@@ -137,7 +138,7 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
 };
 
 /**
- * Hook to access time entry data and operations
+ * Hook to access time entry context data and operations
  */
 export const useTimeEntryContext = (): TimeEntryContextType => {
   const context = useContext(TimeEntryContext);

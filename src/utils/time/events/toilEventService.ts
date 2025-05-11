@@ -88,7 +88,9 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       
       // Use the new centralized EventBus
-      eventBus.publish(TOIL_EVENTS.UPDATED, event.data);
+      // Fixed: TypeScript error by properly handling the data type
+      const eventData = event.data || {};
+      eventBus.publish(TOIL_EVENTS.UPDATED, eventData);
       
       return true;
     } catch (error) {
@@ -126,11 +128,16 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const unsubscribe = eventBus.subscribe(TOIL_EVENTS.UPDATED, (data) => {
       if (!data) return;
       
+      // Fixed: TypeScript error by providing a fallback for userId
+      const userId = typeof data === 'object' && data !== null && 'userId' in data 
+        ? String(data.userId) 
+        : undefined;
+      
       setLastEvent({
         type: 'toil-updated',
         data,
         timestamp: new Date(),
-        userId: data.userId
+        userId
       });
     });
     
