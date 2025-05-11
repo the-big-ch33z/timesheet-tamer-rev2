@@ -1,3 +1,4 @@
+
 /**
  * Schedule utility functions
  * Functions for working with work schedules and calendar data
@@ -236,6 +237,19 @@ export const calculateFortnightHoursFromSchedule = (workSchedule: WorkSchedule):
   });
   
   return totalHours;
+};
+
+/**
+ * Calculate adjusted fortnight hours based on work schedule and FTE
+ * @param workSchedule The work schedule
+ * @param fte Full Time Equivalent value (0.1 to 1.0)
+ * @returns Adjusted fortnight hours
+ */
+export const calculateAdjustedFortnightHours = (workSchedule: WorkSchedule, fte: number = 1.0): number => {
+  if (!workSchedule) return 0;
+  
+  const baseHours = calculateFortnightHoursFromSchedule(workSchedule);
+  return Math.round((baseHours * fte) * 2) / 2; // Round to nearest 0.5
 };
 
 /**

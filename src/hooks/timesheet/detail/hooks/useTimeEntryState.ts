@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHoursContext } from '@/contexts/timesheet';
@@ -51,10 +52,10 @@ export const useTimeEntryState = ({
   // Calculate target hours for the day based on workSchedule
   const targetHours = 8; // Default to 8 hours if no schedule
   
-  // Calculate hours variance - Pass both actual and target hours to the function
+  // Calculate hours variance
   const hoursVariance = calculateHoursVariance(totalEnteredHours, targetHours);
   
-  // Check for undertime - Pass both actual and target hours to the function
+  // Check for undertime
   const isUndertimeValue = isUndertime(totalEnteredHours, targetHours);
   
   // Flag if we have entries
