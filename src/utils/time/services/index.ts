@@ -4,39 +4,34 @@
  * Exports the unified time entry service and its constants
  */
 import { 
-  unifiedTimeEntryService,
   timeEntryService,
-  UnifiedTimeEntryService,
+  unifiedTimeEntryService,
+  TimeEntryService,
   createTimeEntryService,
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
-  storageWriteLock,
   validateTimeEntry,
   autoCalculateHours,
   calculateTotalHours
-} from './index-unified';
+} from './time-entry-service';
 
-// Export the singleton instance as the default export
-export { unifiedTimeEntryService as default };
-
-// Export for backward compatibility
+// Re-export everything for backward compatibility
 export { 
-  unifiedTimeEntryService,
   timeEntryService,
+  unifiedTimeEntryService,
+  TimeEntryService,
   createTimeEntryService,
-  UnifiedTimeEntryService,
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
-  storageWriteLock,
   validateTimeEntry,
   autoCalculateHours,
   calculateTotalHours
 };
 
-// Export type definitions
+// Export singleton instance as default
+export default timeEntryService;
+
+// Export type definitions for convenience
 export type {
-  TimeEntryEvent,
-  TimeEntryEventType,
-  ValidationResult,
   TimeEntryServiceConfig
-} from './unified-service';
+} from './types';

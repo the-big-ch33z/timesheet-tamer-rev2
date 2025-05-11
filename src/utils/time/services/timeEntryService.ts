@@ -1,20 +1,23 @@
 
 /**
  * @deprecated This file is provided for backward compatibility.
- * Please use unifiedTimeEntryService instead.
+ * Please use time-entry-service.ts instead.
  */
 
-import { unifiedTimeEntryService } from './core';
+import { 
+  timeEntryService,
+  unifiedTimeEntryService,
+  TimeEntryService,
+  createTimeEntryService,
+  STORAGE_KEY,
+  DELETED_ENTRIES_KEY
+} from './time-entry-service';
 
 // Re-export the storage key constants for compatibility
-export const STORAGE_KEY = 'timeEntries';
-export const DELETED_ENTRIES_KEY = 'deletedTimeEntries';
+export { STORAGE_KEY, DELETED_ENTRIES_KEY };
 
 // Create a compatibility layer for legacy code
-export const timeEntryService = unifiedTimeEntryService;
-
-// For backward compatibility with code using createTimeEntryService
-export const createTimeEntryService = () => unifiedTimeEntryService;
+export { timeEntryService, unifiedTimeEntryService, TimeEntryService, createTimeEntryService };
 
 // Exports for tests and legacy code
 export default timeEntryService;

@@ -29,7 +29,7 @@ export interface TimeEntryEvent {
 export type TimeEntryEventListener = (event: TimeEntryEvent) => void;
 
 /**
- * Configuration options for the service
+ * Configuration options for the time entry service
  */
 export interface TimeEntryServiceConfig {
   enableCaching?: boolean;
@@ -37,6 +37,26 @@ export interface TimeEntryServiceConfig {
   validateOnAccess?: boolean;
   enableAuditing?: boolean;
   storageKey?: string;
+}
+
+/**
+ * Configuration for time entry operations
+ */
+export interface TimeEntryOperationsConfig {
+  serviceName?: string;
+  storageKey: string;
+  validateOnSave?: boolean;
+  enableAuditing?: boolean;
+  enableCache?: boolean;
+}
+
+/**
+ * Base interface for time entry operations
+ */
+export interface TimeEntryBaseOperations {
+  createEntry(entryData: Omit<TimeEntry, "id">, deletedEntryIds: string[]): string | null;
+  updateEntry(entryId: string, updates: Partial<TimeEntry>, deletedEntryIds: string[]): boolean;
+  deleteEntry(entryId: string, deletedEntryIds: string[]): Promise<boolean>;
 }
 
 /**
@@ -52,7 +72,7 @@ export interface EntryCache {
 }
 
 /**
- * Result of entry validation
+ * Validation result type
  */
 export interface ValidationResult {
   valid: boolean;

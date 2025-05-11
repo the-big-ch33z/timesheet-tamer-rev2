@@ -1,7 +1,21 @@
 
 import { TimeEntry } from "@/types";
+import { createTimeLogger } from '../errors/timeLogger';
 
-export const validateTimeEntry = (entry: Partial<TimeEntry>): { valid: boolean; message?: string } => {
+const logger = createTimeLogger('entry-validation');
+
+/**
+ * Validation result type
+ */
+export interface ValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
+/**
+ * Validate a time entry
+ */
+export function validateTimeEntry(entry: Partial<TimeEntry>): ValidationResult {
   if (!entry.hours || entry.hours <= 0) {
     return {
       valid: false,
@@ -17,27 +31,26 @@ export const validateTimeEntry = (entry: Partial<TimeEntry>): { valid: boolean; 
   }
 
   return { valid: true };
-};
+}
 
-// Add these exported functions to fix references in other files
-export const autoCalculateHours = (startTime: string, endTime: string): number => {
-  // Simple implementation to calculate hours between times
+/**
+ * Auto-calculate hours from start and end times
+ */
+export function autoCalculateHours(startTime: string, endTime: string): number {
   const [startHour, startMinute] = startTime.split(':').map(Number);
   const [endHour, endMinute] = endTime.split(':').map(Number);
   
   let hours = endHour - startHour;
   const minutes = endMinute - startMinute;
   
-  // Adjust for minutes
   hours += minutes / 60;
   
-  // Ensure positive value
   return Math.max(0, parseFloat(hours.toFixed(2)));
-};
+}
 
-export const calculateTotalHours = (entries: TimeEntry[]): number => {
+/**
+ * Calculate total hours from a list of entries
+ */
+export function calculateTotalHours(entries: TimeEntry[]): number {
   return entries.reduce((total, entry) => total + (entry.hours || 0), 0);
-};
-
-// For backward compatibility
-export const validateEntry = validateTimeEntry;
+}

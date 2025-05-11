@@ -4,29 +4,28 @@
  */
 
 import { 
+  timeEntryService,
   unifiedTimeEntryService,
   createTimeEntryService,
   STORAGE_KEY, 
   DELETED_ENTRIES_KEY,
-  UnifiedTimeEntryService
-} from './index-unified';
+  TimeEntryService
+} from './time-entry-service';
 
 // Re-export for backward compatibility
 export { 
   unifiedTimeEntryService,
+  timeEntryService,
   createTimeEntryService,
-  UnifiedTimeEntryService,
+  TimeEntryService,
   STORAGE_KEY, 
   DELETED_ENTRIES_KEY
 };
 
-// Backward compatibility for old imports
-export const timeEntryService = unifiedTimeEntryService;
-
 // Safe initialization function with retry logic
 export const initializeService = async (): Promise<void> => {
   try {
-    // Our new service auto-initializes, this is just a no-op for compatibility
+    // Our service auto-initializes, this is just a no-op for compatibility
     return Promise.resolve();
   } catch (error) {
     // Maintain API compatibility
