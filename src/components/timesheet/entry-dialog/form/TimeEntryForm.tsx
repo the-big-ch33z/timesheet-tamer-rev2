@@ -104,11 +104,18 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({
     }
   };
 
+  const handleFieldChange = (field: string, value: string) => {
+    setFieldValue(field, value);
+  };
+
   return (
     <Card className="p-4">
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
-          <FormFields formState={formState} setFieldValue={setFieldValue} />
+          <FormFields 
+            formState={formState} 
+            onChange={handleFieldChange} 
+          />
           
           <FormButtons 
             onCancel={onCancel}

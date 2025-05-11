@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { FormState, FormField } from '../useEntryFormState';
+import { FormState } from '@/hooks/form/useFormState';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,14 @@ type FormFieldsProps = {
   onChange: (field: string, value: string) => void;
   disabled?: boolean;
 };
+
+interface FormField {
+  name?: string;
+  value: string;
+  touched: boolean;
+  required?: boolean;
+  error?: string;
+}
 
 /**
  * Safely access properties from a form field
