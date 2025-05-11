@@ -5,47 +5,53 @@ import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 const logger = createTimeLogger('useEntryFormVisibility');
 
 /**
- * Hook to manage the visibility of entry forms
+ * Hook to manage the visibility of entry forms using CSS classes instead of 
+ * conditional rendering to prevent unmounting
  */
 export const useEntryFormVisibility = (initialVisibility: boolean[] = []) => {
-  const [showEntryForms, setShowEntryForms] = useState<boolean[]>(initialVisibility);
+  const [formVisibility, setFormVisibility] = useState<Record<string, boolean>>({});
   
   // Track visible forms count
-  const visibleFormsCount = showEntryForms.filter(Boolean).length;
+  const visibleFormsCount = Object.values(formVisibility).filter(Boolean).length;
   
   // Toggle form visibility
-  const setFormVisibility = useCallback((index: number, isVisible: boolean) => {
-    logger.debug(`[useEntryFormVisibility] Setting form ${index} visibility to ${isVisible}`);
+  const setFormVisibility = useCallback((formId: string, isVisible: boolean) => {
+    logger.debug(`[useEntryFormVisibility] Setting form ${formId} visibility to ${isVisible}`);
     
-    setShowEntryForms(prev => {
-      const updated = [...prev];
-      updated[index] = isVisible;
-      return updated;
-    });
+    setFormVisibility(prev => ({
+      ...prev,
+      [formId]: isVisible
+    }));
   }, []);
   
   // Show a form
-  const showForm = useCallback((index: number) => {
-    setFormVisibility(index, true);
+  const showForm = useCallback((formId: string) => {
+    setFormVisibility(formId, true);
   }, [setFormVisibility]);
   
   // Hide a form
-  const hideForm = useCallback((index: number) => {
-    setFormVisibility(index, false);
+  const hideForm = useCallback((formId: string) => {
+    setFormVisibility(formId, false);
   }, [setFormVisibility]);
   
   // Reset all form visibility
-  const resetVisibility = useCallback((newVisibility: boolean[] = []) => {
-    logger.debug(`[useEntryFormVisibility] Resetting visibility to array of length ${newVisibility.length}`);
-    setShowEntryForms(newVisibility);
+  const resetVisibility = useCallback((initialForms: Record<string, boolean> = {}) => {
+    logger.debug(`[useEntryFormVisibility] Resetting visibility to ${Object.keys(initialForms).length} forms`);
+    setFormVisibility(initialForms);
   }, []);
+
+  // Generate CSS classes for forms
+  const getFormClass = useCallback((formId: string) => {
+    return formVisibility[formId] ? 'block' : 'hidden';
+  }, [formVisibility]);
   
   return {
-    showEntryForms,
-    setShowEntryForms,
+    formVisibility,
+    setFormVisibility,
     visibleFormsCount,
     showForm,
     hideForm,
-    resetVisibility
+    resetVisibility,
+    getFormClass
   };
 };

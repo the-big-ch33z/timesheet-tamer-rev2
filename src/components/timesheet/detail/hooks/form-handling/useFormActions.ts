@@ -8,82 +8,106 @@ const logger = createTimeLogger('useFormActions');
 
 interface UseFormActionsProps {
   formHandlers: UseTimeEntryFormReturn[];
-  showEntryForms: boolean[];
+  formVisibility: Record<string, boolean>;
   interactive: boolean;
 }
 
 /**
- * Hook to handle form actions like saving and managing entries
+ * Hook to manage form actions like saving and validation
  */
 export const useFormActions = ({
   formHandlers,
-  showEntryForms,
+  formVisibility,
   interactive
 }: UseFormActionsProps) => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
-  // Save a specific entry
+  // Save a specific entry form
   const handleSaveEntry = useCallback((index: number) => {
     if (!interactive || index < 0 || index >= formHandlers.length) return;
     
-    try {
-      logger.debug(`[useFormActions] Saving entry at index ${index}`);
-      formHandlers[index].handleSave();
-    } catch (error) {
-      logger.error(`[useFormActions] Error saving entry ${index}:`, error);
-      
-      toast({
-        title: 'Error',
-        description: 'Could not save entry',
-        variant: 'destructive'
-      });
+    const formId = `entry-form-${index}`;
+    const isVisible = formVisibility[formId];
+    
+    if (!isVisible) {
+      logger.debug(`[useFormActions] Form ${formId} is not visible, skipping save`);
+      return;
     }
-  }, [interactive, formHandlers, toast]);
+    
+    const formHandler = formHandlers[index];
+    
+    try {
+      logger.debug(`[useFormActions] Saving form ${formId}`);
+      setIsSaving(true);
+      
+      // Check if the form is valid before saving
+      if (!formHandler.formState.hours) {
+        logger.warn(`[useFormActions] Form ${formId} has no hours, cannot save`);
+        toast({
+          title: "Cannot save entry",
+          description: "Please enter hours for the entry",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Save the form
+      formHandler.handleSave();
+      logger.debug(`[useFormActions] Form ${formId} saved successfully`);
+      
+    } catch (error) {
+      logger.error(`[useFormActions] Error saving form ${formId}:`, error);
+      toast({
+        title: "Error",
+        description: "Failed to save entry",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [interactive, formHandlers, formVisibility, toast]);
   
-  // Save all entries
+  // Save all forms with pending changes
   const saveAllPendingChanges = useCallback(() => {
     if (!interactive) return false;
     
+    logger.debug(`[useFormActions] Saving all pending changes`);
+    let savedAny = false;
+    
     try {
-      setIsSaving(true);
-      logger.debug('[useFormActions] Saving all pending changes');
-      
-      let savedCount = 0;
-      
-      // Check each visible form
-      showEntryForms.forEach((isVisible, index) => {
-        if (isVisible && index < formHandlers.length && formHandlers[index].formState.formEdited) {
-          formHandlers[index].handleSave();
-          savedCount++;
+      // Loop through all visible forms and save those with changes
+      Object.entries(formVisibility).forEach(([formId, isVisible]) => {
+        if (!isVisible) return;
+        
+        // Extract the index from the formId
+        const match = formId.match(/entry-form-(\d+)/);
+        if (!match) return;
+        
+        const index = parseInt(match[1]);
+        if (isNaN(index) || index < 0 || index >= formHandlers.length) return;
+        
+        const formHandler = formHandlers[index];
+        
+        // Check if form has changes and hours
+        if (formHandler.formState.formEdited && formHandler.formState.hours) {
+          logger.debug(`[useFormActions] Saving form ${formId} with pending changes`);
+          formHandler.handleSave();
+          savedAny = true;
         }
       });
       
-      if (savedCount > 0) {
-        toast({
-          title: 'Entries saved',
-          description: `Saved ${savedCount} time ${savedCount === 1 ? 'entry' : 'entries'}`
-        });
-        return true;
-      } else {
-        logger.debug('[useFormActions] No changes to save');
-        return false;
-      }
+      return savedAny;
     } catch (error) {
-      logger.error('[useFormActions] Error saving all entries:', error);
-      
+      logger.error(`[useFormActions] Error saving pending changes:`, error);
       toast({
-        title: 'Error',
-        description: 'Could not save all entries',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to save one or more entries",
+        variant: "destructive"
       });
-      
       return false;
-    } finally {
-      // Reset saving state after a short delay
-      setTimeout(() => setIsSaving(false), 500);
     }
-  }, [interactive, showEntryForms, formHandlers, toast]);
+  }, [interactive, formVisibility, formHandlers, toast]);
   
   return {
     handleSaveEntry,

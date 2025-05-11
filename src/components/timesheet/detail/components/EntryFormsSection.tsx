@@ -1,34 +1,44 @@
 
-import React from "react";
-import EntryFormsList from "./EntryFormsList";
+import React, { memo } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
+import EntryFormsList from "./EntryFormsList";
 
 interface EntryFormsSectionProps {
-  showEntryForms: boolean[];
+  formVisibility: Record<string, boolean>;
   formHandlers: UseTimeEntryFormReturn[];
-  handleSaveEntry: (index: number) => void;
-  removeEntryForm: (index: number) => void;
   addEntryForm: () => void;
+  removeEntryForm: (index: number) => void;
+  handleSaveEntry: (index: number) => void;
   interactive: boolean;
+  getFormClass: (formId: string) => string;
 }
 
-const EntryFormsSection: React.FC<EntryFormsSectionProps> = ({
-  showEntryForms,
+const EntryFormsSection = ({
+  formVisibility,
   formHandlers,
   handleSaveEntry,
   removeEntryForm,
-  interactive
-}) => {
-  if (!interactive) return null;
+  interactive,
+  getFormClass
+}: EntryFormsSectionProps) => {
+  // Check if we have any visible forms
+  const hasVisibleForms = Object.values(formVisibility).some(Boolean);
   
+  if (!hasVisibleForms || !interactive) {
+    return null;
+  }
+
   return (
-    <EntryFormsList
-      showEntryForms={showEntryForms}
-      formHandlers={formHandlers}
-      handleSaveEntry={handleSaveEntry}
-      removeEntryForm={removeEntryForm}
-    />
+    <div data-testid="entry-forms-section">
+      <EntryFormsList 
+        formVisibility={formVisibility}
+        formHandlers={formHandlers}
+        handleSaveEntry={handleSaveEntry}
+        removeEntryForm={removeEntryForm}
+        getFormClass={getFormClass}
+      />
+    </div>
   );
 };
 
-export default EntryFormsSection;
+export default memo(EntryFormsSection);

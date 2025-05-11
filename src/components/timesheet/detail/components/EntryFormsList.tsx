@@ -1,48 +1,56 @@
 
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { UseTimeEntryFormReturn } from "@/hooks/timesheet/types/timeEntryTypes";
 import EntryFormItem from "./EntryFormItem";
 
 interface EntryFormsListProps {
-  showEntryForms: boolean[];
+  formVisibility: Record<string, boolean>;
   formHandlers: UseTimeEntryFormReturn[];
   handleSaveEntry: (index: number) => void;
   removeEntryForm: (index: number) => void;
+  getFormClass: (formId: string) => string;
 }
 
 // Use memo to prevent unnecessary re-renders
 const EntryFormsList: React.FC<EntryFormsListProps> = memo(({
-  showEntryForms,
+  formVisibility,
   formHandlers,
   handleSaveEntry,
-  removeEntryForm
+  removeEntryForm,
+  getFormClass
 }) => {
-  if (showEntryForms.filter(Boolean).length === 0) {
+  // Generate stable form IDs for consistent keys
+  const formIds = useMemo(() => 
+    formHandlers.map((_, index) => `entry-form-${index}`),
+    [formHandlers.length] // Only regenerate when length changes
+  );
+  
+  if (Object.values(formVisibility).filter(Boolean).length === 0) {
     return null;
   }
 
   return (
     <div className="space-y-4 mt-4 mb-4">
-      {showEntryForms.map((isVisible, index) => {
-        // Only render visible forms that have corresponding handlers
-        if (!isVisible || index >= formHandlers.length) return null;
+      {formHandlers.map((formHandler, index) => {
+        const formId = formIds[index];
         
-        const formHandler = formHandlers[index];
-        
-        if (!formHandler) {
-          console.debug("No form handler for index:", index);
-          return null;
-        }
-        
+        // Always render the form but control visibility with CSS
         return (
-          <EntryFormItem
-            key={`form-${index}`}
-            formState={formHandler.formState}
-            handleFieldChange={(field, value) => formHandler.handleFieldChange(field, value)}
-            handleSave={() => handleSaveEntry(index)}
-            onDelete={() => removeEntryForm(index)}
-            entryId={`entry-${index}`}
-          />
+          <div 
+            key={formId} 
+            className={getFormClass(formId)}
+            data-form-id={formId}
+          >
+            <EntryFormItem
+              key={`${formId}-item`} // Add more stable keys
+              formId={formId} // Pass stable ID to the form
+              formState={formHandler.formState}
+              handleFieldChange={(field, value) => formHandler.handleFieldChange(field, value)}
+              handleSave={() => handleSaveEntry(index)}
+              onDelete={() => removeEntryForm(index)}
+              entryId={formId}
+            />
+          </div>
         );
       })}
     </div>

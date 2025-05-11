@@ -6,7 +6,7 @@ import WorkHoursActions from '../components/WorkHoursActions';
 
 interface TimeEntryFormManagerProps {
   formHandlers: UseTimeEntryFormReturn[];
-  showEntryForms: boolean[];
+  formVisibility: Record<string, boolean>;
   addEntryForm: () => void;
   removeEntryForm: (index: number) => void;
   handleSaveEntry: (index: number) => void;
@@ -16,17 +16,21 @@ interface TimeEntryFormManagerProps {
   endTime: string;
   calculatedHours: number;
   onAddEntry?: () => void;
+  getFormClass: (formId: string) => string;
 }
 
 const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
   formHandlers,
-  showEntryForms,
+  formVisibility,
   addEntryForm,
   removeEntryForm,
   handleSaveEntry,
   interactive,
-  onAddEntry
+  onAddEntry,
+  getFormClass
 }) => {
+  const hasVisibleForms = Object.values(formVisibility).some(Boolean);
+  
   return (
     <div className="space-y-4">
       {interactive && (
@@ -35,14 +39,15 @@ const TimeEntryFormManager: React.FC<TimeEntryFormManagerProps> = ({
             onAddEntry={onAddEntry || addEntryForm}
           />
           
-          {showEntryForms.some(Boolean) && (
+          {hasVisibleForms && (
             <EntryFormsSection 
-              showEntryForms={showEntryForms}
+              formVisibility={formVisibility}
               formHandlers={formHandlers}
               addEntryForm={addEntryForm} 
               removeEntryForm={removeEntryForm}
               handleSaveEntry={handleSaveEntry}
               interactive={interactive}
+              getFormClass={getFormClass}
             />
           )}
         </div>

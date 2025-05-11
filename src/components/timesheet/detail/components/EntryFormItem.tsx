@@ -1,7 +1,6 @@
-import React, { useEffect, useCallback, useMemo } from "react";
+
+import React, { useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { useFormState } from "@/hooks/form/useFormState";
-import { useFormSubmission } from "@/hooks/form/useFormSubmission";
 import { TimeEntryFormState } from "@/hooks/timesheet/useTimeEntryForm";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,26 +15,15 @@ const FIELD_TYPES = {
   TASK_NUMBER: "taskNumber"
 };
 
-const VALIDATION_RULES = {
-  hours: {
-    required: true,
-    rules: [
-      {
-        validate: (value: string) => parseFloat(value) > 0,
-        message: "Hours must be greater than 0"
-      }
-    ]
-  }
-};
-
 interface EntryFormItemProps {
   formState: TimeEntryFormState;
   handleFieldChange: (field: string, value: string) => void;
   handleSave: () => void;
   onDelete: () => void;
   entryId: string;
+  formId: string; // Add stable formId
   disabled?: boolean;
-  scheduledHours?: number; // The cap for entered hours
+  scheduledHours?: number;
 }
 
 const renderFormField = (
@@ -49,6 +37,9 @@ const renderFormField = (
   placeholder: string = "",
   inputExtraProps: Record<string, any> = {}
 ) => {
+  // Create refs to track the actual input values
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium mb-1">{label}</label>
@@ -58,6 +49,7 @@ const renderFormField = (
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder || label}
+        ref={inputRef}
         {...inputExtraProps}
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
@@ -65,71 +57,89 @@ const renderFormField = (
   );
 };
 
+// Use React.memo to prevent unnecessary re-renders
 const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
-  formState: initialFormState,
-  handleFieldChange: parentHandleFieldChange,
+  formState,
+  handleFieldChange,
   handleSave,
   onDelete,
   entryId,
+  formId,
   disabled = false,
   scheduledHours = undefined
 }) => {
-  const { formState, setFieldValue, validateForm } = useFormState(`entry-${entryId}`, {
-    hours: initialFormState.hours || '',
-    description: initialFormState.description || '',
-    jobNumber: initialFormState.jobNumber || '',
-    rego: initialFormState.rego || '',
-    taskNumber: initialFormState.taskNumber || ''
-  }, VALIDATION_RULES);
-
-  const { isSubmitting, handleSubmit } = useFormSubmission({
-    onSubmit: async () => {
-      if (validateForm() && !overLimit) {
-        handleSave();
-      }
-    }
-  });
-
-  const handleFieldChangeCallback = useCallback((field: string, value: string) => {
-    setFieldValue(field, value);
-    parentHandleFieldChange(field, value);
-  }, [setFieldValue, parentHandleFieldChange]);
-
+  // Use refs to track if component is mounted
+  const mountedRef = useRef(true);
+  
+  // Track if form is submitting
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  // Parse hours value directly from form state to avoid conversion issues
+  const hourValue = parseFloat(formState.hours || "0");
+  const scheduled = typeof scheduledHours === "number" && !isNaN(scheduledHours) ? scheduledHours : undefined;
+  const overLimit = scheduled !== undefined && hourValue > scheduled;
+  
+  // Setup cleanup on unmount
   useEffect(() => {
-    if (formState.formEdited) {
-      Object.entries(formState.fields).forEach(([field, { value }]) => {
-        parentHandleFieldChange(field, value);
-      });
-    }
-
     return () => {
-      console.debug(`[EntryFormItem] Cleaning up form state for entry ${entryId}`);
+      mountedRef.current = false;
+      console.debug(`[EntryFormItem] Unmounting form ${formId}`);
     };
-  }, [formState.fields, parentHandleFieldChange, entryId, formState.formEdited]);
+  }, [formId]);
 
-  const handleHoursInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Create a safer field change handler with mounted check
+  const handleFieldChangeCallback = useCallback((field: string, value: string) => {
+    if (!mountedRef.current) {
+      console.debug(`[EntryFormItem] Ignoring update to ${field} on unmounted component ${formId}`);
+      return;
+    }
+    
+    console.debug(`[EntryFormItem] Updating field ${field} to ${value} in form ${formId}`);
+    handleFieldChange(field, value);
+  }, [handleFieldChange, formId]);
+
+  // Handle hours input with formatting
+  const handleHoursInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = e.target.value;
     let numValue = parseFloat(newValue);
+    
     if (!isNaN(numValue)) {
-      numValue = Math.round(numValue * 4) / 4;
+      numValue = Math.round(numValue * 4) / 4; // Round to nearest 0.25
       if (numValue < 0.25) numValue = 0.25;
       if (numValue > 24) numValue = 24;
       newValue = numValue.toString();
     }
+    
     handleFieldChangeCallback(FIELD_TYPES.HOURS, newValue);
-  };
+  }, [handleFieldChangeCallback]);
 
-  const hourValue = parseFloat(formState.fields.hours.value || "0");
-  const scheduled = typeof scheduledHours === "number" && !isNaN(scheduledHours) ? scheduledHours : undefined;
-  const overLimit = scheduled !== undefined && hourValue > scheduled;
-
+  // Safe save handler
   const onSaveCallback = useCallback(() => {
-    if (!disabled && validateForm() && !overLimit) {
-      handleSubmit(formState);
+    if (disabled || overLimit) return;
+    
+    try {
+      setIsSubmitting(true);
+      handleSave();
+    } finally {
+      // Only update state if component is still mounted
+      if (mountedRef.current) {
+        setTimeout(() => {
+          if (mountedRef.current) {
+            setIsSubmitting(false);
+          }
+        }, 300);
+      }
     }
-  }, [disabled, validateForm, handleSubmit, formState, overLimit]);
+  }, [disabled, overLimit, handleSave]);
 
-  const hoursWarnMsg = useMemo(() => {
+  // Safe delete handler
+  const onDeleteCallback = useCallback(() => {
+    if (disabled) return;
+    onDelete();
+  }, [disabled, onDelete]);
+
+  // Warning message for hours
+  const hoursWarnMsg = React.useMemo(() => {
     if (overLimit && !isNaN(hourValue))
       return `You entered more hours (${hourValue}) than are scheduled (${scheduled}). Please reduce.`;
     return null;
@@ -139,94 +149,104 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
     <div 
       className="bg-white rounded-md shadow p-4 border border-gray-200" 
       data-entry-id={entryId}
+      data-form-id={formId}
       data-disabled={disabled ? 'true' : 'false'}
     >
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderFormField(
-            `job-${entryId}`, 
-            FIELD_TYPES.JOB_NUMBER,
-            "Job Number", 
-            formState.fields.jobNumber.value,
-            (value) => handleFieldChangeCallback(FIELD_TYPES.JOB_NUMBER, value),
-            disabled,
-            formState.fields.jobNumber.error
-          )}
+          {/* Job Number */}
+          <div>
+            <label htmlFor={`job-${formId}`} className="block text-sm font-medium mb-1">Job Number</label>
+            <Input
+              id={`job-${formId}`}
+              value={formState.jobNumber || ""}
+              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.JOB_NUMBER, e.target.value)}
+              disabled={disabled}
+              placeholder="Job Number"
+              data-field-name="jobNumber"
+            />
+          </div>
           
-          {renderFormField(
-            `task-${entryId}`, 
-            FIELD_TYPES.TASK_NUMBER,
-            "Task Number", 
-            formState.fields.taskNumber.value,
-            (value) => handleFieldChangeCallback(FIELD_TYPES.TASK_NUMBER, value),
-            disabled,
-            formState.fields.taskNumber.error
-          )}
+          {/* Task Number */}
+          <div>
+            <label htmlFor={`task-${formId}`} className="block text-sm font-medium mb-1">Task Number</label>
+            <Input
+              id={`task-${formId}`}
+              value={formState.taskNumber || ""}
+              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.TASK_NUMBER, e.target.value)}
+              disabled={disabled}
+              placeholder="Task Number"
+              data-field-name="taskNumber"
+            />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(() => {
-            const warning = overLimit;
-            return (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="relative">
-                      <Input
-                        id={`hours-${entryId}`}
-                        type="number"
-                        value={formState.fields.hours.value}
-                        onChange={handleHoursInput}
-                        disabled={disabled}
-                        placeholder="Hours"
-                        className={
-                          "peer " +
-                          (warning
-                            ? "border-red-500 !ring-red-400 focus:!ring-red-400 focus:border-red-500 bg-red-50"
-                            : "")
-                        }
-                        step="0.25"
-                        min="0.25"
-                        max="24"
-                        aria-invalid={warning}
-                        aria-describedby={warning ? `hours-tooltip-${entryId}` : undefined}
-                        style={warning ? { boxShadow: "0 0 0 2px #f87171" } : undefined}
-                      />
-                      {warning && (
-                        <div className="absolute top-full left-0 w-max text-xs text-red-600 mt-0.5 bg-white border border-red-200 rounded p-1 shadow-sm z-10">
-                          {hoursWarnMsg}
-                        </div>
-                      )}
+          {/* Hours */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative">
+                  <label htmlFor={`hours-${formId}`} className="block text-sm font-medium mb-1">Hours</label>
+                  <Input
+                    id={`hours-${formId}`}
+                    type="number"
+                    value={formState.hours || ""}
+                    onChange={handleHoursInput}
+                    disabled={disabled}
+                    placeholder="Hours"
+                    className={
+                      "peer " +
+                      (overLimit
+                        ? "border-red-500 !ring-red-400 focus:!ring-red-400 focus:border-red-500 bg-red-50"
+                        : "")
+                    }
+                    step="0.25"
+                    min="0.25"
+                    max="24"
+                    aria-invalid={overLimit}
+                    aria-describedby={overLimit ? `hours-tooltip-${formId}` : undefined}
+                    style={overLimit ? { boxShadow: "0 0 0 2px #f87171" } : undefined}
+                    data-field-name="hours"
+                  />
+                  {overLimit && (
+                    <div className="absolute top-full left-0 w-max text-xs text-red-600 mt-0.5 bg-white border border-red-200 rounded p-1 shadow-sm z-10">
+                      {hoursWarnMsg}
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" id={`hours-tooltip-${entryId}`}>
-                    {overLimit && hoursWarnMsg}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            );
-          })()}
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" id={`hours-tooltip-${formId}`}>
+                {overLimit && hoursWarnMsg}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-          {renderFormField(
-            `rego-${entryId}`, 
-            FIELD_TYPES.REGO,
-            "Rego", 
-            formState.fields.rego.value,
-            (value) => handleFieldChangeCallback(FIELD_TYPES.REGO, value),
-            disabled,
-            formState.fields.rego.error
-          )}
+          {/* Registration Number */}
+          <div>
+            <label htmlFor={`rego-${formId}`} className="block text-sm font-medium mb-1">Rego</label>
+            <Input
+              id={`rego-${formId}`}
+              value={formState.rego || ""}
+              onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.REGO, e.target.value)}
+              disabled={disabled}
+              placeholder="Rego"
+              data-field-name="rego"
+            />
+          </div>
         </div>
         
+        {/* Description */}
         <div>
-          <label htmlFor={`desc-${entryId}`} className="block text-sm font-medium mb-1">Description</label>
+          <label htmlFor={`desc-${formId}`} className="block text-sm font-medium mb-1">Description</label>
           <Textarea
-            id={`desc-${entryId}`}
-            value={formState.fields.description.value}
+            id={`desc-${formId}`}
+            value={formState.description || ""}
             onChange={(e) => handleFieldChangeCallback(FIELD_TYPES.DESCRIPTION, e.target.value)}
             disabled={disabled}
             placeholder="Entry description"
             rows={2}
+            data-field-name="description"
           />
         </div>
       </div>
@@ -235,7 +255,7 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
         <Button 
           size="sm" 
           variant="ghost"
-          onClick={onDelete}
+          onClick={onDeleteCallback}
           className="text-red-500 hover:text-red-700"
           disabled={disabled || isSubmitting}
         >
@@ -247,13 +267,13 @@ const EntryFormItem: React.FC<EntryFormItemProps> = React.memo(({
           size="sm" 
           onClick={onSaveCallback}
           className={
-            (formState.isValid && !overLimit
+            (!overLimit
               ? 'bg-green-500 hover:bg-green-600'
               : 'bg-gray-300') +
             " text-white"
           }
-          disabled={disabled || !formState.formEdited || !formState.isValid || isSubmitting || overLimit}
-          data-testid={`save-button-${entryId}`}
+          disabled={disabled || !formState.formEdited || isSubmitting || overLimit}
+          data-testid={`save-button-${formId}`}
         >
           {isSubmitting ? (
             <>

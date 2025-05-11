@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FormState, FormField } from '@/contexts/form/types';
 import { FieldValidations, validateField } from './validation/fieldValidation';
@@ -9,6 +8,7 @@ export const useFormState = (
   validations: FieldValidations = {}
 ) => {
   const mounted = useRef(true);
+  const stateUpdatesCounter = useRef(0);
   console.debug('[useFormState] Initializing with:', {
     formKey,
     initialState,
@@ -63,7 +63,9 @@ export const useFormState = (
   }, [validations]);
 
   const setFieldValue = useCallback((fieldName: string, value: any) => {
-    console.debug(`[useFormState:setFieldValue] Setting field "${fieldName}" to:`, value);
+    // Increment counter to track state updates
+    const updateId = ++stateUpdatesCounter.current;
+    console.debug(`[useFormState:setFieldValue] Setting field "${fieldName}" to:`, value, `(update #${updateId})`);
     
     if (!mounted.current) {
       console.warn(`[useFormState:setFieldValue] Component unmounted, ignoring update to "${fieldName}"`);
@@ -73,9 +75,22 @@ export const useFormState = (
     const error = validateFieldValue(fieldName, value);
     
     setFormState(prev => {
+      // Safety check for race conditions - only proceed if still mounted
+      if (!mounted.current) {
+        console.warn(`[useFormState:setFieldValue] Component unmounted during state update for "${fieldName}"`);
+        return prev;
+      }
+      
       // Check if the field exists in the current state
       if (!prev.fields[fieldName]) {
         console.warn(`[useFormState:setFieldValue] Field "${fieldName}" does not exist in form state`);
+        // Create the field if it doesn't exist
+        prev.fields[fieldName] = {
+          name: fieldName,
+          value: '',
+          touched: false,
+          required: validations[fieldName]?.required || false
+        };
       }
       
       const newFields = {
@@ -101,12 +116,13 @@ export const useFormState = (
       console.debug(`[useFormState:setFieldValue] Updated state for field "${fieldName}":`, {
         value,
         error,
-        isValid: !hasErrors
+        isValid: !hasErrors,
+        updateId
       });
       
       return newState;
     });
-  }, [validateFieldValue]);
+  }, [validateFieldValue, validations]);
 
   const validateForm = useCallback(() => {
     console.debug('[useFormState:validateForm] Validating entire form');
@@ -161,6 +177,7 @@ export const useFormState = (
     formState,
     setFieldValue,
     validateForm,
-    resetForm
+    resetForm,
+    isMounted: () => mounted.current
   };
 };
