@@ -4,6 +4,17 @@ import { useTimesheetContext } from "./timesheet/useTimesheetContext";
 import { useTimeEntriesWithRecovery } from "./timeEntries/useTimeEntriesWithRecovery";
 import { useLogger } from "./useLogger";
 import { useErrorHandler } from "./useErrorHandler";
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger("Timesheet");
+
+/**
+ * TimesheetOptions interface for the useTimesheet hook
+ */
+export interface TimesheetOptions {
+  /** Whether to show toasts for errors and state changes */
+  showToasts?: boolean;
+}
 
 /**
  * Primary hook for timesheet functionality
@@ -11,8 +22,11 @@ import { useErrorHandler } from "./useErrorHandler";
  * 
  * This is the main hook for accessing timesheet functionality and provides
  * a unified API for all timesheet-related data and actions.
+ * 
+ * @param {TimesheetOptions} options - Configuration options
+ * @returns {Object} Unified timesheet state and handlers
  */
-export const useTimesheet = () => {
+export const useTimesheet = (options: TimesheetOptions = {}) => {
   const logger = useLogger("Timesheet");
   const { errorState, handleError } = useErrorHandler("Timesheet");
   
@@ -41,11 +55,17 @@ export const useTimesheet = () => {
     entries,
     isLoading: entriesLoading,
     error: entriesError,
-    isServiceReady
+    isServiceReady,
+    createEntry,
+    updateEntry,
+    deleteEntry,
+    getDayEntries,
+    getMonthEntries,
+    calculateTotalHours
   } = useTimeEntriesWithRecovery({
     userId: targetUserId || undefined,
     date: selectedDay,
-    showToasts: false
+    showToasts: options.showToasts ?? false
   });
   
   // Handle any errors from entries loading
@@ -76,6 +96,12 @@ export const useTimesheet = () => {
     entriesLoading,
     entriesError,
     isServiceReady,
+    createEntry,
+    updateEntry,
+    deleteEntry,
+    getDayEntries,
+    getMonthEntries,
+    calculateTotalHours,
     
     // Timesheet context
     activeTab,

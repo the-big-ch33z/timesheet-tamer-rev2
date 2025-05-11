@@ -6,12 +6,32 @@ import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
 import { calculateFortnightHoursFromSchedule } from '@/utils/time/scheduleUtils';
 
-export const useMonthlyHoursCalculation = (
-  entries: TimeEntry[],
-  currentMonth: Date,
-  user?: User,
-  workSchedule?: WorkSchedule
-) => {
+/**
+ * Options for the useMonthlyHoursCalculation hook
+ */
+export interface MonthlyHoursCalculationOptions {
+  /** Time entries to calculate from */
+  entries: TimeEntry[];
+  /** The month to calculate for */
+  currentMonth: Date;
+  /** User data (optional) */
+  user?: User;
+  /** Work schedule data (optional) */
+  workSchedule?: WorkSchedule;
+}
+
+/**
+ * Hook to calculate monthly hours and completion percentage
+ * 
+ * @param {MonthlyHoursCalculationOptions} options - Calculation options
+ * @returns {Object} Monthly hours calculation results
+ */
+export const useMonthlyHoursCalculation = ({
+  entries,
+  currentMonth,
+  user,
+  workSchedule
+}: MonthlyHoursCalculationOptions) => {
   const { getUserMetrics } = useUserMetrics();
   const logger = useLogger("MonthlyHoursCalculation");
   

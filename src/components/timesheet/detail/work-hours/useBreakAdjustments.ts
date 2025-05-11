@@ -2,13 +2,38 @@
 import { useMemo } from 'react';
 import { BreakConfig } from './types';
 
-export const useBreakAdjustments = (
-  startTime: string,
-  endTime: string,
-  actionStates: Record<string, boolean>,
-  hasLunchBreakInSchedule: boolean,
-  hasSmokoBreakInSchedule: boolean
-) => {
+/**
+ * Options for the useBreakAdjustments hook
+ */
+export interface BreakAdjustmentsOptions {
+  /** Start time in HH:MM format */
+  startTime: string;
+  /** End time in HH:MM format */
+  endTime: string;
+  /** Record of action states (toggles) */
+  actionStates: Record<string, boolean>;
+  /** Whether lunch break is included in schedule */
+  hasLunchBreakInSchedule: boolean;
+  /** Whether smoko break is included in schedule */
+  hasSmokoBreakInSchedule: boolean;
+}
+
+/**
+ * Hook to calculate break adjustments for work hours
+ * 
+ * Calculates how breaks affect the total work hours and provides
+ * configuration for displaying break indicators.
+ * 
+ * @param {BreakAdjustmentsOptions} options - Break adjustment options
+ * @returns {Object} Break adjustment values and configurations
+ */
+export const useBreakAdjustments = ({
+  startTime,
+  endTime,
+  actionStates,
+  hasLunchBreakInSchedule,
+  hasSmokoBreakInSchedule
+}: BreakAdjustmentsOptions) => {
   // Calculate effective total hours with break adjustments
   const calculateAdjustedHours = useMemo(() => {
     // Start with a base adjustment of 0

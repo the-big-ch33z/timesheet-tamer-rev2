@@ -1,34 +1,244 @@
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { format } from 'date-fns';
+import { WorkHoursContextType, WorkHoursData } from '../types';
+import { useWorkHoursManagement } from './hooks/useWorkHoursManagement';
+import { useWorkHoursLogger } from './hooks/useWorkHoursLogger';
+import { createTimeLogger } from '@/utils/time/errors';
 
-import React, { createContext, useContext, ReactNode, useEffect } from 'react';
-import { WorkHoursContextType } from './types';
-import { useWorkSchedule } from '@/contexts/work-schedule';
-import { createWorkHoursOperations } from './workHoursOperations';
-import { useWorkHoursState } from './hooks/useWorkHoursState';
-import { useWorkHoursStorage } from './hooks/useWorkHoursStorage';
-import { useWorkHoursValue } from './hooks/useWorkHoursValue';
-import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
-import { timeEventsService } from '@/utils/time/events/timeEventsService';
+const logger = createTimeLogger('WorkHoursContext');
+
+// Create context with default values
+const WorkHoursContext = createContext<WorkHoursContextType | undefined>(undefined);
+
+export interface WorkHoursProviderProps {
+  children: React.ReactNode;
+}
 
 /**
- * WorkHoursContext
+ * WorkHoursProvider
  * 
- * Manages work hours data for users across different dates
- * Responsible for:
- * - Loading and saving work hours
- * - Calculating default work hours from schedules
- * - Managing custom work hours overrides
- * - Event communication for work hours changes
- *
- * Dependencies:
- * - WorkScheduleContext: Used for getting default hours from schedules
- * - timeEventsService: Used for broadcasting work hours changes
+ * Provides work hours data and operations to manipulate them
+ * 
+ * @dependency None - This is a root-level context that doesn't depend on other contexts
+ * 
+ * Dependencies Flow:
+ * - User components may depend on WorkHoursContext
+ * - This context may be used by TimeEntryContext for hours calculation
  */
+export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
+  // State for work hours
+  const [workHoursMap, setWorkHoursMap] = useState<Map<string, any>>(new Map());
+  
+  // Utility hooks
+  const { logWorkHoursRetrieval, logDefaultHours, logCustomHoursCheck } = useWorkHoursLogger();
+  
+  // Management operations
+  const { 
+    resetDayWorkHours, 
+    refreshTimesForDate,
+    synchronizeFromRemote 
+  } = useWorkHoursManagement({
+    workHoursMap,
+    setWorkHoursMap
+  });
 
-const WorkHoursContext = createContext<WorkHoursContextType | undefined>(undefined);
+  /**
+   * Check if custom work hours exist for a specific date and user
+   * 
+   * @param date - The date to check
+   * @param userId - The user ID
+   * @returns {boolean} Whether custom hours exist
+   */
+  const hasCustomWorkHours = useCallback((date: Date, userId: string): boolean => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const key = `${userId}-${dateString}`;
+    
+    const hasHours = workHoursMap.has(key);
+    
+    logCustomHoursCheck(dateString, userId, hasHours);
+    
+    return hasHours;
+  }, [workHoursMap, logCustomHoursCheck]);
+
+  /**
+   * Get work hours for a specific date and user
+   * 
+   * @param date - The date to get hours for
+   * @param userId - The user ID
+   * @returns Work hours data
+   */
+  const getWorkHours = useCallback((date: Date, userId: string) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const key = `${userId}-${dateString}`;
+    
+    const hours = workHoursMap.get(key);
+    
+    logWorkHoursRetrieval(dateString, userId, hours);
+    
+    if (hours) {
+      return {
+        startTime: hours.startTime || '09:00',
+        endTime: hours.endTime || '17:00',
+        isCustom: true
+      };
+    }
+    
+    // Default work hours
+    const startTime = '09:00';
+    const endTime = '17:00';
+    
+    logDefaultHours(dateString, startTime, endTime);
+    
+    return { startTime, endTime, isCustom: false };
+  }, [workHoursMap, logWorkHoursRetrieval, logDefaultHours]);
+
+  /**
+   * Enhanced API for getting work hours with additional metadata
+   * 
+   * @param date - The date to get hours for
+   * @param userId - The user ID
+   * @returns Work hours data with additional metadata
+   */
+  const getWorkHoursForDate = useCallback((date: Date, userId: string) => {
+    const { startTime, endTime, isCustom } = getWorkHours(date, userId);
+    
+    return { 
+      startTime, 
+      endTime, 
+      isCustom,
+      hasData: isCustom 
+    };
+  }, [getWorkHours]);
+
+  /**
+   * Save work hours for a specific date and user
+   * 
+   * @param date - The date to save hours for
+   * @param userId - The user ID
+   * @param startTime - The start time in HH:MM format
+   * @param endTime - The end time in HH:MM format
+   */
+  const saveWorkHours = useCallback((date: Date, userId: string, startTime: string, endTime: string): void => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    const key = `${userId}-${dateString}`;
+    
+    logger.debug(`Saving work hours for ${dateString}, user ${userId}: ${startTime}-${endTime}`);
+    
+    setWorkHoursMap(prevMap => {
+      const newMap = new Map(prevMap);
+      newMap.set(key, {
+        startTime,
+        endTime,
+        date: dateString,
+        userId,
+        isCustom: true,
+        lastModified: Date.now()
+      });
+      return newMap;
+    });
+  }, []);
+
+  /**
+   * Enhanced API for saving work hours with more flexible parameter order
+   * 
+   * @param date - The date to save hours for
+   * @param startTime - The start time in HH:MM format
+   * @param endTime - The end time in HH:MM format
+   * @param userId - The user ID
+   */
+  const saveWorkHoursForDate = useCallback((date: Date, startTime: string, endTime: string, userId: string): void => {
+    saveWorkHours(date, userId, startTime, endTime);
+  }, [saveWorkHours]);
+
+  /**
+   * Clear all work hours for a user
+   * 
+   * @param userId - The user ID
+   */
+  const clearWorkHours = useCallback((userId: string): void => {
+    logger.debug(`Clearing all work hours for user ${userId}`);
+    
+    setWorkHoursMap(prevMap => {
+      const newMap = new Map();
+      
+      // Only keep entries that don't belong to this user
+      for (const [key, value] of prevMap.entries()) {
+        if (value.userId !== userId) {
+          newMap.set(key, value);
+        }
+      }
+      
+      return newMap;
+    });
+  }, []);
+
+  // Load work hours from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedWorkHours = localStorage.getItem('work-hours');
+      
+      if (savedWorkHours) {
+        const parsedHours: WorkHoursData[] = JSON.parse(savedWorkHours);
+        
+        if (Array.isArray(parsedHours)) {
+          const newMap = new Map();
+          
+          parsedHours.forEach(hours => {
+            const key = `${hours.userId}-${hours.date}`;
+            newMap.set(key, hours);
+          });
+          
+          setWorkHoursMap(newMap);
+          logger.debug(`Loaded ${parsedHours.length} work hour entries from storage`);
+        }
+      }
+    } catch (error) {
+      logger.error('Error loading work hours from storage', error);
+    }
+  }, []);
+
+  // Save work hours to localStorage when they change
+  useEffect(() => {
+    if (workHoursMap.size > 0) {
+      try {
+        const hoursArray = Array.from(workHoursMap.values());
+        localStorage.setItem('work-hours', JSON.stringify(hoursArray));
+        logger.debug(`Saved ${hoursArray.length} work hour entries to storage`);
+      } catch (error) {
+        logger.error('Error saving work hours to storage', error);
+      }
+    }
+  }, [workHoursMap]);
+
+  // Context value
+  const contextValue: WorkHoursContextType = {
+    getWorkHours,
+    saveWorkHours,
+    clearWorkHours,
+    hasCustomWorkHours,
+    resetDayWorkHours,
+    refreshTimesForDate,
+    synchronizeFromRemote,
+    
+    // Enhanced API
+    getWorkHoursForDate,
+    saveWorkHoursForDate
+  };
+
+  return (
+    <WorkHoursContext.Provider value={contextValue}>
+      {children}
+    </WorkHoursContext.Provider>
+  );
+};
 
 /**
  * useWorkHoursContext
- * Primary hook for accessing work hours functionality
+ * 
+ * Hook to access work hours data and operations
+ * 
+ * @returns {WorkHoursContextType} Work hours context value
+ * @throws {Error} If used outside of a WorkHoursProvider
  */
 export const useWorkHoursContext = (): WorkHoursContextType => {
   const context = useContext(WorkHoursContext);
@@ -36,87 +246,4 @@ export const useWorkHoursContext = (): WorkHoursContextType => {
     throw new Error('useWorkHoursContext must be used within a WorkHoursProvider');
   }
   return context;
-};
-
-interface WorkHoursProviderProps {
-  children: ReactNode;
-}
-
-/**
- * WorkHoursProvider
- * Context provider that manages work hours data and operations
- */
-export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
-  // Get schedule data from work schedule context
-  const { defaultSchedule, schedules, getUserSchedule } = useWorkSchedule();
-  
-  // Create a wrapper function to extract schedule ID with cached lookup
-  const getUserScheduleId = React.useCallback((userId: string): string => {
-    const schedule = getUserSchedule(userId);
-    return schedule?.id || 'default';
-  }, [getUserSchedule]);
-
-  // Initialize operations with the wrapper function using useMemo
-  const { getDefaultHoursFromSchedule } = React.useMemo(() => (
-    createWorkHoursOperations(
-      defaultSchedule,
-      schedules,
-      getUserScheduleId
-    )
-  ), [defaultSchedule, schedules, getUserScheduleId]);
-
-  // Initialize state management
-  const {
-    workHoursMap,
-    setWorkHoursMap,
-    latestWorkHoursRef,
-    saveTimeoutRef,
-    isInitializedRef,
-    cleanupCache
-  } = useWorkHoursState();
-
-  // Set up storage synchronization
-  useWorkHoursStorage({
-    workHoursMap,
-    setWorkHoursMap,
-    latestWorkHoursRef,
-    saveTimeoutRef,
-    isInitializedRef
-  });
-
-  // Create context value with memoization
-  const value = useWorkHoursValue({
-    workHoursMap,
-    setWorkHoursMap,
-    latestWorkHoursRef,
-    getDefaultHoursFromSchedule
-  });
-
-  // Listen for schedule update events to clear caches
-  useEffect(() => {
-    const handleSchedulesUpdated = () => {
-      console.debug('WorkHoursContext: Schedules updated, clearing work hours cache');
-      clearWorkHoursCache();
-    };
-    
-    // Store subscriptions to clean them up properly
-    const schedulesSubscription = timeEventsService.subscribe('schedules-updated', handleSchedulesUpdated);
-    const userSchedulesSubscription = timeEventsService.subscribe('user-schedules-updated', handleSchedulesUpdated);
-    
-    // Periodically clean up cache to prevent memory leaks
-    const cleanupInterval = setInterval(cleanupCache, 60 * 60 * 1000); // Every hour
-    
-    return () => {
-      // Properly unsubscribe from each subscription object
-      schedulesSubscription.unsubscribe();
-      userSchedulesSubscription.unsubscribe();
-      clearInterval(cleanupInterval);
-    };
-  }, [cleanupCache]);
-
-  return (
-    <WorkHoursContext.Provider value={value}>
-      {children}
-    </WorkHoursContext.Provider>
-  );
 };

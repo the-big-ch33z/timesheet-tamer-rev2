@@ -6,18 +6,30 @@ import WorkHoursInterface from "../WorkHoursInterface";
 import TimeEntryController from "../../entry-control/TimeEntryController";
 
 /**
- * WorkHoursContent Component
- * Displays the work hours interface and time entry controller
+ * WorkHoursContent Component Props
  */
-interface WorkHoursContentProps {
+export interface WorkHoursContentProps {
+  /** The date to display work hours for */
   date: Date;
+  /** The user ID */
   userId: string;
+  /** Time entries for the day */
   dayEntries: any[];
+  /** Work schedule for the user */
   workSchedule?: WorkSchedule;
+  /** Whether the interface is interactive */
   interactive?: boolean;
+  /** Callback when a new entry is created */
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
+/**
+ * WorkHoursContent Component
+ * Displays the work hours interface and time entry controller
+ * 
+ * @param {WorkHoursContentProps} props - Component props
+ * @returns {JSX.Element} Rendered component
+ */
 const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
   date,
   userId,

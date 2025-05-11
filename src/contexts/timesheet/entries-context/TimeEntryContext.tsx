@@ -7,30 +7,9 @@ import { useEntryQueries } from './hooks/useEntryQueries';
 import { useStorageSync } from './hooks/useStorageSync';
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOILEventProvider } from '@/utils/time/events/toilEventService';
+import { TimeEntryContextType } from '../types';
 
 const logger = createTimeLogger('TimeEntryContext');
-
-/**
- * Unified TimeEntryContext that combines data and operations
- * This eliminates the need for separate EntryDataContext and EntryOperationsContext
- */
-export interface TimeEntryContextValue {
-  // Data state
-  entries: TimeEntry[];
-  dayEntries: TimeEntry[];
-  isLoading: boolean;
-  
-  // Queries
-  getDayEntries: (date: Date) => TimeEntry[];
-  getMonthEntries: (date: Date, userIdOverride?: string) => TimeEntry[];
-  calculateTotalHours: (entries?: TimeEntry[]) => number;
-  
-  // Operations
-  addEntry: (entry: Omit<TimeEntry, "id">) => void;
-  updateEntry: (id: string, updates: Partial<TimeEntry>) => void;
-  deleteEntry: (id: string) => Promise<boolean>;
-  createEntry: (entry: Omit<TimeEntry, "id">) => string | null;
-}
 
 export interface TimeEntryProviderProps {
   children: ReactNode;
@@ -39,11 +18,18 @@ export interface TimeEntryProviderProps {
 }
 
 // Create the context
-export const TimeEntryContext = createContext<TimeEntryContextValue | undefined>(undefined);
+export const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefined);
 
 /**
- * Unified TimeEntryProvider that combines data and operations
- * This replaces the previous pattern of nesting EntryDataContext and EntryOperationsContext
+ * TimeEntryProvider
+ * 
+ * Provides access to time entries and operations to manipulate them
+ * 
+ * @dependency None - This is a root-level context that doesn't depend on other contexts
+ * 
+ * Dependencies Flow:
+ * - Other contexts may depend on TimeEntryContext
+ * - This context uses services directly without requiring other contexts
  */
 export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({ 
   children, 
@@ -71,7 +57,7 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
   }, [selectedDate, dayEntries.length]);
 
   // Create unified context value
-  const contextValue: TimeEntryContextValue = {
+  const contextValue: TimeEntryContextType = {
     // Data
     entries,
     dayEntries,
@@ -100,10 +86,14 @@ export const TimeEntryProvider: React.FC<TimeEntryProviderProps> = ({
 };
 
 /**
- * Hook to access the TimeEntryContext
- * This is the main entry point for consuming time entry functionality
+ * useTimeEntryContext
+ * 
+ * Hook to access time entry data and operations
+ * 
+ * @returns {TimeEntryContextType} Time entry context value
+ * @throws {Error} If used outside of a TimeEntryProvider
  */
-export const useTimeEntryContext = (): TimeEntryContextValue => {
+export const useTimeEntryContext = (): TimeEntryContextType => {
   const context = useContext(TimeEntryContext);
   if (!context) {
     throw new Error('useTimeEntryContext must be used within a TimeEntryProvider');

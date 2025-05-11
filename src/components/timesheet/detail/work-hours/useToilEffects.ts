@@ -7,20 +7,40 @@ import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useToilEffects');
 
-// Type for unified parameter object
-export interface UseToilEffectsParams {
+/**
+ * Options for the useToilEffects hook
+ */
+export interface UseToilEffectsOptions {
+  /** The user ID */
   userId: string;
+  /** The date to calculate TOIL for */
   date: Date;
+  /** Time entries for the day */
   entries: TimeEntry[];
+  /** Work schedule for the user */
   schedule?: WorkSchedule;
+  /** Whether leave is active for the day */
   leaveActive?: boolean;
+  /** Whether TOIL is active for the day */
   toilActive?: boolean;
+  /** Whether the timesheet is complete */
   isComplete?: boolean;
 }
 
-// Updated hook that supports both object and individual parameters
+/**
+ * Hook to manage TOIL effects and calculations
+ * 
+ * Handles TOIL calculation triggers based on timesheet state changes
+ * 
+ * @param {UseToilEffectsOptions | boolean} options - Configuration options or legacy flag
+ * @param {boolean} [arg2] - Legacy leaveActive flag
+ * @param {boolean} [arg3] - Legacy toilActive flag
+ * @param {boolean} [arg4] - Legacy isComplete flag
+ * @param {() => Promise<any>} [arg5] - Legacy calculation function
+ * @param {number} [arg6] - Legacy entries length
+ */
 export const useToilEffects = (
-  arg1: UseToilEffectsParams | boolean,
+  arg1: UseToilEffectsOptions | boolean,
   arg2?: boolean,
   arg3?: boolean,
   arg4?: boolean,
@@ -92,10 +112,10 @@ export const useToilEffects = (
   useEffect(() => {
     if (isObjectFormat) {
       logger.debug('useToilEffects called with object parameters:', {
-        userId: (arg1 as UseToilEffectsParams).userId,
-        date: (arg1 as UseToilEffectsParams).date?.toISOString?.(),
+        userId: (arg1 as UseToilEffectsOptions).userId,
+        date: (arg1 as UseToilEffectsOptions).date?.toISOString?.(),
         entriesCount: entriesLength,
-        hasSchedule: !!(arg1 as UseToilEffectsParams).schedule
+        hasSchedule: !!(arg1 as UseToilEffectsOptions).schedule
       });
     } else {
       logger.debug('useToilEffects called with individual parameters:', {

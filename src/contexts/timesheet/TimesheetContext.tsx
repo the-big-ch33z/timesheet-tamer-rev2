@@ -7,6 +7,10 @@ import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/Timeshe
 import { WorkHoursProvider } from './work-hours-context/WorkHoursContext';
 import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTimesheetContext';
 import { useToast } from '@/hooks/use-toast';
+import { UnifiedTimesheetContextType } from './types';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('TimesheetContext');
 
 /**
  * Timesheet Context Module
@@ -15,15 +19,17 @@ import { useToast } from '@/hooks/use-toast';
  * This is the main entry point for timesheet-related components.
  * 
  * Context Architecture:
- * - All contexts are now implemented as parallel providers rather than deeply nested
+ * - All contexts are implemented as parallel providers rather than deeply nested
  * - Each context is responsible for its own initialization and state management
  * - Inter-context communication happens through explicit dependencies or the global event bus
  * 
- * Context Dependencies:
- * - WorkHoursContext depends on WorkScheduleContext (external)
- * - CalendarContext is independent
- * - UserTimesheetContext depends on useTimesheetContext hook
- * - TimesheetUIContext is independent
+ * Context Dependency Hierarchy:
+ * TimesheetContext
+ * ├── TimesheetUIProvider (independent)
+ * ├── UserTimesheetProvider (depends on auth state)
+ * ├── WorkHoursProvider (independent, may use WorkScheduleContext externally)
+ * └── CalendarProvider (independent)
+ *     └── TimeEntryProvider (depends on selectedDate from CalendarProvider)
  */
 
 // Re-export individual context hooks for easier access from components
@@ -41,16 +47,18 @@ let lastTriggerTime = 0;
 /**
  * Triggers a global save event for all timesheet components
  * Includes debounce protection to prevent multiple calls
+ * 
+ * @returns {boolean} Whether the event was triggered
  */
-export const triggerGlobalSave = () => {
+export const triggerGlobalSave = (): boolean => {
   // Prevent multiple triggers in quick succession
   const now = Date.now();
   if (now - lastTriggerTime < 300) {
-    console.debug("[TimesheetContext] Skipping duplicate save event trigger");
+    logger.debug("Skipping duplicate save event trigger");
     return false;
   }
   
-  console.debug("[TimesheetContext] Dispatching global save event");
+  logger.debug("Dispatching global save event");
   const event = new CustomEvent('timesheet:save-pending-changes');
   window.dispatchEvent(event);
   
@@ -61,8 +69,10 @@ export const triggerGlobalSave = () => {
 /**
  * Main hook to access timesheet functionality
  * Combines all specialized context hooks into one unified API
+ * 
+ * @returns {UnifiedTimesheetContextType} Combined context values
  */
-export const useTimesheetContext = () => {
+export const useTimesheetContext = (): UnifiedTimesheetContextType => {
   const calendar = useCalendarContext();
   const user = useUserTimesheetContext();
   const ui = useTimesheetUIContext();
@@ -81,14 +91,17 @@ interface TimesheetProviderProps {
 
 /**
  * Main provider component that manages the timesheet context hierarchy
- * Now uses a flattened context provider structure instead of deep nesting
+ * Uses a flattened context provider structure instead of deep nesting
+ * 
+ * @param {TimesheetProviderProps} props - Provider props
+ * @returns {JSX.Element} Provider component
  */
 export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }) => {
   const { toast } = useToast();
   
   // This function will be called before the date changes
   const handleBeforeDateChange = useCallback(() => {
-    console.log("[TimesheetProvider] Date is about to change - triggering save event");
+    logger.debug("Date is about to change - triggering save event");
     // Dispatch our custom event to notify components
     triggerGlobalSave();
   }, []);
@@ -96,7 +109,7 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
   // Setup window navigation event listener
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      console.debug("[TimesheetProvider] Page unload detected, triggering save");
+      logger.debug("Page unload detected, triggering save");
       triggerGlobalSave();
       
       // Standard approach to show confirmation dialog

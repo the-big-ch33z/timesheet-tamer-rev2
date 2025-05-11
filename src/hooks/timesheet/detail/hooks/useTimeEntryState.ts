@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHoursContext } from '@/contexts/timesheet';
@@ -7,15 +8,31 @@ import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useTimeEntryState');
 
-interface UseTimeEntryStateProps {
+/**
+ * Options for the useTimeEntryState hook
+ */
+export interface TimeEntryStateOptions {
+  /** Time entries for the current day */
   entries: TimeEntry[];
+  /** The current day */
   date: Date;
+  /** The work schedule for the user */
   workSchedule?: WorkSchedule;
+  /** Whether the interface is interactive */
   interactive: boolean;
+  /** The user ID */
   userId: string;
+  /** Callback when hours change */
   onHoursChange?: (hours: number) => void;
 }
 
+/**
+ * Hook to manage time entry state
+ * Handles start/end times, hours calculation, and state tracking
+ * 
+ * @param {TimeEntryStateOptions} options - Configuration options
+ * @returns {Object} Time entry state and handlers
+ */
 export const useTimeEntryState = ({
   entries,
   date,
@@ -23,7 +40,7 @@ export const useTimeEntryState = ({
   interactive,
   userId,
   onHoursChange
-}: UseTimeEntryStateProps) => {
+}: TimeEntryStateOptions) => {
   // Get work hours from context
   const workHoursContext = useWorkHoursContext();
   

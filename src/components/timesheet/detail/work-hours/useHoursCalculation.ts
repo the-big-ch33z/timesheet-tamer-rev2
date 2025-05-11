@@ -2,14 +2,41 @@
 import { useMemo } from 'react';
 import { calculateHoursFromTimes } from "@/utils/time/calculations/hoursCalculations";
 
-export const useHoursCalculation = (
-  startTime: string, 
-  endTime: string, 
-  breakAdjustments: number, 
-  scheduledHours: number,
-  effectiveHours: number,
-  hasEntries: boolean
-) => {
+/**
+ * Options for the useHoursCalculation hook
+ */
+export interface HoursCalculationOptions {
+  /** Start time in HH:MM format */
+  startTime: string;
+  /** End time in HH:MM format */
+  endTime: string;
+  /** Adjustments for breaks in hours */
+  breakAdjustments: number;
+  /** Scheduled hours for the day */
+  scheduledHours: number;
+  /** Effective hours (from entries) */
+  effectiveHours: number;
+  /** Whether there are entries for the day */
+  hasEntries: boolean;
+}
+
+/**
+ * Hook to calculate hours based on times and adjustments
+ * 
+ * Calculates raw hours from start/end times, applies adjustments,
+ * and determines if the day is complete based on scheduled hours.
+ * 
+ * @param {HoursCalculationOptions} options - Calculation options
+ * @returns {Object} Calculated hours and completion status
+ */
+export const useHoursCalculation = ({
+  startTime, 
+  endTime, 
+  breakAdjustments, 
+  scheduledHours,
+  effectiveHours,
+  hasEntries
+}: HoursCalculationOptions) => {
   // Helper function to round to quarter hour
   const roundToQuarter = (val: number) => Math.round(val * 4) / 4;
   
