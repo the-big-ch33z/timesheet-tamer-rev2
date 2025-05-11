@@ -6,9 +6,31 @@ import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { toDate } from '@/utils/date/dateConversions';
 
+/**
+ * useTimesheetWorkHours
+ * 
+ * Unified hook for work hours operations in timesheet
+ * Provides a simplified API for manipulating work hours data
+ * 
+ * This hook is the standard way to access work hours functionality
+ * in the timesheet UI components.
+ */
+
 const logger = createTimeLogger('useTimesheetWorkHours');
 
-export const useTimesheetWorkHours = (defaultUserId?: string) => {
+export interface UseTimesheetWorkHoursResult {
+  getWorkHoursForDate: (date: Date | string, userId?: string) => { startTime: string, endTime: string, hasData?: boolean };
+  saveWorkHoursForDate: (date: Date | string, startTime: string, endTime: string, userId?: string) => void;
+  resetWorkHoursForDate: (date: Date | string, userId?: string) => void;
+  refreshWorkHours: (date?: Date | string, userId?: string) => void;
+}
+
+/**
+ * Hook for accessing and manipulating work hours
+ * 
+ * @param defaultUserId - Optional default user ID to use if not specified in method calls
+ */
+export const useTimesheetWorkHours = (defaultUserId?: string): UseTimesheetWorkHoursResult => {
   const workHoursContext = useWorkHoursContext();
 
   const ensureDate = (date: Date | string): Date => {

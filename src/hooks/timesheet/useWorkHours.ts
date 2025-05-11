@@ -7,12 +7,20 @@ import { useTimesheetWorkHours } from './useTimesheetWorkHours';
 import { useTimeCalculations } from './useTimeCalculations';
 import { unifiedTimeEntryService } from '@/utils/time/services';
 
+/**
+ * useWorkHours
+ * 
+ * Legacy compatibility hook for working with work hours
+ * This hook maintains the original API for backward compatibility
+ * but internally uses the new standardized hooks
+ */
 const logger = createTimeLogger('useWorkHours');
 
 /**
- * Enhanced hook for working with work hours
- * This is a compatibility layer that uses useTimesheetWorkHours internally
- * but maintains the original API for backward compatibility
+ * Comprehensive hook for work hours management
+ * Combines functionality from both new and legacy APIs
+ * 
+ * @param userId - Optional user ID to use if not specified in method calls
  */
 export const useWorkHours = (userId?: string) => {
   // Use the enhanced implementation for core functionality
@@ -38,7 +46,7 @@ export const useWorkHours = (userId?: string) => {
   // Add compatibility methods for tests
   const hasCustomHours = useCallback((date: Date, userId?: string): boolean => {
     const hours = enhancedHook.getWorkHoursForDate(date, userId);
-    return !!hours.startTime && !!hours.endTime;
+    return !!hours.startTime && !!hours.endTime && !!hours.hasData;
   }, [enhancedHook]);
   
   const resetWorkHours = useCallback((date: Date, userId?: string): void => {
@@ -67,6 +75,13 @@ export const useWorkHours = (userId?: string) => {
     };
   }, [enhancedHook, calculateAutoHours]);
   
+  // Compatibility method for clearAllWorkHours
+  const clearAllWorkHours = useCallback((userId?: string): void => {
+    // This is a no-op in the new system as we rely on refreshWorkHours instead
+    logger.debug('clearAllWorkHours called - operation replaced with refreshWorkHours');
+    enhancedHook.refreshWorkHours(undefined, userId);
+  }, [enhancedHook]);
+  
   // Extend the hook with the additional methods needed for backward compatibility
   return {
     ...enhancedHook,
@@ -74,6 +89,7 @@ export const useWorkHours = (userId?: string) => {
     hasCustomHours,
     resetWorkHours,
     calculateDayHours,
+    clearAllWorkHours,
     getWorkHoursForDate: getWorkHoursForDateWithCalculated
   };
 };

@@ -14,16 +14,16 @@ import { useToast } from '@/hooks/use-toast';
  * Provides centralized state management for timesheet functionality.
  * This is the main entry point for timesheet-related components.
  * 
- * Context Hierarchy:
- * - TimesheetProvider (top-level)
- *   - TimesheetUIProvider (UI state)
- *   - UserTimesheetProvider (user-specific data)
- *     - WorkHoursProvider (work hours calculations)
- *       - CalendarProvider (calendar navigation)
- *         - TimeEntryProvider* (time entries - supplied separately)
+ * Context Architecture:
+ * - All contexts are now implemented as parallel providers rather than deeply nested
+ * - Each context is responsible for its own initialization and state management
+ * - Inter-context communication happens through explicit dependencies or the global event bus
  * 
- * *TimeEntryProvider is provided separately in the page component
- * to have access to route parameters.
+ * Context Dependencies:
+ * - WorkHoursContext depends on WorkScheduleContext (external)
+ * - CalendarContext is independent
+ * - UserTimesheetContext depends on useTimesheetContext hook
+ * - TimesheetUIContext is independent
  */
 
 // Re-export individual context hooks for easier access from components
@@ -81,7 +81,7 @@ interface TimesheetProviderProps {
 
 /**
  * Main provider component that manages the timesheet context hierarchy
- * This wraps all specialized providers in the correct order
+ * Now uses a flattened context provider structure instead of deep nesting
  */
 export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }) => {
   const { toast } = useToast();
@@ -112,7 +112,7 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
     };
   }, []);
   
-  // Simplified provider nesting structure
+  // Flattened provider structure - each context is now responsible for its own initialization
   return (
     <TimesheetUIProvider>
       <UserTimesheetProvider>

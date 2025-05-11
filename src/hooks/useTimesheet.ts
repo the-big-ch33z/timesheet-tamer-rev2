@@ -8,6 +8,9 @@ import { useErrorHandler } from "./useErrorHandler";
 /**
  * Primary hook for timesheet functionality
  * Enhanced with better error handling and service recovery
+ * 
+ * This is the main hook for accessing timesheet functionality and provides
+ * a unified API for all timesheet-related data and actions.
  */
 export const useTimesheet = () => {
   const logger = useLogger("Timesheet");

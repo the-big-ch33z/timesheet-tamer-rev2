@@ -4,8 +4,24 @@ import { useCalendarState } from '@/hooks/timesheet/useCalendarState';
 import { CalendarContextType } from '../types';
 import { triggerGlobalSave } from '../TimesheetContext';
 
+/**
+ * CalendarContext
+ * 
+ * Manages calendar state for the timesheet application
+ * Responsible for:
+ * - Current month navigation
+ * - Selected day management
+ * - Date change event handling
+ * 
+ * This context is independent and doesn't rely on other contexts,
+ * making it reusable across different parts of the application.
+ */
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
+/**
+ * useCalendarContext
+ * Primary hook for accessing calendar functionality
+ */
 export const useCalendarContext = (): CalendarContextType => {
   const context = useContext(CalendarContext);
   if (!context) {
@@ -19,6 +35,10 @@ interface CalendarProviderProps {
   onBeforeDateChange?: () => void; // Callback for before date changes
 }
 
+/**
+ * CalendarProvider
+ * Provides calendar state and operations to its children
+ */
 export const CalendarProvider: React.FC<CalendarProviderProps> = ({ 
   children, 
   onBeforeDateChange 

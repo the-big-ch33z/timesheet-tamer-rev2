@@ -5,6 +5,10 @@ import { Card } from "@/components/ui/card";
 import WorkHoursInterface from "../WorkHoursInterface";
 import TimeEntryController from "../../entry-control/TimeEntryController";
 
+/**
+ * WorkHoursContent Component
+ * Displays the work hours interface and time entry controller
+ */
 interface WorkHoursContentProps {
   date: Date;
   userId: string;

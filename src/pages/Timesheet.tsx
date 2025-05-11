@@ -3,9 +3,9 @@ import React, { Suspense, lazy, useState, useEffect } from "react";
 import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErrorBoundary";
 import { 
   useUserTimesheetContext,
-  useTimesheetUIContext,
   useCalendarContext
 } from "@/contexts/timesheet";
+import { useTimesheetUIContext } from "@/contexts/timesheet";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";

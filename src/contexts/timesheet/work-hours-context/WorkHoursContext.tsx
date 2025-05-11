@@ -9,8 +9,27 @@ import { useWorkHoursValue } from './hooks/useWorkHoursValue';
 import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
+/**
+ * WorkHoursContext
+ * 
+ * Manages work hours data for users across different dates
+ * Responsible for:
+ * - Loading and saving work hours
+ * - Calculating default work hours from schedules
+ * - Managing custom work hours overrides
+ * - Event communication for work hours changes
+ *
+ * Dependencies:
+ * - WorkScheduleContext: Used for getting default hours from schedules
+ * - timeEventsService: Used for broadcasting work hours changes
+ */
+
 const WorkHoursContext = createContext<WorkHoursContextType | undefined>(undefined);
 
+/**
+ * useWorkHoursContext
+ * Primary hook for accessing work hours functionality
+ */
 export const useWorkHoursContext = (): WorkHoursContextType => {
   const context = useContext(WorkHoursContext);
   if (!context) {
@@ -23,7 +42,12 @@ interface WorkHoursProviderProps {
   children: ReactNode;
 }
 
+/**
+ * WorkHoursProvider
+ * Context provider that manages work hours data and operations
+ */
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
+  // Get schedule data from work schedule context
   const { defaultSchedule, schedules, getUserSchedule } = useWorkSchedule();
   
   // Create a wrapper function to extract schedule ID with cached lookup
@@ -41,13 +65,14 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     )
   ), [defaultSchedule, schedules, getUserScheduleId]);
 
-  // Use our new hooks
+  // Initialize state management
   const {
     workHoursMap,
     setWorkHoursMap,
     latestWorkHoursRef,
     saveTimeoutRef,
     isInitializedRef,
+    cleanupCache
   } = useWorkHoursState();
 
   // Set up storage synchronization
@@ -78,12 +103,16 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const schedulesSubscription = timeEventsService.subscribe('schedules-updated', handleSchedulesUpdated);
     const userSchedulesSubscription = timeEventsService.subscribe('user-schedules-updated', handleSchedulesUpdated);
     
+    // Periodically clean up cache to prevent memory leaks
+    const cleanupInterval = setInterval(cleanupCache, 60 * 60 * 1000); // Every hour
+    
     return () => {
       // Properly unsubscribe from each subscription object
       schedulesSubscription.unsubscribe();
       userSchedulesSubscription.unsubscribe();
+      clearInterval(cleanupInterval);
     };
-  }, []);
+  }, [cleanupCache]);
 
   return (
     <WorkHoursContext.Provider value={value}>
