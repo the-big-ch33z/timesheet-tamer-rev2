@@ -17,15 +17,24 @@ export class TimeEntryOperations implements TimeEntryBaseOperations {
     private getAllEntries: () => TimeEntry[],
     private eventManager: EventManager
   ) {
+    // Create a complete config with required serviceName
+    const completeConfig: Required<TimeEntryOperationsConfig> = {
+      serviceName: config.serviceName || 'default',
+      storageKey: config.storageKey,
+      validateOnSave: config.validateOnSave ?? true,
+      enableAuditing: config.enableAuditing ?? true,
+      enableCache: config.enableCache ?? true
+    };
+    
     // Initialize with correct parameters order
     // Pass eventManager first, then the config to match the constructor signature
-    this.createOps = new CreateOperations(this.eventManager, config);
+    this.createOps = new CreateOperations(this.eventManager, completeConfig);
     this.updateOps = new UpdateOperations(config, this.invalidateCache, this.getAllEntries, this.eventManager);
-    this.deleteOps = new DeleteOperations(this.eventManager, config);
+    this.deleteOps = new DeleteOperations(this.eventManager, completeConfig);
     
     console.log("[TimeEntryOperations] Initialized with config:", {
-      serviceName: config.serviceName || 'default',
-      storageKey: config.storageKey
+      serviceName: completeConfig.serviceName,
+      storageKey: completeConfig.storageKey
     });
   }
 
