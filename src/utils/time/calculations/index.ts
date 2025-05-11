@@ -3,10 +3,26 @@
  * Re-export all calculation utilities for easier imports
  */
 export * from './timeCalculations';
-export * from './scheduleUtils';
+// Export scheduleUtils but exclude the functions that might cause ambiguity
+export { 
+  getDayScheduleInfo,
+  isWorkingDay,
+  isHolidayDate,
+  isNonWorkingDay,
+  calculateDayHoursWithBreaks,
+  calculateDayHours,
+  clearHolidayCache,
+  isRDODay,
+  getWeekDay,
+  getFortnightWeek,
+  getWorkdaysInMonth
+} from '../scheduleUtils';
 
-// Do not re-export these specifically since they're already exported from timeCalculations
-// export * from './hoursCalculations';
+// These specific functions are now only exported from scheduleUtils to avoid ambiguity
+export { 
+  calculateFortnightHoursFromSchedule,
+  calculateAdjustedFortnightHours 
+} from '../scheduleUtils';
 
 // For backward compatibility, also re-export from specialized files
 export * from './varianceCalculations';

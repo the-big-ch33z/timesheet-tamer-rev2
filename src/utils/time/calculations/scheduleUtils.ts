@@ -4,11 +4,17 @@ import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('scheduleUtils');
 
+/**
+ * Calculate adjusted fortnight hours based on work schedule and FTE
+ */
 export const calculateAdjustedFortnightHours = (schedule: WorkSchedule, fte: number = 1.0): number => {
   const baseHours = calculateFortnightHoursFromSchedule(schedule);
   return Math.round((baseHours * fte) * 2) / 2; // Round to nearest 0.5
 };
 
+/**
+ * Calculate fortnight hours from work schedule
+ */
 export const calculateFortnightHoursFromSchedule = (schedule: WorkSchedule): number => {
   if (!schedule) return 0;
   

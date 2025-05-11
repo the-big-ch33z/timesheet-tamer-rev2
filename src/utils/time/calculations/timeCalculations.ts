@@ -79,9 +79,5 @@ export const safeCalculateVariance = (
   }
 };
 
-// Import from scheduleUtils rather than re-exporting from hoursCalculations
-// to prevent circular dependencies and ambiguous exports
-export { 
-  calculateAdjustedFortnightHours,
-  calculateFortnightHoursFromSchedule
-} from '../scheduleUtils';
+// We're removing the re-exports that caused circular dependencies
+// These functions are properly exported from scheduleUtils.ts directly
