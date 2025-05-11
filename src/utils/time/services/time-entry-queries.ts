@@ -1,12 +1,8 @@
+
 import { TimeEntry } from "@/types";
 import { EntryCache, TimeEntryServiceConfig } from "./types";
 import { createTimeLogger } from '../errors/timeLogger';
 import { isValidDate, formatDateForComparison } from '../validation/dateValidation';
-import { 
-  getCachedUserEntries, 
-  getCachedDayEntries, 
-  getCachedMonthEntries 
-} from "./cache-management";
 
 const logger = createTimeLogger('TimeEntryQueries');
 
@@ -31,7 +27,7 @@ export class TimeEntryQueries {
       return [];
     }
     
-    return getCachedUserEntries(this.cache, userId, allEntries);
+    return this.getCachedUserEntries(userId, allEntries);
   }
 
   /**
@@ -70,6 +66,34 @@ export class TimeEntryQueries {
       return [];
     }
     
-    return getCachedMonthEntries(this.cache, date, userId, userEntries);
+    return this.getCachedMonthEntries(date, userId, userEntries);
+  }
+  
+  /**
+   * Helper method to get cached entries for a user
+   */
+  private getCachedUserEntries(userId: string, allEntries: TimeEntry[]): TimeEntry[] {
+    if (!userId) {
+      return [];
+    }
+    
+    return allEntries.filter(entry => entry.userId === userId);
+  }
+  
+  /**
+   * Helper method to get cached entries for a month and user
+   */
+  private getCachedMonthEntries(date: Date, userId: string, userEntries: TimeEntry[]): TimeEntry[] {
+    if (!date || !userId) {
+      return [];
+    }
+    
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    return userEntries.filter(entry => {
+      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+      return entryDate.getMonth() === month && entryDate.getFullYear() === year;
+    });
   }
 }

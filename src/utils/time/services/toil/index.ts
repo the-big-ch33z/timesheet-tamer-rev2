@@ -4,7 +4,11 @@
  * This file provides a consolidated export of TOIL-related functionality.
  */
 
-// Export TOIL service and types
+// Export the TOIL service instance
+import { toilService } from "../toil-service";
+export { toilService };
+
+// Export TOIL service and types 
 export { 
   TOILService, 
   TOIL_JOB_NUMBER,
@@ -16,27 +20,37 @@ export type {
   TOILUsageEntry
 } from './service';
 
-// Re-export calculation functions
+// Re-export calculation functions from calculation.ts
 export { 
   calculateTOILBalance,
   calculateTOILAccrual,
   getAvailableTOILHours
 } from './calculation';
 
-// Re-export batch processing functions
+// Re-export batch processing functions from batch-processing.ts
 export {
   processTOILBatch,
   validateTOILBatchItem
 } from './batch-processing';
 
-// Re-export storage functions
+// Re-export storage functions from storage.ts
 export {
   loadTOILData,
   saveTOILData,
-  clearTOILCache
 } from './storage';
 
-// Export event functionality
+// Export clean utility functions
+export { clearAllTOILCaches } from './storage';
+
+// Cleanup functions for TOILRecords
+export { 
+  cleanupDuplicateTOILRecords,
+  cleanupDuplicateTOILUsage,
+  loadTOILRecords,
+  loadTOILUsage
+} from './storage';
+
+// Export event functionality from events.ts
 export {
   dispatchTOILEvent,
   addTOILEventListener,

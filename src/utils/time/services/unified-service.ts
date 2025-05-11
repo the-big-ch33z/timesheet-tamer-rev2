@@ -17,7 +17,7 @@ export const storageWriteLock = {
   lockTimeout: null as NodeJS.Timeout | null
 };
 
-// Export the UnifiedTimeEntryService class (this was missing)
+// Export the UnifiedTimeEntryService class
 export { UnifiedTimeEntryService };
 
 // Export types from the types file
@@ -25,6 +25,14 @@ export * from './types';
 
 // Create and export a singleton instance
 export const unifiedTimeEntryService = new UnifiedTimeEntryService();
+
+// Create and export compatability service for backward compatibility
+export const timeEntryService = unifiedTimeEntryService;
+
+// Factory function to create a new service instance (for tests or isolated usage)
+export function createTimeEntryService(config?: any): UnifiedTimeEntryService {
+  return new UnifiedTimeEntryService(config);
+}
 
 // Initialize the service if we're in browser environment
 if (typeof window !== 'undefined') {

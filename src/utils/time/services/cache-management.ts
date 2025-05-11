@@ -66,45 +66,94 @@ export const updateCacheEntries = (
 };
 
 /**
- * Update the cache with user entries
+ * Get cached entries for a specific user
  */
+export const getCachedUserEntries = (
+  cache: EntryCache,
+  userId: string,
+  allEntries: TimeEntry[]
+): TimeEntry[] => {
+  if (!userId) {
+    logger.warn('No userId provided to getCachedUserEntries');
+    return [];
+  }
+  
+  // Use cache if valid, otherwise filter the entries
+  const entries = cache.valid ? cache.entries : allEntries;
+  
+  return entries.filter(entry => entry.userId === userId);
+};
+
+/**
+ * Get cached entries for a specific day and user
+ */
+export const getCachedDayEntries = (
+  cache: EntryCache,
+  date: Date,
+  userId: string,
+  userEntries: TimeEntry[]
+): TimeEntry[] => {
+  if (!date || !userId) {
+    logger.warn('Invalid date or userId provided to getCachedDayEntries');
+    return [];
+  }
+  
+  const dateString = date.toDateString();
+  
+  return userEntries.filter(entry => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+    return entryDate.toDateString() === dateString;
+  });
+};
+
+/**
+ * Get cached entries for a specific month and user
+ */
+export const getCachedMonthEntries = (
+  cache: EntryCache,
+  date: Date,
+  userId: string,
+  userEntries: TimeEntry[]
+): TimeEntry[] => {
+  if (!date || !userId) {
+    logger.warn('Invalid date or userId provided to getCachedMonthEntries');
+    return [];
+  }
+  
+  const month = date.getMonth();
+  const year = date.getFullYear();
+  
+  return userEntries.filter(entry => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+    return entryDate.getMonth() === month && entryDate.getFullYear() === year;
+  });
+};
+
 export const updateUserEntries = (
   cache: EntryCache,
   userId: string,
   entries: TimeEntry[]
 ): EntryCache => {
-  // For now we just store all entries in the main entries array
-  // In a future optimization, we could store per-user entries separately
   logger.debug(`Updating cache with ${entries.length} entries for user ${userId}`);
   return updateCacheEntries(cache, entries);
 };
 
-/**
- * Update day entries in the cache
- */
 export const updateDayEntries = (
   cache: EntryCache,
   date: Date,
   userId: string,
   entries: TimeEntry[]
 ): EntryCache => {
-  // For now, we're just updating all entries
-  // In a future optimization, we could store day entries separately
   logger.debug(`Updating cache with ${entries.length} entries for date ${date.toISOString()} and user ${userId}`);
   return updateCacheEntries(cache, entries);
 };
 
-/**
- * Update month entries in the cache
- */
 export const updateMonthEntries = (
   cache: EntryCache,
   date: Date,
   userId: string,
   entries: TimeEntry[]
 ): EntryCache => {
-  // For now, we're just updating all entries
-  // In a future optimization, we could store month entries separately
   logger.debug(`Updating cache with ${entries.length} entries for month ${date.toISOString().slice(0, 7)} and user ${userId}`);
   return updateCacheEntries(cache, entries);
 };
