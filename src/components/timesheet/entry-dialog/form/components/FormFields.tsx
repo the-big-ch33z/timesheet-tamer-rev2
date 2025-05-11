@@ -1,145 +1,149 @@
 
-import React from "react";
-import HoursField from "../../fields/field-types/HoursField";
-import EntryField from "../../fields/EntryField";
-import { Textarea } from "@/components/ui/textarea";
-import { FormState } from "@/contexts/form/types";
+import React from 'react';
+import { FormState, FormField } from '../useEntryFormState';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
-const FIELD_TYPES = {
-  JOB_NUMBER: "jobNumber",
-  TASK_NUMBER: "taskNumber",
-  REGO: "rego",
-  HOURS: "hours",
-  DESCRIPTION: "description"
-};
-
-interface FormFieldsProps {
+type FormFieldsProps = {
   formState: FormState;
-  setFieldValue: (field: string, value: string) => void;
-}
-
-const renderFormField = (
-  fieldType: string, 
-  formField: { value: any, error?: string }, 
-  onChange: (value: string) => void, 
-  required = false
-) => {
-  const fieldConfig = {
-    [FIELD_TYPES.JOB_NUMBER]: {
-      name: "Job Number",
-      placeholder: "Job No."
-    },
-    [FIELD_TYPES.TASK_NUMBER]: {
-      name: "Task Number",
-      placeholder: "Task No."
-    },
-    [FIELD_TYPES.REGO]: {
-      name: "Rego",
-      placeholder: "Rego"
-    }
-  };
-  
-  const config = fieldConfig[fieldType];
-  if (config) {
-    return (
-      <div className="w-full">
-        <EntryField 
-          id={fieldType} 
-          name={config.name} 
-          value={formField.value} 
-          onChange={onChange} 
-          placeholder={config.placeholder} 
-          required={required} 
-          {...(fieldType === FIELD_TYPES.HOURS ? { type: "number", min: "0.25", step: "0.25" } : {})}
-        />
-        {formField.error && <p className="text-red-500 text-sm mt-1">{formField.error}</p>}
-      </div>
-    );
-  }
-  return null;
+  onChange: (field: string, value: string) => void;
+  disabled?: boolean;
 };
 
-export const FormFields: React.FC<FormFieldsProps> = ({ formState, setFieldValue }) => {
-  // Extract the fields from formState or provide fallbacks for safety
-  // Use type assertion for safe access to error property
-  const getFieldWithError = (fieldName: string) => {
-    const field = formState.fields[fieldName] || { value: '', touched: false };
-    return {
-      value: field.value ?? '',
-      error: 'error' in field ? field.error : undefined,
-      touched: 'touched' in field ? field.touched : false
-    };
-  };
+/**
+ * Safely access properties from a form field
+ * This handles potential undefined fields and provides type safety
+ */
+const getFieldSafely = (formState: FormState, fieldName: string): FormField => {
+  const field = formState.fields[fieldName];
+  if (!field) {
+    // Return a default field if it doesn't exist
+    return { value: '', touched: false };
+  }
+  return field;
+};
 
-  const hoursField = getFieldWithError(FIELD_TYPES.HOURS);
-  const descriptionField = getFieldWithError(FIELD_TYPES.DESCRIPTION);
-  const jobNumberField = getFieldWithError(FIELD_TYPES.JOB_NUMBER);
-  const regoField = getFieldWithError(FIELD_TYPES.REGO);
-  const taskNumberField = getFieldWithError(FIELD_TYPES.TASK_NUMBER);
+/**
+ * Safely get a field's error message
+ */
+const getFieldError = (formState: FormState, fieldName: string): string | undefined => {
+  const field = formState.fields[fieldName];
+  if (!field) return undefined;
+  return 'error' in field ? field.error : undefined;
+};
+
+/**
+ * Component to render form fields for time entry
+ */
+const FormFields: React.FC<FormFieldsProps> = ({
+  formState,
+  onChange,
+  disabled = false,
+}) => {
+  // Extract fields from formState
+  const hoursField = getFieldSafely(formState, 'hours');
+  const descriptionField = getFieldSafely(formState, 'description');
+  const jobNumberField = getFieldSafely(formState, 'jobNumber');
+  const taskNumberField = getFieldSafely(formState, 'taskNumber');
+  const regoField = getFieldSafely(formState, 'rego');
+
+  // Get error messages
+  const hoursError = getFieldError(formState, 'hours');
+  const descriptionError = getFieldError(formState, 'description');
+  const jobNumberError = getFieldError(formState, 'jobNumber');
+  const taskNumberError = getFieldError(formState, 'taskNumber');
+  const regoError = getFieldError(formState, 'rego');
 
   return (
-    <>
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="w-full md:w-24">
-          <HoursField 
-            id="hours" 
-            value={hoursField.value}
-            onChange={(value) => {
-              let numValue = parseFloat(value);
-              if (!isNaN(numValue)) {
-                numValue = Math.round(numValue * 4) / 4;
-                if (numValue < 0.25) numValue = 0.25;
-                if (numValue > 24) numValue = 24;
-                value = numValue.toString();
-              }
-              setFieldValue(FIELD_TYPES.HOURS, value);
-            }} 
-            required={true} 
-          />
-          {hoursField.error && (
-            <p className="text-red-500 text-sm mt-1">{hoursField.error}</p>
-          )}
-        </div>
-        
-        <div className="w-full md:w-32">
-          {renderFormField(
-            FIELD_TYPES.JOB_NUMBER, 
-            jobNumberField, 
-            value => setFieldValue(FIELD_TYPES.JOB_NUMBER, value)
-          )}
-        </div>
-        
-        <div className="w-full md:w-24">
-          {renderFormField(
-            FIELD_TYPES.REGO, 
-            regoField, 
-            value => setFieldValue(FIELD_TYPES.REGO, value)
-          )}
-        </div>
-        
-        <div className="w-full md:w-32">
-          {renderFormField(
-            FIELD_TYPES.TASK_NUMBER, 
-            taskNumberField, 
-            value => setFieldValue(FIELD_TYPES.TASK_NUMBER, value)
-          )}
-        </div>
+    <Card className="p-4 space-y-4">
+      {/* Hours Field */}
+      <div className="space-y-2">
+        <Label htmlFor="hours" className={cn(hoursError ? 'text-destructive' : '')}>
+          Hours*
+        </Label>
+        <Input
+          id="hours"
+          type="text"
+          inputMode="decimal"
+          value={hoursField.value}
+          onChange={(e) => onChange('hours', e.target.value)}
+          placeholder="Enter hours"
+          className={cn(hoursError ? 'border-destructive' : '')}
+          disabled={disabled}
+        />
+        {hoursError && <p className="text-sm text-destructive">{hoursError}</p>}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
-        <Textarea 
-          value={descriptionField.value} 
-          onChange={e => setFieldValue(FIELD_TYPES.DESCRIPTION, e.target.value)}
+      {/* Description Field */}
+      <div className="space-y-2">
+        <Label htmlFor="description" className={cn(descriptionError ? 'text-destructive' : '')}>
+          Description*
+        </Label>
+        <Textarea
+          id="description"
+          value={descriptionField.value}
+          onChange={(e) => onChange('description', e.target.value)}
           placeholder="Enter description"
-          className="w-full"
-          rows={2}
+          className={cn(descriptionError ? 'border-destructive' : '')}
+          disabled={disabled}
         />
-        {descriptionField.error && (
-          <p className="text-red-500 text-sm mt-1">{descriptionField.error}</p>
-        )}
+        {descriptionError && <p className="text-sm text-destructive">{descriptionError}</p>}
       </div>
-    </>
+
+      {/* Job Number Field */}
+      <div className="space-y-2">
+        <Label htmlFor="jobNumber" className={cn(jobNumberError ? 'text-destructive' : '')}>
+          Job Number
+        </Label>
+        <Input
+          id="jobNumber"
+          type="text"
+          value={jobNumberField.value}
+          onChange={(e) => onChange('jobNumber', e.target.value)}
+          placeholder="Enter job number"
+          className={cn(jobNumberError ? 'border-destructive' : '')}
+          disabled={disabled}
+        />
+        {jobNumberError && <p className="text-sm text-destructive">{jobNumberError}</p>}
+      </div>
+
+      {/* Task Number Field */}
+      <div className="space-y-2">
+        <Label htmlFor="taskNumber" className={cn(taskNumberError ? 'text-destructive' : '')}>
+          Task Number
+        </Label>
+        <Input
+          id="taskNumber"
+          type="text"
+          value={taskNumberField.value}
+          onChange={(e) => onChange('taskNumber', e.target.value)}
+          placeholder="Enter task number"
+          className={cn(taskNumberError ? 'border-destructive' : '')}
+          disabled={disabled}
+        />
+        {taskNumberError && <p className="text-sm text-destructive">{taskNumberError}</p>}
+      </div>
+
+      {/* Registration Number Field */}
+      <div className="space-y-2">
+        <Label htmlFor="rego" className={cn(regoError ? 'text-destructive' : '')}>
+          Registration Number
+        </Label>
+        <Input
+          id="rego"
+          type="text"
+          value={regoField.value}
+          onChange={(e) => onChange('rego', e.target.value)}
+          placeholder="Enter registration number"
+          className={cn(regoError ? 'border-destructive' : '')}
+          disabled={disabled}
+        />
+        {regoError && <p className="text-sm text-destructive">{regoError}</p>}
+      </div>
+    </Card>
   );
 };
 

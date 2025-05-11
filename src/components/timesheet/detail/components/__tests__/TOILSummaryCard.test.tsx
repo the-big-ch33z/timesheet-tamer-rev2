@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react';
-import { screen } from '@testing-library/dom';
+import { screen } from '../../../__tests__/utils/test-utils';
 import TOILSummaryCard from '../TOILSummaryCard';
 import { TOILSummary } from '@/types/toil';
 import '@testing-library/jest-dom';

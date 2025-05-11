@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { render } from './utils/test-utils';
 import './utils/setupTests'; // Import the setup file for Jest DOM matchers
 import TabContent from '../TabContent';
 import { useCalendarContext, useUserTimesheetContext, useTimeEntryContext } from '@/contexts/timesheet';
-import { screen } from '@testing-library/dom';
+import { screen } from './utils/test-utils';
 
 // Mock the hooks
 jest.mock('@/contexts/timesheet', () => ({

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react';
-import { screen, fireEvent, waitFor } from '@testing-library/dom';
+import { screen, fireEvent, waitFor } from '../../__tests__/utils/test-utils';
 import TimeEntryManager from '../managers/TimeEntryManager';
 import { DraftProvider } from '@/contexts/timesheet/draft-context/DraftContext';
 import { TimeEntry } from '@/types';

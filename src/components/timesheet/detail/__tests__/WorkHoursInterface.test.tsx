@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react';
-import { screen, fireEvent } from '@testing-library/dom';
+import { screen, fireEvent } from '../../__tests__/utils/test-utils';
 import WorkHoursInterface from '../WorkHoursInterface';
 
 // Mock useWorkHours hook
