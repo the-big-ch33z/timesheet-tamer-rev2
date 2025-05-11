@@ -1,5 +1,5 @@
 
-import WorkHoursContent from '../work-hours/WorkHoursContent';
+import WorkHoursContent from './WorkHoursContent';
 import DebugPanel from './DebugPanel';
 
 export {
