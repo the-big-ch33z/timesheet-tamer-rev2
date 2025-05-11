@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
