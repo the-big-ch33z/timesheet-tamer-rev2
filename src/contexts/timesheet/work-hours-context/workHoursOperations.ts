@@ -52,11 +52,11 @@ export const createWorkHoursOperations = (
         };
       }
       
-      logger.debug(`No schedule hours found for ${userId} on ${format(date, 'yyyy-MM-dd')}, using empty defaults`);
-      return { startTime: "", endTime: "" }; // Return empty strings instead of hardcoded defaults
+      logger.debug(`No schedule hours found for ${userId} on ${format(date, 'yyyy-MM-dd')}, using defaults`);
+      return { startTime: "09:00", endTime: "17:00" };
     } catch (error) {
       logger.error(`Error getting default hours from schedule: ${error}`);
-      return { startTime: "", endTime: "" }; // Return empty strings instead of hardcoded defaults
+      return { startTime: "09:00", endTime: "17:00" };
     }
   };
 

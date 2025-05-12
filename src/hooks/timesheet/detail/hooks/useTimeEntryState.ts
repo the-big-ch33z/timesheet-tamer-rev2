@@ -5,6 +5,7 @@ import { useWorkHoursContext } from '@/contexts/timesheet';
 import { calculateHoursFromTimes } from '@/utils/time/calculations/hoursCalculations';
 import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 import { createTimeLogger } from '@/utils/time/errors';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useTimeEntryState');
 
@@ -66,27 +67,30 @@ export const useTimeEntryState = ({
   // Initial stored work hours
   const initialWorkHours = loadWorkHours();
   
-  // State for start and end times - use empty strings as defaults
-  const [startTime, setStartTime] = useState(initialWorkHours?.startTime || '');
-  const [endTime, setEndTime] = useState(initialWorkHours?.endTime || '');
+  // State for start and end times
+  const [startTime, setStartTime] = useState(initialWorkHours?.startTime || '09:00');
+  const [endTime, setEndTime] = useState(initialWorkHours?.endTime || '17:00');
   
-  // Subscribe to schedule update events using window event listener
+  // Subscribe to schedule update events
   useEffect(() => {
-    const handleWorkHoursRefreshNeeded = () => {
-      logger.debug('Work hours refresh needed, refreshing work hours');
+    const scheduleUpdatedHandler = () => {
+      logger.debug('Schedule updated, refreshing work hours');
       scheduleUpdateCountRef.current += 1;
       
       // Refresh work hours from context
       const refreshedHours = loadWorkHours();
-      setStartTime(refreshedHours?.startTime || '');
-      setEndTime(refreshedHours?.endTime || '');
+      setStartTime(refreshedHours?.startTime || '09:00');
+      setEndTime(refreshedHours?.endTime || '17:00');
     };
     
-    // Use standard DOM event listeners instead of timeEventsService
-    window.addEventListener('work-hours-refresh-needed', handleWorkHoursRefreshNeeded);
+    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
+    const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', scheduleUpdatedHandler);
+    const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', scheduleUpdatedHandler);
     
     return () => {
-      window.removeEventListener('work-hours-refresh-needed', handleWorkHoursRefreshNeeded);
+      scheduleUpdatedUnsubscribe.unsubscribe();
+      userScheduleUpdatedUnsubscribe.unsubscribe();
+      scheduleChangedUnsubscribe.unsubscribe();
     };
   }, [loadWorkHours]);
   
@@ -172,8 +176,8 @@ export const useTimeEntryState = ({
   useEffect(() => {
     const refreshedHours = loadWorkHours();
     if (refreshedHours) {
-      setStartTime(refreshedHours.startTime || '');
-      setEndTime(refreshedHours.endTime || '');
+      setStartTime(refreshedHours.startTime || '09:00');
+      setEndTime(refreshedHours.endTime || '17:00');
     }
   }, [date, userId, scheduleUpdateCountRef.current, loadWorkHours]);
   

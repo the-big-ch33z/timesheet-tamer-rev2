@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { WorkHoursContextType, WorkHoursData } from '../types';
@@ -6,8 +7,6 @@ import { useWorkHoursLogger } from './hooks/useWorkHoursLogger';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
-import { useWorkSchedule } from '@/contexts/work-schedule';
-import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
 
 const logger = createTimeLogger('WorkHoursContext');
 
@@ -32,9 +31,6 @@ export interface WorkHoursProviderProps {
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
   // State for work hours
   const [workHoursMap, setWorkHoursMap] = useState<Map<string, any>>(new Map());
-  
-  // Get work schedule to derive default times
-  const workScheduleContext = useWorkSchedule();
   
   // Utility hooks
   const { logWorkHoursRetrieval, logDefaultHours, logCustomHoursCheck } = useWorkHoursLogger();
@@ -68,41 +64,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   }, [workHoursMap, logCustomHoursCheck]);
 
   /**
-   * Get default hours from the user's schedule
-   * 
-   * @param date - The date to get default hours for
-   * @param userId - The user ID
-   * @returns Default work hours from schedule
-   */
-  const getDefaultScheduleHours = useCallback((date: Date, userId: string) => {
-    try {
-      // Get the user's schedule ID (string)
-      const userScheduleId = workScheduleContext.getUserSchedule(userId);
-      
-      // Get the appropriate schedule based on the ID
-      const schedule = userScheduleId === 'default' 
-        ? workScheduleContext.defaultSchedule
-        : workScheduleContext.getScheduleById(userScheduleId) || workScheduleContext.defaultSchedule;
-      
-      // Get the day info from the schedule
-      const dayInfo = getDayScheduleInfo(date, schedule);
-      
-      if (dayInfo && dayInfo.isWorkingDay && dayInfo.hours) {
-        return {
-          startTime: dayInfo.hours.startTime,
-          endTime: dayInfo.hours.endTime
-        };
-      }
-      
-      // Fall back to standard hours if no schedule or not a working day
-      return { startTime: "", endTime: "" };
-    } catch (error) {
-      logger.error(`Error getting default hours from schedule: ${error}`);
-      return { startTime: "", endTime: "" };
-    }
-  }, [workScheduleContext]);
-
-  /**
    * Get work hours for a specific date and user
    * 
    * @param date - The date to get hours for
@@ -119,23 +80,20 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     
     if (hours) {
       return {
-        startTime: hours.startTime || '',
-        endTime: hours.endTime || '',
+        startTime: hours.startTime || '09:00',
+        endTime: hours.endTime || '17:00',
         isCustom: true
       };
     }
     
-    // Get default hours from schedule instead of hardcoded values
-    const defaultHours = getDefaultScheduleHours(date, userId);
+    // Default work hours
+    const startTime = '09:00';
+    const endTime = '17:00';
     
-    logDefaultHours(dateString, defaultHours.startTime, defaultHours.endTime);
+    logDefaultHours(dateString, startTime, endTime);
     
-    return { 
-      startTime: defaultHours.startTime, 
-      endTime: defaultHours.endTime, 
-      isCustom: false 
-    };
-  }, [workHoursMap, logWorkHoursRetrieval, logDefaultHours, getDefaultScheduleHours]);
+    return { startTime, endTime, isCustom: false };
+  }, [workHoursMap, logWorkHoursRetrieval, logDefaultHours]);
 
   /**
    * Enhanced API for getting work hours with additional metadata
@@ -245,29 +203,16 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', () => {
       logger.debug('Work schedules updated, clearing work hours cache');
       clearWorkHoursCache();
-      // Use custom event string directly since 'work-hours-refresh-needed' isn't in TimeEventType
-      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
-        detail: { timestamp: Date.now() }
-      }));
     });
 
     const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', () => {
       logger.debug('User schedules updated, clearing work hours cache');
       clearWorkHoursCache();
-      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
-        detail: { timestamp: Date.now() }
-      }));
     });
 
     const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', (data) => {
       logger.debug(`User schedule changed for ${data.userId}, refreshing work hours`);
       clearWorkHoursCache();
-      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
-        detail: {
-          userId: data.userId,
-          timestamp: Date.now() 
-        }
-      }));
     });
 
     return () => {
@@ -299,7 +244,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     resetDayWorkHours,
     refreshTimesForDate,
     synchronizeFromRemote,
-    getDefaultScheduleHours,
     
     // Enhanced API
     getWorkHoursForDate,

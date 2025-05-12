@@ -40,9 +40,9 @@ export const useFormStateCore = ({
   const [taskNumber, setTaskNumber] = useState("");
   const [formEdited, setFormEdited] = useState(false);
   
-  // Initialize with empty values instead of hardcoded defaults
-  const [startTime, setStartTime] = useState(""); 
-  const [endTime, setEndTime] = useState("");
+  // We'll store these in local variables only, they're not part of TimeEntry anymore
+  const [startTime, setStartTime] = useState("09:00"); 
+  const [endTime, setEndTime] = useState("17:00");
   
   // Use specialized sub-hooks 
   const { 
@@ -127,9 +127,9 @@ export const useFormStateCore = ({
     setRego(initialData.rego || "");
     setTaskNumber(initialData.taskNumber || "");
     
-    // Initialize with empty values
-    setStartTime("");
-    setEndTime("");
+    // These are no longer part of TimeEntry
+    setStartTime("09:00");
+    setEndTime("17:00");
     
     setFormEdited(false);
     console.debug("[useFormStateCore] Form reset complete");

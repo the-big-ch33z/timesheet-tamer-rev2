@@ -57,7 +57,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
     });
   }, [startTime, endTime, totalHours, calculatedHours, interactive]);
 
-  // Display empty values until user enters them
+  // Display placeholders instead of the actual values until user enters them
   const displayStartTime = startTime || "";
   const displayEndTime = endTime || "";
 
