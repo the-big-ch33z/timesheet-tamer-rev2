@@ -15,6 +15,7 @@ type TimeEventType =
   | 'schedules-updated'
   | 'user-schedules-updated'
   | 'user-schedule-changed'
+  | 'work-hours-changed'
   | 'toil-calculated'
   | 'toil-updated'
   | 'timesheet-entry-saved'

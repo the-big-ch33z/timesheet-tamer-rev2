@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHoursContext } from '@/contexts/timesheet';
@@ -86,7 +85,7 @@ export const useTimeEntryState = ({
     const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
     const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', scheduleUpdatedHandler);
     const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', scheduleUpdatedHandler);
-    const workHoursRefreshUnsubscribe = timeEventsService.subscribe('work-hours-changed', scheduleUpdatedHandler);
+    const workHoursRefreshUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
     
     return () => {
       scheduleUpdatedUnsubscribe.unsubscribe();

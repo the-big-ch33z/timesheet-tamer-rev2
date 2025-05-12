@@ -2,6 +2,7 @@
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { TimeEntryFormState } from "@/hooks/timesheet/types/timeEntryTypes";
 
+// Calendar Context Types
 export interface CalendarContextType {
   currentMonth: Date;
   selectedDay: Date;
@@ -21,6 +22,12 @@ export interface EntriesContextType {
   deleteEntry: (id: string) => boolean;
 }
 
+// Break configuration used by work hours components
+export interface BreakConfig {
+  lunch: boolean;
+  smoko: boolean;
+}
+
 // Unified WorkHoursData interface - the single source of truth
 export interface WorkHoursData {
   startTime: string;
@@ -30,12 +37,11 @@ export interface WorkHoursData {
   isCustom: boolean; // Flag to indicate this is a custom override
   lastModified: number; // Timestamp for sync conflict resolution
   hasData?: boolean;
+  calculatedHours?: number; // Include this for backward compatibility
 }
 
 // For backward compatibility, provide WorkHoursState as an alias to WorkHoursData
-export type WorkHoursState = WorkHoursData & {
-  calculatedHours?: number;
-};
+export type WorkHoursState = WorkHoursData;
 
 // Consolidated WorkHoursContextType - the unified interface
 export interface WorkHoursContextType {
@@ -56,10 +62,4 @@ export interface WorkHoursContextType {
   // Enhanced API methods for more flexible calling patterns
   getWorkHoursForDate: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
   saveWorkHoursForDate: (date: Date, startTime: string, endTime: string, userId: string) => void;
-}
-
-// Break configuration - used by work hours components
-export interface BreakConfig {
-  lunch: boolean;
-  smoko: boolean;
 }
