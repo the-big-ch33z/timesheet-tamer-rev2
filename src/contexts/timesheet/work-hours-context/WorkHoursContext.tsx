@@ -8,6 +8,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
 import { useWorkSchedule } from '@/contexts/work-schedule';
+import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
 
 const logger = createTimeLogger('WorkHoursContext');
 
@@ -77,13 +78,13 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   const getDefaultScheduleHours = useCallback((date: Date, userId: string) => {
     try {
       // Get the user schedule
-      const userScheduleId = workScheduleContext.getUserScheduleId(userId);
+      const userScheduleId = workScheduleContext.getUserSchedule(userId);
       const schedule = userScheduleId === 'default' 
         ? workScheduleContext.defaultSchedule
         : workScheduleContext.getScheduleById(userScheduleId) || workScheduleContext.defaultSchedule;
       
       // Get the day info from the schedule
-      const dayInfo = workScheduleContext.getDayScheduleInfo(date, schedule);
+      const dayInfo = getDayScheduleInfo(date, schedule);
       
       if (dayInfo && dayInfo.isWorkingDay && dayInfo.hours) {
         return {
@@ -243,23 +244,29 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', () => {
       logger.debug('Work schedules updated, clearing work hours cache');
       clearWorkHoursCache();
-      // Publish an event to notify components that they should refresh their hours
-      timeEventsService.publish('work-hours-refresh-needed', { timestamp: Date.now() });
+      // Use custom event string directly since 'work-hours-refresh-needed' isn't in TimeEventType
+      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
+        detail: { timestamp: Date.now() }
+      }));
     });
 
     const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', () => {
       logger.debug('User schedules updated, clearing work hours cache');
       clearWorkHoursCache();
-      timeEventsService.publish('work-hours-refresh-needed', { timestamp: Date.now() });
+      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
+        detail: { timestamp: Date.now() }
+      }));
     });
 
     const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', (data) => {
       logger.debug(`User schedule changed for ${data.userId}, refreshing work hours`);
       clearWorkHoursCache();
-      timeEventsService.publish('work-hours-refresh-needed', { 
-        userId: data.userId,
-        timestamp: Date.now() 
-      });
+      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
+        detail: {
+          userId: data.userId,
+          timestamp: Date.now() 
+        }
+      }));
     });
 
     return () => {
