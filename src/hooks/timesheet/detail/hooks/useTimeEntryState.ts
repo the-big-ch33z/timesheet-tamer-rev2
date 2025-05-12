@@ -67,9 +67,9 @@ export const useTimeEntryState = ({
   // Initial stored work hours
   const initialWorkHours = loadWorkHours();
   
-  // State for start and end times
-  const [startTime, setStartTime] = useState(initialWorkHours?.startTime || '09:00');
-  const [endTime, setEndTime] = useState(initialWorkHours?.endTime || '17:00');
+  // State for start and end times - use empty strings as defaults
+  const [startTime, setStartTime] = useState(initialWorkHours?.startTime || '');
+  const [endTime, setEndTime] = useState(initialWorkHours?.endTime || '');
   
   // Subscribe to schedule update events
   useEffect(() => {
@@ -79,18 +79,20 @@ export const useTimeEntryState = ({
       
       // Refresh work hours from context
       const refreshedHours = loadWorkHours();
-      setStartTime(refreshedHours?.startTime || '09:00');
-      setEndTime(refreshedHours?.endTime || '17:00');
+      setStartTime(refreshedHours?.startTime || '');
+      setEndTime(refreshedHours?.endTime || '');
     };
     
     const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
     const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', scheduleUpdatedHandler);
     const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', scheduleUpdatedHandler);
+    const workHoursRefreshUnsubscribe = timeEventsService.subscribe('work-hours-refresh-needed', scheduleUpdatedHandler);
     
     return () => {
       scheduleUpdatedUnsubscribe.unsubscribe();
       userScheduleUpdatedUnsubscribe.unsubscribe();
       scheduleChangedUnsubscribe.unsubscribe();
+      workHoursRefreshUnsubscribe.unsubscribe();
     };
   }, [loadWorkHours]);
   
@@ -176,8 +178,8 @@ export const useTimeEntryState = ({
   useEffect(() => {
     const refreshedHours = loadWorkHours();
     if (refreshedHours) {
-      setStartTime(refreshedHours.startTime || '09:00');
-      setEndTime(refreshedHours.endTime || '17:00');
+      setStartTime(refreshedHours.startTime || '');
+      setEndTime(refreshedHours.endTime || '');
     }
   }, [date, userId, scheduleUpdateCountRef.current, loadWorkHours]);
   
