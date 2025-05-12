@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { WeekDay, WorkSchedule } from "@/types";
 import { useWorkSchedule } from "@/contexts/work-schedule";
 import { clearWorkHoursCache } from "@/contexts/timesheet/work-hours-context/hooks/useWorkHoursCore";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
+import { SCHEDULE_EVENTS } from "@/utils/events/eventTypes";
 
 export const useScheduleState = () => {
   const { toast } = useToast();
@@ -85,6 +85,13 @@ export const useScheduleState = () => {
     
     // Clear work hours cache to ensure new schedule is used immediately
     clearWorkHoursCache();
+    
+    // Add event for schedule creation
+    timeEventsService.publish(SCHEDULE_EVENTS.CREATED, {
+      scheduleId: newSchedule.id,
+      name: newSchedule.name,
+      timestamp: Date.now()
+    });
   };
   
   const saveSchedule = () => {
@@ -100,7 +107,7 @@ export const useScheduleState = () => {
     clearWorkHoursCache();
     
     // Publish event about schedule update
-    timeEventsService.publish('schedules-updated', {
+    timeEventsService.publish(SCHEDULE_EVENTS.UPDATED, {
       scheduleId: editingSchedule.id,
       name: editingSchedule.name,
       timestamp: Date.now()
@@ -122,6 +129,8 @@ export const useScheduleState = () => {
       return;
     }
     
+    const scheduleName = editingSchedule.name;
+    
     deleteSchedule(selectedScheduleId);
     setSchedules(getAllSchedules());
     setSelectedScheduleId('default');
@@ -129,6 +138,13 @@ export const useScheduleState = () => {
     
     // Clear work hours cache when a schedule is deleted
     clearWorkHoursCache();
+    
+    // Add event for schedule deletion
+    timeEventsService.publish(SCHEDULE_EVENTS.DELETED, {
+      scheduleId: selectedScheduleId,
+      name: scheduleName,
+      timestamp: Date.now()
+    });
   };
   
   const updateWorkDay = (day: WeekDay, isWorkDay: boolean) => {

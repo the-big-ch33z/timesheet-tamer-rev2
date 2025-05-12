@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { useScheduleCalculation } from "@/hooks/timesheet/useScheduleCalculation
 import { useToast } from "@/hooks/use-toast";
 import { clearWorkHoursCache } from "@/contexts/timesheet/work-hours-context/hooks/useWorkHoursCore";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
+import { SCHEDULE_EVENTS } from "@/utils/events/eventTypes";
 
 const WorkScheduleSettings: React.FC = () => {
   const { toast } = useToast();
@@ -45,7 +47,7 @@ const WorkScheduleSettings: React.FC = () => {
     
     // Publish an explicit event that a schedule has been manually saved
     // The work hours hook will listen for this event and clear its cache
-    timeEventsService.publish('schedules-updated', {
+    timeEventsService.publish(SCHEDULE_EVENTS.UPDATED, {
       scheduleId: selectedScheduleId,
       timestamp: Date.now(),
       source: 'manual-save'

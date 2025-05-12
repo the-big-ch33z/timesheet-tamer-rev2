@@ -45,13 +45,22 @@ export const SYSTEM_EVENTS = {
   SERVICE_READY: 'system:service-ready'
 };
 
+// Schedule events - adding these new constants
+export const SCHEDULE_EVENTS = {
+  UPDATED: 'schedules:updated',
+  CREATED: 'schedules:created',
+  DELETED: 'schedules:deleted',
+  USER_CHANGED: 'user-schedule:changed'
+};
+
 // Collection of all event types for easier import
 export const EVENT_TYPES = {
   ...TIME_ENTRY_EVENTS,
   ...WORK_HOURS_EVENTS,
   ...TOIL_EVENTS,
   ...CALENDAR_EVENTS,
-  ...SYSTEM_EVENTS
+  ...SYSTEM_EVENTS,
+  ...SCHEDULE_EVENTS
 };
 
 // Helper type for typed event handling

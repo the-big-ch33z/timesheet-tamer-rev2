@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { useWorkHoursLogger } from './useWorkHoursLogger';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { SCHEDULE_EVENTS } from '@/utils/events/eventTypes';
 
 // Cache for getWorkHours results with expiry
 const workHoursCache = new Map<string, {
@@ -47,7 +48,7 @@ export const useWorkHoursCore = ({
 
   // Subscribe to schedule update events
   useMemo(() => {
-    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', () => {
+    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe(SCHEDULE_EVENTS.UPDATED, () => {
       logger.debug('Received schedules-updated event, clearing cache');
       clearCache();
     });
@@ -57,8 +58,18 @@ export const useWorkHoursCore = ({
       clearCache();
     });
     
-    const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', () => {
+    const scheduleChangedUnsubscribe = timeEventsService.subscribe(SCHEDULE_EVENTS.USER_CHANGED, () => {
       logger.debug('Received user-schedule-changed event, clearing cache');
+      clearCache();
+    });
+    
+    const scheduleCreatedUnsubscribe = timeEventsService.subscribe(SCHEDULE_EVENTS.CREATED, () => {
+      logger.debug('Received schedule-created event, clearing cache');
+      clearCache();
+    });
+    
+    const scheduleDeletedUnsubscribe = timeEventsService.subscribe(SCHEDULE_EVENTS.DELETED, () => {
+      logger.debug('Received schedule-deleted event, clearing cache');
       clearCache();
     });
 
@@ -66,6 +77,8 @@ export const useWorkHoursCore = ({
       scheduleUpdatedUnsubscribe.unsubscribe();
       userScheduleUpdatedUnsubscribe.unsubscribe();
       scheduleChangedUnsubscribe.unsubscribe();
+      scheduleCreatedUnsubscribe.unsubscribe();
+      scheduleDeletedUnsubscribe.unsubscribe();
     };
   }, [clearCache]);
 

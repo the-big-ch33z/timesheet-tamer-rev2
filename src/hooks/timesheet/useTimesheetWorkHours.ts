@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { toDate } from '@/utils/date/dateConversions';
+import { WORK_HOURS_EVENTS } from '@/utils/events/eventTypes';
 
 /**
  * useTimesheetWorkHours
@@ -81,7 +82,7 @@ export const useTimesheetWorkHours = (defaultUserId?: string): UseTimesheetWorkH
     logger.debug(`Saving work hours for ${formattedDate}, user ${targetUserId}:`, { startTime, endTime });
     workHoursContext.saveWorkHours(dateObj, targetUserId, startTime, endTime);
 
-    timeEventsService.publish('work-hours-updated', {
+    timeEventsService.publish(WORK_HOURS_EVENTS.UPDATED, {
       date: formattedDate,
       userId: targetUserId,
       startTime,
@@ -104,7 +105,7 @@ export const useTimesheetWorkHours = (defaultUserId?: string): UseTimesheetWorkH
     workHoursContext.resetDayWorkHours(dateObj, targetUserId);
     const newHours = workHoursContext.getWorkHours(dateObj, targetUserId);
 
-    timeEventsService.publish('work-hours-reset', {
+    timeEventsService.publish(WORK_HOURS_EVENTS.RESET, {
       date: formattedDate,
       userId: targetUserId,
       startTime: newHours.startTime,
