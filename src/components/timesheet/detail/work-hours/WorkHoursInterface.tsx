@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHours } from '@/hooks/timesheet/useWorkHours';
@@ -9,6 +8,7 @@ import { useTimeEntryState } from '@/hooks/timesheet/detail/hooks/useTimeEntrySt
 import { useWorkHoursActions } from '@/components/timesheet/detail/hooks/useWorkHoursActions';
 import { useWorkHoursCalculation } from '@/components/timesheet/detail/hooks/useWorkHoursCalculation';
 import { WorkHoursContent } from '../work-hours-section';
+import { BreakConfig } from '@/contexts/timesheet/types';
 
 const logger = createTimeLogger('WorkHoursInterface');
 

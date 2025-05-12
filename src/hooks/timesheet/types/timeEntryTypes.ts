@@ -1,5 +1,6 @@
 
 import { TimeEntry } from '@/types';
+import { WorkHoursData } from '@/contexts/timesheet/types';
 
 export interface TimeEntryFormState {
   hours: string;
@@ -37,14 +38,6 @@ export interface UseTimeEntryFormReturn {
 }
 
 // New interfaces for timesheetWorkHours hook
-export interface WorkHoursData {
-  startTime: string;
-  endTime: string;
-  isCustom: boolean;
-  hasData: boolean;
-  calculatedHours: number;
-}
-
 export interface TimesheetWorkHoursHook {
   getWorkHoursForDate: (date: Date, specificUserId?: string) => WorkHoursData;
   saveWorkHoursForDate: (date: Date, startTime: string, endTime: string, specificUserId?: string) => boolean;

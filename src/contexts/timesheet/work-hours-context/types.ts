@@ -1,15 +1,8 @@
 
-import { WorkSchedule } from '@/types';
+import { WorkHoursData } from '../types';
 
 // Define the data structure for storing work hours
-export interface WorkHoursData {
-  startTime: string;
-  endTime: string;
-  date: string; // ISO date string
-  userId: string;
-  isCustom: boolean; // Flag to indicate this is a custom override
-  lastModified: number; // Timestamp for sync conflict resolution
-}
+export { WorkHoursData };
 
 export interface WorkHoursContextType {
   getWorkHours: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom: boolean };
@@ -19,8 +12,9 @@ export interface WorkHoursContextType {
   resetDayWorkHours: (date: Date, userId: string) => void;
   refreshTimesForDate: (date: Date, userId: string) => void;
   synchronizeFromRemote?: (remoteData: WorkHoursData[]) => void;
+  getDefaultScheduleHours?: (date: Date, userId: string) => { startTime: string; endTime: string };
   
   // Add the methods being used in useTimeEntryState
-  getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
+  getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean; calculatedHours?: number };
   saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;
 }

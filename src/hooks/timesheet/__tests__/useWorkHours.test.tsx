@@ -1,6 +1,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { useWorkHours } from '../useWorkHours';
+import { WorkHoursData } from '@/contexts/timesheet/types';
 
 // Mock the work hours context
 jest.mock('@/contexts/timesheet/work-hours-context/WorkHoursContext', () => ({
@@ -13,7 +14,25 @@ jest.mock('@/contexts/timesheet/work-hours-context/WorkHoursContext', () => ({
     }),
     saveWorkHours: jest.fn(),
     hasCustomWorkHours: jest.fn((userId, date) => userId === 'user-with-custom-hours'),
-    resetDayWorkHours: jest.fn()
+    resetDayWorkHours: jest.fn(),
+    getWorkHoursForDate: jest.fn((date, userId) => {
+      if (userId === 'user-with-custom-hours') {
+        return { 
+          startTime: '08:00', 
+          endTime: '16:00', 
+          isCustom: true, 
+          hasData: true,
+          calculatedHours: 8
+        };
+      }
+      return { 
+        startTime: '', 
+        endTime: '', 
+        isCustom: false, 
+        hasData: false,
+        calculatedHours: 0
+      };
+    })
   }),
 }));
 

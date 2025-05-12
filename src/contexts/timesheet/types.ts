@@ -7,6 +7,15 @@
 import { TimeEntry, WorkSchedule, User } from "@/types";
 
 /**
+ * BreakConfig interface
+ * Used to track break configurations in work hours
+ */
+export interface BreakConfig {
+  lunch: boolean;
+  smoko: boolean;
+}
+
+/**
  * Calendar Context Types
  * Manages the current month, selected day and date navigation
  * @see CalendarContext.tsx
@@ -128,6 +137,10 @@ export interface WorkHoursData {
   isCustom: boolean;
   /** Timestamp for sync conflict resolution */
   lastModified: number;
+  /** Calculated hours for this work period - for compatibility */
+  calculatedHours?: number;
+  /** Flag to indicate data exists - for compatibility */
+  hasData?: boolean;
 }
 
 /**
@@ -150,13 +163,16 @@ export interface WorkHoursContextType {
   refreshTimesForDate: (date: Date, userId: string) => void;
   /** Synchronize work hours from remote data */
   synchronizeFromRemote?: (remoteData: WorkHoursData[]) => void;
+  /** Get default schedule hours */
+  getDefaultScheduleHours?: (date: Date, userId: string) => { startTime: string; endTime: string };
   
   /** Enhanced API for getting work hours */
   getWorkHoursForDate?: (date: Date, userId: string) => { 
     startTime: string; 
     endTime: string; 
     isCustom?: boolean; 
-    hasData?: boolean 
+    hasData?: boolean;
+    calculatedHours?: number;
   };
   /** Enhanced API for saving work hours */
   saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;

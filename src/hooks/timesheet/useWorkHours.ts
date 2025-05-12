@@ -6,6 +6,7 @@ import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { useTimesheetWorkHours } from './useTimesheetWorkHours';
 import { useTimeCalculations } from './useTimeCalculations';
 import { unifiedTimeEntryService } from '@/utils/time/services';
+import { WorkHoursData } from '@/contexts/timesheet/types';
 
 /**
  * useWorkHours

@@ -35,6 +35,9 @@ export const useWorkHoursValue = ({
     setWorkHoursMap
   });
 
+  // Add the getDefaultScheduleHours method to match the interface
+  const getDefaultScheduleHours = getDefaultHoursFromSchedule;
+
   return {
     getWorkHours,
     saveWorkHours,
@@ -42,6 +45,7 @@ export const useWorkHoursValue = ({
     hasCustomWorkHours,
     resetDayWorkHours,
     refreshTimesForDate,
-    synchronizeFromRemote
+    synchronizeFromRemote,
+    getDefaultScheduleHours
   };
 };

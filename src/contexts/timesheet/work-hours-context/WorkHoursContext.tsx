@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { WorkHoursContextType, WorkHoursData } from '../types';
 import { useWorkHoursManagement } from './hooks/useWorkHoursManagement';
@@ -7,6 +7,7 @@ import { useWorkHoursLogger } from './hooks/useWorkHoursLogger';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
+import { WorkSchedule } from '@/types';
 
 const logger = createTimeLogger('WorkHoursContext');
 
@@ -44,6 +45,19 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     workHoursMap,
     setWorkHoursMap
   });
+
+  /**
+   * Get default schedule hours for a given date and user
+   * This is a placeholder function that should be connected to the WorkScheduleContext in a real implementation
+   */
+  const getDefaultScheduleHours = useCallback((date: Date, userId: string) => {
+    // In a real implementation, this would look up the user's schedule and return appropriate times
+    // Here we just return default times
+    return {
+      startTime: '09:00',
+      endTime: '17:00'
+    };
+  }, []);
 
   /**
    * Check if custom work hours exist for a specific date and user
@@ -87,13 +101,14 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     }
     
     // Default work hours
-    const startTime = '09:00';
-    const endTime = '17:00';
+    const defaultHours = getDefaultScheduleHours(date, userId);
+    const startTime = defaultHours.startTime;
+    const endTime = defaultHours.endTime;
     
     logDefaultHours(dateString, startTime, endTime);
     
     return { startTime, endTime, isCustom: false };
-  }, [workHoursMap, logWorkHoursRetrieval, logDefaultHours]);
+  }, [workHoursMap, logWorkHoursRetrieval, logDefaultHours, getDefaultScheduleHours]);
 
   /**
    * Enhanced API for getting work hours with additional metadata
@@ -244,6 +259,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     resetDayWorkHours,
     refreshTimesForDate,
     synchronizeFromRemote,
+    getDefaultScheduleHours,
     
     // Enhanced API
     getWorkHoursForDate,

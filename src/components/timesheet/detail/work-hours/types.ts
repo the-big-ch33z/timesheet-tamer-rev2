@@ -1,8 +1,7 @@
 
-export interface BreakConfig {
-  lunch: boolean;
-  smoko: boolean;
-}
+import { BreakConfig } from '@/contexts/timesheet/types';
+
+export { BreakConfig };
 
 export interface WorkHoursState {
   startTime: string;
