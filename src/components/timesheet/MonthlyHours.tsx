@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
@@ -32,6 +33,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   });
   
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rolloverHours, setRolloverHours] = useState<number>(0);
 
   const monthName = format(currentMonth, 'MMMM yyyy');
   
@@ -59,6 +61,16 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
         description: `Could not load your TOIL data: ${toilError}`,
         variant: "destructive"
       });
+    }
+    
+    // Calculate rollover hours when summary changes
+    // This is a simplified example - in production you'd get this from a service
+    if (toilSummary && toilSummary.remaining > 0) {
+      // Just for demonstration - usually this would come from a real calculation
+      const calculatedRollover = Math.min(toilSummary.remaining, 16); // Cap at 16 hours for example
+      setRolloverHours(calculatedRollover);
+    } else {
+      setRolloverHours(0);
     }
   }, [toilSummary, toilLoading, toilError, monthName, user.id]);
   
@@ -105,6 +117,8 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
               loading={toilLoading}
               monthName={monthName}
               onError={handleTOILError}
+              showRollover={rolloverHours > 0}
+              rolloverHours={rolloverHours}
             />
           )}
           

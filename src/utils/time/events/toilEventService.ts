@@ -1,3 +1,4 @@
+
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from "@/utils/events/EventBus";
@@ -152,19 +153,15 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
   
   // Context value
-  const value: TOILEventContextType = {
+  const contextValue = React.useMemo(() => ({
     dispatchTOILEvent,
     subscribe,
     lastEvent
-  };
+  }), [dispatchTOILEvent, subscribe, lastEvent]);
   
   return React.createElement(
     TOILEventContext.Provider,
-    { value: {
-      dispatchTOILEvent: () => false,
-      subscribe: () => () => {},
-      lastEvent: null
-    } },
+    { value: contextValue },
     children
   );
 };

@@ -9,6 +9,9 @@ interface TOILProgressBarProps {
   isNegativeBalance: boolean;
 }
 
+/**
+ * TOILProgressBar component that displays a visual representation of TOIL remaining vs accrued
+ */
 const TOILProgressBar: React.FC<TOILProgressBarProps> = ({ remaining, accrued, isNegativeBalance }) => {
   // Ensure we have valid numbers
   const safeRemaining = isFinite(remaining) ? remaining : 0;

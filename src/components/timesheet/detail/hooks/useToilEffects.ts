@@ -18,6 +18,10 @@ interface UseToilEffectsProps {
   entriesCount: number;
 }
 
+/**
+ * Hook that handles side effects for TOIL calculations
+ * Automatically triggers TOIL calculations when conditions are met
+ */
 export const useToilEffects = ({
   userId,
   date,
@@ -42,3 +46,5 @@ export const useToilEffects = ({
     }
   }, [hasEntries, leaveActive, toilActive, isComplete, date, calculateToilForDay, entriesCount]);
 };
+
+export default useToilEffects;

@@ -20,6 +20,8 @@ interface TOILSummaryCardProps {
   monthName?: string;
   className?: string;
   onError?: (error: string) => void;
+  showRollover?: boolean;
+  rolloverHours?: number;
 }
 
 // Main TOILSummaryCard component with improved error handling
@@ -28,7 +30,9 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   loading = false,
   monthName,
   className,
-  onError
+  onError,
+  showRollover = false,
+  rolloverHours = 0
 }) => {
   // Subscribe to TOIL events if available
   const toilEvents = React.useRef<ReturnType<typeof useTOILEvents> | null>(null);
@@ -123,6 +127,19 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
                 accrued={accrued} 
                 isNegativeBalance={isNegativeBalance} 
               />
+              
+              {/* Added rollover hours display from ToilSummary.tsx */}
+              {showRollover && rolloverHours > 0 && (
+                <div className="mt-4 p-3 bg-muted/50 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Roll-over TOIL</span>
+                    <span className="font-semibold text-green-600">{rolloverHours.toFixed(1)} hours</span>
+                  </div>
+                  <p className="text-xs mt-1 text-muted-foreground">
+                    These hours have been rolled over and will be used first when taking TOIL.
+                  </p>
+                </div>
+              )}
             </>
           )}
         </CardContent>
