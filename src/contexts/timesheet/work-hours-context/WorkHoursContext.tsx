@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { WorkHoursContextType, WorkHoursData } from '../types';
@@ -77,13 +76,12 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
    */
   const getDefaultScheduleHours = useCallback((date: Date, userId: string) => {
     try {
-      // Get the user schedule
+      // Get the user's schedule ID (string)
       const userScheduleId = workScheduleContext.getUserSchedule(userId);
       
-      // Fixed: Compare string scheduleId with 'default' string, not WorkSchedule object
+      // Get the appropriate schedule based on the ID
       const schedule = userScheduleId === 'default' 
         ? workScheduleContext.defaultSchedule
-        // Fixed: Pass scheduleId (string) to getScheduleById, not the schedule object
         : workScheduleContext.getScheduleById(userScheduleId) || workScheduleContext.defaultSchedule;
       
       // Get the day info from the schedule

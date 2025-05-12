@@ -37,7 +37,7 @@ export interface WorkHoursContextType {
   hasCustomWorkHours: (date: Date, userId: string) => boolean;
   resetDayWorkHours: (date: Date, userId: string) => void;
   refreshTimesForDate: (date: Date, userId: string) => void;
-  synchronizeFromRemote: (userId: string) => Promise<void>;
+  synchronizeFromRemote: (userId: string) => Promise<void>;  // Updated signature
   getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string }; 
   
   // Enhanced API methods

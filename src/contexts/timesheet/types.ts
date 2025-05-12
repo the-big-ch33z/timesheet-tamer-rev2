@@ -1,4 +1,3 @@
-
 /**
  * Core Timesheet Context Type Definitions
  * This file provides standardized types for all timesheet-related contexts
@@ -148,8 +147,10 @@ export interface WorkHoursContextType {
   resetDayWorkHours: (date: Date, userId: string) => void;
   /** Refresh times for a specific date */
   refreshTimesForDate: (date: Date, userId: string) => void;
-  /** Synchronize work hours from remote data */
-  synchronizeFromRemote?: (remoteData: WorkHoursData[]) => void;
+  /** Synchronize work hours from remote data - updated signature */
+  synchronizeFromRemote: (userId: string) => Promise<void>;
+  /** Get default work hours from schedule */
+  getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string };
   
   /** Enhanced API for getting work hours */
   getWorkHoursForDate?: (date: Date, userId: string) => { 
