@@ -16,6 +16,9 @@ const logger = createTimeLogger('MonthSummary');
 // Define TOIL and synthetic job numbers to exclude
 const EXCLUDED_JOB_NUMBERS = ["TOIL"];
 
+// Define job numbers that should be included even if synthetic
+const INCLUDED_SYNTHETIC_JOB_NUMBERS = ["SICK", "LEAVE"];
+
 interface MonthSummaryProps {
   userId: string;
   date: Date;
@@ -49,24 +52,30 @@ const MonthSummary: React.FC<MonthSummaryProps> = ({
     setIsLoading(true);
     const monthEntries = getMonthEntries(date, userId);
     
-    // IMPORTANT: Filter out TOIL entries and synthetic entries to prevent them affecting monthly total
+    // Filter entries: Include regular entries and synthetic entries for SICK/LEAVE
     const filteredEntries = monthEntries.filter(entry => {
-      // Exclude entries with TOIL job number
+      // Exclude entries with excluded job numbers like TOIL
       if (EXCLUDED_JOB_NUMBERS.includes(entry.jobNumber || '')) {
         return false;
       }
       
-      // Exclude synthetic entries (which includes TOIL)
-      if (entry.synthetic === true) {
-        return false;
+      // Include non-synthetic entries
+      if (entry.synthetic !== true) {
+        return true;
       }
       
-      return true;
+      // Include synthetic entries with job numbers like SICK or LEAVE
+      if (INCLUDED_SYNTHETIC_JOB_NUMBERS.includes(entry.jobNumber || '')) {
+        return true;
+      }
+      
+      // Exclude other synthetic entries
+      return false;
     });
     
     const totalHours = calculateTotalHours(filteredEntries);
     
-    logger.debug(`Month total hours: ${totalHours} from ${filteredEntries.length} filtered entries (excluded ${monthEntries.length - filteredEntries.length} TOIL entries)`);
+    logger.debug(`Month total hours: ${totalHours} from ${filteredEntries.length} filtered entries (excluded ${monthEntries.length - filteredEntries.length} entries)`);
     setMonthTotalHours(totalHours);
     setIsLoading(false);
   }, [date, userId, getMonthEntries, calculateTotalHours]);
