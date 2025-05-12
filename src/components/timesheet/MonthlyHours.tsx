@@ -7,7 +7,7 @@ import TOILSummaryCard from "./detail/components/TOILSummaryCard";
 import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { TOILEventProvider } from "@/utils/time/events/toilEventService";
 
 // Create a logger for this component
@@ -32,6 +32,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     monthOnly: true // Explicitly set to use month-only mode
   });
   
+  const { toast } = useToast();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [rolloverHours, setRolloverHours] = useState<number>(0);
 
@@ -72,7 +73,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     } else {
       setRolloverHours(0);
     }
-  }, [toilSummary, toilLoading, toilError, monthName, user.id]);
+  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast]);
   
   // Force a refresh when the component mounts to ensure data is loaded
   useEffect(() => {
@@ -119,6 +120,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
               onError={handleTOILError}
               showRollover={rolloverHours > 0}
               rolloverHours={rolloverHours}
+              useSimpleView={false}
             />
           )}
           

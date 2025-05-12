@@ -5,7 +5,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useToilEffects');
 
-interface UseToilEffectsProps {
+export interface UseToilEffectsProps {
   userId: string;
   date: Date;
   entries: TimeEntry[];

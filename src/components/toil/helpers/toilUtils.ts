@@ -4,8 +4,9 @@ import { User } from "@/types";
 import { ToilThresholds } from "@/types/monthEndToil";
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
+import { formatDisplayHours } from "@/utils/time/formatting";
 
-const logger = createTimeLogger('ToilUtils');
+const logger = createTimeLogger('TOILUtils');
 
 // Get user's employment type based on FTE
 export const getUserEmploymentType = (user: User | null): "fullTime" | "partTime" | "casual" => {
@@ -88,9 +89,9 @@ export const calculateToilDistribution = (
   };
 };
 
-// Format hours for display with 1 decimal place
+// Format hours for display (use the standardized function)
 export const formatHours = (hours: number): string => {
-  return hours.toFixed(1);
+  return formatDisplayHours(hours).replace(/^[+-]/, '');
 };
 
 // Check if a user can approve TOIL (can't approve their own)

@@ -14,6 +14,9 @@ import {
   TOILProgressBar
 } from "./toil-summary";
 
+// Import the unified TOILSummary component
+import UnifiedTOILSummary from "@/components/toil/TOILSummary";
+
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
   loading?: boolean;
@@ -22,6 +25,7 @@ interface TOILSummaryCardProps {
   onError?: (error: string) => void;
   showRollover?: boolean;
   rolloverHours?: number;
+  useSimpleView?: boolean;
 }
 
 // Main TOILSummaryCard component with improved error handling
@@ -32,7 +36,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   className,
   onError,
   showRollover = false,
-  rolloverHours = 0
+  rolloverHours = 0,
+  useSimpleView = false
 }) => {
   // Subscribe to TOIL events if available
   const toilEvents = React.useRef<ReturnType<typeof useTOILEvents> | null>(null);
@@ -111,6 +116,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <TOILLoadingState />
           ) : hasNoTOILActivity ? (
             <TOILEmptyState />
+          ) : useSimpleView ? (
+            <UnifiedTOILSummary 
+              summary={summary} 
+              showRollover={showRollover} 
+              rolloverHours={rolloverHours}
+              variant="simple"
+            />
           ) : (
             <>
               <TOILSummaryBoxes 
@@ -128,7 +140,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
                 isNegativeBalance={isNegativeBalance} 
               />
               
-              {/* Added rollover hours display from ToilSummary.tsx */}
+              {/* Added rollover hours display from unified TOILSummary */}
               {showRollover && rolloverHours > 0 && (
                 <div className="mt-4 p-3 bg-muted/50 rounded-md">
                   <div className="flex justify-between items-center">
