@@ -1,7 +1,6 @@
 
 import { useCallback } from 'react';
 import { createTimeLogger } from '@/utils/time/errors';
-import { WorkHoursData } from '../../types';
 
 const logger = createTimeLogger('useWorkHoursSynchronizer');
 
@@ -12,36 +11,27 @@ interface UseWorkHoursSynchronizerProps {
 export const useWorkHoursSynchronizer = ({
   setWorkHoursMap
 }: UseWorkHoursSynchronizerProps) => {
-  // Update the function signature to match the expected type in WorkHoursContextType
-  const synchronizeFromRemote = useCallback(async (userId: string): Promise<void> => {
-    // Placeholder for actual remote synchronization logic
-    logger.info(`Synchronizing work hours for user ${userId}`);
+  const synchronizeFromRemote = useCallback((remoteData: any[]): void => {
+    logger.info(`Synchronizing with ${remoteData.length} remote entries`);
     
-    try {
-      // Mock fetching remote data - in a real implementation, this would call an API
-      const remoteData: WorkHoursData[] = []; // This would be data fetched from a remote source
+    setWorkHoursMap(prevMap => {
+      const updatedMap = new Map(prevMap);
       
-      setWorkHoursMap(prevMap => {
-        const updatedMap = new Map(prevMap);
+      remoteData.forEach(remoteItem => {
+        const key = `${remoteItem.userId}-${remoteItem.date}`;
+        const localItem = updatedMap.get(key);
         
-        remoteData.forEach(remoteItem => {
-          const key = `${remoteItem.userId}-${remoteItem.date}`;
-          const localItem = updatedMap.get(key);
-          
-          if (!localItem || (remoteItem.lastModified > (localItem.lastModified || 0))) {
-            updatedMap.set(key, {
-              ...remoteItem,
-              lastModified: remoteItem.lastModified || Date.now()
-            });
-          }
-        });
-        
-        return updatedMap;
+        if (!localItem || (remoteItem.lastModified > (localItem.lastModified || 0))) {
+          updatedMap.set(key, {
+            ...remoteItem,
+            lastModified: remoteItem.lastModified || Date.now()
+          });
+        }
       });
-    } catch (error) {
-      logger.error(`Error synchronizing from remote: ${error}`);
-    }
-  }, [setWorkHoursMap]);
+      
+      return updatedMap;
+    });
+  }, []);
 
   return {
     synchronizeFromRemote

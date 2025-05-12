@@ -42,8 +42,6 @@ export const useWorkHoursValue = ({
     hasCustomWorkHours,
     resetDayWorkHours,
     refreshTimesForDate,
-    synchronizeFromRemote,
-    // Add this property to match the expected interface
-    getDefaultScheduleHours: getDefaultHoursFromSchedule
+    synchronizeFromRemote
   };
 };

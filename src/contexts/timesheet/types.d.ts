@@ -1,4 +1,3 @@
-
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { TimeEntryFormState } from "@/hooks/timesheet/types/timeEntryTypes";
 
@@ -37,8 +36,8 @@ export interface WorkHoursContextType {
   hasCustomWorkHours: (date: Date, userId: string) => boolean;
   resetDayWorkHours: (date: Date, userId: string) => void;
   refreshTimesForDate: (date: Date, userId: string) => void;
-  synchronizeFromRemote: (userId: string) => Promise<void>;  // Updated signature
-  getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string }; 
+  synchronizeFromRemote: (userId: string) => Promise<void>;
+  getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string }; // Added this new method
   
   // Enhanced API methods
   getWorkHoursForDate: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
