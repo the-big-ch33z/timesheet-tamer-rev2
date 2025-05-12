@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -8,7 +9,8 @@ import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToil
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { getHolidays } from "@/lib/holidays";
 import { DebugPanel, WorkHoursContent } from "./work-hours-section";
-import { useTOILTriggers } from "./hooks/useTOILTriggers";
+import { useTOILTriggers } from "../hooks/useTOILTriggers";
+import WorkHoursInterface from "./work-hours/WorkHoursInterface";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -71,12 +73,11 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   // Call updated hook with object-based parameters
   useToilEffects({
     hasEntries: dayEntries.length > 0,
-    leaveActive: false,  // Default to false as we don't have this info
-    toilActive: false,   // Default to false as we don't have this info
-    isComplete: true,    // We assume it's ready for calculation in this context
+    leaveActive: false,
+    toilActive: false,
+    isComplete: true,
     calculateToilForDay,
     entriesCount: dayEntries.length,
-    // Include these parameters for compatibility
     userId,
     date,
     entries: dayEntries,
@@ -110,13 +111,12 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         />
       )}
       
-      <WorkHoursContent
+      <WorkHoursInterface 
         date={date}
         userId={userId}
-        dayEntries={dayEntries}
+        entries={dayEntries}
         workSchedule={effectiveWorkSchedule}
         interactive={interactive}
-        onCreateEntry={handleCreateEntry}
       />
     </div>
   );

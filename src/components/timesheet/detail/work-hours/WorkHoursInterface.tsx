@@ -1,10 +1,15 @@
 
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHours } from '@/hooks/timesheet/useWorkHours';
 import { useTimeCalculations } from '@/hooks/timesheet/useTimeCalculations';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
+import WorkHoursContent from './WorkHoursContent';
+import { useTimeEntryState } from '@/hooks/timesheet/detail/hooks/useTimeEntryState';
+import { useWorkHoursActions } from '@/components/timesheet/detail/hooks/useWorkHoursActions';
+import { useWorkHoursCalculation } from '@/components/timesheet/detail/hooks/useWorkHoursCalculation';
+import { HoursSummary } from '@/components/timesheet/detail/components/HoursSummary';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -33,21 +38,77 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   const { calculateHours } = useTimeCalculations();
   const { toast } = useToast();
   
-  // Get work hours for the date
-  const workHours = getWorkHoursForDate(date, userId);
-  const { startTime, endTime, isCustom } = workHours;
+  // Get the work hours state using the specialized hook
+  const {
+    startTime,
+    endTime,
+    totalEnteredHours,
+    hasEntries,
+    hoursVariance,
+    isUndertime,
+    handleTimeChange
+  } = useTimeEntryState({
+    entries,
+    date,
+    workSchedule,
+    interactive,
+    userId,
+    onHoursChange
+  });
+
+  // Use specialized hook for break configuration and day hours
+  const { 
+    calculateDayHours, 
+    breakConfig,
+    hasLunchBreakInSchedule,
+    hasSmokoBreakInSchedule
+  } = useWorkHoursCalculation(date, workSchedule);
+
+  // Calculate scheduled hours for the day
+  const scheduledHours = calculateDayHours();
   
-  // Calculate hours
-  const hours = calculateHours(startTime, endTime);
-  
+  // Use specialized hook for hours calculation
+  const {
+    calculatedTimeHours,
+    isComplete,
+    isOverScheduled
+  } = useHoursCalculation({
+    startTime,
+    endTime,
+    breakAdjustments: 0, // This will be adjusted by action buttons
+    scheduledHours,
+    effectiveHours: totalEnteredHours,
+    hasEntries
+  });
+
+  // Work hours actions (leave, sick, toil, breaks)
+  const {
+    actionStates,
+    handleToggleAction
+  } = useWorkHoursActions(date, userId);
+
+  // Display configuration for breaks
+  const [displayBreakConfig, setDisplayBreakConfig] = useState({
+    lunch: false,
+    smoko: false
+  });
+
+  // Update display configuration when action states change
+  useEffect(() => {
+    setDisplayBreakConfig({
+      lunch: breakConfig.lunch && !actionStates.lunch,
+      smoko: breakConfig.smoko && !actionStates.smoko
+    });
+  }, [actionStates, breakConfig]);
+
   // Call onHoursChange if provided
   React.useEffect(() => {
     if (onHoursChange) {
-      onHoursChange(hours);
+      onHoursChange(calculatedTimeHours);
     }
-  }, [hours, onHoursChange]);
+  }, [calculatedTimeHours, onHoursChange]);
   
-  // Handle reset
+  // Handle reset button click
   const handleReset = () => {
     resetWorkHours(date, userId);
     toast({
@@ -55,54 +116,35 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
       description: "Work hours have been reset to default."
     });
   };
-  
-  // This is a placeholder implementation to make tests pass
-  // The real implementation would be developed fully with proper UI
+
+  // Check if hours are custom (not from schedule)
+  const isCustom = hasCustomHours(date, userId);
+
   return (
-    <div className="p-4 border rounded">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">
-          {isCustom ? "Work Hours (Custom)" : "Work Hours"}
-        </h3>
-        
-        {isCustom && interactive && (
-          <button
-            onClick={handleReset}
-            className="text-sm bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
-          >
-            Reset
-          </button>
-        )}
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="start-time" className="block text-sm mb-1">Start Time</label>
-          <input
-            id="start-time"
-            type="text"
-            className="border rounded p-2 w-full"
-            value={startTime}
-            disabled={!interactive}
-            readOnly
-          />
-        </div>
-        <div>
-          <label htmlFor="end-time" className="block text-sm mb-1">End Time</label>
-          <input
-            id="end-time"
-            type="text" 
-            className="border rounded p-2 w-full"
-            value={endTime}
-            disabled={!interactive}
-            readOnly
-          />
-        </div>
-      </div>
-      
-      <div className="mt-4">
-        <span className="font-medium">Hours: {hours.toFixed(1)}</span>
-      </div>
+    <div className="space-y-4">
+      <WorkHoursContent
+        date={date}
+        userId={userId}
+        dayEntries={entries}
+        workSchedule={workSchedule}
+        interactive={interactive}
+        startTime={startTime}
+        endTime={endTime}
+        effectiveTotalHours={totalEnteredHours}
+        calculatedTimeHours={calculatedTimeHours}
+        hasEntries={hasEntries}
+        interactive={interactive}
+        isActuallyComplete={isComplete}
+        hoursVariance={hoursVariance}
+        isUndertime={isUndertime}
+        breakConfig={breakConfig}
+        displayBreakConfig={displayBreakConfig}
+        actionStates={actionStates}
+        isOverScheduled={isOverScheduled}
+        isCalculating={false}
+        handleTimeChange={handleTimeChange}
+        handleToggleAction={handleToggleAction}
+      />
     </div>
   );
 };

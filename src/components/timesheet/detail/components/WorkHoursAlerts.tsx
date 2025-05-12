@@ -1,16 +1,14 @@
 
 import React from "react";
-import { AlertTriangle, CheckCircle, Info } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Check, Info } from "lucide-react";
 
 interface WorkHoursAlertsProps {
   hasEntries: boolean;
   isUndertime: boolean;
   hoursVariance: number;
   interactive: boolean;
-  showEntryForms?: boolean;
-  date?: Date;
-  isComplete?: boolean;
+  date: Date;
+  isComplete: boolean;
 }
 
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
@@ -18,46 +16,46 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   isUndertime,
   hoursVariance,
   interactive,
-  showEntryForms = false,
   date,
-  isComplete = false
+  isComplete
 }) => {
-  // Round variance to nearest quarter hour for display
-  const roundedVariance = Math.round(Math.abs(hoursVariance) * 4) / 4;
-  
-  // Don't show warning when the hours are very close (within 0.01)
-  const shouldShowUndertime = isUndertime && Math.abs(hoursVariance) > 0.01 && !isComplete;
-  const shouldShowOvertime = !isUndertime && !isComplete && Math.abs(hoursVariance) > 0.01;
+  // Only show alerts on interactive displays and when there are entries
+  if (!interactive || !hasEntries) return null;
 
-  return <>
-      {hasEntries && isComplete && <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
-          <CheckCircle className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            Your hours are complete for this day
-          </AlertDescription>
-        </Alert>}
+  const isToday = new Date().toDateString() === date.toDateString();
+  const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
 
-      {hasEntries && shouldShowUndertime && <Alert variant="destructive" className="mt-2 border-red-200 text-red-800 px-[26px] my-0 mx-0 bg-orange-100">
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            Hours don't match daily entries (under by {roundedVariance.toFixed(2)} hrs)
-          </AlertDescription>
-        </Alert>}
+  // Show undertime alert for past days
+  if (isUndertime && isPast && !isComplete) {
+    return (
+      <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-100 text-amber-700 flex items-center text-xs">
+        <AlertTriangle className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+        <span>This day appears to have {Math.abs(hoursVariance).toFixed(2)} hours under your scheduled hours.</span>
+      </div>
+    );
+  }
 
-      {hasEntries && shouldShowOvertime && <Alert variant="destructive" className="mt-2 bg-red-50 border-red-200 text-red-800 px-[26px] my-0 mx-0">
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            Hours exceed daily entries (over by {roundedVariance.toFixed(2)} hrs)
-          </AlertDescription>
-        </Alert>}
-      
-      {!hasEntries && interactive && <Alert className="mt-2 bg-blue-50 border-blue-200 text-blue-800">
-          <Info className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            No time entries for this day. Add an entry to record your hours.
-          </AlertDescription>
-        </Alert>}
-    </>;
+  // Show completion alert for complete days
+  if (isComplete) {
+    return (
+      <div className="mt-2 p-2 rounded-md bg-green-50 border border-green-100 text-green-700 flex items-center text-xs">
+        <Check className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+        <span>This day has been completed with all scheduled hours accounted for.</span>
+      </div>
+    );
+  }
+
+  // Show reminder for today
+  if (isToday && !isComplete) {
+    return (
+      <div className="mt-2 p-2 rounded-md bg-blue-50 border border-blue-100 text-blue-700 flex items-center text-xs">
+        <Info className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+        <span>Don't forget to enter all your work hours for today.</span>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default WorkHoursAlerts;

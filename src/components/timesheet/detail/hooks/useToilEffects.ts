@@ -1,0 +1,44 @@
+
+import { useEffect } from 'react';
+import { TimeEntry, WorkSchedule } from '@/types';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('useToilEffects');
+
+interface UseToilEffectsProps {
+  userId: string;
+  date: Date;
+  entries: TimeEntry[];
+  schedule?: WorkSchedule;
+  hasEntries: boolean;
+  leaveActive: boolean;
+  toilActive: boolean;
+  isComplete: boolean;
+  calculateToilForDay: () => Promise<void>;
+  entriesCount: number;
+}
+
+export const useToilEffects = ({
+  userId,
+  date,
+  entries,
+  schedule,
+  hasEntries,
+  leaveActive,
+  toilActive,
+  isComplete,
+  calculateToilForDay,
+  entriesCount
+}: UseToilEffectsProps) => {
+  // Trigger TOIL calculation when entries change and day is complete
+  useEffect(() => {
+    // Only calculate if:
+    // 1. We have entries
+    // 2. No leave or TOIL is active
+    // 3. The day is marked as complete
+    if (hasEntries && !leaveActive && !toilActive && isComplete) {
+      logger.debug(`[useToilEffects] Auto-calculating TOIL for complete day: ${date.toISOString().split('T')[0]}`);
+      calculateToilForDay();
+    }
+  }, [hasEntries, leaveActive, toilActive, isComplete, date, calculateToilForDay, entriesCount]);
+};

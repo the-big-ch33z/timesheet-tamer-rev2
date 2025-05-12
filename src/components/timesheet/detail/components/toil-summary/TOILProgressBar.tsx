@@ -17,7 +17,7 @@ const TOILProgressBar: React.FC<TOILProgressBarProps> = ({ remaining, accrued, i
   const total = Math.max(safeAccrued + Math.abs(safeRemaining), 1); // Prevent division by zero
   const progressValue = total === 0 
     ? 0 
-    : Math.max(0, Math.min(100, 100 * Math.abs(safeRemaining) / (safeAccrued || 1)));
+    : Math.max(0, Math.min(100, 100 * Math.abs(safeRemaining) / total));
   
   return (
     <>
@@ -30,6 +30,7 @@ const TOILProgressBar: React.FC<TOILProgressBarProps> = ({ remaining, accrued, i
       <Progress 
         value={progressValue} 
         className={`h-2 ${isNegativeBalance ? "bg-red-100/60" : "bg-green-100/60"}`}
+        indicatorColor={isNegativeBalance ? "bg-red-500" : "bg-green-500"}
       />
     </>
   );
