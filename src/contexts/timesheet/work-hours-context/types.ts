@@ -21,7 +21,7 @@ export interface WorkHoursContextType {
   synchronizeFromRemote?: (userId: string) => Promise<void>;
   getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string };
   
-  // Add the methods being used in useTimeEntryState
+  // Enhanced API methods
   getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
   saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;
 }
