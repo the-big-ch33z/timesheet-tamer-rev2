@@ -5,6 +5,7 @@ import { useTimeEntryContext } from '@/contexts/timesheet/entries-context';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
 
 const logger = createTimeLogger('useWorkHoursActions');
 
@@ -22,7 +23,6 @@ const INITIAL_STATES = {
 
 // Add debounce protection for TOIL events
 let lastTOILEventTime = 0;
-const DEBOUNCE_TIME = 500; // ms
 
 export const useWorkHoursActions = (date: Date, userId: string) => {
   const { createEntry, deleteEntry, dayEntries } = useTimeEntryContext();
@@ -85,7 +85,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
   // New: Debounced event publisher for TOIL updates
   const publishToilEvent = useCallback((eventData: any) => {
     const now = Date.now();
-    if (now - lastTOILEventTime < DEBOUNCE_TIME) {
+    if (now - lastTOILEventTime < DEBOUNCE_PERIOD) {
       logger.debug('Skipping duplicate TOIL event due to debounce');
       return;
     }

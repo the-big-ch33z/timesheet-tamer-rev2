@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { toilService } from '@/utils/time/services/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
+import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
 
 const logger = createTimeLogger('useTOILSummary');
 
@@ -20,6 +21,9 @@ export interface UseTOILSummaryResult {
   error: string | null;
   refreshSummary: () => void;
 }
+
+// Use imported debounce period
+let lastOperationTime = 0;
 
 export const useTOILSummary = ({
   userId,
@@ -70,6 +74,13 @@ export const useTOILSummary = ({
   }, [userId, monthYear, refreshCounter]);
 
   const refreshSummary = useCallback(() => {
+    const now = Date.now();
+    if (now - lastOperationTime < DEBOUNCE_PERIOD) {
+      logger.debug('Skipping duplicate refresh due to debounce');
+      return;
+    }
+    lastOperationTime = now;
+    
     logger.debug(`Refresh requested for ${userId}`);
     setRefreshCounter(c => c + 1);
   }, [userId]);

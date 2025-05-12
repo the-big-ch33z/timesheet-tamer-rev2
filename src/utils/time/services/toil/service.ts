@@ -23,7 +23,9 @@ import {
   TOIL_PROCESSING_RECORDS_KEY,
   TOIL_MONTH_PROCESSING_STATE_KEY,
   TOIL_THRESHOLDS_KEY,
-  DEBOUNCE_TIME
+  DEBOUNCE_PERIOD,
+  STORAGE_RETRY_DELAY,
+  STORAGE_MAX_RETRIES
 } from "./storage/constants";
 import { calculateTOILHours } from "./calculation";
 import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
@@ -35,7 +37,8 @@ const logger = createTimeLogger('TOILService');
 
 // Add debouncing for TOIL operations
 let lastTOILOperationTime = 0;
-const DEBOUNCE_TIME = 500; // ms
+// Use imported DEBOUNCE_PERIOD instead of redefining DEBOUNCE_TIME
+// const DEBOUNCE_TIME = 500; // ms
 
 // Default thresholds
 const DEFAULT_THRESHOLDS: ToilThresholds = {
@@ -86,7 +89,7 @@ export class TOILService {
     try {
       // Apply debouncing to prevent duplicate calculations
       const now = Date.now();
-      if (now - lastTOILOperationTime < DEBOUNCE_TIME) {
+      if (now - lastTOILOperationTime < DEBOUNCE_PERIOD) {
         logger.debug('Skipping duplicate TOIL calculation due to debounce');
         return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
       }
@@ -231,7 +234,7 @@ export class TOILService {
     try {
       // Apply debouncing to prevent duplicate calculations
       const now = Date.now();
-      if (now - lastTOILOperationTime < DEBOUNCE_TIME) {
+      if (now - lastTOILOperationTime < DEBOUNCE_PERIOD) {
         logger.debug('Skipping duplicate TOIL usage record due to debounce');
         return true;
       }
@@ -352,7 +355,7 @@ export class TOILService {
       
       // Apply debouncing to prevent duplicate calculations
       const now = Date.now();
-      if (now - lastTOILOperationTime < DEBOUNCE_TIME) {
+      if (now - lastTOILOperationTime < DEBOUNCE_PERIOD) {
         logger.debug('Skipping duplicate TOIL calculation due to debounce');
         resolve(this.getTOILSummary(userId, format(date, 'yyyy-MM')));
         return;
