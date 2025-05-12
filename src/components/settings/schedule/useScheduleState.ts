@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { WeekDay, WorkSchedule } from "@/types";
 import { useWorkSchedule } from "@/contexts/work-schedule";
+import { clearWorkHoursCache } from "@/contexts/timesheet/work-hours-context/hooks/useWorkHoursCore";
+import { timeEventsService } from "@/utils/time/events/timeEventsService";
 
 export const useScheduleState = () => {
   const { toast } = useToast();
@@ -80,6 +82,9 @@ export const useScheduleState = () => {
     setSelectedScheduleId(newSchedule.id);
     setEditingSchedule(newSchedule);
     setShowCreateScheduleDialog(false);
+    
+    // Clear work hours cache to ensure new schedule is used immediately
+    clearWorkHoursCache();
   };
   
   const saveSchedule = () => {
@@ -90,6 +95,16 @@ export const useScheduleState = () => {
     }
     
     setSchedules(getAllSchedules());
+    
+    // Clear work hours cache when a schedule is saved
+    clearWorkHoursCache();
+    
+    // Publish event about schedule update
+    timeEventsService.publish('schedules-updated', {
+      scheduleId: editingSchedule.id,
+      name: editingSchedule.name,
+      timestamp: Date.now()
+    });
     
     toast({
       title: "Schedule saved",
@@ -111,6 +126,9 @@ export const useScheduleState = () => {
     setSchedules(getAllSchedules());
     setSelectedScheduleId('default');
     setEditingSchedule({...defaultSchedule});
+    
+    // Clear work hours cache when a schedule is deleted
+    clearWorkHoursCache();
   };
   
   const updateWorkDay = (day: WeekDay, isWorkDay: boolean) => {

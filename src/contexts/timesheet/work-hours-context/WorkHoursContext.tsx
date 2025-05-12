@@ -1,9 +1,12 @@
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { WorkHoursContextType, WorkHoursData } from '../types';
 import { useWorkHoursManagement } from './hooks/useWorkHoursManagement';
 import { useWorkHoursLogger } from './hooks/useWorkHoursLogger';
 import { createTimeLogger } from '@/utils/time/errors';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
 
 const logger = createTimeLogger('WorkHoursContext');
 
@@ -195,6 +198,28 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     } catch (error) {
       logger.error('Error loading work hours from storage', error);
     }
+
+    // Set up event listeners for schedule changes
+    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', () => {
+      logger.debug('Work schedules updated, clearing work hours cache');
+      clearWorkHoursCache();
+    });
+
+    const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', () => {
+      logger.debug('User schedules updated, clearing work hours cache');
+      clearWorkHoursCache();
+    });
+
+    const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', (data) => {
+      logger.debug(`User schedule changed for ${data.userId}, refreshing work hours`);
+      clearWorkHoursCache();
+    });
+
+    return () => {
+      scheduleUpdatedUnsubscribe.unsubscribe();
+      userScheduleUpdatedUnsubscribe.unsubscribe();
+      scheduleChangedUnsubscribe.unsubscribe();
+    };
   }, []);
 
   // Save work hours to localStorage when they change

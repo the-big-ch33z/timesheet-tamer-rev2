@@ -12,6 +12,8 @@ import { useScheduleState } from "./schedule/useScheduleState";
 import { Badge } from "@/components/ui/badge";
 import { useScheduleCalculation } from "@/hooks/timesheet/useScheduleCalculation";
 import { useToast } from "@/hooks/use-toast";
+import { clearWorkHoursCache } from "@/contexts/timesheet/work-hours-context/hooks/useWorkHoursCore";
+import { timeEventsService } from "@/utils/time/events/timeEventsService";
 
 const WorkScheduleSettings: React.FC = () => {
   const { toast } = useToast();
@@ -38,13 +40,24 @@ const WorkScheduleSettings: React.FC = () => {
   // Use our updated hook for live calculations with the editingSchedule
   const { fortnightHours } = useScheduleCalculation(editingSchedule);
 
-  // Wrap the save function to add toast notification
+  // Wrap the save function to add toast notification and trigger cache refresh
   const handleSaveSchedule = () => {
     originalSaveSchedule();
+    
+    // Clear the work hours cache to ensure new schedule takes effect immediately
+    clearWorkHoursCache();
+    
+    // Publish an explicit event that a schedule has been manually saved
+    timeEventsService.publish('schedules-updated', {
+      scheduleId: selectedScheduleId,
+      timestamp: Date.now(),
+      source: 'manual-save'
+    });
+    
     toast({
       title: "Schedule saved",
-      description: "Your schedule has been saved successfully",
-      duration: 2000, // 2 seconds
+      description: "Your schedule has been saved successfully. Work hours will automatically update.",
+      duration: 3000,
     });
   };
 
