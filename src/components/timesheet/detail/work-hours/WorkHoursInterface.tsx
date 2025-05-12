@@ -9,6 +9,7 @@ import { useTimeEntryState } from '@/hooks/timesheet/detail/hooks/useTimeEntrySt
 import { useWorkHoursActions } from '@/components/timesheet/detail/hooks/useWorkHoursActions';
 import { useWorkHoursCalculation } from '@/components/timesheet/detail/hooks/useWorkHoursCalculation';
 import { WorkHoursContent } from '../work-hours-section';
+import { BreakConfig } from '@/contexts/timesheet/types';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -89,7 +90,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   } = useWorkHoursActions(date, userId);
 
   // Display configuration for breaks
-  const [displayBreakConfig, setDisplayBreakConfig] = useState({
+  const [displayBreakConfig, setDisplayBreakConfig] = useState<BreakConfig>({
     lunch: false,
     smoko: false
   });

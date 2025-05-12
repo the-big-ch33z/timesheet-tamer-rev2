@@ -1,13 +1,14 @@
 
-import { WorkHoursContextType } from '../types';
+import { WorkHoursContextType, WorkHoursData } from '../../types';
 import { useWorkHoursCore } from './useWorkHoursCore';
 import { useWorkHoursModification } from './useWorkHoursModification';
 import { useWorkHoursManagement } from './useWorkHoursManagement';
+import { useWorkHoursSynchronizer } from './useWorkHoursSynchronizer';
 
 interface UseWorkHoursValueProps {
-  workHoursMap: Map<string, any>;
-  setWorkHoursMap: React.Dispatch<React.SetStateAction<Map<string, any>>>;
-  latestWorkHoursRef: React.MutableRefObject<Map<string, any>>;
+  workHoursMap: Map<string, WorkHoursData>;
+  setWorkHoursMap: React.Dispatch<React.SetStateAction<Map<string, WorkHoursData>>>;
+  latestWorkHoursRef: React.MutableRefObject<Map<string, WorkHoursData>>;
   getDefaultHoursFromSchedule: (date: Date, userId: string) => { startTime: string; endTime: string };
 }
 
@@ -17,21 +18,25 @@ export const useWorkHoursValue = ({
   latestWorkHoursRef,
   getDefaultHoursFromSchedule
 }: UseWorkHoursValueProps): WorkHoursContextType => {
-  const { getWorkHours, hasCustomWorkHours } = useWorkHoursCore({
+  const { getWorkHours, hasCustomWorkHours, getWorkHoursForDate } = useWorkHoursCore({
     workHoursMap,
     setWorkHoursMap,
     latestWorkHoursRef,
     getDefaultHoursFromSchedule
   });
 
-  const { saveWorkHours, clearWorkHours } = useWorkHoursModification({
+  const { saveWorkHours, clearWorkHours, saveWorkHoursForDate } = useWorkHoursModification({
     workHoursMap,
     setWorkHoursMap,
     getDefaultHoursFromSchedule
   });
 
-  const { resetDayWorkHours, refreshTimesForDate, synchronizeFromRemote } = useWorkHoursManagement({
+  const { resetDayWorkHours, refreshTimesForDate } = useWorkHoursManagement({
     workHoursMap,
+    setWorkHoursMap
+  });
+
+  const { synchronizeFromRemote } = useWorkHoursSynchronizer({
     setWorkHoursMap
   });
 
@@ -42,6 +47,9 @@ export const useWorkHoursValue = ({
     hasCustomWorkHours,
     resetDayWorkHours,
     refreshTimesForDate,
-    synchronizeFromRemote
+    synchronizeFromRemote,
+    getDefaultScheduleHours: getDefaultHoursFromSchedule,
+    getWorkHoursForDate,
+    saveWorkHoursForDate
   };
 };

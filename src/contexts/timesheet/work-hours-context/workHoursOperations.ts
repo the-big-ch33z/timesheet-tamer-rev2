@@ -4,7 +4,6 @@ import { WorkHoursData } from '../types';
 import { WorkSchedule } from '@/types';
 import { createTimeLogger } from '@/utils/time/errors';
 import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
-import { useWorkSchedule } from '@/contexts/work-schedule';
 
 const logger = createTimeLogger('WorkHoursOperations');
 

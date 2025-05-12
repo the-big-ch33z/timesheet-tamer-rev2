@@ -1,11 +1,10 @@
 
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
-import { useCallback, useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { useCallback } from 'react';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { useTimesheetWorkHours } from './useTimesheetWorkHours';
 import { useTimeCalculations } from './useTimeCalculations';
-import { unifiedTimeEntryService } from '@/utils/time/services';
+import { WorkHoursState } from '@/contexts/timesheet/types';
 
 /**
  * useWorkHours
@@ -62,7 +61,7 @@ export const useWorkHours = (userId?: string) => {
   }, [enhancedHook, calculateAutoHours, userId]);
   
   // Add a wrapper method that includes calculatedHours for test compatibility
-  const getWorkHoursForDateWithCalculated = useCallback((date: Date, userId?: string) => {
+  const getWorkHoursForDateWithCalculated = useCallback((date: Date, userId?: string): WorkHoursState => {
     const hours = enhancedHook.getWorkHoursForDate(date, userId);
     const calculatedHours = (hours.startTime && hours.endTime) 
       ? calculateAutoHours(hours.startTime, hours.endTime) 

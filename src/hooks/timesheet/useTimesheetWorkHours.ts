@@ -1,10 +1,10 @@
-
 import { useCallback } from 'react';
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { toDate } from '@/utils/date/dateConversions';
+import { WorkHoursData } from '@/contexts/timesheet/types';
 
 /**
  * useTimesheetWorkHours

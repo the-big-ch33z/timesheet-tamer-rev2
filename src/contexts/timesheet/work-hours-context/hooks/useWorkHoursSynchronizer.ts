@@ -1,17 +1,18 @@
 
 import { useCallback } from 'react';
+import { WorkHoursData } from '../../types';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('useWorkHoursSynchronizer');
 
 interface UseWorkHoursSynchronizerProps {
-  setWorkHoursMap: React.Dispatch<React.SetStateAction<Map<string, any>>>;
+  setWorkHoursMap: React.Dispatch<React.SetStateAction<Map<string, WorkHoursData>>>;
 }
 
 export const useWorkHoursSynchronizer = ({
   setWorkHoursMap
 }: UseWorkHoursSynchronizerProps) => {
-  const synchronizeFromRemote = useCallback((remoteData: any[]): void => {
+  const synchronizeFromRemote = useCallback((remoteData: WorkHoursData[]): void => {
     logger.info(`Synchronizing with ${remoteData.length} remote entries`);
     
     setWorkHoursMap(prevMap => {
@@ -31,7 +32,7 @@ export const useWorkHoursSynchronizer = ({
       
       return updatedMap;
     });
-  }, []);
+  }, [setWorkHoursMap]);
 
   return {
     synchronizeFromRemote

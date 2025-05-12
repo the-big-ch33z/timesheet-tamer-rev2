@@ -8,6 +8,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
 import { useWorkSchedule } from '@/contexts/work-schedule';
+import { useWorkHoursSynchronizer } from './hooks/useWorkHoursSynchronizer';
 
 const logger = createTimeLogger('WorkHoursContext');
 
@@ -31,7 +32,8 @@ export interface WorkHoursProviderProps {
  */
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
   // State for work hours
-  const [workHoursMap, setWorkHoursMap] = useState<Map<string, any>>(new Map());
+  const [workHoursMap, setWorkHoursMap] = useState<Map<string, WorkHoursData>>(new Map());
+  const latestWorkHoursRef = React.useRef<Map<string, WorkHoursData>>(new Map());
   
   // Get work schedule to derive default times
   const workScheduleContext = useWorkSchedule();
@@ -39,11 +41,15 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   // Utility hooks
   const { logWorkHoursRetrieval, logDefaultHours, logCustomHoursCheck } = useWorkHoursLogger();
   
+  // Load the synchronizer hook
+  const { synchronizeFromRemote } = useWorkHoursSynchronizer({
+    setWorkHoursMap
+  });
+  
   // Management operations
   const { 
     resetDayWorkHours, 
     refreshTimesForDate,
-    synchronizeFromRemote 
   } = useWorkHoursManagement({
     workHoursMap,
     setWorkHoursMap
@@ -179,7 +185,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       });
       return newMap;
     });
-  }, []);
+    
+    // Update the reference to the latest work hours map
+    latestWorkHoursRef.current = new Map(workHoursMap);
+  }, [workHoursMap]);
 
   /**
    * Enhanced API for saving work hours with more flexible parameter order
@@ -213,7 +222,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       
       return newMap;
     });
-  }, []);
+    
+    // Update the reference to the latest work hours map
+    latestWorkHoursRef.current = new Map(workHoursMap);
+  }, [workHoursMap]);
 
   // Load work hours from localStorage on mount
   useEffect(() => {
@@ -232,6 +244,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
           });
           
           setWorkHoursMap(newMap);
+          latestWorkHoursRef.current = newMap;
           logger.debug(`Loaded ${parsedHours.length} work hour entries from storage`);
         }
       }
