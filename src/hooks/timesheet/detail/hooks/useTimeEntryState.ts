@@ -1,10 +1,10 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHoursContext } from '@/contexts/timesheet';
 import { calculateHoursFromTimes } from '@/utils/time/calculations/hoursCalculations';
 import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 import { createTimeLogger } from '@/utils/time/errors';
-import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useTimeEntryState');
 
@@ -70,10 +70,10 @@ export const useTimeEntryState = ({
   const [startTime, setStartTime] = useState(initialWorkHours?.startTime || '');
   const [endTime, setEndTime] = useState(initialWorkHours?.endTime || '');
   
-  // Subscribe to schedule update events
+  // Subscribe to schedule update events using window event listener
   useEffect(() => {
-    const scheduleUpdatedHandler = () => {
-      logger.debug('Schedule updated, refreshing work hours');
+    const handleWorkHoursRefreshNeeded = () => {
+      logger.debug('Work hours refresh needed, refreshing work hours');
       scheduleUpdateCountRef.current += 1;
       
       // Refresh work hours from context
@@ -82,16 +82,11 @@ export const useTimeEntryState = ({
       setEndTime(refreshedHours?.endTime || '');
     };
     
-    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
-    const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', scheduleUpdatedHandler);
-    const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', scheduleUpdatedHandler);
-    const workHoursRefreshUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
+    // Use standard DOM event listeners instead of timeEventsService
+    window.addEventListener('work-hours-refresh-needed', handleWorkHoursRefreshNeeded);
     
     return () => {
-      scheduleUpdatedUnsubscribe.unsubscribe();
-      userScheduleUpdatedUnsubscribe.unsubscribe();
-      scheduleChangedUnsubscribe.unsubscribe();
-      workHoursRefreshUnsubscribe.unsubscribe();
+      window.removeEventListener('work-hours-refresh-needed', handleWorkHoursRefreshNeeded);
     };
   }, [loadWorkHours]);
   

@@ -1,6 +1,27 @@
 
-// This file is retained for backward compatibility
-// All types are now defined in src/contexts/timesheet/types.d.ts
+import { WorkSchedule } from '@/types';
 
-// Re-export types from the main types file
-export type { WorkHoursData, WorkHoursContextType, BreakConfig } from '../types';
+// Define the data structure for storing work hours
+export interface WorkHoursData {
+  startTime: string;
+  endTime: string;
+  date: string; // ISO date string
+  userId: string;
+  isCustom: boolean; // Flag to indicate this is a custom override
+  lastModified: number; // Timestamp for sync conflict resolution
+}
+
+export interface WorkHoursContextType {
+  getWorkHours: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom: boolean };
+  saveWorkHours: (date: Date, userId: string, startTime: string, endTime: string) => void;
+  clearWorkHours: (userId: string) => void;
+  hasCustomWorkHours: (date: Date, userId: string) => boolean;
+  resetDayWorkHours: (date: Date, userId: string) => void;
+  refreshTimesForDate: (date: Date, userId: string) => void;
+  synchronizeFromRemote: (userId: string) => Promise<void>;  // Updated to match implementation
+  getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string };
+  
+  // Enhanced API methods
+  getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
+  saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;
+}

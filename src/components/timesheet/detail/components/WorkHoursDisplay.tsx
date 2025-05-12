@@ -1,7 +1,7 @@
+
 import React, { useEffect } from "react";
 import { Bell, Coffee } from "lucide-react";
 import TimeInput from "@/components/ui/time-input/TimeInput";
-import { BreakConfig } from "@/contexts/timesheet/types";
 
 // Helper to round to nearest 0.25 for summary display
 function roundToQuarter(value: number) {
@@ -19,7 +19,10 @@ interface WorkHoursDisplayProps {
   isComplete: boolean;
   hoursVariance: number;
   isUndertime: boolean;
-  breaksIncluded: BreakConfig;
+  breaksIncluded: {
+    lunch: boolean;
+    smoko: boolean;
+  };
   overrideStates: {
     lunch: boolean;
   };

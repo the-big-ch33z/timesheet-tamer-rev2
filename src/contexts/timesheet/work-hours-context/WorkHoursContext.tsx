@@ -7,7 +7,6 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { clearWorkHoursCache } from './hooks/useWorkHoursCore';
 import { useWorkSchedule } from '@/contexts/work-schedule';
-import { useWorkHoursSynchronizer } from './hooks/useWorkHoursSynchronizer';
 import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
 
 const logger = createTimeLogger('WorkHoursContext');
@@ -23,11 +22,16 @@ export interface WorkHoursProviderProps {
  * WorkHoursProvider
  * 
  * Provides work hours data and operations to manipulate them
+ * 
+ * @dependency None - This is a root-level context that doesn't depend on other contexts
+ * 
+ * Dependencies Flow:
+ * - User components may depend on WorkHoursContext
+ * - This context may be used by TimeEntryContext for hours calculation
  */
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
   // State for work hours
-  const [workHoursMap, setWorkHoursMap] = useState<Map<string, WorkHoursData>>(new Map());
-  const latestWorkHoursRef = React.useRef<Map<string, WorkHoursData>>(new Map());
+  const [workHoursMap, setWorkHoursMap] = useState<Map<string, any>>(new Map());
   
   // Get work schedule to derive default times
   const workScheduleContext = useWorkSchedule();
@@ -35,15 +39,11 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   // Utility hooks
   const { logWorkHoursRetrieval, logDefaultHours, logCustomHoursCheck } = useWorkHoursLogger();
   
-  // Load the synchronizer hook
-  const { synchronizeFromRemote } = useWorkHoursSynchronizer({
-    setWorkHoursMap
-  });
-  
   // Management operations
   const { 
     resetDayWorkHours, 
     refreshTimesForDate,
+    synchronizeFromRemote 
   } = useWorkHoursManagement({
     workHoursMap,
     setWorkHoursMap
@@ -51,6 +51,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   /**
    * Check if custom work hours exist for a specific date and user
+   * 
+   * @param date - The date to check
+   * @param userId - The user ID
+   * @returns {boolean} Whether custom hours exist
    */
   const hasCustomWorkHours = useCallback((date: Date, userId: string): boolean => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -65,11 +69,17 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   /**
    * Get default hours from the user's schedule
+   * 
+   * @param date - The date to get default hours for
+   * @param userId - The user ID
+   * @returns Default work hours from schedule
    */
   const getDefaultScheduleHours = useCallback((date: Date, userId: string) => {
     try {
-      // Get the user schedule
+      // Get the user's schedule ID (string)
       const userScheduleId = workScheduleContext.getUserSchedule(userId);
+      
+      // Get the appropriate schedule based on the ID
       const schedule = userScheduleId === 'default' 
         ? workScheduleContext.defaultSchedule
         : workScheduleContext.getScheduleById(userScheduleId) || workScheduleContext.defaultSchedule;
@@ -94,6 +104,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   /**
    * Get work hours for a specific date and user
+   * 
+   * @param date - The date to get hours for
+   * @param userId - The user ID
+   * @returns Work hours data
    */
   const getWorkHours = useCallback((date: Date, userId: string) => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -125,6 +139,10 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   /**
    * Enhanced API for getting work hours with additional metadata
+   * 
+   * @param date - The date to get hours for
+   * @param userId - The user ID
+   * @returns Work hours data with additional metadata
    */
   const getWorkHoursForDate = useCallback((date: Date, userId: string) => {
     const { startTime, endTime, isCustom } = getWorkHours(date, userId);
@@ -139,6 +157,11 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   /**
    * Save work hours for a specific date and user
+   * 
+   * @param date - The date to save hours for
+   * @param userId - The user ID
+   * @param startTime - The start time in HH:MM format
+   * @param endTime - The end time in HH:MM format
    */
   const saveWorkHours = useCallback((date: Date, userId: string, startTime: string, endTime: string): void => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -158,13 +181,15 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       });
       return newMap;
     });
-    
-    // Update the reference to the latest work hours map
-    latestWorkHoursRef.current = new Map(workHoursMap);
-  }, [workHoursMap]);
+  }, []);
 
   /**
    * Enhanced API for saving work hours with more flexible parameter order
+   * 
+   * @param date - The date to save hours for
+   * @param startTime - The start time in HH:MM format
+   * @param endTime - The end time in HH:MM format
+   * @param userId - The user ID
    */
   const saveWorkHoursForDate = useCallback((date: Date, startTime: string, endTime: string, userId: string): void => {
     saveWorkHours(date, userId, startTime, endTime);
@@ -172,6 +197,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
 
   /**
    * Clear all work hours for a user
+   * 
+   * @param userId - The user ID
    */
   const clearWorkHours = useCallback((userId: string): void => {
     logger.debug(`Clearing all work hours for user ${userId}`);
@@ -188,10 +215,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       
       return newMap;
     });
-    
-    // Update the reference to the latest work hours map
-    latestWorkHoursRef.current = new Map(workHoursMap);
-  }, [workHoursMap]);
+  }, []);
 
   // Load work hours from localStorage on mount
   useEffect(() => {
@@ -210,7 +234,6 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
           });
           
           setWorkHoursMap(newMap);
-          latestWorkHoursRef.current = newMap;
           logger.debug(`Loaded ${parsedHours.length} work hour entries from storage`);
         }
       }
@@ -222,23 +245,29 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', () => {
       logger.debug('Work schedules updated, clearing work hours cache');
       clearWorkHoursCache();
-      // Publish an event to notify components that they should refresh their hours
-      timeEventsService.publish('schedules-updated', { timestamp: Date.now() });
+      // Use custom event string directly since 'work-hours-refresh-needed' isn't in TimeEventType
+      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
+        detail: { timestamp: Date.now() }
+      }));
     });
 
     const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', () => {
       logger.debug('User schedules updated, clearing work hours cache');
       clearWorkHoursCache();
-      timeEventsService.publish('user-schedules-updated', { timestamp: Date.now() });
+      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
+        detail: { timestamp: Date.now() }
+      }));
     });
 
     const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', (data) => {
       logger.debug(`User schedule changed for ${data.userId}, refreshing work hours`);
       clearWorkHoursCache();
-      timeEventsService.publish('user-schedule-changed', { 
-        userId: data.userId,
-        timestamp: Date.now() 
-      });
+      window.dispatchEvent(new CustomEvent('work-hours-refresh-needed', { 
+        detail: {
+          userId: data.userId,
+          timestamp: Date.now() 
+        }
+      }));
     });
 
     return () => {
@@ -288,6 +317,9 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
  * useWorkHoursContext
  * 
  * Hook to access work hours data and operations
+ * 
+ * @returns {WorkHoursContextType} Work hours context value
+ * @throws {Error} If used outside of a WorkHoursProvider
  */
 export const useWorkHoursContext = (): WorkHoursContextType => {
   const context = useContext(WorkHoursContext);

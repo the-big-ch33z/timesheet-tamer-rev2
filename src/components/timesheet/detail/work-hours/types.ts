@@ -1,5 +1,13 @@
 
-// Re-export the standardized types from the centralized types file
-export type { BreakConfig, WorkHoursData as WorkHoursState } from '@/contexts/timesheet/types';
+export interface BreakConfig {
+  lunch: boolean;
+  smoko: boolean;
+}
 
-// If any component-specific types are needed, they can be added here
+export interface WorkHoursState {
+  startTime: string;
+  endTime: string;
+  isCustom: boolean;
+  hasData?: boolean;
+  calculatedHours?: number;
+}

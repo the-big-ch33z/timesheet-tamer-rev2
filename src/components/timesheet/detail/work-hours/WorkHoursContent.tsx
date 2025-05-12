@@ -1,10 +1,11 @@
+
 import React from "react";
 import WorkHoursHeader from "../components/WorkHoursHeader";
 import WorkHoursDisplay from "../components/WorkHoursDisplay";
 import WorkHoursAlerts from "../components/WorkHoursAlerts";
 import WorkHoursActionButtons from "../components/WorkHoursActionButtons";
 import { WorkHoursStatus } from "../components/WorkHoursStatus";
-import { BreakConfig } from "@/contexts/timesheet/types";
+import { BreakConfig } from "./types";
 
 interface WorkHoursContentProps {
   startTime: string;
@@ -17,7 +18,7 @@ interface WorkHoursContentProps {
   hoursVariance: number;
   isUndertime: boolean;
   breakConfig: BreakConfig;
-  displayBreakConfig: BreakConfig;
+  displayBreakConfig: BreakConfig;  // Add the new display config
   actionStates: Record<string, boolean>;
   isOverScheduled: boolean;
   isCalculating: boolean;
@@ -37,7 +38,7 @@ const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
   hoursVariance,
   isUndertime,
   breakConfig,
-  displayBreakConfig,
+  displayBreakConfig,  // Add the new display config
   actionStates,
   isOverScheduled,
   isCalculating,
@@ -83,7 +84,7 @@ const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
               isComplete={isActuallyComplete}
               hoursVariance={hoursVariance}
               isUndertime={isUndertime}
-              breaksIncluded={displayBreakConfig}
+              breaksIncluded={displayBreakConfig}  // Use display config instead of base config
               overrideStates={{
                 lunch: actionStates.lunch,
               }}

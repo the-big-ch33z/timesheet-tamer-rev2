@@ -1,5 +1,5 @@
 
-import { WorkHoursData } from '../types';
+import { WorkHoursData } from './types';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('WorkHoursStorage');
@@ -41,3 +41,4 @@ export const workHoursStorage = {
     }
   }
 };
+

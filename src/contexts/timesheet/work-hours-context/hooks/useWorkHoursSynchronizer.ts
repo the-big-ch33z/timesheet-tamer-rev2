@@ -1,37 +1,46 @@
 
 import { useCallback } from 'react';
-import { WorkHoursData } from '../../types';
 import { createTimeLogger } from '@/utils/time/errors';
+import { WorkHoursData } from '../../types';
 
 const logger = createTimeLogger('useWorkHoursSynchronizer');
 
 interface UseWorkHoursSynchronizerProps {
-  setWorkHoursMap: React.Dispatch<React.SetStateAction<Map<string, WorkHoursData>>>;
+  setWorkHoursMap: React.Dispatch<React.SetStateAction<Map<string, any>>>;
 }
 
 export const useWorkHoursSynchronizer = ({
   setWorkHoursMap
 }: UseWorkHoursSynchronizerProps) => {
-  const synchronizeFromRemote = useCallback((remoteData: WorkHoursData[]): void => {
-    logger.info(`Synchronizing with ${remoteData.length} remote entries`);
+  // Update the function signature to match the expected type in WorkHoursContextType
+  const synchronizeFromRemote = useCallback(async (userId: string): Promise<void> => {
+    // Placeholder for actual remote synchronization logic
+    logger.info(`Synchronizing work hours for user ${userId}`);
     
-    setWorkHoursMap(prevMap => {
-      const updatedMap = new Map(prevMap);
+    try {
+      // Mock fetching remote data - in a real implementation, this would call an API
+      const remoteData: WorkHoursData[] = []; // This would be data fetched from a remote source
       
-      remoteData.forEach(remoteItem => {
-        const key = `${remoteItem.userId}-${remoteItem.date}`;
-        const localItem = updatedMap.get(key);
+      setWorkHoursMap(prevMap => {
+        const updatedMap = new Map(prevMap);
         
-        if (!localItem || (remoteItem.lastModified > (localItem.lastModified || 0))) {
-          updatedMap.set(key, {
-            ...remoteItem,
-            lastModified: remoteItem.lastModified || Date.now()
-          });
-        }
+        remoteData.forEach(remoteItem => {
+          const key = `${remoteItem.userId}-${remoteItem.date}`;
+          const localItem = updatedMap.get(key);
+          
+          if (!localItem || (remoteItem.lastModified > (localItem.lastModified || 0))) {
+            updatedMap.set(key, {
+              ...remoteItem,
+              lastModified: remoteItem.lastModified || Date.now()
+            });
+          }
+        });
+        
+        return updatedMap;
       });
-      
-      return updatedMap;
-    });
+    } catch (error) {
+      logger.error(`Error synchronizing from remote: ${error}`);
+    }
   }, [setWorkHoursMap]);
 
   return {
