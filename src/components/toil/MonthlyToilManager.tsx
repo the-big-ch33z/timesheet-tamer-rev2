@@ -215,7 +215,7 @@ const MonthlyToilManager: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <ToilSummary 
+            <TOILSummary 
               summary={summary} 
               showRollover={!!processingState && processingState.status === ToilProcessingStatus.COMPLETED}
             />

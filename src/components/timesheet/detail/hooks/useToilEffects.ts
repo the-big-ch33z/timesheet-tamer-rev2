@@ -42,7 +42,9 @@ export const useToilEffects = ({
     // 3. The day is marked as complete
     if (hasEntries && !leaveActive && !toilActive && isComplete) {
       logger.debug(`[useToilEffects] Auto-calculating TOIL for complete day: ${date.toISOString().split('T')[0]}`);
-      calculateToilForDay();
+      calculateToilForDay().catch(error => {
+        logger.error('TOIL calculation failed:', error);
+      });
     }
   }, [hasEntries, leaveActive, toilActive, isComplete, date, calculateToilForDay, entriesCount]);
 };
