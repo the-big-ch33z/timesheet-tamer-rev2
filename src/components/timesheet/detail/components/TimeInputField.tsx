@@ -23,6 +23,9 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   testId,
   placeholder
 }) => {
+  // Remove default values - display empty string if no value is provided
+  const displayValue = value || "";
+  
   return (
     <div>
       <div className="text-sm text-amber-700 mb-1 mx-[9px]">{label}</div>
@@ -33,7 +36,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
         {interactive ? (
           <TimeInput
             id={`time-input-${type}`}
-            value={value}
+            value={displayValue}
             onChange={(newValue) => onChange(type, newValue)}
             disabled={!interactive}
             className="bg-transparent border-none shadow-none p-0 h-auto"
@@ -43,7 +46,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
         ) : (
           <div className="flex items-center">
             <span className="text-lg flex-1">
-              {value ? value : "--:--"}
+              {displayValue ? displayValue : "--:--"}
             </span>
             <Clock className="h-4 w-4 text-gray-400 ml-2" />
           </div>

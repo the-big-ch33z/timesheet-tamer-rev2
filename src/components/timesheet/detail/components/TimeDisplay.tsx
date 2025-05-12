@@ -21,11 +21,15 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
   interactive,
   onTimeChange
 }) => {
+  // Display empty values until user enters them
+  const displayStartTime = startTime || "";
+  const displayEndTime = endTime || "";
+  
   return (
     <div className="grid grid-cols-2 gap-4">
       <TimeInputField
         label="Start Time"
-        value={startTime}
+        value={displayStartTime}
         type="start"
         interactive={interactive}
         onChange={onTimeChange}
@@ -35,7 +39,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
       
       <TimeInputField
         label="End Time"
-        value={endTime}
+        value={displayEndTime}
         type="end"
         interactive={interactive}
         onChange={onTimeChange}

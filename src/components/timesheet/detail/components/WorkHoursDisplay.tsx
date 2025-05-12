@@ -57,6 +57,10 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
     });
   }, [startTime, endTime, totalHours, calculatedHours, interactive]);
 
+  // Display placeholders instead of the actual values until user enters them
+  const displayStartTime = startTime || "";
+  const displayEndTime = endTime || "";
+
   return (
     <div className="w-full p-4 bg-white border-t border-gray-200 rounded-b-md">
       <div className="flex items-center justify-start gap-6 mb-2">
@@ -64,7 +68,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           <TimeInput 
             id="start-time"
             label="Start Time"
-            value={startTime}
+            value={displayStartTime}
             onChange={(value) => onTimeChange("start", value)} 
             disabled={!interactive}
             className="w-32"
@@ -76,7 +80,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           <TimeInput 
             id="end-time"
             label="End Time"
-            value={endTime}
+            value={displayEndTime}
             onChange={(value) => onTimeChange("end", value)}
             disabled={!interactive}
             className="w-32"

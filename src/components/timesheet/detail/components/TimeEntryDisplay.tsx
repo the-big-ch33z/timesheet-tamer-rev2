@@ -23,13 +23,14 @@ const TimeEntryDisplay: React.FC<TimeEntryDisplayProps> = ({
   interactive,
   onTimeChange
 }) => {
-  const [localStartTime, setLocalStartTime] = useState(startTime);
-  const [localEndTime, setLocalEndTime] = useState(endTime);
+  // Use empty strings if no time values are provided
+  const [localStartTime, setLocalStartTime] = useState(startTime || "");
+  const [localEndTime, setLocalEndTime] = useState(endTime || "");
 
   // Update local state when props change
   useEffect(() => {
-    setLocalStartTime(startTime);
-    setLocalEndTime(endTime);
+    setLocalStartTime(startTime || "");
+    setLocalEndTime(endTime || "");
   }, [startTime, endTime]);
 
   // Handle local time changes
