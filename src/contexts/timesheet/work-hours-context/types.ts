@@ -2,7 +2,7 @@
 import { WorkHoursData } from '../types';
 
 // Define the data structure for storing work hours
-export { WorkHoursData };
+export type { WorkHoursData };
 
 export interface WorkHoursContextType {
   getWorkHours: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom: boolean };

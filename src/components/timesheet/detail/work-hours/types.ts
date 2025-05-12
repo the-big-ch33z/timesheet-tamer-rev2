@@ -1,7 +1,7 @@
 
 import { BreakConfig } from '@/contexts/timesheet/types';
 
-export { BreakConfig };
+export type { BreakConfig };
 
 export interface WorkHoursState {
   startTime: string;
