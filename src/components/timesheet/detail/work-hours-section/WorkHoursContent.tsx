@@ -5,7 +5,7 @@ import WorkHoursDisplay from "../components/WorkHoursDisplay";
 import WorkHoursAlerts from "../components/WorkHoursAlerts";
 import WorkHoursActionButtons from "../components/WorkHoursActionButtons";
 import { WorkHoursStatus } from "../components/WorkHoursStatus";
-import { BreakConfig } from '../work-hours/types';
+import { BreakConfig } from '@/contexts/timesheet/types';
 
 interface WorkHoursContentProps {
   startTime: string;

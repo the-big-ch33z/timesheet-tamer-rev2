@@ -1,6 +1,2 @@
 
-import WorkHoursInterface from './WorkHoursInterface';
-
-export {
-  WorkHoursInterface
-};
+export { default as WorkHoursInterface } from './WorkHoursInterface';
