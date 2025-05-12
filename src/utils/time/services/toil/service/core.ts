@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createTimeLogger } from "@/utils/time/errors";
 import { 
   clearSummaryCache,
-  getStorageTOILSummary
+  getTOILSummary
 } from "../storage";
 import { 
   TOIL_SUMMARY_CACHE_KEY,
@@ -68,7 +68,7 @@ export class TOILServiceCore {
       logger.debug(`Getting TOIL summary for user ${userId}, month ${normalizedMonthYear}`);
       
       // Use the unified implementation from storage/queries.ts
-      const summary = getStorageTOILSummary(userId, normalizedMonthYear);
+      const summary = getTOILSummary(userId, normalizedMonthYear);
       
       logger.debug(`TOIL service returning summary for ${userId} - ${normalizedMonthYear}:`, summary);
       
