@@ -1,4 +1,3 @@
-
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -11,7 +10,7 @@ import { WorkHoursData, BreakConfig } from '@/contexts/timesheet/types';
 import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
-import { EVENT_TYPES } from '@/utils/events/eventTypes';
+import { WORK_HOURS_EVENTS } from '@/utils/events/eventTypes';
 
 /**
  * Comprehensive hook for work hours management
@@ -169,7 +168,7 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
       saveWorkHoursForDate(date, timeToSave.startTime, timeToSave.endTime, userId);
       
       // Notify about the change
-      timeEventsService.publish(EVENT_TYPES.WORK_HOURS_CHANGED, {
+      timeEventsService.publish(WORK_HOURS_EVENTS.CHANGED, {
         date: format(date, 'yyyy-MM-dd'),
         userId,
         startTime: timeToSave.startTime,
@@ -272,7 +271,7 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
     
     // Notify about action state changes
     if (date && userId) {
-      timeEventsService.publish(EVENT_TYPES.WORK_HOURS_ACTION_TOGGLED, {
+      timeEventsService.publish(WORK_HOURS_EVENTS.ACTION_TOGGLED, {
         date: format(date, 'yyyy-MM-dd'),
         userId,
         actionType: type,

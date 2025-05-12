@@ -8,7 +8,7 @@ import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { deprecationWarning } from '@/utils/deprecation/deprecationWarnings';
-import { EVENT_TYPES } from '@/utils/events/eventTypes';
+import { WORK_HOURS_EVENTS } from '@/utils/events/eventTypes';
 
 export const useWorkHoursActions = (date: Date, userId: string) => {
   // Show a deprecation warning in development
@@ -52,7 +52,7 @@ export const useWorkHoursActions = (date: Date, userId: string) => {
     });
     
     // Notify about action state changes
-    timeEventsService.publish(EVENT_TYPES.WORK_HOURS_ACTION_TOGGLED, {
+    timeEventsService.publish(WORK_HOURS_EVENTS.ACTION_TOGGLED, {
       date: format(date, 'yyyy-MM-dd'),
       userId,
       actionType: type,
