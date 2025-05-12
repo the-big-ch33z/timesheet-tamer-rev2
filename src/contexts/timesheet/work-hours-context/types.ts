@@ -18,8 +18,7 @@ export interface WorkHoursContextType {
   hasCustomWorkHours: (date: Date, userId: string) => boolean;
   resetDayWorkHours: (date: Date, userId: string) => void;
   refreshTimesForDate: (date: Date, userId: string) => void;
-  synchronizeFromRemote?: (userId: string) => Promise<void>;
-  getDefaultScheduleHours: (date: Date, userId: string) => { startTime: string; endTime: string };
+  synchronizeFromRemote?: (remoteData: WorkHoursData[]) => void;
   
   // Add the methods being used in useTimeEntryState
   getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
