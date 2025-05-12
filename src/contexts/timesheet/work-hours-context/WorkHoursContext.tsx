@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { useWorkHoursValue } from './hooks/useWorkHoursValue';
 import { WorkHoursContextType } from './types';
@@ -37,7 +38,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   const getDefaultHoursFromSchedule = (date: Date, userId: string) => {
     try {
       // Get the user's schedule or default if not available
-      const userScheduleId = getUserSchedule(userId)?.scheduleId || 'default';
+      const userSchedule = getUserSchedule(userId);
+      const userScheduleId = userSchedule?.id || 'default'; // Fixed: Using id instead of scheduleId
       const schedule = getScheduleById(userScheduleId);
       
       if (!schedule) {
