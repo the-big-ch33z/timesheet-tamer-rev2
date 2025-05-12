@@ -11,7 +11,9 @@ import { getHolidays } from "@/lib/holidays";
 import { DebugPanel, WorkHoursContent } from "./work-hours-section";
 import { useTOILTriggers } from "@/hooks/timesheet/useTOILTriggers";
 import WorkHoursInterface from "./work-hours/WorkHoursInterface";
+import TimeEntryController from "../entry-control/TimeEntryController";
 import { TOILSummary } from "@/types/toil";
+import WorkHoursActions from "./components/WorkHoursActions";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -34,6 +36,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const userContext = useUserTimesheetContext();
   const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [showEntryForm, setShowEntryForm] = useState(false);
   
   // Get the holidays once
   const holidays = React.useMemo(() => getHolidays(), []);
@@ -114,6 +117,10 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     }
   }, [onCreateEntry, userId, date]);
 
+  const handleAddEntry = useCallback(() => {
+    setShowEntryForm(true);
+  }, []);
+
   return (
     <div className="space-y-6 w-full">
       {showDebugPanel && (
@@ -131,6 +138,17 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         entries={dayEntries}
         workSchedule={effectiveWorkSchedule}
         interactive={interactive}
+      />
+      
+      {interactive && (
+        <WorkHoursActions onAddEntry={handleAddEntry} />
+      )}
+
+      <TimeEntryController
+        date={date}
+        userId={userId}
+        interactive={interactive}
+        onCreateEntry={handleCreateEntry}
       />
     </div>
   );
