@@ -2,7 +2,7 @@
 import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
-import { Clock, AlertCircle } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useTOILEvents } from "@/utils/time/events/toilEventService";
 
 import {

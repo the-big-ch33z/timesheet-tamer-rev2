@@ -1,7 +1,6 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { formatDisplayHours } from "@/utils/time/formatting";
-import { CircleMinus, CirclePlus, CircleCheck, AlertTriangle } from "lucide-react";
 
 interface TOILSummaryBoxProps {
   label: string;

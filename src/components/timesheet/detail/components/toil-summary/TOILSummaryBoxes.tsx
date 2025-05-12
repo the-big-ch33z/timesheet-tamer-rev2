@@ -1,7 +1,7 @@
 
 import React, { useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, CircleMinus, CirclePlus, CircleCheck, AlertTriangle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import TOILSummaryBox from "./TOILSummaryBox";
 
 interface TOILSummaryBoxesProps {
@@ -40,31 +40,35 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
     hasInvalidValues 
   });
   
-  const boxConfigs = [{
-    label: "Earned",
-    value: safeAccrued,
-    color: "text-blue-600",
-    border: "border-blue-100 bg-blue-50",
-    icon: <CirclePlus className="w-5 h-5 text-blue-400" />,
-    displaySign: true,
-    showTooltip: true
-  }, {
-    label: "Used",
-    value: safeUsed,
-    color: "text-red-600",
-    border: "border-red-100 bg-red-50",
-    icon: <CircleMinus className="w-5 h-5 text-red-400" />,
-    displaySign: false,
-    forceNegative: true
-  }, {
-    label: "Remaining",
-    value: safeRemaining,
-    color: isNegativeBalance ? "text-[#ea384c]" : "text-green-600",
-    border: isNegativeBalance ? "border-red-100 bg-red-50" : "border-green-100 bg-green-50",
-    icon: isNegativeBalance ? <AlertTriangle className="w-4 h-4 text-[#ea384c]" /> : <CircleCheck className="w-5 h-5 text-green-400" />,
-    displaySign: true,
-    isNegativeBalance
-  }];
+  const boxConfigs = [
+    {
+      label: "Earned",
+      value: safeAccrued,
+      color: "text-blue-600",
+      border: "border-blue-100 bg-blue-50",
+      icon: <span className="text-blue-400">+</span>,
+      displaySign: true,
+      showTooltip: true
+    }, 
+    {
+      label: "Used",
+      value: safeUsed,
+      color: "text-red-600",
+      border: "border-red-100 bg-red-50",
+      icon: <span className="text-red-400">-</span>,
+      displaySign: false,
+      forceNegative: true
+    }, 
+    {
+      label: "Remaining",
+      value: safeRemaining,
+      color: isNegativeBalance ? "text-[#ea384c]" : "text-green-600",
+      border: isNegativeBalance ? "border-red-100 bg-red-50" : "border-green-100 bg-green-50",
+      icon: isNegativeBalance ? <span className="text-[#ea384c]">!</span> : <span className="text-green-400">✓</span>,
+      displaySign: true,
+      isNegativeBalance
+    }
+  ];
   
   return (
     <>

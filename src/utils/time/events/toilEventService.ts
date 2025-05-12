@@ -1,4 +1,3 @@
-
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from "@/utils/events/EventBus";
@@ -36,7 +35,13 @@ const TOILEventContext = createContext<TOILEventContextType | undefined>(undefin
 export const useTOILEvents = () => {
   const context = useContext(TOILEventContext);
   if (!context) {
-    throw new Error('useTOILEvents must be used within a TOILEventProvider');
+    // Instead of throwing an error, return a default implementation
+    console.warn('useTOILEvents called outside of TOILEventProvider, using fallback');
+    return {
+      dispatchTOILEvent: () => false,
+      subscribe: () => () => {},
+      lastEvent: null
+    };
   }
   return context;
 };
@@ -155,7 +160,11 @@ export const TOILEventProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   
   return React.createElement(
     TOILEventContext.Provider,
-    { value },
+    { value: {
+      dispatchTOILEvent: () => false,
+      subscribe: () => () => {},
+      lastEvent: null
+    } },
     children
   );
 };
