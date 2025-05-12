@@ -1,6 +1,7 @@
 
 import { useCallback } from 'react';
 import { createTimeLogger } from '@/utils/time/errors';
+import { WorkHoursData } from '../../types';
 
 const logger = createTimeLogger('useWorkHoursSynchronizer');
 
@@ -18,7 +19,7 @@ export const useWorkHoursSynchronizer = ({
     
     try {
       // Mock fetching remote data - in a real implementation, this would call an API
-      const remoteData = []; // This would be data fetched from a remote source
+      const remoteData: WorkHoursData[] = []; // This would be data fetched from a remote source
       
       setWorkHoursMap(prevMap => {
         const updatedMap = new Map(prevMap);
@@ -40,7 +41,7 @@ export const useWorkHoursSynchronizer = ({
     } catch (error) {
       logger.error(`Error synchronizing from remote: ${error}`);
     }
-  }, []);
+  }, [setWorkHoursMap]);
 
   return {
     synchronizeFromRemote

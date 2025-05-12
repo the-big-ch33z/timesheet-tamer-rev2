@@ -79,8 +79,11 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     try {
       // Get the user schedule
       const userScheduleId = workScheduleContext.getUserSchedule(userId);
+      
+      // Fixed: Compare string scheduleId with 'default' string, not WorkSchedule object
       const schedule = userScheduleId === 'default' 
         ? workScheduleContext.defaultSchedule
+        // Fixed: Pass scheduleId (string) to getScheduleById, not the schedule object
         : workScheduleContext.getScheduleById(userScheduleId) || workScheduleContext.defaultSchedule;
       
       // Get the day info from the schedule
