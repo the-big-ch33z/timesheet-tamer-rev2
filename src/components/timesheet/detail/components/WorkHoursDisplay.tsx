@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Bell, Coffee } from "lucide-react";
 import TimeInput from "@/components/ui/time-input/TimeInput";
 
@@ -45,6 +45,17 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   // Ensure we display actual hours / target hours for clarity
   const displayTotalHours = totalHours;
   const displayCalculatedHours = calculatedHours;
+
+  // For debugging
+  useEffect(() => {
+    console.debug('[WorkHoursDisplay] Received props:', { 
+      startTime, 
+      endTime, 
+      totalHours, 
+      calculatedHours, 
+      interactive 
+    });
+  }, [startTime, endTime, totalHours, calculatedHours, interactive]);
 
   return (
     <div className="w-full p-4 bg-white border-t border-gray-200 rounded-b-md">

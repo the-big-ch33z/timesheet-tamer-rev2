@@ -1,10 +1,11 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { useWorkHoursContext } from '@/contexts/timesheet';
 import { calculateHoursFromTimes } from '@/utils/time/calculations/hoursCalculations';
 import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 import { createTimeLogger } from '@/utils/time/errors';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 const logger = createTimeLogger('useTimeEntryState');
 
@@ -44,20 +45,54 @@ export const useTimeEntryState = ({
   // Get work hours from context
   const workHoursContext = useWorkHoursContext();
   
-  // Get stored work hours for this date and user, handling both API versions
-  let storedWorkHours: { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
+  // For tracking schedule updates
+  const scheduleUpdateCountRef = useRef(0);
   
-  // Try the newer API first, fall back to older API if needed
-  if (workHoursContext.getWorkHoursForDate) {
-    storedWorkHours = workHoursContext.getWorkHoursForDate(date, userId);
-  } else {
-    // Fall back to the original getWorkHours method
-    storedWorkHours = workHoursContext.getWorkHours(date, userId);
-  }
+  // Load work hours from context
+  const loadWorkHours = useCallback(() => {
+    // Get stored work hours for this date and user, handling both API versions
+    let storedWorkHours: { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean };
+    
+    // Try the newer API first, fall back to older API if needed
+    if (workHoursContext.getWorkHoursForDate) {
+      storedWorkHours = workHoursContext.getWorkHoursForDate(date, userId);
+    } else {
+      // Fall back to the original getWorkHours method
+      storedWorkHours = workHoursContext.getWorkHours(date, userId);
+    }
+    
+    return storedWorkHours;
+  }, [workHoursContext, date, userId]);
+  
+  // Initial stored work hours
+  const initialWorkHours = loadWorkHours();
   
   // State for start and end times
-  const [startTime, setStartTime] = useState(storedWorkHours?.startTime || '09:00');
-  const [endTime, setEndTime] = useState(storedWorkHours?.endTime || '17:00');
+  const [startTime, setStartTime] = useState(initialWorkHours?.startTime || '09:00');
+  const [endTime, setEndTime] = useState(initialWorkHours?.endTime || '17:00');
+  
+  // Subscribe to schedule update events
+  useEffect(() => {
+    const scheduleUpdatedHandler = () => {
+      logger.debug('Schedule updated, refreshing work hours');
+      scheduleUpdateCountRef.current += 1;
+      
+      // Refresh work hours from context
+      const refreshedHours = loadWorkHours();
+      setStartTime(refreshedHours?.startTime || '09:00');
+      setEndTime(refreshedHours?.endTime || '17:00');
+    };
+    
+    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', scheduleUpdatedHandler);
+    const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', scheduleUpdatedHandler);
+    const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', scheduleUpdatedHandler);
+    
+    return () => {
+      scheduleUpdatedUnsubscribe.unsubscribe();
+      userScheduleUpdatedUnsubscribe.unsubscribe();
+      scheduleChangedUnsubscribe.unsubscribe();
+    };
+  }, [loadWorkHours]);
   
   // Total hours from all entries
   const totalEnteredHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
@@ -137,13 +172,14 @@ export const useTimeEntryState = ({
     }
   }, [startTime, endTime, interactive, date, userId, workHoursContext, onHoursChange, normalizeTimeValue]);
   
-  // Initialize with stored values on mount
+  // Initialize with stored values when date or userId changes
   useEffect(() => {
-    if (storedWorkHours) {
-      setStartTime(storedWorkHours.startTime);
-      setEndTime(storedWorkHours.endTime);
+    const refreshedHours = loadWorkHours();
+    if (refreshedHours) {
+      setStartTime(refreshedHours.startTime || '09:00');
+      setEndTime(refreshedHours.endTime || '17:00');
     }
-  }, [date, userId]);
+  }, [date, userId, scheduleUpdateCountRef.current, loadWorkHours]);
   
   // Log for debugging
   useEffect(() => {

@@ -1,7 +1,9 @@
+
 import { useCallback, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { useWorkHoursLogger } from './useWorkHoursLogger';
 import { createTimeLogger } from '@/utils/time/errors';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
 
 // Cache for getWorkHours results with expiry
 const workHoursCache = new Map<string, {
@@ -42,6 +44,30 @@ export const useWorkHoursCore = ({
     lastScheduleRefreshRef.current = Date.now();
     logger.debug('Work hours cache cleared');
   }, []);
+
+  // Subscribe to schedule update events
+  useMemo(() => {
+    const scheduleUpdatedUnsubscribe = timeEventsService.subscribe('schedules-updated', () => {
+      logger.debug('Received schedules-updated event, clearing cache');
+      clearCache();
+    });
+    
+    const userScheduleUpdatedUnsubscribe = timeEventsService.subscribe('user-schedules-updated', () => {
+      logger.debug('Received user-schedules-updated event, clearing cache');
+      clearCache();
+    });
+    
+    const scheduleChangedUnsubscribe = timeEventsService.subscribe('user-schedule-changed', () => {
+      logger.debug('Received user-schedule-changed event, clearing cache');
+      clearCache();
+    });
+
+    return () => {
+      scheduleUpdatedUnsubscribe.unsubscribe();
+      userScheduleUpdatedUnsubscribe.unsubscribe();
+      scheduleChangedUnsubscribe.unsubscribe();
+    };
+  }, [clearCache]);
 
   const getWorkHours = useCallback((date: Date, userId: string) => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -114,7 +140,7 @@ export const useWorkHoursCore = ({
     return hasHours;
   }, [logCustomHoursCheck, latestWorkHoursRef]);
 
-  // Clear cache when workHoursMap changes
+  // Immediately clear cache when workHoursMap changes
   useMemo(() => {
     clearCache();
   }, [workHoursMap, clearCache]);

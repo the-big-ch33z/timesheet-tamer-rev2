@@ -18,15 +18,17 @@ export const createWorkHoursOperations = (
 
   const getDefaultHoursFromSchedule = (date: Date, userId: string): { startTime: string; endTime: string } => {
     try {
-      // Always get the latest schedule ID for the user
+      // Always get the latest schedule ID for the user - this is crucial for synchronization
       const userScheduleId = getUserSchedule(userId);
       let selectedSchedule: WorkSchedule;
       
-      // Use latest schedule data
+      // Use latest schedule data - Force fresh lookup every time
       if (userScheduleId === 'default') {
+        // Direct lookup ensures we get the most current data
         selectedSchedule = defaultSchedule;
         logger.debug(`Using default schedule for user ${userId}`);
       } else {
+        // Find the user's schedule in the current schedules array
         const foundSchedule = schedules.find(s => s.id === userScheduleId);
         if (foundSchedule) {
           selectedSchedule = foundSchedule;
