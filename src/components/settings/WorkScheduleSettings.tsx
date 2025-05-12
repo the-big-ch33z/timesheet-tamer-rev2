@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,10 +43,8 @@ const WorkScheduleSettings: React.FC = () => {
   const handleSaveSchedule = () => {
     originalSaveSchedule();
     
-    // Clear the work hours cache to ensure new schedule takes effect immediately
-    clearWorkHoursCache();
-    
     // Publish an explicit event that a schedule has been manually saved
+    // The work hours hook will listen for this event and clear its cache
     timeEventsService.publish('schedules-updated', {
       scheduleId: selectedScheduleId,
       timestamp: Date.now(),

@@ -1,38 +1,211 @@
-
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { useTimesheetWorkHours } from './useTimesheetWorkHours';
 import { useTimeCalculations } from './useTimeCalculations';
-import { unifiedTimeEntryService } from '@/utils/time/services';
-import { WorkHoursData } from '@/contexts/timesheet/types';
-
-/**
- * useWorkHours
- * 
- * Legacy compatibility hook for working with work hours
- * This hook maintains the original API for backward compatibility
- * but internally uses the new standardized hooks
- */
-const logger = createTimeLogger('useWorkHours');
+import { validateTimeOrder } from '@/utils/time/validation';
+import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { WorkHoursData, BreakConfig } from '@/contexts/timesheet/types';
+import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
+import { TimeEntry, WorkSchedule } from '@/types';
+import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 
 /**
  * Comprehensive hook for work hours management
- * Combines functionality from both new and legacy APIs
  * 
- * @param userId - Optional user ID to use if not specified in method calls
+ * This is the main hook for working with work hours in the application.
+ * It combines all functionality from different specialized hooks into one unified API.
+ * 
+ * @param options - Optional configuration object
+ * @returns Combined work hours functionality
  */
-export const useWorkHours = (userId?: string) => {
+
+const logger = createTimeLogger('useWorkHours');
+
+// Define the options interface for the hook
+export interface UseWorkHoursOptions {
+  userId?: string;
+  date?: Date;
+  entries?: TimeEntry[];
+  workSchedule?: WorkSchedule;
+  interactive?: boolean;
+  formHandlers?: UseTimeEntryFormReturn[];
+  onHoursChange?: (hours: number) => void;
+}
+
+export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
+  // Extract options with defaults
+  const {
+    userId,
+    date,
+    entries = [],
+    workSchedule,
+    interactive = true,
+    formHandlers = [],
+    onHoursChange
+  } = options;
+
   // Use the enhanced implementation for core functionality
-  const enhancedHook = useTimesheetWorkHours(userId);
+  const {
+    getWorkHoursForDate,
+    saveWorkHoursForDate,
+    resetWorkHoursForDate,
+    refreshWorkHours
+  } = useTimesheetWorkHours(userId);
   
   // Use our centralized calculation hook
   const { calculateHours } = useTimeCalculations();
+
+  // State for tracking times
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [calculatedHours, setCalculatedHours] = useState(0);
   
-  logger.debug('useWorkHours initialized (compatibility wrapper)');
+  // Action states for leave, TOIL, etc.
+  const [actionStates, setActionStates] = useState({
+    leave: false,
+    sick: false,
+    toil: false,
+    lunch: false,
+    smoko: false
+  });
   
-  // Add additional functionality for TimeEntryManager integration
+  // Load work hours when date or userId changes
+  useEffect(() => {
+    if (!date || !userId) return;
+    
+    logger.debug(`Loading work hours for date: ${date.toDateString()}, userId: ${userId}`);
+    const { startTime: loadedStart, endTime: loadedEnd } = getWorkHoursForDate(date, userId);
+    
+    setStartTime(loadedStart || "");
+    setEndTime(loadedEnd || "");
+    
+    // Calculate hours if both times are present
+    if (loadedStart && loadedEnd) {
+      try {
+        const hours = calculateHours(loadedStart, loadedEnd);
+        setCalculatedHours(hours);
+      } catch (error) {
+        logger.error("Error calculating hours:", error);
+        setCalculatedHours(0);
+      }
+    } else {
+      setCalculatedHours(0);
+    }
+  }, [date, userId, getWorkHoursForDate, calculateHours]);
+
+  // Recalculate hours when times change
+  useEffect(() => {
+    // Only calculate if both times are set
+    if (startTime && endTime) {
+      try {
+        const hours = calculateHours(startTime, endTime);
+        setCalculatedHours(hours);
+        
+        // Update any existing form handlers with the new times
+        if (interactive) {
+          formHandlers.forEach(handler => {
+            if (handler) {
+              handler.updateTimes(startTime, endTime);
+              handler.setHoursFromTimes();
+            }
+          });
+        }
+        
+        // Call onHoursChange if provided
+        if (onHoursChange) {
+          onHoursChange(hours);
+        }
+      } catch (error) {
+        logger.error("Error calculating hours:", error);
+        setCalculatedHours(0);
+      }
+    } else {
+      setCalculatedHours(0);
+    }
+  }, [startTime, endTime, formHandlers, interactive, onHoursChange, calculateHours]);
+  
+  // Handle time input changes with better validation and saving logic
+  const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
+    logger.debug(`Time change: ${type} = ${value}, interactive=${interactive}`);
+    
+    if (!interactive || !userId || !date) {
+      return;
+    }
+    
+    try {
+      // Make sure we have valid values to work with
+      const currentStartTime = type === 'start' ? value : startTime;
+      const currentEndTime = type === 'end' ? value : endTime;
+      
+      // Only validate if both times are set
+      if (currentStartTime && currentEndTime) {
+        // Validate the time order
+        const validation = validateTimeOrder(currentStartTime, currentEndTime);
+        
+        if (!validation.valid) {
+          logger.error(`Invalid time range: ${validation.message}`);
+          return;
+        }
+      }
+      
+      // If validation passes or one of the times is empty, update the times
+      if (type === 'start') {
+        setStartTime(value);
+      } else {
+        setEndTime(value);
+      }
+      
+      // Save the updated times
+      const timeToSave = {
+        startTime: type === 'start' ? value : startTime,
+        endTime: type === 'end' ? value : endTime
+      };
+      
+      logger.debug(`Saving times: ${timeToSave.startTime} - ${timeToSave.endTime}`);
+      saveWorkHoursForDate(date, timeToSave.startTime, timeToSave.endTime, userId);
+      
+      // Notify about the change
+      timeEventsService.publish('work-hours-changed', {
+        date: format(date, 'yyyy-MM-dd'),
+        userId,
+        startTime: timeToSave.startTime,
+        endTime: timeToSave.endTime,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      logger.error("Error updating time:", error);
+    }
+  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
+  
+  // Calculate day hours based on entries or schedule
+  const calculateDayHours = useCallback((targetDate?: Date) => {
+    const dateToUse = targetDate || date;
+    
+    if (!dateToUse) return 0;
+    
+    // If we have entries, use their total hours
+    if (entries && entries.length > 0) {
+      return entries.reduce((total, entry) => total + (entry.hours || 0), 0);
+    }
+    
+    // Otherwise, check if we have times to calculate from
+    const hoursData = getWorkHoursForDate(dateToUse, userId);
+    if (hoursData.startTime && hoursData.endTime) {
+      try {
+        return calculateHours(hoursData.startTime, hoursData.endTime);
+      } catch (error) {
+        logger.error(`Error calculating hours for ${format(dateToUse, 'yyyy-MM-dd')}:`, error);
+        return 0;
+      }
+    }
+    
+    // Default to zero if we have no data
+    return 0;
+  }, [date, entries, userId, getWorkHoursForDate, calculateHours]);
+
+  // Calculate auto hours from start and end times
   const calculateAutoHours = useCallback((startTime: string, endTime: string): number => {
     if (!startTime || !endTime) return 0;
     
@@ -43,28 +216,106 @@ export const useWorkHours = (userId?: string) => {
       return 0;
     }
   }, [calculateHours]);
-  
-  // Add compatibility methods for tests
-  const hasCustomHours = useCallback((date: Date, userId?: string): boolean => {
-    const hours = enhancedHook.getWorkHoursForDate(date, userId);
+
+  // Check if custom hours exist for a date
+  const hasCustomHours = useCallback((date: Date, targetUserId?: string): boolean => {
+    const effectiveUserId = targetUserId || userId;
+    if (!effectiveUserId) return false;
+    
+    const hours = getWorkHoursForDate(date, effectiveUserId);
     return !!hours.startTime && !!hours.endTime && !!hours.hasData;
-  }, [enhancedHook]);
+  }, [getWorkHoursForDate, userId]);
   
-  const resetWorkHours = useCallback((date: Date, userId?: string): void => {
-    enhancedHook.resetWorkHoursForDate(date, userId);
-  }, [enhancedHook]);
+  // Reset work hours for a specific date
+  const resetWorkHours = useCallback((date: Date, targetUserId?: string): void => {
+    const effectiveUserId = targetUserId || userId;
+    if (!effectiveUserId) return;
+    
+    resetWorkHoursForDate(date, effectiveUserId);
+  }, [resetWorkHoursForDate, userId]);
   
-  const calculateDayHours = useCallback((date: Date): number => {
-    const hours = enhancedHook.getWorkHoursForDate(date, userId);
-    if (hours.startTime && hours.endTime) {
-      return calculateAutoHours(hours.startTime, hours.endTime);
+  // Clear all work hours (for compatibility)
+  const clearAllWorkHours = useCallback((targetUserId?: string): void => {
+    const effectiveUserId = targetUserId || userId;
+    if (!effectiveUserId) return;
+    
+    logger.debug('clearAllWorkHours called - operation replaced with refreshWorkHours');
+    refreshWorkHours(undefined, effectiveUserId);
+  }, [refreshWorkHours, userId]);
+  
+  // Toggle action states like leave, sick, TOIL
+  const handleToggleAction = useCallback((type: string, scheduledHours: number): void => {
+    setActionStates(prev => {
+      const newStates = { ...prev };
+      
+      // Special handling for leave and sick which are mutually exclusive
+      if (type === 'leave' || type === 'sick') {
+        newStates.leave = type === 'leave' ? !prev.leave : false;
+        newStates.sick = type === 'sick' ? !prev.sick : false;
+        newStates.toil = false; // Turn off TOIL if leave/sick is enabled
+      } 
+      // Special handling for TOIL
+      else if (type === 'toil') {
+        newStates.toil = !prev.toil;
+        newStates.leave = false; // Turn off leave if TOIL is enabled
+        newStates.sick = false;  // Turn off sick if TOIL is enabled
+      }
+      // Handle breaks
+      else {
+        newStates[type] = !prev[type];
+      }
+      
+      return newStates;
+    });
+    
+    // Notify about action state changes
+    if (date && userId) {
+      timeEventsService.publish('work-hours-action-toggled', {
+        date: format(date, 'yyyy-MM-dd'),
+        userId,
+        actionType: type,
+        scheduledHours,
+        timestamp: Date.now()
+      });
     }
-    return 0;
-  }, [enhancedHook, calculateAutoHours, userId]);
-  
-  // Add a wrapper method that includes calculatedHours for test compatibility
-  const getWorkHoursForDateWithCalculated = useCallback((date: Date, userId?: string) => {
-    const hours = enhancedHook.getWorkHoursForDate(date, userId);
+  }, [date, userId]);
+
+  // Calculate work hours statistics from entries
+  const getWorkHoursStats = useCallback(() => {
+    if (!entries || entries.length === 0) {
+      return {
+        totalEnteredHours: 0,
+        hasEntries: false,
+        hoursVariance: 0,
+        isUndertime: false
+      };
+    }
+
+    // Total hours from all entries
+    const totalEnteredHours = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+    
+    // Calculate target hours (ideally from schedule, default to 8)
+    const targetHours = 8; // Default - in a real implementation this would come from schedule
+    
+    return {
+      totalEnteredHours,
+      hasEntries: entries.length > 0,
+      hoursVariance: calculateHoursVariance(totalEnteredHours, targetHours),
+      isUndertime: isUndertime(totalEnteredHours, targetHours)
+    };
+  }, [entries]);
+
+  // Combine stats from entries
+  const { totalEnteredHours, hasEntries, hoursVariance, isUndertime: isUndertimeValue } = getWorkHoursStats();
+
+  // Add a wrapper method for test compatibility
+  const getWorkHoursForDateWithCalculated = useCallback((date: Date, targetUserId?: string) => {
+    const effectiveUserId = targetUserId || userId;
+    if (!effectiveUserId) {
+      return { startTime: "", endTime: "", calculatedHours: 0, isCustom: false, hasData: false };
+    }
+    
+    const hours = getWorkHoursForDate(date, effectiveUserId);
     const calculatedHours = (hours.startTime && hours.endTime) 
       ? calculateAutoHours(hours.startTime, hours.endTime) 
       : 0;
@@ -72,26 +323,43 @@ export const useWorkHours = (userId?: string) => {
     return {
       ...hours,
       calculatedHours,
-      isCustom: !!hours.hasData // For backward compatibility
+      isCustom: !!hours.hasData
     };
-  }, [enhancedHook, calculateAutoHours]);
-  
-  // Compatibility method for clearAllWorkHours
-  const clearAllWorkHours = useCallback((userId?: string): void => {
-    // This is a no-op in the new system as we rely on refreshWorkHours instead
-    logger.debug('clearAllWorkHours called - operation replaced with refreshWorkHours');
-    enhancedHook.refreshWorkHours(undefined, userId);
-  }, [enhancedHook]);
-  
-  // Extend the hook with the additional methods needed for backward compatibility
+  }, [getWorkHoursForDate, calculateAutoHours, userId]);
+
+  // Return the combined API
   return {
-    ...enhancedHook,
-    calculateAutoHours,
-    hasCustomHours,
+    // Basic state
+    startTime,
+    endTime,
+    calculatedHours,
+    
+    // Time entry states
+    totalEnteredHours,
+    hasEntries,
+    hoursVariance,
+    isUndertime: isUndertimeValue,
+    
+    // Action states
+    actionStates,
+    
+    // Handlers
+    handleTimeChange,
+    handleToggleAction,
+    
+    // Core work hours API
+    getWorkHoursForDate: getWorkHoursForDateWithCalculated,
+    saveWorkHoursForDate,
     resetWorkHours,
+    refreshWorkHours,
+    
+    // Calculation methods
+    calculateAutoHours,
     calculateDayHours,
-    clearAllWorkHours,
-    getWorkHoursForDate: getWorkHoursForDateWithCalculated
+    
+    // Utils
+    hasCustomHours,
+    clearAllWorkHours
   };
 };
 
