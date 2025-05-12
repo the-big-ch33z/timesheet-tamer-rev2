@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format, subMonths, isSameMonth, parseISO } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,16 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import ToilProcessDialog from "./ToilProcessDialog";
-// Fix import capitalization to match the actual file name
-import { TOILSummary } from "@/components/toil/TOILSummary";
-import { fetchToilThresholds } from "@/services/toil/ToilSettingsService";
-import { 
-  fetchToilByMonth, 
-  getMonthProcessingState, 
-  getToilProcessingRecordForMonth,
-  updateMonthProcessingState 
-} from "@/services/toil/ToilProcessingService";
-import { isMonthProcessable, getUserEmploymentType, getToilThreshold, formatHours } from "./helpers/toilUtils";
+import { TOILSummary as TOILSummaryComponent } from "@/components/toil/TOILSummary";
+import { toilService } from "@/utils/time/services/toil";
+import { isMonthProcessable, getUserEmploymentType, getToilThreshold } from "./helpers/toilUtils";
 import { ToilProcessingStatus } from "@/types/monthEndToil";
 import { createTimeLogger } from "@/utils/time/errors";
 
@@ -64,7 +57,7 @@ const MonthlyToilManager: React.FC = () => {
     }
   }, [summary, isLoading, error, selectedMonth]);
   
-  // Fix: Improved check if month can be processed
+  // Check if month can be processed
   const checkIfMonthCanBeProcessed = useCallback(() => {
     if (!summary || !userId) {
       setProcessingEnabled(false);
@@ -72,14 +65,10 @@ const MonthlyToilManager: React.FC = () => {
     }
     
     // Fix: More permissive month processability check for April
-    const now = new Date();
-    const selectedDate = new Date(selectedMonth + "-01");
-    
-    // Consider April processable since we're in May now
     const isProcessable = isMonthProcessable(selectedMonth) && summary.remaining > 0;
 
     // Check if this month has already been processed
-    const existingRecord = getToilProcessingRecordForMonth(userId, selectedMonth);
+    const existingRecord = toilService.getToilProcessingRecordForMonth(userId, selectedMonth);
     
     logger.debug(`Month processability check:`, { 
       month: selectedMonth,
@@ -114,7 +103,7 @@ const MonthlyToilManager: React.FC = () => {
     };
   }, [refreshSummary, checkIfMonthCanBeProcessed]);
   
-  // Generate last 12 months for the dropdown - modified to show month names clearly
+  // Generate last 12 months for the dropdown
   const generateMonthOptions = () => {
     const options = [];
     for (let i = 0; i < 12; i++) {
@@ -149,7 +138,7 @@ const MonthlyToilManager: React.FC = () => {
   };
   
   // Get processing status for this month
-  const processingState = getMonthProcessingState(userId, selectedMonth);
+  const processingState = toilService.getMonthProcessingState(userId, selectedMonth);
   
   // Log current processing state
   useEffect(() => {
@@ -215,7 +204,7 @@ const MonthlyToilManager: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <TOILSummary 
+            <TOILSummaryComponent 
               summary={summary} 
               showRollover={!!processingState && processingState.status === ToilProcessingStatus.COMPLETED}
             />

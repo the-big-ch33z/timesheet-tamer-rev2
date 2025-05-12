@@ -5,6 +5,7 @@ import { ToilThresholds } from "@/types/monthEndToil";
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { formatDisplayHours } from "@/utils/time/formatting";
+import { toilService } from "@/utils/time/services/toil";
 
 const logger = createTimeLogger('TOILUtils');
 

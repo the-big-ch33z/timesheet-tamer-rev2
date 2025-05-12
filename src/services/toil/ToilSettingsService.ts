@@ -1,40 +1,21 @@
 
+/**
+ * @deprecated This file is now deprecated - use toilService from "@/utils/time/services/toil" instead
+ * It's kept for backward compatibility during the transition
+ */
+
+import { toilService } from "@/utils/time/services/toil";
 import { ToilThresholds } from "@/types/monthEndToil";
 
-// Storage key for TOIL thresholds
-const TOIL_THRESHOLDS_KEY = "toil_thresholds";
-
-// Default thresholds
-const DEFAULT_THRESHOLDS: ToilThresholds = {
-  fullTime: 8,
-  partTime: 6,
-  casual: 4
-};
-
-// Fetch TOIL thresholds from storage or use defaults
+// Re-export functions that use the unified service
 export const fetchToilThresholds = (): ToilThresholds => {
-  try {
-    const storedThresholds = localStorage.getItem(TOIL_THRESHOLDS_KEY);
-    return storedThresholds ? JSON.parse(storedThresholds) : DEFAULT_THRESHOLDS;
-  } catch (error) {
-    console.error("Error fetching TOIL thresholds:", error);
-    return DEFAULT_THRESHOLDS;
-  }
+  return toilService.fetchToilThresholds();
 };
 
-// Save TOIL thresholds to storage
 export const saveToilThresholds = (thresholds: ToilThresholds): boolean => {
-  try {
-    localStorage.setItem(TOIL_THRESHOLDS_KEY, JSON.stringify(thresholds));
-    return true;
-  } catch (error) {
-    console.error("Error saving TOIL thresholds:", error);
-    return false;
-  }
+  return toilService.saveToilThresholds(thresholds);
 };
 
-// Reset TOIL thresholds to defaults
 export const resetToilThresholds = (): ToilThresholds => {
-  localStorage.setItem(TOIL_THRESHOLDS_KEY, JSON.stringify(DEFAULT_THRESHOLDS));
-  return DEFAULT_THRESHOLDS;
+  return toilService.resetToilThresholds();
 };

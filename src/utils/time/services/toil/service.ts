@@ -8,9 +8,6 @@ import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
 import { 
   clearSummaryCache,
-  TOIL_RECORDS_KEY,
-  TOIL_USAGE_KEY,
-  TOIL_SUMMARY_CACHE_KEY,
   cleanupDuplicateTOILRecords,
   cleanupDuplicateTOILUsage,
   storeTOILRecord,
@@ -19,10 +16,20 @@ import {
   loadTOILUsage,
   getTOILSummary as getStorageTOILSummary
 } from "./storage/index";
+import { 
+  TOIL_RECORDS_KEY, 
+  TOIL_USAGE_KEY, 
+  TOIL_SUMMARY_CACHE_KEY,
+  TOIL_PROCESSING_RECORDS_KEY,
+  TOIL_MONTH_PROCESSING_STATE_KEY,
+  TOIL_THRESHOLDS_KEY,
+  DEBOUNCE_TIME
+} from "./storage/constants";
 import { calculateTOILHours } from "./calculation";
 import { queueTOILCalculation, processTOILQueue } from "./batch-processing";
 import { dispatchTOILEvent } from "./events";
 import { createTimeLogger } from "../../errors/timeLogger";
+import { ToilProcessingFormData, ToilProcessingRecord, ToilMonthProcessingState, ToilProcessingStatus, ToilThresholds } from "@/types/monthEndToil";
 
 const logger = createTimeLogger('TOILService');
 
@@ -30,14 +37,19 @@ const logger = createTimeLogger('TOILService');
 let lastTOILOperationTime = 0;
 const DEBOUNCE_TIME = 500; // ms
 
+// Default thresholds
+const DEFAULT_THRESHOLDS: ToilThresholds = {
+  fullTime: 8,
+  partTime: 6,
+  casual: 4
+};
+
 // TOIL Service class for managing TOIL calculations and storage
 export class TOILService {
   private calculationQueueEnabled: boolean = true;
   
   constructor(calculationQueueEnabled: boolean = true) {
     this.calculationQueueEnabled = calculationQueueEnabled;
-    
-    // Log constructor initialization
     logger.debug(`TOILService initialized with calculationQueueEnabled=${calculationQueueEnabled}`);
   }
   
@@ -45,7 +57,6 @@ export class TOILService {
   public clearCache(): void {
     try {
       logger.debug('Clearing TOIL cache');
-      console.log('[TOILService] Clearing TOIL cache');
       
       // Clear all summary caches
       for (let i = 0; i < localStorage.length; i++) {
@@ -53,17 +64,14 @@ export class TOILService {
         if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
           localStorage.removeItem(key);
           logger.debug(`Removed cache key: ${key}`);
-          console.log(`[TOILService] Removed cache key: ${key}`);
         }
       }
       
       clearSummaryCache();
       
       logger.debug('TOIL cache cleared successfully');
-      console.log('[TOILService] TOIL cache cleared successfully');
     } catch (error) {
       logger.error('Error clearing TOIL cache:', error);
-      console.error('[TOILService] Error clearing TOIL cache:', error);
     }
   }
 
@@ -76,13 +84,10 @@ export class TOILService {
     holidays: Holiday[]
   ): Promise<TOILSummary | null> {
     try {
-      console.log(`[TOILService] calculateAndStoreTOIL called with ${entries.length} entries for user ${userId}`);
-      
       // Apply debouncing to prevent duplicate calculations
       const now = Date.now();
       if (now - lastTOILOperationTime < DEBOUNCE_TIME) {
         logger.debug('Skipping duplicate TOIL calculation due to debounce');
-        console.log('[TOILService] Skipping duplicate TOIL calculation due to debounce');
         return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
       }
       lastTOILOperationTime = now;
@@ -92,33 +97,24 @@ export class TOILService {
       // Validate inputs
       if (!entries || entries.length === 0) {
         logger.debug('No entries to calculate TOIL for');
-        console.log('[TOILService] No entries to calculate TOIL for');
         return null;
       }
       
       if (!userId) {
         logger.error('Missing userId for TOIL calculation');
-        console.error('[TOILService] Missing userId for TOIL calculation');
         return null;
       }
       
       if (!workSchedule) {
         logger.error('Missing workSchedule for TOIL calculation');
-        console.error('[TOILService] Missing workSchedule for TOIL calculation');
         return null;
       }
       
-      // Enhanced logging for debugging
-      logger.debug(`Processing ${entries.length} entries for TOIL calculation`);
-      console.log(`[TOILService] Processing ${entries.length} entries for TOIL calculation`);
-      
       // Filter out synthetic TOIL entries to prevent circular calculation
       const nonToilEntries = entries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
-      console.log(`[TOILService] Filtered to ${nonToilEntries.length} non-TOIL entries`);
       
       if (nonToilEntries.length === 0) {
         logger.debug('Only synthetic TOIL entries found, skipping TOIL calculation');
-        console.log('[TOILService] Only synthetic TOIL entries found, skipping TOIL calculation');
         return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
       }
       
@@ -128,11 +124,9 @@ export class TOILService {
       const toilHours = calculateTOILHours(nonToilEntries, date, workSchedule, holidays);
       
       logger.debug(`TOIL hours calculated: ${toilHours}`);
-      console.log(`[TOILService] TOIL hours calculated: ${toilHours}`);
       
       if (toilHours === 0) {
         logger.debug('No TOIL hours calculated');
-        console.log('[TOILService] No TOIL hours calculated');
         return this.getTOILSummary(userId, monthYear); // Return existing summary
       }
       
@@ -148,19 +142,16 @@ export class TOILService {
       };
       
       logger.debug(`Created TOIL record: ${JSON.stringify(toilRecord)}`);
-      console.log(`[TOILService] Created TOIL record: ${JSON.stringify(toilRecord)}`);
       
       // Store the TOIL record using our enhanced function
       const stored = await storeTOILRecord(toilRecord);
       
       if (!stored) {
         logger.error('Failed to store TOIL record');
-        console.error('[TOILService] Failed to store TOIL record');
         return null;
       }
       
       logger.debug('TOIL record stored successfully, cleaning up duplicates');
-      console.log('[TOILService] TOIL record stored successfully, cleaning up duplicates');
       
       // Run cleanup to remove any duplicate entries
       await cleanupDuplicateTOILRecords(userId);
@@ -169,7 +160,6 @@ export class TOILService {
       const summary = this.getTOILSummary(userId, monthYear);
       
       logger.debug(`Updated TOIL summary: ${JSON.stringify(summary)}`);
-      console.log(`[TOILService] Updated TOIL summary: ${JSON.stringify(summary)}`);
       
       // Dispatch TOIL update event
       dispatchTOILEvent(summary);
@@ -177,12 +167,11 @@ export class TOILService {
       return summary;
     } catch (error) {
       logger.error(`Error in calculateAndStoreTOIL: ${error instanceof Error ? error.message : String(error)}`, error);
-      console.error(`[TOILService] Error in calculateAndStoreTOIL: ${error instanceof Error ? error.message : String(error)}`, error);
       return null;
     }
   }
 
-  // Get TOIL summary for a user and month - non-async method
+  // Get TOIL summary for a user and month
   public getTOILSummary(userId: string, monthYear: string | Date): TOILSummary {
     try {
       // Normalize input to string format
@@ -191,13 +180,11 @@ export class TOILService {
         : monthYear;
       
       logger.debug(`Getting TOIL summary for user ${userId}, month ${normalizedMonthYear}`);
-      console.log(`[TOILService] Getting TOIL summary for user ${userId}, month ${normalizedMonthYear}`);
       
-      // Use the unified implementation from storage/queries.ts - this returns a TOILSummary directly
+      // Use the unified implementation from storage/queries.ts
       const summary = getStorageTOILSummary(userId, normalizedMonthYear);
       
       logger.debug(`TOIL service returning summary for ${userId} - ${normalizedMonthYear}:`, summary);
-      console.log(`[TOILService] TOIL service returning summary for ${userId} - ${normalizedMonthYear}:`, summary);
       
       // Extra validation to catch potential issues
       if (summary) {
@@ -206,7 +193,6 @@ export class TOILService {
         // Check for NaN or invalid values
         if (isNaN(accrued) || isNaN(used) || isNaN(remaining)) {
           logger.error(`Invalid numeric values in TOIL summary: accrued=${accrued}, used=${used}, remaining=${remaining}`);
-          console.error(`[TOILService] Invalid numeric values in TOIL summary: accrued=${accrued}, used=${used}, remaining=${remaining}`);
           
           // Return a corrected summary
           return {
@@ -228,7 +214,6 @@ export class TOILService {
       };
     } catch (error) {
       logger.error(`Error getting TOIL summary from service: ${error instanceof Error ? error.message : String(error)}`, error);
-      console.error(`[TOILService] Error getting TOIL summary: ${error instanceof Error ? error.message : String(error)}`, error);
       
       // Return a valid but empty summary on error
       return {
@@ -241,16 +226,13 @@ export class TOILService {
     }
   }
 
-  // Record TOIL usage - IMPROVED with duplicate prevention
+  // Record TOIL usage
   public async recordTOILUsage(entry: TimeEntry): Promise<boolean> {
     try {
-      console.log(`[TOILService] recordTOILUsage called for entry ID: ${entry?.id}`);
-      
       // Apply debouncing to prevent duplicate calculations
       const now = Date.now();
       if (now - lastTOILOperationTime < DEBOUNCE_TIME) {
         logger.debug('Skipping duplicate TOIL usage record due to debounce');
-        console.log('[TOILService] Skipping duplicate TOIL usage record due to debounce');
         return true;
       }
       lastTOILOperationTime = now;
@@ -259,24 +241,17 @@ export class TOILService {
       
       if (!entry) {
         logger.error('No entry provided for TOIL usage');
-        console.error('[TOILService] No entry provided for TOIL usage');
         return false;
       }
       
       // Skip if this entry is not a TOIL entry
       if (entry.jobNumber !== "TOIL") {
         logger.debug('Entry is not a TOIL entry, skipping usage recording');
-        console.log('[TOILService] Entry is not a TOIL entry, skipping usage recording');
         return false;
       }
       
       if (!entry.userId || !entry.date || typeof entry.hours !== 'number') {
         logger.error('Invalid TOIL entry data', { 
-          hasUserId: !!entry.userId, 
-          hasDate: !!entry.date, 
-          hours: entry.hours 
-        });
-        console.error('[TOILService] Invalid TOIL entry data', { 
           hasUserId: !!entry.userId, 
           hasDate: !!entry.date, 
           hours: entry.hours 
@@ -287,7 +262,6 @@ export class TOILService {
       // Enhanced error checking for TOIL usage amount
       if (entry.hours <= 0) {
         logger.error(`Invalid TOIL usage hours: ${entry.hours}. Must be positive.`);
-        console.error(`[TOILService] Invalid TOIL usage hours: ${entry.hours}. Must be positive.`);
         return false;
       }
       
@@ -296,7 +270,6 @@ export class TOILService {
       
       if (existingUsages.length > 0) {
         logger.debug(`TOIL usage already recorded for entry ${entry.id}, skipping duplicate`);
-        console.log(`[TOILService] TOIL usage already recorded for entry ${entry.id}, skipping duplicate`);
         
         // Clean up any duplicate entries while we're here
         await cleanupDuplicateTOILUsage(entry.userId);
@@ -304,7 +277,6 @@ export class TOILService {
       }
       
       logger.debug(`Creating new TOIL usage record for ${entry.hours} hours`);
-      console.log(`[TOILService] Creating new TOIL usage record for ${entry.hours} hours`);
       
       const usage: TOILUsage = {
         id: uuidv4(),
@@ -317,7 +289,6 @@ export class TOILService {
       
       // Use the improved storage function that prevents duplicates
       const stored = await storeTOILUsage(usage);
-      console.log(`[TOILService] TOIL usage storage result: ${stored}`);
       
       if (stored) {
         logger.debug('TOIL usage stored successfully');
@@ -329,16 +300,13 @@ export class TOILService {
         dispatchTOILEvent(summary);
         
         logger.debug(`Updated TOIL summary after usage recorded: ${JSON.stringify(summary)}`);
-        console.log(`[TOILService] Updated TOIL summary after usage recorded: ${JSON.stringify(summary)}`);
       } else {
         logger.error('Failed to store TOIL usage');
-        console.error('[TOILService] Failed to store TOIL usage');
       }
       
       return stored;
     } catch (error) {
       logger.error(`Error recording TOIL usage: ${error instanceof Error ? error.message : String(error)}`, error);
-      console.error(`[TOILService] Error recording TOIL usage: ${error instanceof Error ? error.message : String(error)}`, error);
       return false;
     }
   }
@@ -353,11 +321,9 @@ export class TOILService {
     resolve: (summary: TOILSummary | null) => void
   ): void {
     logger.debug(`Queueing TOIL calculation for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
-    console.log(`[TOILService] Queueing TOIL calculation for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
     
     if (!this.calculationQueueEnabled) {
       logger.warn('TOIL calculation queue is disabled, processing immediately');
-      console.warn('[TOILService] TOIL calculation queue is disabled, processing immediately');
       this.processCalculation(userId, date, entries, workSchedule, holidays, resolve);
       return;
     }
@@ -383,13 +349,11 @@ export class TOILService {
   ): Promise<void> {
     try {
       logger.debug(`Processing TOIL calculation for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
-      console.log(`[TOILService] Processing TOIL calculation for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
       
       // Apply debouncing to prevent duplicate calculations
       const now = Date.now();
       if (now - lastTOILOperationTime < DEBOUNCE_TIME) {
         logger.debug('Skipping duplicate TOIL calculation due to debounce');
-        console.log('[TOILService] Skipping duplicate TOIL calculation due to debounce');
         resolve(this.getTOILSummary(userId, format(date, 'yyyy-MM')));
         return;
       }
@@ -399,11 +363,9 @@ export class TOILService {
       
       // Filter out synthetic TOIL entries to prevent circular calculation
       const nonToilEntries = entries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
-      console.log(`[TOILService] Processing ${nonToilEntries.length} non-TOIL entries for calculation`);
       
       if (nonToilEntries.length === 0) {
         logger.debug('Only synthetic TOIL entries found, skipping TOIL calculation');
-        console.log('[TOILService] Only synthetic TOIL entries found, skipping TOIL calculation');
         resolve(this.getTOILSummary(userId, monthYear));
         return;
       }
@@ -412,11 +374,9 @@ export class TOILService {
       const toilHours = calculateTOILHours(nonToilEntries, date, workSchedule, holidays);
       
       logger.debug(`TOIL hours calculated: ${toilHours}`);
-      console.log(`[TOILService] TOIL hours calculated: ${toilHours}`);
       
       if (toilHours === 0) {
         logger.debug('No TOIL hours calculated');
-        console.log('[TOILService] No TOIL hours calculated');
         resolve(this.getTOILSummary(userId, monthYear)); // Resolve with existing summary
         return;
       }
@@ -433,14 +393,12 @@ export class TOILService {
       };
       
       logger.debug(`Created TOIL record: ${JSON.stringify(toilRecord)}`);
-      console.log(`[TOILService] Created TOIL record: ${JSON.stringify(toilRecord)}`);
       
       // Store the TOIL record
       const stored = await this.storeTOILRecord(toilRecord);
       
       if (!stored) {
         logger.error('Failed to store TOIL record');
-        console.error('[TOILService] Failed to store TOIL record');
         resolve(null);
         return;
       }
@@ -457,7 +415,6 @@ export class TOILService {
       resolve(summary);
     } catch (error) {
       logger.error(`Error in processCalculation: ${error instanceof Error ? error.message : String(error)}`, error);
-      console.error(`[TOILService] Error in processCalculation: ${error instanceof Error ? error.message : String(error)}`, error);
       resolve(null);
     }
   }
@@ -466,13 +423,189 @@ export class TOILService {
   private async storeTOILRecord(record: TOILRecord): Promise<boolean> {
     try {
       logger.debug(`Storing TOIL record: ${JSON.stringify(record)}`);
-      console.log(`[TOILService] Storing TOIL record: ${JSON.stringify(record)}`);
       return storeTOILRecord(record);
     } catch (error) {
       logger.error(`Error in storeTOILRecord: ${error instanceof Error ? error.message : String(error)}`, error);
-      console.error(`[TOILService] Error in storeTOILRecord: ${error instanceof Error ? error.message : String(error)}`, error);
       return false;
     }
+  }
+
+  // MONTH-END PROCESSING METHODS (Moved from ToilProcessingService)
+
+  // Fetch TOIL processing records
+  public fetchToilProcessingRecords(): ToilProcessingRecord[] {
+    try {
+      const records = localStorage.getItem(TOIL_PROCESSING_RECORDS_KEY);
+      return records ? JSON.parse(records) : [];
+    } catch (error) {
+      logger.error("Error fetching TOIL processing records:", error);
+      return [];
+    }
+  }
+
+  // Save TOIL processing records
+  private saveToilProcessingRecords(records: ToilProcessingRecord[]): void {
+    localStorage.setItem(TOIL_PROCESSING_RECORDS_KEY, JSON.stringify(records));
+    logger.debug(`Saved ${records.length} TOIL processing records`);
+  }
+
+  // Get TOIL processing records for a user
+  public getUserToilProcessingRecords(userId: string): ToilProcessingRecord[] {
+    const records = this.fetchToilProcessingRecords();
+    return records.filter(record => record.userId === userId);
+  }
+
+  // Get TOIL processing record by ID
+  public getToilProcessingRecordById(id: string): ToilProcessingRecord | null {
+    const records = this.fetchToilProcessingRecords();
+    const record = records.find(record => record.id === id);
+    return record || null;
+  }
+
+  // Get TOIL processing record for a specific month
+  public getToilProcessingRecordForMonth(userId: string, month: string): ToilProcessingRecord | null {
+    const records = this.getUserToilProcessingRecords(userId);
+    const record = records.find(record => record.month === month);
+    
+    if (record) {
+      logger.debug(`Found existing processing record for user ${userId}, month ${month}`, record);
+    } else {
+      logger.debug(`No processing record found for user ${userId}, month ${month}`);
+    }
+    
+    return record || null;
+  }
+
+  // Submit TOIL processing request
+  public submitToilProcessing(data: ToilProcessingFormData): ToilProcessingRecord {
+    const records = this.fetchToilProcessingRecords();
+    
+    logger.debug(`Submitting TOIL processing for user ${data.userId}, month ${data.month}`, data);
+    
+    // Check if a record already exists for this month
+    const existingIndex = records.findIndex(
+      record => record.userId === data.userId && record.month === data.month
+    );
+
+    const processingRecord: ToilProcessingRecord = {
+      id: existingIndex >= 0 ? records[existingIndex].id : uuidv4(),
+      userId: data.userId,
+      month: data.month,
+      totalHours: data.totalHours,
+      rolloverHours: data.rolloverHours,
+      surplusHours: data.surplusHours,
+      surplusAction: data.surplusAction,
+      status: "pending",
+      submittedAt: new Date().toISOString(),
+      originalRecords: [], // Would be populated with actual TOIL record IDs
+    };
+
+    if (existingIndex >= 0) {
+      records[existingIndex] = processingRecord;
+      logger.debug(`Updated existing processing record for ${data.month}`);
+    } else {
+      records.push(processingRecord);
+      logger.debug(`Created new processing record for ${data.month}`);
+    }
+
+    this.saveToilProcessingRecords(records);
+    
+    // Update the month processing state
+    this.updateMonthProcessingState(data.userId, data.month, ToilProcessingStatus.IN_PROGRESS);
+    
+    // Dispatch event for UI update
+    const event = new CustomEvent("toil-month-end-submitted", { detail: processingRecord });
+    window.dispatchEvent(event);
+    
+    return processingRecord;
+  }
+
+  // Get TOIL month processing state
+  public getMonthProcessingState(userId: string, month: string): ToilMonthProcessingState | null {
+    try {
+      const states = localStorage.getItem(TOIL_MONTH_PROCESSING_STATE_KEY);
+      const allStates: ToilMonthProcessingState[] = states ? JSON.parse(states) : [];
+      
+      const state = allStates.find(state => state.userId === userId && state.month === month);
+      
+      logger.debug(`Got processing state for user ${userId}, month ${month}:`, state || 'Not found');
+      
+      return state || null;
+    } catch (error) {
+      logger.error("Error fetching TOIL month processing state:", error);
+      return null;
+    }
+  }
+
+  // Update TOIL month processing state
+  public updateMonthProcessingState(
+    userId: string,
+    month: string,
+    status: ToilProcessingStatus
+  ): void {
+    try {
+      logger.debug(`Updating processing state for user ${userId}, month ${month} to ${status}`);
+      
+      const states = localStorage.getItem(TOIL_MONTH_PROCESSING_STATE_KEY);
+      const allStates: ToilMonthProcessingState[] = states ? JSON.parse(states) : [];
+      
+      const existingIndex = allStates.findIndex(
+        state => state.userId === userId && state.month === month
+      );
+      
+      const newState: ToilMonthProcessingState = {
+        userId,
+        month,
+        status,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      if (existingIndex >= 0) {
+        allStates[existingIndex] = newState;
+        logger.debug(`Updated existing processing state for ${month}`);
+      } else {
+        allStates.push(newState);
+        logger.debug(`Created new processing state for ${month}`);
+      }
+      
+      localStorage.setItem(TOIL_MONTH_PROCESSING_STATE_KEY, JSON.stringify(allStates));
+      
+      // Dispatch event for UI update
+      const event = new CustomEvent("toil-month-state-updated", { detail: newState });
+      window.dispatchEvent(event);
+    } catch (error) {
+      logger.error("Error updating TOIL month processing state:", error);
+    }
+  }
+
+  // THRESHOLD MANAGEMENT METHODS (Moved from ToilSettingsService)
+  
+  // Fetch TOIL thresholds
+  public fetchToilThresholds(): ToilThresholds {
+    try {
+      const storedThresholds = localStorage.getItem(TOIL_THRESHOLDS_KEY);
+      return storedThresholds ? JSON.parse(storedThresholds) : DEFAULT_THRESHOLDS;
+    } catch (error) {
+      logger.error("Error fetching TOIL thresholds:", error);
+      return DEFAULT_THRESHOLDS;
+    }
+  }
+  
+  // Save TOIL thresholds
+  public saveToilThresholds(thresholds: ToilThresholds): boolean {
+    try {
+      localStorage.setItem(TOIL_THRESHOLDS_KEY, JSON.stringify(thresholds));
+      return true;
+    } catch (error) {
+      logger.error("Error saving TOIL thresholds:", error);
+      return false;
+    }
+  }
+  
+  // Reset TOIL thresholds to defaults
+  public resetToilThresholds(): ToilThresholds {
+    localStorage.setItem(TOIL_THRESHOLDS_KEY, JSON.stringify(DEFAULT_THRESHOLDS));
+    return DEFAULT_THRESHOLDS;
   }
 }
 

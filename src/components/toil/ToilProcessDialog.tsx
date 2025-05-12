@@ -1,12 +1,11 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { fetchToilThresholds } from "@/services/toil/ToilSettingsService";
-import { submitToilProcessing } from "@/services/toil/ToilProcessingService";
+import { toilService } from "@/utils/time/services/toil";
 import { getUserEmploymentType, getToilThreshold, calculateToilDistribution, formatHours } from "./helpers/toilUtils";
 import { ToilProcessingFormData } from "@/types/monthEndToil";
 import { TOILSummary } from "@/types/toil";
@@ -31,7 +30,7 @@ const ToilProcessDialog: React.FC<ToilProcessDialogProps> = ({
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [surplusAction, setSurplusAction] = useState<"paid" | "banked">("paid");
-  const [thresholds, setThresholds] = useState(fetchToilThresholds());
+  const [thresholds, setThresholds] = useState(toilService.fetchToilThresholds());
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Get user employment type and threshold
@@ -57,7 +56,7 @@ const ToilProcessDialog: React.FC<ToilProcessDialogProps> = ({
         surplusAction
       };
       
-      const result = await submitToilProcessing(formData);
+      const result = toilService.submitToilProcessing(formData);
       
       toast({
         title: "TOIL Processing Submitted",
