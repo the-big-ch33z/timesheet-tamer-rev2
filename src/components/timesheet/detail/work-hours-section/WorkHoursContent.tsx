@@ -5,20 +5,15 @@ import WorkHoursDisplay from "../components/WorkHoursDisplay";
 import WorkHoursAlerts from "../components/WorkHoursAlerts";
 import WorkHoursActionButtons from "../components/WorkHoursActionButtons";
 import { WorkHoursStatus } from "../components/WorkHoursStatus";
-import { TimeEntry, WorkSchedule } from '@/types';
 import { BreakConfig } from '../work-hours/types';
 
 interface WorkHoursContentProps {
-  date: Date;
-  userId: string;
-  dayEntries: TimeEntry[];
-  workSchedule?: WorkSchedule;
-  interactive: boolean;
   startTime: string;
   endTime: string;
   effectiveTotalHours: number;
   calculatedTimeHours: number;
   hasEntries: boolean;
+  interactive: boolean;
   isActuallyComplete: boolean;
   hoursVariance: number;
   isUndertime: boolean;
@@ -27,22 +22,18 @@ interface WorkHoursContentProps {
   actionStates: Record<string, boolean>;
   isOverScheduled: boolean;
   isCalculating: boolean;
+  date: Date;
   handleTimeChange: (type: 'start' | 'end', value: string) => void;
   handleToggleAction: (type: string, scheduledHours: number) => void;
-  onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
 const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
-  date,
-  userId,
-  dayEntries,
-  workSchedule,
-  interactive,
   startTime,
   endTime,
   effectiveTotalHours,
   calculatedTimeHours,
   hasEntries,
+  interactive,
   isActuallyComplete,
   hoursVariance,
   isUndertime,
@@ -51,9 +42,9 @@ const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
   actionStates,
   isOverScheduled,
   isCalculating,
+  date,
   handleTimeChange,
-  handleToggleAction,
-  onCreateEntry
+  handleToggleAction
 }) => {
   const leaveActive = actionStates.leave || actionStates.sick;
   const toilActive = actionStates.toil;

@@ -5,11 +5,10 @@ import { useWorkHours } from '@/hooks/timesheet/useWorkHours';
 import { useTimeCalculations } from '@/hooks/timesheet/useTimeCalculations';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
-import WorkHoursContent from './WorkHoursContent';
 import { useTimeEntryState } from '@/hooks/timesheet/detail/hooks/useTimeEntryState';
 import { useWorkHoursActions } from '@/components/timesheet/detail/hooks/useWorkHoursActions';
 import { useWorkHoursCalculation } from '@/components/timesheet/detail/hooks/useWorkHoursCalculation';
-import { HoursSummary } from '@/components/timesheet/detail/components/HoursSummary';
+import { WorkHoursContent } from '../work-hours-section';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -67,19 +66,21 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   // Calculate scheduled hours for the day
   const scheduledHours = calculateDayHours();
   
-  // Use specialized hook for hours calculation
-  const {
-    calculatedTimeHours,
-    isComplete,
-    isOverScheduled
-  } = useHoursCalculation({
-    startTime,
-    endTime,
-    breakAdjustments: 0, // This will be adjusted by action buttons
-    scheduledHours,
-    effectiveHours: totalEnteredHours,
-    hasEntries
-  });
+  // Calculate hours with the workHoursCalculation hook
+  const [calculatedTimeHours, setCalculatedTimeHours] = useState(scheduledHours);
+  const [isComplete, setIsComplete] = useState(false);
+  const [isOverScheduled, setIsOverScheduled] = useState(false);
+  
+  // Recalculate derived values when inputs change
+  useEffect(() => {
+    const effectiveHours = totalEnteredHours || 0;
+    const isCompleted = effectiveHours >= (scheduledHours * 0.99); // Allow slight rounding differences
+    const isOver = effectiveHours > (scheduledHours * 1.05); // Over by 5%
+    
+    setCalculatedTimeHours(scheduledHours);
+    setIsComplete(isCompleted);
+    setIsOverScheduled(isOver);
+  }, [totalEnteredHours, scheduledHours]);
 
   // Work hours actions (leave, sick, toil, breaks)
   const {
@@ -124,10 +125,6 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     <div className="space-y-4">
       <WorkHoursContent
         date={date}
-        userId={userId}
-        dayEntries={entries}
-        workSchedule={workSchedule}
-        interactive={interactive}
         startTime={startTime}
         endTime={endTime}
         effectiveTotalHours={totalEnteredHours}

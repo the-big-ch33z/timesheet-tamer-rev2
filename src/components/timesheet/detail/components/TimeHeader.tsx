@@ -47,7 +47,7 @@ const TimeHeader: React.FC<TimeHeaderProps> = ({
         hoursVariance={hoursVariance}
         interactive={interactive}
         date={date}
-        showEntryForms={false}
+        isComplete={false}
       />
     </div>
   );

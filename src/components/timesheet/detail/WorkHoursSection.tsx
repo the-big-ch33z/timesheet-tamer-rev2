@@ -9,7 +9,7 @@ import { useToilEffects } from "@/components/timesheet/detail/work-hours/useToil
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { getHolidays } from "@/lib/holidays";
 import { DebugPanel, WorkHoursContent } from "./work-hours-section";
-import { useTOILTriggers } from "../hooks/useTOILTriggers";
+import { useTOILTriggers } from "@/hooks/timesheet/useTOILTriggers"; // Fixed import path
 import WorkHoursInterface from "./work-hours/WorkHoursInterface";
 
 const logger = createTimeLogger('WorkHoursSection');
