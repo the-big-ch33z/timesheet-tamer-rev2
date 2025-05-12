@@ -14,7 +14,7 @@ export interface UseToilEffectsProps {
   leaveActive: boolean;
   toilActive: boolean;
   isComplete: boolean;
-  calculateToilForDay: () => Promise<void>;
+  calculateToilForDay: () => Promise<void>; // Updated to Promise<void>
   entriesCount: number;
 }
 

@@ -12,7 +12,7 @@ export interface UseToilEffectsParams {
   leaveActive?: boolean;
   toilActive?: boolean;
   isComplete?: boolean;
-  calculateToilForDay?: () => Promise<any>;
+  calculateToilForDay?: () => Promise<void>; // Updated to Promise<void>
   entriesCount?: number;
   // Add new parameters that were being used in WorkHoursSection.tsx
   userId?: string;

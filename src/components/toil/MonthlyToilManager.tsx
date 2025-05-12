@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import ToilProcessDialog from "./ToilProcessDialog";
-import { ToilSummary } from "./ToilSummary";
+// Fix import capitalization to match the actual file name
+import { TOILSummary } from "@/components/toil/TOILSummary";
 import { fetchToilThresholds } from "@/services/toil/ToilSettingsService";
 import { 
   fetchToilByMonth, 

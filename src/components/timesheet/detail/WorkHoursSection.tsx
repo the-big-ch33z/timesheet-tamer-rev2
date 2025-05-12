@@ -11,6 +11,7 @@ import { getHolidays } from "@/lib/holidays";
 import { DebugPanel, WorkHoursContent } from "./work-hours-section";
 import { useTOILTriggers } from "@/hooks/timesheet/useTOILTriggers";
 import WorkHoursInterface from "./work-hours/WorkHoursInterface";
+import { TOILSummary } from "@/types/toil";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -56,6 +57,19 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     workSchedule: effectiveWorkSchedule,
     holidays
   });
+  
+  // Fix: Create a wrapper function that conforms to the expected type
+  const calculateToilWrapper = useCallback(async (): Promise<void> => {
+    try {
+      await calculateToilForDay();
+      // Explicitly return undefined to satisfy the Promise<void> return type
+      return undefined;
+    } catch (error) {
+      logger.error('Error in TOIL calculation wrapper:', error);
+      // Still return undefined even in case of error
+      return undefined;
+    }
+  }, [calculateToilForDay]);
 
   useEffect(() => {
     if (effectiveWorkSchedule) {
@@ -70,13 +84,13 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     setShowDebugPanel(isDevMode);
   }, [effectiveWorkSchedule]);
   
-  // Call updated hook with object-based parameters
+  // Call updated hook with object-based parameters, using the wrapper function
   useToilEffects({
     hasEntries: dayEntries.length > 0,
     leaveActive: false,
     toilActive: false,
     isComplete: true,
-    calculateToilForDay,
+    calculateToilForDay: calculateToilWrapper,
     entriesCount: dayEntries.length,
     userId,
     date,
