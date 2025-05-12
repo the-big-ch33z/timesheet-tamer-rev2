@@ -1,0 +1,94 @@
+
+import { createTimeLogger } from "@/utils/time/errors";
+import { TOILServiceCore } from "./core";
+import { TOILServiceCalculation } from "./calculation";
+import { TOILServiceUsage } from "./usage";
+import { TOILServiceProcessing } from "./processing";
+import { TOILServiceSettings } from "./settings";
+import { processTOILQueue } from "../batch-processing";
+
+const logger = createTimeLogger('TOILService');
+
+/**
+ * Complete TOIL service that inherits all functionality from specialized service classes
+ */
+export class TOILService extends TOILServiceCore {
+  private calculationService: TOILServiceCalculation;
+  private usageService: TOILServiceUsage;
+  private processingService: TOILServiceProcessing;
+  private settingsService: TOILServiceSettings;
+  
+  constructor(calculationQueueEnabled: boolean = true) {
+    super(calculationQueueEnabled);
+    
+    // Initialize specialized services
+    this.calculationService = new TOILServiceCalculation(calculationQueueEnabled);
+    this.usageService = new TOILServiceUsage(calculationQueueEnabled);
+    this.processingService = new TOILServiceProcessing(calculationQueueEnabled);
+    this.settingsService = new TOILServiceSettings(calculationQueueEnabled);
+    
+    logger.debug('TOILService fully initialized with all specialized services');
+  }
+  
+  // ======= Delegation methods for calculation service =======
+  public async calculateAndStoreTOIL(...args: Parameters<TOILServiceCalculation['calculateAndStoreTOIL']>) {
+    return this.calculationService.calculateAndStoreTOIL(...args);
+  }
+  
+  public queueCalculation(...args: Parameters<TOILServiceCalculation['queueCalculation']>) {
+    return this.calculationService.queueCalculation(...args);
+  }
+  
+  // ======= Delegation methods for usage service =======
+  public async recordTOILUsage(...args: Parameters<TOILServiceUsage['recordTOILUsage']>) {
+    return this.usageService.recordTOILUsage(...args);
+  }
+  
+  // ======= Delegation methods for processing service =======
+  public fetchToilProcessingRecords() {
+    return this.processingService.fetchToilProcessingRecords();
+  }
+  
+  public getUserToilProcessingRecords(...args: Parameters<TOILServiceProcessing['getUserToilProcessingRecords']>) {
+    return this.processingService.getUserToilProcessingRecords(...args);
+  }
+  
+  public getToilProcessingRecordById(...args: Parameters<TOILServiceProcessing['getToilProcessingRecordById']>) {
+    return this.processingService.getToilProcessingRecordById(...args);
+  }
+  
+  public getToilProcessingRecordForMonth(...args: Parameters<TOILServiceProcessing['getToilProcessingRecordForMonth']>) {
+    return this.processingService.getToilProcessingRecordForMonth(...args);
+  }
+  
+  public submitToilProcessing(...args: Parameters<TOILServiceProcessing['submitToilProcessing']>) {
+    return this.processingService.submitToilProcessing(...args);
+  }
+  
+  public getMonthProcessingState(...args: Parameters<TOILServiceProcessing['getMonthProcessingState']>) {
+    return this.processingService.getMonthProcessingState(...args);
+  }
+  
+  public updateMonthProcessingState(...args: Parameters<TOILServiceProcessing['updateMonthProcessingState']>) {
+    return this.processingService.updateMonthProcessingState(...args);
+  }
+  
+  // ======= Delegation methods for settings service =======
+  public fetchToilThresholds() {
+    return this.settingsService.fetchToilThresholds();
+  }
+  
+  public saveToilThresholds(...args: Parameters<TOILServiceSettings['saveToilThresholds']>) {
+    return this.settingsService.saveToilThresholds(...args);
+  }
+  
+  public resetToilThresholds() {
+    return this.settingsService.resetToilThresholds();
+  }
+}
+
+// Export a singleton instance of the TOILService
+export const toilService = new TOILService();
+
+// Start processing the queue
+processTOILQueue();
