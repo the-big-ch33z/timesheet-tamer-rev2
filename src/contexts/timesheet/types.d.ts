@@ -32,6 +32,11 @@ export interface WorkHoursData {
   hasData?: boolean;
 }
 
+// For backward compatibility, provide WorkHoursState as an alias to WorkHoursData
+export type WorkHoursState = WorkHoursData & {
+  calculatedHours?: number;
+};
+
 // Consolidated WorkHoursContextType - the unified interface
 export interface WorkHoursContextType {
   // Core methods
@@ -57,13 +62,4 @@ export interface WorkHoursContextType {
 export interface BreakConfig {
   lunch: boolean;
   smoko: boolean;
-}
-
-// Standardized work hours state
-export interface WorkHoursState {
-  startTime: string;
-  endTime: string;
-  isCustom: boolean;
-  hasData?: boolean;
-  calculatedHours?: number;
 }

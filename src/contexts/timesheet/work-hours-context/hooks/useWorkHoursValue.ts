@@ -18,18 +18,36 @@ export const useWorkHoursValue = ({
   latestWorkHoursRef,
   getDefaultHoursFromSchedule
 }: UseWorkHoursValueProps): WorkHoursContextType => {
-  const { getWorkHours, hasCustomWorkHours, getWorkHoursForDate } = useWorkHoursCore({
+  const coreHooks = useWorkHoursCore({
     workHoursMap,
     setWorkHoursMap,
     latestWorkHoursRef,
     getDefaultHoursFromSchedule
   });
 
-  const { saveWorkHours, clearWorkHours, saveWorkHoursForDate } = useWorkHoursModification({
+  const { getWorkHours, hasCustomWorkHours } = coreHooks;
+  
+  // Create getWorkHoursForDate if it doesn't exist
+  const getWorkHoursForDate = (date: Date, userId: string) => {
+    const baseHours = getWorkHours(date, userId);
+    return {
+      ...baseHours,
+      hasData: baseHours.isCustom
+    };
+  };
+
+  const modificationHooks = useWorkHoursModification({
     workHoursMap,
     setWorkHoursMap,
     getDefaultHoursFromSchedule
   });
+  
+  const { saveWorkHours, clearWorkHours } = modificationHooks;
+  
+  // Create saveWorkHoursForDate if it doesn't exist
+  const saveWorkHoursForDate = (date: Date, startTime: string, endTime: string, userId: string) => {
+    saveWorkHours(date, userId, startTime, endTime);
+  };
 
   const { resetDayWorkHours, refreshTimesForDate } = useWorkHoursManagement({
     workHoursMap,
