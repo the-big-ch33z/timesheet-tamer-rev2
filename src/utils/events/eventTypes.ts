@@ -18,7 +18,8 @@ export const WORK_HOURS_EVENTS = {
   UPDATED: 'work-hours:updated',
   RESET: 'work-hours:reset',
   LOADED: 'work-hours:loaded',
-  CHANGED: 'work-hours:changed'
+  CHANGED: 'work-hours:changed',
+  ACTION_TOGGLED: 'work-hours:action-toggled'
 };
 
 // TOIL events
@@ -67,11 +68,14 @@ export interface TimeEntryEventData {
 
 export interface WorkHoursEventData {
   userId?: string;
-  date?: Date;
+  date?: string;
   startTime?: string;
   endTime?: string;
   hours?: number;
   isCustom?: boolean;
+  actionType?: string;
+  scheduledHours?: number;
+  timestamp?: number;
 }
 
 export interface TOILEventData {

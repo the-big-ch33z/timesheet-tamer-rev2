@@ -2,24 +2,10 @@
 /**
  * Enhanced event service for timesheet-related events with improved type safety
  */
+import { EventType } from '@/utils/events/eventTypes';
 
-type TimeEventType = 
-  | 'entry-created' 
-  | 'entry-updated' 
-  | 'entry-deleted' 
-  | 'hours-updated' 
-  | 'hours-reset'
-  | 'work-hours-updated'
-  | 'work-hours-reset'
-  | 'work-hours-cleared'
-  | 'schedules-updated'
-  | 'user-schedules-updated'
-  | 'user-schedule-changed'
-  | 'toil-calculated'
-  | 'toil-updated'
-  | 'timesheet-entry-saved'
-  | 'timesheet-day-changed'
-  | 'timesheet-month-changed';
+// Use the centralized event type from eventTypes.ts
+type TimeEventType = EventType | string;
 
 // Subscription with proper cleanup
 interface Subscription {
@@ -105,7 +91,7 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
   const now = Date.now();
   
   // Record in history for debugging
-  eventHistory.unshift({ type: eventType, time: now, data });
+  eventHistory.unshift({ type: eventType as string, time: now, data });
   if (eventHistory.length > MAX_EVENT_HISTORY) {
     eventHistory.pop();
   }
@@ -118,7 +104,7 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
   if (!handlerCount) {
     // No handler, fire DOM event for legacy/other listeners
     try {
-      const event = new CustomEvent(eventType, { detail: data });
+      const event = new CustomEvent(eventType as string, { detail: data });
       window.dispatchEvent(event);
     } catch (error) {
       console.error(`[TimeEvents] Error dispatching DOM event for ${eventType}:`, error);
@@ -161,7 +147,7 @@ const publish = (eventType: TimeEventType, data: any = {}): boolean => {
 
     // Still dispatch legacy DOM event for compatibility
     try {
-      const event = new CustomEvent(eventType, { detail: data });
+      const event = new CustomEvent(eventType as string, { detail: data });
       window.dispatchEvent(event);
     } catch (error) {
       console.error(`[TimeEvents] Error dispatching DOM event for ${eventType}:`, error);

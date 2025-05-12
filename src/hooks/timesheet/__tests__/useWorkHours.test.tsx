@@ -77,7 +77,7 @@ describe('useWorkHours Hook', () => {
   
   it('gets custom work hours for a user', () => {
     const testDate = new Date();
-    const { result } = renderHook(() => useWorkHours('user-with-custom-hours'));
+    const { result } = renderHook(() => useWorkHours({ userId: 'user-with-custom-hours' }));
     
     const workHours = result.current.getWorkHoursForDate(testDate);
     
@@ -91,7 +91,7 @@ describe('useWorkHours Hook', () => {
   
   it('calculates hours correctly from work hours', () => {
     const testDate = new Date();
-    const { result } = renderHook(() => useWorkHours('user-with-custom-hours'));
+    const { result } = renderHook(() => useWorkHours({ userId: 'user-with-custom-hours' }));
     
     const workHours = result.current.getWorkHoursForDate(testDate);
     
@@ -101,7 +101,7 @@ describe('useWorkHours Hook', () => {
   
   it('saves work hours correctly', () => {
     const testDate = new Date();
-    const { result } = renderHook(() => useWorkHours('test-user'));
+    const { result } = renderHook(() => useWorkHours({ userId: 'test-user' }));
     
     // Mock the context methods to spy on them
     const mockWorkHoursContext = require('@/contexts/timesheet/work-hours-context/WorkHoursContext').useWorkHoursContext();
@@ -133,7 +133,7 @@ describe('useWorkHours Hook', () => {
   
   it('resets work hours to defaults', () => {
     const testDate = new Date();
-    const { result } = renderHook(() => useWorkHours('test-user'));
+    const { result } = renderHook(() => useWorkHours({ userId: 'test-user' }));
     
     // Mock the context methods to spy on them
     const mockWorkHoursContext = require('@/contexts/timesheet/work-hours-context/WorkHoursContext').useWorkHoursContext();
@@ -151,7 +151,7 @@ describe('useWorkHours Hook', () => {
   
   it('calculates day hours correctly', () => {
     const testDate = new Date();
-    const { result } = renderHook(() => useWorkHours('user-with-custom-hours'));
+    const { result } = renderHook(() => useWorkHours({ userId: 'user-with-custom-hours' }));
     
     const hours = result.current.calculateDayHours(testDate);
     
