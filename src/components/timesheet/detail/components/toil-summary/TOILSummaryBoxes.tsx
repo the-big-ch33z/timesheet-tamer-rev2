@@ -11,17 +11,33 @@ interface TOILSummaryBoxesProps {
   onError?: (error: string) => void;
 }
 
+// Helper function to log box rendering info
+const logBoxInfo = (index: number, label: string, showTooltip?: boolean) => {
+  console.log(`TOILSummaryBoxes - Inside Fragment - box ${index}, with tooltip: ${showTooltip}`);
+  if (showTooltip) {
+    console.log(`TOILSummaryBoxes - Rendering tooltip content for box ${index}`);
+  }
+};
+
 const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
   accrued,
   used,
   remaining,
   onError
 }) => {
+  console.log('TOILSummaryBoxes - Component rendering with props:', { 
+    accrued, 
+    used, 
+    remaining, 
+    onError: !!onError 
+  });
+  
   // Guard against invalid inputs with better error handling
   const hasInvalidValues = [accrued, used, remaining].some(val => !isFinite(val));
   
   useEffect(() => {
     if (hasInvalidValues && onError) {
+      console.log('TOILSummaryBoxes - Reporting invalid values to parent');
       onError("Invalid TOIL values detected");
     }
   }, [hasInvalidValues, onError]);
@@ -32,7 +48,7 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
   const safeRemaining = isFinite(remaining) ? remaining : 0;
   const isNegativeBalance = safeRemaining < 0;
 
-  console.log('TOILSummaryBoxes rendering with values:', { 
+  console.log('TOILSummaryBoxes - Processed safe values:', { 
     safeAccrued, 
     safeUsed, 
     safeRemaining, 
@@ -69,6 +85,8 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
       isNegativeBalance
     }
   ];
+
+  console.log('TOILSummaryBoxes - Generated box configs:', boxConfigs);
   
   return (
     <>
@@ -79,10 +97,13 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        {boxConfigs.map((boxConfig) => (
-          <React.Fragment key={boxConfig.label}>
-            {boxConfig.label === "Earned" && boxConfig.showTooltip ? (
-              <TooltipProvider>
+        {boxConfigs.map((boxConfig, index) => {
+          console.log(`TOILSummaryBoxes - Rendering box ${index} with label: ${boxConfig.label}`);
+          
+          // Return the appropriate component based on whether we need a tooltip
+          if (boxConfig.label === "Earned" && boxConfig.showTooltip) {
+            return (
+              <TooltipProvider key={boxConfig.label}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="contents">
@@ -102,11 +123,15 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            ) : (
-              <TOILSummaryBox {...boxConfig} />
-            )}
-          </React.Fragment>
-        ))}
+            );
+          } else {
+            return (
+              <React.Fragment key={boxConfig.label}>
+                <TOILSummaryBox {...boxConfig} />
+              </React.Fragment>
+            );
+          }
+        })}
       </div>
     </>
   );

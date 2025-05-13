@@ -1,103 +1,116 @@
 
-import React, { createContext, useContext } from "react";
-import { UserMetrics, UserMetricsContextType, DEFAULT_USER_METRICS } from "./types";
-import { useAuth } from "@/contexts/auth";
-import { useToast } from "@/hooks/use-toast";
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { useErrorContext } from '../error/ErrorContext';
+import { BaseContextProvider } from '../base/BaseContext';
+import { useLogger } from '@/hooks/useLogger';
+import { UserMetrics, UserMetricsContextType, DEFAULT_USER_METRICS } from './types';
 
-// Create the context with a default implementation
-const UserMetricsContext = createContext<UserMetricsContextType>({
-  getUserMetrics: () => DEFAULT_USER_METRICS,
-  updateUserMetrics: async () => {},
-  resetUserMetrics: async () => {}
-});
+// Create context
+const UserMetricsContext = createContext<UserMetricsContextType | undefined>(undefined);
 
-export const UserMetricsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, updateUserMetrics: authUpdateUserMetrics } = useAuth();
-  const { toast } = useToast();
+export interface UserMetricsProviderProps {
+  children: ReactNode;
+}
 
-  // Get user metrics with defaults for missing values
-  const getUserMetrics = (userId: string): UserMetrics => {
-    const user = users.find(u => u.id === userId);
-    
-    if (!user) {
-      console.log(`User ${userId} not found, returning default metrics`);
-      return DEFAULT_USER_METRICS;
-    }
-    
-    return {
-      fte: user.fte !== undefined ? user.fte : DEFAULT_USER_METRICS.fte,
-      fortnightHours: user.fortnightHours !== undefined ? user.fortnightHours : DEFAULT_USER_METRICS.fortnightHours,
-      workScheduleId: user.workScheduleId || DEFAULT_USER_METRICS.workScheduleId
-    };
-  };
+/**
+ * Provider component for user metrics
+ */
+export const UserMetricsProvider: React.FC<UserMetricsProviderProps> = ({ children }) => {
+  const logger = useLogger('UserMetricsContext');
+  const [metricsStore, setMetricsStore] = useState<Record<string, UserMetrics>>({});
+  
+  // Use try/catch for error context in case it's not available
+  let errorHandler = { handleError: (error: any) => console.error(error) };
+  try {
+    errorHandler = useErrorContext();
+  } catch (error) {
+    logger.warn('ErrorContext not available in UserMetricsContext, using fallback');
+  }
 
-  // Update user metrics with validation
-  const updateUserMetrics = async (userId: string, metrics: Partial<UserMetrics>): Promise<void> => {
+  // Get metrics for a specific user
+  const getUserMetrics = useCallback((userId: string): UserMetrics => {
+    logger.debug(`Getting metrics for user ${userId}`);
+    return metricsStore[userId] || DEFAULT_USER_METRICS;
+  }, [metricsStore, logger]);
+
+  // Update metrics for a specific user
+  const updateUserMetrics = useCallback(async (userId: string, metrics: Partial<UserMetrics>): Promise<void> => {
+    logger.debug(`Updating metrics for user ${userId}:`, metrics);
     try {
-      // Validate metrics before updating
-      const validatedMetrics: Partial<UserMetrics> = {};
-      
-      if (metrics.fte !== undefined) {
-        validatedMetrics.fte = Number.isFinite(metrics.fte) ? metrics.fte : DEFAULT_USER_METRICS.fte;
-      }
-      
-      if (metrics.fortnightHours !== undefined) {
-        validatedMetrics.fortnightHours = Number.isFinite(metrics.fortnightHours) 
-          ? metrics.fortnightHours 
-          : DEFAULT_USER_METRICS.fortnightHours;
-      }
-      
-      if (metrics.workScheduleId !== undefined) {
-        validatedMetrics.workScheduleId = metrics.workScheduleId;
-      }
-      
-      await authUpdateUserMetrics(userId, validatedMetrics);
-      console.log(`Updated user ${userId} metrics:`, validatedMetrics);
-      
+      setMetricsStore(prev => ({
+        ...prev,
+        [userId]: {
+          ...getUserMetrics(userId),
+          ...metrics
+        }
+      }));
+      return Promise.resolve();
     } catch (error) {
-      console.error("Error updating user metrics:", error);
-      toast({
-        title: "Failed to update metrics",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
+      logger.error(`Failed to update metrics for user ${userId}:`, error);
+      errorHandler.handleError(error);
+      return Promise.reject(error);
+    }
+  }, [metricsStore, getUserMetrics, logger, errorHandler]);
+
+  // Reset metrics for a specific user
+  const resetUserMetrics = useCallback(async (userId: string): Promise<void> => {
+    logger.debug(`Resetting metrics for user ${userId}`);
+    try {
+      setMetricsStore(prev => {
+        const newStore = { ...prev };
+        delete newStore[userId];
+        return newStore;
       });
+      return Promise.resolve();
+    } catch (error) {
+      logger.error(`Failed to reset metrics for user ${userId}:`, error);
+      errorHandler.handleError(error);
+      return Promise.reject(error);
+    }
+  }, [logger, errorHandler]);
+
+  // Initialize metrics from storage or API
+  const initializeMetrics = async () => {
+    try {
+      logger.debug('Initializing user metrics');
+      
+      // This could be extended to load from localStorage or an API
+      return {};
+    } catch (error) {
+      logger.error('Failed to initialize metrics:', error);
+      errorHandler.handleError(error);
       throw error;
     }
   };
 
-  // Reset user metrics to defaults
-  const resetUserMetrics = async (userId: string): Promise<void> => {
-    try {
-      await authUpdateUserMetrics(userId, DEFAULT_USER_METRICS);
-      console.log(`Reset user ${userId} metrics to defaults`);
-      
-      toast({
-        title: "Metrics reset",
-        description: "User metrics have been reset to default values",
-      });
-    } catch (error) {
-      console.error("Error resetting user metrics:", error);
-      toast({
-        title: "Failed to reset metrics",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const value: UserMetricsContextType = {
+  const contextValue: UserMetricsContextType = {
     getUserMetrics,
     updateUserMetrics,
     resetUserMetrics
   };
 
   return (
-    <UserMetricsContext.Provider value={value}>
-      {children}
-    </UserMetricsContext.Provider>
+    <BaseContextProvider
+      contextName="UserMetrics"
+      initializer={initializeMetrics}
+      autoInitialize={true}
+    >
+      <UserMetricsContext.Provider value={contextValue}>
+        {children}
+      </UserMetricsContext.Provider>
+    </BaseContextProvider>
   );
 };
 
-// Hook for using the context
-export const useUserMetrics = () => useContext(UserMetricsContext);
+/**
+ * Hook for accessing user metrics context
+ */
+export const useUserMetrics = (): UserMetricsContextType => {
+  const context = useContext(UserMetricsContext);
+  
+  if (!context) {
+    throw new Error('useUserMetrics must be used within a UserMetricsProvider');
+  }
+  
+  return context;
+};

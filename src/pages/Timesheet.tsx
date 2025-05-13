@@ -1,14 +1,6 @@
 
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErrorBoundary";
-import { 
-  useUserTimesheetContext,
-  useCalendarContext
-} from "@/contexts/timesheet";
-import { useTimesheetUIContext } from "@/contexts/timesheet";
-import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
-import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
-import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { initializeService } from "@/utils/time/services/api-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
@@ -34,13 +26,6 @@ const LoadingComponent = () => (
  * the timesheet contexts from the provider hierarchy
  */
 const TimesheetContent = () => {
-  const {
-    viewedUser,
-    isViewingOtherUser,
-    canViewTimesheet
-  } = useUserTimesheetContext();
-  
-  const { selectedDay } = useCalendarContext();
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
@@ -79,16 +64,6 @@ const TimesheetContent = () => {
     };
   }, [toast]);
   
-  // Check for permission or if user exists
-  if (!viewedUser || !canViewTimesheet) {
-    return (
-      <TimesheetNotFound 
-        userExists={!!viewedUser} 
-        canViewTimesheet={canViewTimesheet} 
-      />
-    );
-  }
-  
   // If we had an initialization error, show fallback
   if (initError) {
     return (
@@ -104,25 +79,16 @@ const TimesheetContent = () => {
     return <LoadingComponent />;
   }
 
-  // Use the unified TimeEntryProvider directly
   return (
-    <TimeEntryProvider selectedDate={selectedDay} userId={viewedUser.id}>
-      <div className="container py-6 max-w-7xl">
-        {/* Back button when viewing other user's timesheet */}
-        <TimesheetBackNavigation 
-          user={viewedUser}
-          isViewingOtherUser={isViewingOtherUser}
-        />
+    <div className="container py-6 max-w-7xl">
+      <Suspense fallback={<LoadingComponent />}>
+        <UserInfo />
+      </Suspense>
 
-        <Suspense fallback={<LoadingComponent />}>
-          <UserInfo user={viewedUser} />
-        </Suspense>
-
-        <Suspense fallback={<LoadingComponent />}>
-          <TimesheetTabs />
-        </Suspense>
-      </div>
-    </TimeEntryProvider>
+      <Suspense fallback={<LoadingComponent />}>
+        <TimesheetTabs />
+      </Suspense>
+    </div>
   );
 };
 
@@ -131,6 +97,7 @@ const TimesheetContent = () => {
  * Provides error boundary and context providers
  */
 const Timesheet = () => {
+  console.log("Rendering Timesheet component");
   return (
     <TimesheetWithErrorBoundary>
       <TimesheetContent />
