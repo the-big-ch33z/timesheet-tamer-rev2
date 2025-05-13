@@ -17,19 +17,6 @@ const logger = createTimeLogger('TimesheetContext');
  * 
  * Provides centralized state management for timesheet functionality.
  * This is the main entry point for timesheet-related components.
- * 
- * Context Architecture:
- * - All contexts are implemented as parallel providers rather than deeply nested
- * - Each context is responsible for its own initialization and state management
- * - Inter-context communication happens through explicit dependencies or the global event bus
- * 
- * Context Dependency Hierarchy:
- * TimesheetContext
- * ├── TimesheetUIProvider (independent)
- * ├── UserTimesheetProvider (depends on auth state)
- * ├── WorkHoursProvider (independent, may use WorkScheduleContext externally)
- * └── CalendarProvider (independent)
- *     └── TimeEntryProvider (depends on selectedDate from CalendarProvider)
  */
 
 // Re-export individual context hooks for easier access from components
@@ -41,7 +28,6 @@ export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
 export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 
 // Custom event to trigger auto-save across components
-// Enhanced with debounce protection
 let lastTriggerTime = 0;
 
 /**
@@ -73,16 +59,43 @@ export const triggerGlobalSave = (): boolean => {
  * @returns {UnifiedTimesheetContextType} Combined context values
  */
 export const useTimesheetContext = (): UnifiedTimesheetContextType => {
-  const calendar = useCalendarContext();
-  const user = useUserTimesheetContext();
-  const ui = useTimesheetUIContext();
-  
-  // Combine all context values into one object for backward compatibility
-  return {
-    ...calendar,
-    ...user,
-    ...ui
-  };
+  try {
+    const calendar = useCalendarContext();
+    const user = useUserTimesheetContext();
+    const ui = useTimesheetUIContext();
+    
+    // Combine all context values into one object for backward compatibility
+    return {
+      ...calendar,
+      ...user,
+      ...ui
+    };
+  } catch (error) {
+    console.error('Error in useTimesheetContext:', error);
+    // Return a minimal valid object to prevent app crash
+    return {
+      // Calendar minimal defaults
+      currentMonth: new Date(),
+      selectedDay: new Date(),
+      prevMonth: () => {},
+      nextMonth: () => {},
+      handleDayClick: () => {},
+      setSelectedDay: () => {},
+      
+      // UI minimal defaults
+      activeTab: 'timesheet',
+      setActiveTab: () => {},
+      showHelpPanel: false,
+      setShowHelpPanel: () => {},
+      
+      // User minimal defaults
+      viewedUser: null,
+      isViewingOtherUser: false,
+      canViewTimesheet: true,
+      canEditTimesheet: true,
+      workSchedule: null
+    };
+  }
 };
 
 interface TimesheetProviderProps {
@@ -127,14 +140,18 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
   
   // Flattened provider structure - each context is now responsible for its own initialization
   return (
-    <TimesheetUIProvider>
-      <UserTimesheetProvider>
-        <WorkHoursProvider>
-          <CalendarProvider onBeforeDateChange={handleBeforeDateChange}>
-            {children}
-          </CalendarProvider>
-        </WorkHoursProvider>
-      </UserTimesheetProvider>
-    </TimesheetUIProvider>
+    <React.ErrorBoundary fallback={<div className="p-4">Error loading timesheet</div>}>
+      <TimesheetUIProvider>
+        <UserTimesheetProvider>
+          <WorkHoursProvider>
+            <CalendarProvider onBeforeDateChange={handleBeforeDateChange}>
+              <React.Suspense fallback={<div className="p-4">Loading timesheet...</div>}>
+                {children}
+              </React.Suspense>
+            </CalendarProvider>
+          </WorkHoursProvider>
+        </UserTimesheetProvider>
+      </TimesheetUIProvider>
+    </React.ErrorBoundary>
   );
 };
