@@ -25,6 +25,34 @@ const TOILSummaryBox: React.FC<TOILSummaryBoxProps> = ({
   isNegativeBalance,
   showTooltip
 }) => {
+  // Log all props to see any unexpected ones
+  console.log(`TOILSummaryBox - Rendering with props for ${label}:`, { 
+    label, 
+    value, 
+    color, 
+    border, 
+    icon: !!icon, // Just logging that icon exists to avoid circular references
+    displaySign, 
+    forceNegative, 
+    isNegativeBalance, 
+    showTooltip
+  });
+  
+  // Check for any unexpected props
+  const allProps = arguments[0];
+  const expectedPropNames = ['label', 'value', 'color', 'border', 'icon', 'displaySign', 
+    'forceNegative', 'isNegativeBalance', 'showTooltip'];
+  
+  // Find unexpected props (could include data-lov-id)
+  const unexpectedProps = Object.keys(allProps || {}).filter(
+    prop => !expectedPropNames.includes(prop)
+  );
+  
+  if (unexpectedProps.length > 0) {
+    console.warn(`TOILSummaryBox(${label}) - Received unexpected props:`, unexpectedProps);
+    console.log('TOILSummaryBox - Full props object:', allProps);
+  }
+  
   let formattedValue;
   
   try {
@@ -35,6 +63,7 @@ const TOILSummaryBox: React.FC<TOILSummaryBoxProps> = ({
     } else {
       formattedValue = formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '');
     }
+    console.log(`TOILSummaryBox(${label}) - Formatted value:`, formattedValue);
   } catch (e) {
     console.error(`Error formatting value for ${label}`, e);
     formattedValue = "0h";

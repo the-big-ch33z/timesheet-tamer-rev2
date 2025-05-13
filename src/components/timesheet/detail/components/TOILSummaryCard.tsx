@@ -39,6 +39,32 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   rolloverHours = 0,
   useSimpleView = false
 }) => {
+  console.log('TOILSummaryCard - Component rendering with props:', { 
+    summary: summary ? 'present' : 'null',
+    loading, 
+    monthName,
+    className, 
+    hasErrorCallback: !!onError,
+    showRollover,
+    rolloverHours,
+    useSimpleView
+  });
+  
+  // Check for any unexpected props that might be passed down
+  const allProps = arguments[0];
+  const expectedPropNames = ['summary', 'loading', 'monthName', 'className', 'onError', 
+    'showRollover', 'rolloverHours', 'useSimpleView'];
+  
+  // Find unexpected props (could include data-lov-id)
+  const unexpectedProps = Object.keys(allProps || {}).filter(
+    prop => !expectedPropNames.includes(prop)
+  );
+  
+  if (unexpectedProps.length > 0) {
+    console.warn('TOILSummaryCard - Received unexpected props:', unexpectedProps);
+    console.log('TOILSummaryCard - Full props object:', allProps);
+  }
+  
   // Subscribe to TOIL events if available
   const toilEvents = React.useRef<ReturnType<typeof useTOILEvents> | null>(null);
   
@@ -73,6 +99,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       'used' in summary &&
       'remaining' in summary;
     
+    console.log('TOILSummaryCard - Data validation:', { hasSummary, hasValidStructure });
+    
     // Safety checks for null or invalid summary
     if (!hasSummary && !loading) {
       console.warn('TOILSummaryCard received null summary and not in loading state');
@@ -99,6 +127,14 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     const isNegativeBalance = remaining < 0;
     const hasNoTOILActivity = loading || (accrued === 0 && used === 0);
     
+    console.log('TOILSummaryCard - Before rendering content:', {
+      isNegativeBalance,
+      hasNoTOILActivity,
+      renderedComponent: loading ? 'TOILLoadingState' : 
+        hasNoTOILActivity ? 'TOILEmptyState' : 
+        useSimpleView ? 'UnifiedTOILSummary' : 'TOILSummaryBoxes'
+    });
+    
     return (
       <Card 
         className={`bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl
@@ -113,18 +149,30 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
         </CardHeader>
         <CardContent className="pt-0">
           {loading ? (
-            <TOILLoadingState />
+            <>
+              {console.log('TOILSummaryCard - Rendering loading state')}
+              <TOILLoadingState />
+            </>
           ) : hasNoTOILActivity ? (
-            <TOILEmptyState />
+            <>
+              {console.log('TOILSummaryCard - Rendering empty state')}
+              <TOILEmptyState />
+            </>
           ) : useSimpleView ? (
-            <UnifiedTOILSummary 
-              summary={summary} 
-              showRollover={showRollover} 
-              rolloverHours={rolloverHours}
-              variant="simple"
-            />
+            <>
+              {console.log('TOILSummaryCard - Rendering unified simple view')}
+              <UnifiedTOILSummary 
+                summary={summary} 
+                showRollover={showRollover} 
+                rolloverHours={rolloverHours}
+                variant="simple"
+              />
+            </>
           ) : (
             <>
+              {console.log('TOILSummaryCard - About to render TOILSummaryBoxes with:', {
+                accrued, used, remaining
+              })}
               <TOILSummaryBoxes 
                 accrued={accrued} 
                 used={used} 
@@ -132,7 +180,12 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
                 onError={onError}
               />
 
-              {isNegativeBalance && <TOILNegativeBalanceWarning />}
+              {isNegativeBalance && (
+                <>
+                  {console.log('TOILSummaryCard - Rendering negative balance warning')}
+                  <TOILNegativeBalanceWarning />
+                </>
+              )}
 
               <TOILProgressBar 
                 remaining={remaining} 

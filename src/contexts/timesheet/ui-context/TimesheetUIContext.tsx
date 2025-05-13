@@ -1,42 +1,72 @@
 
-import React, { createContext, useContext, ReactNode, useState } from 'react';
-import { TimesheetUIContextType } from '../types';
-import { createTimeLogger } from '@/utils/time/errors';
+import React, { createContext, useContext, useState } from 'react';
 
-const logger = createTimeLogger('TimesheetUIContext');
-
-// Create the context
-const TimesheetUIContext = createContext<TimesheetUIContextType | undefined>(undefined);
-
-export interface TimesheetUIProviderProps {
-  children: ReactNode;
-  initialTab?: string;
+// Define the context state interface
+export interface TimesheetUIState {
+  activeTab: string;
+  isLoading: boolean;
+  hasError: boolean;
+  errorMessage: string | null;
 }
 
-/**
- * TimesheetUIProvider
- * 
- * Provides UI state for the timesheet
- * 
- * @dependency None - This is a root-level context that doesn't depend on other contexts
- */
-export const TimesheetUIProvider: React.FC<TimesheetUIProviderProps> = ({
-  children, 
-  initialTab = 'timesheet'
-}) => {
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const [showHelpPanel, setShowHelpPanel] = useState(false);
-  
-  // Log UI context initialization
-  React.useEffect(() => {
-    logger.debug('TimesheetUIContext initialized', { initialTab });
-  }, [initialTab]);
+// Define the context type including state and setters
+export interface TimesheetUIContextType extends TimesheetUIState {
+  setActiveTab: (tab: string) => void;
+  setLoading: (isLoading: boolean) => void;
+  setError: (hasError: boolean, message?: string) => void;
+  clearError: () => void;
+}
 
-  const value: TimesheetUIContextType = { 
-    activeTab, 
+// Create the context with default values
+const TimesheetUIContext = createContext<TimesheetUIContextType>({
+  activeTab: 'daily',
+  isLoading: false,
+  hasError: false,
+  errorMessage: null,
+  setActiveTab: () => {},
+  setLoading: () => {},
+  setError: () => {},
+  clearError: () => {}
+});
+
+// Export the hook for consuming the context
+export const useTimesheetUIContext = () => {
+  const context = useContext(TimesheetUIContext);
+  if (!context) {
+    console.error('useTimesheetUIContext must be used within a TimesheetUIProvider');
+  }
+  return context;
+};
+
+// Provider component
+export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [activeTab, setActiveTab] = useState<string>('daily');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Convenient methods for state management
+  const setLoading = (loading: boolean) => setIsLoading(loading);
+  
+  const setError = (error: boolean, message?: string) => {
+    setHasError(error);
+    setErrorMessage(message || null);
+  };
+  
+  const clearError = () => {
+    setHasError(false);
+    setErrorMessage(null);
+  };
+
+  const value: TimesheetUIContextType = {
+    activeTab,
+    isLoading,
+    hasError,
+    errorMessage,
     setActiveTab,
-    showHelpPanel,
-    setShowHelpPanel 
+    setLoading,
+    setError,
+    clearError
   };
 
   return (
@@ -46,18 +76,4 @@ export const TimesheetUIProvider: React.FC<TimesheetUIProviderProps> = ({
   );
 };
 
-/**
- * useTimesheetUIContext
- * 
- * Hook to access UI state for the timesheet
- * 
- * @returns {TimesheetUIContextType} Timesheet UI context value
- * @throws {Error} If used outside of a TimesheetUIProvider
- */
-export const useTimesheetUIContext = (): TimesheetUIContextType => {
-  const context = useContext(TimesheetUIContext);
-  if (!context) {
-    throw new Error('useTimesheetUIContext must be used within a TimesheetUIProvider');
-  }
-  return context;
-};
+export default TimesheetUIContext;

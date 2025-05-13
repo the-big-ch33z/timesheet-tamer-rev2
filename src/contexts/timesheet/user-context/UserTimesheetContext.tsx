@@ -1,58 +1,102 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useTimesheetContext as useTimesheetUserContext } from '@/hooks/timesheet/useTimesheetContext';
-import { UserTimesheetContextType } from '../types';
-import { createTimeLogger } from '@/utils/time/errors';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, WorkSchedule } from '@/types';
 
-const logger = createTimeLogger('UserTimesheetContext');
-
-const UserTimesheetContext = createContext<UserTimesheetContextType | undefined>(undefined);
-
-export interface UserTimesheetProviderProps {
-  children: ReactNode;
+// Define the context state interface
+export interface UserTimesheetState {
+  viewedUser: User | null;
+  targetUserId: string | null;
+  isViewingOtherUser: boolean;
+  canViewTimesheet: boolean;
+  userWorkSchedule: WorkSchedule | null;
 }
 
-/**
- * UserTimesheetProvider
- * 
- * Provides information about the user whose timesheet is being viewed
- * 
- * @dependency useTimesheetUserContext - Uses the timesheet user hook from application state
- * 
- * Dependencies Flow:
- * - This context depends on the application auth state
- * - Other contexts may use this context to access user information
- */
-export const UserTimesheetProvider: React.FC<UserTimesheetProviderProps> = ({ children }) => {
-  const {
-    targetUserId,
-    viewedUser,
-    isViewingOtherUser,
-    canViewTimesheet,
-    userWorkSchedule
-  } = useTimesheetUserContext();
+// Define the context type including state and setters
+export interface UserTimesheetContextType extends UserTimesheetState {
+  setViewedUser: (user: User | null) => void;
+  setTargetUserId: (userId: string | null) => void;
+  setUserWorkSchedule: (schedule: WorkSchedule | null) => void;
+}
+
+// Sample user data for development
+const demoUser: User = {
+  id: 'current-user',
+  name: 'Demo User',
+  email: 'demo@example.com',
+  role: 'employee'
+};
+
+// Create the context with default values
+const UserTimesheetContext = createContext<UserTimesheetContextType>({
+  viewedUser: null,
+  targetUserId: null,
+  isViewingOtherUser: false,
+  canViewTimesheet: true,
+  userWorkSchedule: null,
+  setViewedUser: () => {},
+  setTargetUserId: () => {},
+  setUserWorkSchedule: () => {}
+});
+
+// Export the hook for consuming the context
+export const useUserTimesheetContext = () => {
+  const context = useContext(UserTimesheetContext);
+  if (!context) {
+    console.error('useUserTimesheetContext must be used within a UserTimesheetProvider');
+  }
+  return context;
+};
+
+// Provider component
+export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // In a real app, you'd get the current user from authentication
+  const currentUser = demoUser;
   
-  // Log user context information
-  React.useEffect(() => {
-    logger.debug('UserTimesheetContext initialized', {
-      viewedUser: viewedUser?.id,
-      isViewingOtherUser,
-      canViewTimesheet,
-      hasWorkSchedule: !!userWorkSchedule
+  const [viewedUser, setViewedUser] = useState<User | null>(currentUser);
+  const [targetUserId, setTargetUserId] = useState<string | null>(currentUser?.id || null);
+  const [userWorkSchedule, setUserWorkSchedule] = useState<WorkSchedule | null>(null);
+  
+  console.log('UserTimesheetContext - Initializing with:', {
+    currentUser: currentUser?.id,
+    viewedUser: viewedUser?.id,
+    targetUserId
+  });
+
+  // Calculate derived state
+  const isViewingOtherUser = Boolean(
+    currentUser && viewedUser && currentUser.id !== viewedUser.id
+  );
+  
+  // Determine if user can view this timesheet
+  const canViewTimesheet = Boolean(viewedUser);
+
+  // Log state changes
+  useEffect(() => {
+    console.log('UserTimesheetContext - Viewed user updated:', viewedUser?.id);
+  }, [viewedUser]);
+  
+  useEffect(() => {
+    console.log('UserTimesheetContext - Target user ID updated:', targetUserId);
+  }, [targetUserId]);
+  
+  useEffect(() => {
+    console.log('UserTimesheetContext - Viewing status:', { 
+      isViewingOtherUser, 
+      canViewTimesheet 
     });
-  }, [viewedUser, isViewingOtherUser, canViewTimesheet, userWorkSchedule]);
-  
-  // This was hardcoded in the original TimesheetContext
-  const canEditTimesheet = true;
-  
+  }, [isViewingOtherUser, canViewTimesheet]);
+
   const value: UserTimesheetContextType = {
     viewedUser,
+    targetUserId,
     isViewingOtherUser,
     canViewTimesheet,
-    canEditTimesheet,
-    workSchedule: userWorkSchedule
+    userWorkSchedule,
+    setViewedUser,
+    setTargetUserId,
+    setUserWorkSchedule
   };
-  
+
   return (
     <UserTimesheetContext.Provider value={value}>
       {children}
@@ -60,18 +104,4 @@ export const UserTimesheetProvider: React.FC<UserTimesheetProviderProps> = ({ ch
   );
 };
 
-/**
- * useUserTimesheetContext
- * 
- * Hook to access information about the user whose timesheet is being viewed
- * 
- * @returns {UserTimesheetContextType} User timesheet context value
- * @throws {Error} If used outside of a UserTimesheetProvider
- */
-export const useUserTimesheetContext = (): UserTimesheetContextType => {
-  const context = useContext(UserTimesheetContext);
-  if (!context) {
-    throw new Error('useUserTimesheetContext must be used within a UserTimesheetProvider');
-  }
-  return context;
-};
+export default UserTimesheetContext;
