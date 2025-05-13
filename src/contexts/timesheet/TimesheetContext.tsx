@@ -9,6 +9,7 @@ import { useTimesheetContext as useTimesheetUser } from '@/hooks/timesheet/useTi
 import { useToast } from '@/hooks/use-toast';
 import { UnifiedTimesheetContextType } from './types';
 import { createTimeLogger } from '@/utils/time/errors';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 const logger = createTimeLogger('TimesheetContext');
 
@@ -140,7 +141,7 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
   
   // Flattened provider structure - each context is now responsible for its own initialization
   return (
-    <React.ErrorBoundary fallback={<div className="p-4">Error loading timesheet</div>}>
+    <ErrorBoundary fallback={<div className="p-4">Error loading timesheet</div>}>
       <TimesheetUIProvider>
         <UserTimesheetProvider>
           <WorkHoursProvider>
@@ -152,6 +153,6 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
           </WorkHoursProvider>
         </UserTimesheetProvider>
       </TimesheetUIProvider>
-    </React.ErrorBoundary>
+    </ErrorBoundary>
   );
 };
