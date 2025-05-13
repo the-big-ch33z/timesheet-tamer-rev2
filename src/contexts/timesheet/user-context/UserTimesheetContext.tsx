@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, WorkSchedule } from '@/types';
+import { User, WorkSchedule, UserRole } from '@/types';
 
 // Define the context state interface
 export interface UserTimesheetState {
@@ -8,14 +8,15 @@ export interface UserTimesheetState {
   targetUserId: string | null;
   isViewingOtherUser: boolean;
   canViewTimesheet: boolean;
-  userWorkSchedule: WorkSchedule | null;
+  canEditTimesheet: boolean;
+  workSchedule: WorkSchedule | null;
 }
 
 // Define the context type including state and setters
 export interface UserTimesheetContextType extends UserTimesheetState {
   setViewedUser: (user: User | null) => void;
   setTargetUserId: (userId: string | null) => void;
-  setUserWorkSchedule: (schedule: WorkSchedule | null) => void;
+  setWorkSchedule: (schedule: WorkSchedule | null) => void;
 }
 
 // Sample user data for development
@@ -23,7 +24,7 @@ const demoUser: User = {
   id: 'current-user',
   name: 'Demo User',
   email: 'demo@example.com',
-  role: 'employee'
+  role: 'team-member' // Fixed: using valid UserRole from types
 };
 
 // Create the context with default values
@@ -32,10 +33,11 @@ const UserTimesheetContext = createContext<UserTimesheetContextType>({
   targetUserId: null,
   isViewingOtherUser: false,
   canViewTimesheet: true,
-  userWorkSchedule: null,
+  canEditTimesheet: true,
+  workSchedule: null,
   setViewedUser: () => {},
   setTargetUserId: () => {},
-  setUserWorkSchedule: () => {}
+  setWorkSchedule: () => {}
 });
 
 // Export the hook for consuming the context
@@ -54,7 +56,7 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
   
   const [viewedUser, setViewedUser] = useState<User | null>(currentUser);
   const [targetUserId, setTargetUserId] = useState<string | null>(currentUser?.id || null);
-  const [userWorkSchedule, setUserWorkSchedule] = useState<WorkSchedule | null>(null);
+  const [workSchedule, setWorkSchedule] = useState<WorkSchedule | null>(null);
   
   console.log('UserTimesheetContext - Initializing with:', {
     currentUser: currentUser?.id,
@@ -69,6 +71,9 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
   
   // Determine if user can view this timesheet
   const canViewTimesheet = Boolean(viewedUser);
+  
+  // Determine if user can edit this timesheet (same as view for now)
+  const canEditTimesheet = canViewTimesheet;
 
   // Log state changes
   useEffect(() => {
@@ -91,10 +96,11 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
     targetUserId,
     isViewingOtherUser,
     canViewTimesheet,
-    userWorkSchedule,
+    canEditTimesheet,
+    workSchedule,
     setViewedUser,
     setTargetUserId,
-    setUserWorkSchedule
+    setWorkSchedule
   };
 
   return (

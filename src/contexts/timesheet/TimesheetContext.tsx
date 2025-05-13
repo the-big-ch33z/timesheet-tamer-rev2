@@ -81,7 +81,10 @@ export const useTimesheetContext = (): UnifiedTimesheetContextType => {
   return {
     ...calendar,
     ...user,
-    ...ui
+    ...ui,
+    showHelpPanel: ui.showHelpPanel,
+    setShowHelpPanel: ui.setShowHelpPanel,
+    canEditTimesheet: user.canEditTimesheet
   };
 };
 

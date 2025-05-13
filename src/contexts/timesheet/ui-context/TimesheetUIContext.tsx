@@ -7,6 +7,7 @@ export interface TimesheetUIState {
   isLoading: boolean;
   hasError: boolean;
   errorMessage: string | null;
+  showHelpPanel: boolean;
 }
 
 // Define the context type including state and setters
@@ -15,6 +16,7 @@ export interface TimesheetUIContextType extends TimesheetUIState {
   setLoading: (isLoading: boolean) => void;
   setError: (hasError: boolean, message?: string) => void;
   clearError: () => void;
+  setShowHelpPanel: (show: boolean) => void;
 }
 
 // Create the context with default values
@@ -23,10 +25,12 @@ const TimesheetUIContext = createContext<TimesheetUIContextType>({
   isLoading: false,
   hasError: false,
   errorMessage: null,
+  showHelpPanel: false,
   setActiveTab: () => {},
   setLoading: () => {},
   setError: () => {},
-  clearError: () => {}
+  clearError: () => {},
+  setShowHelpPanel: () => {}
 });
 
 // Export the hook for consuming the context
@@ -44,6 +48,7 @@ export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showHelpPanel, setShowHelpPanel] = useState<boolean>(false);
 
   // Convenient methods for state management
   const setLoading = (loading: boolean) => setIsLoading(loading);
@@ -63,10 +68,12 @@ export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ c
     isLoading,
     hasError,
     errorMessage,
+    showHelpPanel,
     setActiveTab,
     setLoading,
     setError,
-    clearError
+    clearError,
+    setShowHelpPanel
   };
 
   return (

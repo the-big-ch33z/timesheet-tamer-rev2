@@ -11,6 +11,14 @@ interface TOILSummaryBoxesProps {
   onError?: (error: string) => void;
 }
 
+// Helper function to log box rendering info
+const logBoxInfo = (index: number, label: string, showTooltip?: boolean) => {
+  console.log(`TOILSummaryBoxes - Inside Fragment - box ${index}, with tooltip: ${showTooltip}`);
+  if (showTooltip) {
+    console.log(`TOILSummaryBoxes - Rendering tooltip content for box ${index}`);
+  }
+};
+
 const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
   accrued,
   used,
@@ -91,19 +99,15 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {boxConfigs.map((boxConfig, index) => {
           console.log(`TOILSummaryBoxes - Rendering box ${index} with label: ${boxConfig.label}`);
-          console.log(`TOILSummaryBoxes - Before Fragment - keys and props for box ${index}:`, 
-            { key: boxConfig.label, props: {...boxConfig} });
           
           // Return the appropriate component based on whether we need a tooltip
-          return (
-            <React.Fragment key={boxConfig.label}>
-              {console.log(`TOILSummaryBoxes - Inside Fragment - box ${index}, with tooltip: ${boxConfig.showTooltip}`)}
-              {boxConfig.label === "Earned" && boxConfig.showTooltip ? (
+          if (boxConfig.label === "Earned" && boxConfig.showTooltip) {
+            return (
+              <React.Fragment key={boxConfig.label}>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="contents">
-                        {console.log(`TOILSummaryBoxes - Rendering tooltip content for box ${index}`)}
                         <TOILSummaryBox {...boxConfig} />
                       </div>
                     </TooltipTrigger>
@@ -120,11 +124,15 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : (
+              </React.Fragment>
+            );
+          } else {
+            return (
+              <React.Fragment key={boxConfig.label}>
                 <TOILSummaryBox {...boxConfig} />
-              )}
-            </React.Fragment>
-          );
+              </React.Fragment>
+            );
+          }
         })}
       </div>
     </>

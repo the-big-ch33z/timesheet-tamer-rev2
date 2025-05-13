@@ -28,17 +28,25 @@ interface TOILSummaryCardProps {
   useSimpleView?: boolean;
 }
 
+// Helper function to check for unexpected props
+const checkForUnexpectedProps = (props: Record<string, any>, expectedProps: string[]): string[] => {
+  return Object.keys(props).filter(prop => !expectedProps.includes(prop));
+};
+
 // Main TOILSummaryCard component with improved error handling
-const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
-  summary,
-  loading = false,
-  monthName,
-  className,
-  onError,
-  showRollover = false,
-  rolloverHours = 0,
-  useSimpleView = false
-}) => {
+const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo((props) => {
+  const {
+    summary,
+    loading = false,
+    monthName,
+    className,
+    onError,
+    showRollover = false,
+    rolloverHours = 0,
+    useSimpleView = false,
+    ...restProps
+  } = props;
+  
   console.log('TOILSummaryCard - Component rendering with props:', { 
     summary: summary ? 'present' : 'null',
     loading, 
@@ -51,18 +59,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   });
   
   // Check for any unexpected props that might be passed down
-  const allProps = arguments[0];
   const expectedPropNames = ['summary', 'loading', 'monthName', 'className', 'onError', 
     'showRollover', 'rolloverHours', 'useSimpleView'];
   
   // Find unexpected props (could include data-lov-id)
-  const unexpectedProps = Object.keys(allProps || {}).filter(
-    prop => !expectedPropNames.includes(prop)
-  );
+  const unexpectedProps = checkForUnexpectedProps(restProps, expectedPropNames);
   
   if (unexpectedProps.length > 0) {
     console.warn('TOILSummaryCard - Received unexpected props:', unexpectedProps);
-    console.log('TOILSummaryCard - Full props object:', allProps);
+    console.log('TOILSummaryCard - Full props object:', props);
   }
   
   // Subscribe to TOIL events if available
@@ -149,30 +154,18 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
         </CardHeader>
         <CardContent className="pt-0">
           {loading ? (
-            <>
-              {console.log('TOILSummaryCard - Rendering loading state')}
-              <TOILLoadingState />
-            </>
+            <TOILLoadingState />
           ) : hasNoTOILActivity ? (
-            <>
-              {console.log('TOILSummaryCard - Rendering empty state')}
-              <TOILEmptyState />
-            </>
+            <TOILEmptyState />
           ) : useSimpleView ? (
-            <>
-              {console.log('TOILSummaryCard - Rendering unified simple view')}
-              <UnifiedTOILSummary 
-                summary={summary} 
-                showRollover={showRollover} 
-                rolloverHours={rolloverHours}
-                variant="simple"
-              />
-            </>
+            <UnifiedTOILSummary 
+              summary={summary} 
+              showRollover={showRollover} 
+              rolloverHours={rolloverHours}
+              variant="simple"
+            />
           ) : (
             <>
-              {console.log('TOILSummaryCard - About to render TOILSummaryBoxes with:', {
-                accrued, used, remaining
-              })}
               <TOILSummaryBoxes 
                 accrued={accrued} 
                 used={used} 
@@ -181,10 +174,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
               />
 
               {isNegativeBalance && (
-                <>
-                  {console.log('TOILSummaryCard - Rendering negative balance warning')}
-                  <TOILNegativeBalanceWarning />
-                </>
+                <TOILNegativeBalanceWarning />
               )}
 
               <TOILProgressBar 
