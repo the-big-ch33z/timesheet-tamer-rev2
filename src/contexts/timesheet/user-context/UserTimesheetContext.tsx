@@ -45,7 +45,12 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
   
   // Determine which user we're viewing (current or another)
   const viewedUser = targetUserId && targetUserId !== currentUser?.id
-    ? { id: targetUserId, name: 'Other User', role: 'team-member' as const }
+    ? { 
+        id: targetUserId, 
+        name: 'Other User', 
+        role: 'team-member' as const,
+        email: 'other@example.com' // Adding the required email property
+      } as User
     : currentUser || null;
     
   const isViewingOtherUser = Boolean(targetUserId && targetUserId !== currentUser?.id);
