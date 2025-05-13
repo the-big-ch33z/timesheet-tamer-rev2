@@ -21,7 +21,7 @@ export interface TimesheetUIContextType extends TimesheetUIState {
 
 // Create the context with default values
 const TimesheetUIContext = createContext<TimesheetUIContextType>({
-  activeTab: 'daily',
+  activeTab: 'timesheet',  // Changed default from 'daily' to 'timesheet' to match other code
   isLoading: false,
   hasError: false,
   errorMessage: null,
@@ -44,7 +44,7 @@ export const useTimesheetUIContext = () => {
 
 // Provider component
 export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<string>('daily');
+  const [activeTab, setActiveTab] = useState<string>('timesheet'); // Changed default from 'daily' to 'timesheet'
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

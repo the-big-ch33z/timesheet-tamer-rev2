@@ -103,28 +103,26 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
           // Return the appropriate component based on whether we need a tooltip
           if (boxConfig.label === "Earned" && boxConfig.showTooltip) {
             return (
-              <React.Fragment key={boxConfig.label}>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="contents">
-                        <TOILSummaryBox {...boxConfig} />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs space-y-1">
-                        <p>TOIL is earned by working:</p>
-                        <ul className="list-disc pl-4 space-y-0.5">
-                          <li>On RDOs</li>
-                          <li>On weekends</li>
-                          <li>On public holidays</li>
-                          <li>Over scheduled hours</li>
-                        </ul>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </React.Fragment>
+              <TooltipProvider key={boxConfig.label}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="contents">
+                      <TOILSummaryBox {...boxConfig} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs space-y-1">
+                      <p>TOIL is earned by working:</p>
+                      <ul className="list-disc pl-4 space-y-0.5">
+                        <li>On RDOs</li>
+                        <li>On weekends</li>
+                        <li>On public holidays</li>
+                        <li>Over scheduled hours</li>
+                      </ul>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             );
           } else {
             return (

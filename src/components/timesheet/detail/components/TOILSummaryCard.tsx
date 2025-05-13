@@ -33,6 +33,20 @@ const checkForUnexpectedProps = (props: Record<string, any>, expectedProps: stri
   return Object.keys(props).filter(prop => !expectedProps.includes(prop));
 };
 
+// Function to safely log objects without circular references
+const safeLogProps = (props: TOILSummaryCardProps) => {
+  console.log('TOILSummaryCard - Component rendering with props:', { 
+    summary: props.summary ? 'present' : 'null',
+    loading: props.loading, 
+    monthName: props.monthName,
+    className: props.className, 
+    hasErrorCallback: !!props.onError,
+    showRollover: props.showRollover,
+    rolloverHours: props.rolloverHours,
+    useSimpleView: props.useSimpleView
+  });
+};
+
 // Main TOILSummaryCard component with improved error handling
 const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo((props) => {
   const {
@@ -47,16 +61,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo((props) => {
     ...restProps
   } = props;
   
-  console.log('TOILSummaryCard - Component rendering with props:', { 
-    summary: summary ? 'present' : 'null',
-    loading, 
-    monthName,
-    className, 
-    hasErrorCallback: !!onError,
-    showRollover,
-    rolloverHours,
-    useSimpleView
-  });
+  // Safe logging
+  safeLogProps(props);
   
   // Check for any unexpected props that might be passed down
   const expectedPropNames = ['summary', 'loading', 'monthName', 'className', 'onError', 
@@ -67,7 +73,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo((props) => {
   
   if (unexpectedProps.length > 0) {
     console.warn('TOILSummaryCard - Received unexpected props:', unexpectedProps);
-    console.log('TOILSummaryCard - Full props object:', props);
   }
   
   // Subscribe to TOIL events if available

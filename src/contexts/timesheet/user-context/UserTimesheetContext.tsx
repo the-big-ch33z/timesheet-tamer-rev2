@@ -1,43 +1,32 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, WorkSchedule, UserRole } from '@/types';
+import { User, WorkSchedule } from '@/types';
+import { useAuth } from '@/contexts/auth';
 
 // Define the context state interface
 export interface UserTimesheetState {
-  viewedUser: User | null;
   targetUserId: string | null;
+  viewedUser: User | null;
   isViewingOtherUser: boolean;
   canViewTimesheet: boolean;
   canEditTimesheet: boolean;
-  workSchedule: WorkSchedule | null;
+  workSchedule: WorkSchedule | undefined;
 }
 
 // Define the context type including state and setters
 export interface UserTimesheetContextType extends UserTimesheetState {
-  setViewedUser: (user: User | null) => void;
   setTargetUserId: (userId: string | null) => void;
-  setWorkSchedule: (schedule: WorkSchedule | null) => void;
 }
-
-// Sample user data for development
-const demoUser: User = {
-  id: 'current-user',
-  name: 'Demo User',
-  email: 'demo@example.com',
-  role: 'team-member' // Fixed: using valid UserRole from types
-};
 
 // Create the context with default values
 const UserTimesheetContext = createContext<UserTimesheetContextType>({
-  viewedUser: null,
   targetUserId: null,
+  viewedUser: null,
   isViewingOtherUser: false,
   canViewTimesheet: true,
   canEditTimesheet: true,
-  workSchedule: null,
-  setViewedUser: () => {},
-  setTargetUserId: () => {},
-  setWorkSchedule: () => {}
+  workSchedule: undefined,
+  setTargetUserId: () => {}
 });
 
 // Export the hook for consuming the context
@@ -51,56 +40,34 @@ export const useUserTimesheetContext = () => {
 
 // Provider component
 export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // In a real app, you'd get the current user from authentication
-  const currentUser = demoUser;
+  const { currentUser } = useAuth();
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   
-  const [viewedUser, setViewedUser] = useState<User | null>(currentUser);
-  const [targetUserId, setTargetUserId] = useState<string | null>(currentUser?.id || null);
-  const [workSchedule, setWorkSchedule] = useState<WorkSchedule | null>(null);
+  // Determine which user we're viewing (current or another)
+  const viewedUser = targetUserId && targetUserId !== currentUser?.id
+    ? { id: targetUserId, name: 'Other User', role: 'team-member' as const }
+    : currentUser || null;
+    
+  const isViewingOtherUser = Boolean(targetUserId && targetUserId !== currentUser?.id);
   
-  console.log('UserTimesheetContext - Initializing with:', {
-    currentUser: currentUser?.id,
-    viewedUser: viewedUser?.id,
-    targetUserId
-  });
+  // For demo purposes, always allow viewing timesheets
+  const canViewTimesheet = true;
+  
+  // Only allow editing if viewing own timesheet or has admin rights
+  const canEditTimesheet = !isViewingOtherUser || currentUser?.role === 'admin';
+  
+  // Work schedule should come from user data in a real app
+  const workSchedule = undefined;
 
-  // Calculate derived state
-  const isViewingOtherUser = Boolean(
-    currentUser && viewedUser && currentUser.id !== viewedUser.id
-  );
-  
-  // Determine if user can view this timesheet
-  const canViewTimesheet = Boolean(viewedUser);
-  
-  // Determine if user can edit this timesheet (same as view for now)
-  const canEditTimesheet = canViewTimesheet;
-
-  // Log state changes
-  useEffect(() => {
-    console.log('UserTimesheetContext - Viewed user updated:', viewedUser?.id);
-  }, [viewedUser]);
-  
-  useEffect(() => {
-    console.log('UserTimesheetContext - Target user ID updated:', targetUserId);
-  }, [targetUserId]);
-  
-  useEffect(() => {
-    console.log('UserTimesheetContext - Viewing status:', { 
-      isViewingOtherUser, 
-      canViewTimesheet 
-    });
-  }, [isViewingOtherUser, canViewTimesheet]);
-
+  // Value object for the context
   const value: UserTimesheetContextType = {
-    viewedUser,
     targetUserId,
+    viewedUser,
     isViewingOtherUser,
     canViewTimesheet,
     canEditTimesheet,
     workSchedule,
-    setViewedUser,
-    setTargetUserId,
-    setWorkSchedule
+    setTargetUserId
   };
 
   return (
