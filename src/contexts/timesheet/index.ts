@@ -11,16 +11,14 @@ export {
 // Calendar context
 export { 
   CalendarProvider, 
-  useCalendarContext,
-  CalendarContext
-} from './calendar-context';
+  useCalendarContext 
+} from './calendar-context/CalendarContext';
 
 // User context
 export { 
   UserTimesheetProvider, 
-  useUserTimesheetContext,
-  UserTimesheetContext
-} from './user-context';
+  useUserTimesheetContext 
+} from './user-context/UserTimesheetContext';
 
 // Entries context
 export { 
@@ -37,9 +35,8 @@ export {
 // UI context
 export { 
   TimesheetUIProvider, 
-  useTimesheetUIContext,
-  TimesheetUIContext
-} from './ui-context';
+  useTimesheetUIContext 
+} from './ui-context/TimesheetUIContext';
 
 // Work hours context
 export { 

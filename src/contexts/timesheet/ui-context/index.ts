@@ -1,6 +1,2 @@
 
-export { 
-  TimesheetUIProvider,
-  useTimesheetUIContext,
-  default as TimesheetUIContext
-} from './TimesheetUIContext';
+export * from './TimesheetUIContext';
