@@ -1,11 +1,11 @@
-
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErrorBoundary";
-import { 
+import {
   useUserTimesheetContext,
-  useCalendarContext
+  useCalendarContext,
+  useTimesheetUIContext,
+  TimesheetUIProvider
 } from "@/contexts/timesheet";
-import { useTimesheetUIContext } from "@/contexts/timesheet";
 import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFound";
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
@@ -13,8 +13,6 @@ import { initializeService } from "@/utils/time/services/api-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "@/components/common/ErrorFallback";
-
-const logger = createTimeLogger('TimesheetPage');
 
 // Lazy-loaded components
 const UserInfo = lazy(() => import("@/components/timesheet/UserInfo"));
@@ -39,30 +37,30 @@ const TimesheetContent = () => {
     isViewingOtherUser,
     canViewTimesheet
   } = useUserTimesheetContext();
-  
+
   const { selectedDay } = useCalendarContext();
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
-  
+
   // Initialize services if needed
   useEffect(() => {
     let mounted = true;
-    
+
     const initServices = async () => {
       try {
         logger.debug("Initializing services for timesheet");
         await initializeService();
-        
+
         if (mounted) {
           setIsInitialized(true);
         }
       } catch (error) {
         logger.error("Failed to initialize services:", error);
-        
+
         if (mounted) {
-          setInitError(error instanceof Error ? error : new Error('Service initialization failed'));
-          
+          setInitError(error instanceof Error ? error : new Error("Service initialization failed"));
+
           toast({
             title: "Service Error",
             description: "There was a problem loading the timesheet data. Try refreshing the page.",
@@ -71,60 +69,63 @@ const TimesheetContent = () => {
         }
       }
     };
-    
+
     initServices();
-    
+
     return () => {
       mounted = false;
     };
   }, [toast]);
-  
+
   // Check for permission or if user exists
   if (!viewedUser || !canViewTimesheet) {
     return (
-      <TimesheetNotFound 
-        userExists={!!viewedUser} 
-        canViewTimesheet={canViewTimesheet} 
+      <TimesheetNotFound
+        userExists={!!viewedUser}
+        canViewTimesheet={canViewTimesheet}
       />
     );
   }
-  
+
   // If we had an initialization error, show fallback
   if (initError) {
     return (
-      <ErrorFallback 
+      <ErrorFallback
         error={initError}
         resetErrorBoundary={() => window.location.reload()}
       />
     );
   }
-  
+
   // If waiting for initialization, show loading state
   if (!isInitialized) {
     return <LoadingComponent />;
   }
 
-  // Use the unified TimeEntryProvider directly
   return (
     <TimeEntryProvider selectedDate={selectedDay} userId={viewedUser.id}>
-      <div className="container py-6 max-w-7xl">
-        {/* Back button when viewing other user's timesheet */}
-        <TimesheetBackNavigation 
-          user={viewedUser}
-          isViewingOtherUser={isViewingOtherUser}
-        />
+      <TimesheetUIProvider>
+        <div className="container py-6 max-w-7xl">
+          {/* Back button when viewing other user's timesheet */}
+          <TimesheetBackNavigation
+            user={viewedUser}
+            isViewingOtherUser={isViewingOtherUser}
+          />
 
-        <Suspense fallback={<LoadingComponent />}>
-          <UserInfo user={viewedUser} />
-        </Suspense>
+          <Suspense fallback={<LoadingComponent />}>
+            <UserInfo user={viewedUser} />
+          </Suspense>
 
-        <Suspense fallback={<LoadingComponent />}>
-          <TimesheetTabs />
-        </Suspense>
-      </div>
+          <Suspense fallback={<LoadingComponent />}>
+            <TimesheetTabs />
+          </Suspense>
+        </div>
+      </TimesheetUIProvider>
     </TimeEntryProvider>
   );
 };
+
+const logger = createTimeLogger("TimesheetPage");
 
 /**
  * Main Timesheet Page Component
