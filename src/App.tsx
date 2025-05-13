@@ -1,13 +1,14 @@
-
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
 import { WorkScheduleProvider } from './contexts/work-schedule';
 import { TimesheetSettingsProvider } from './contexts/TimesheetSettingsContext';
+import { UserMetricsProvider } from './contexts/user-metrics/UserMetricsContext';
 import { ProtectedRoute } from './lib/routeProtection';
 import MainLayout from './components/layout/MainLayout';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
+import { AppProvider } from './contexts/AppProvider';
 import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
 import { initializeService } from './utils/time/services/api-wrapper';
 
@@ -40,7 +41,6 @@ function App() {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log("App.tsx: Starting app initialization");
         // Check for stored auth data
         const storedUser = localStorage.getItem('currentUser');
         const storedTeams = localStorage.getItem('teams');
@@ -69,7 +69,6 @@ function App() {
         
         // Mark app as initialized
         globalAppState.isInitialized = true;
-        console.log("App.tsx: App initialization complete, setting isAppReady to true");
         setIsAppReady(true);
       } catch (error) {
         console.error("Failed to initialize application:", error);
@@ -108,68 +107,72 @@ function App() {
 
   return (
     <GlobalErrorBoundary>
-      <AuthProvider>
-        <WorkScheduleProvider>
-          <TimesheetSettingsProvider>
-            <Routes>
-              {/* Redirect root to login */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/login" element={<Auth mode="login" />} />
-              <Route path="/signup" element={<Auth mode="signup" />} />
-              
-              {/* Protected routes with layout */}
-              <Route element={<MainLayout />}>
-                {/* Wrap lazy-loaded components with Suspense */}
-                <Route path="/timesheet/:userId?" element={
-                  <ProtectedRoute>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <Timesheet />
-                    </Suspense>
-                  </ProtectedRoute>
-                } />
-                <Route path="/manager" element={
-                  <ProtectedRoute>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <Manager />
-                    </Suspense>
-                  </ProtectedRoute>
-                } />
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <Reports />
-                    </Suspense>
-                  </ProtectedRoute>
-                } />
-                <Route path="/team-calendar" element={
-                  <ProtectedRoute>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <TeamCalendar />
-                    </Suspense>
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <Settings />
-                    </Suspense>
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin" element={
-                  <ProtectedRoute>
-                    <Suspense fallback={<LoadingFallback />}>
-                      <Admin />
-                    </Suspense>
-                  </ProtectedRoute>
-                } />
-              </Route>
-              
-              {/* 404 route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TimesheetSettingsProvider>
-        </WorkScheduleProvider>
-      </AuthProvider>
+      <AppProvider>
+        <AuthProvider>
+          <WorkScheduleProvider>
+            <TimesheetSettingsProvider>
+              <UserMetricsProvider>
+                <Routes>
+                  {/* Redirect root to login */}
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                  <Route path="/login" element={<Auth mode="login" />} />
+                  <Route path="/signup" element={<Auth mode="signup" />} />
+                  
+                  {/* Protected routes with layout */}
+                  <Route element={<MainLayout />}>
+                    {/* Wrap lazy-loaded components with Suspense */}
+                    <Route path="/timesheet/:userId?" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<LoadingFallback />}>
+                          <Timesheet />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/manager" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<LoadingFallback />}>
+                          <Manager />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/reports" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<LoadingFallback />}>
+                          <Reports />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/team-calendar" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<LoadingFallback />}>
+                          <TeamCalendar />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<LoadingFallback />}>
+                          <Settings />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<LoadingFallback />}>
+                          <Admin />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
+                  </Route>
+                  
+                  {/* 404 route */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </UserMetricsProvider>
+            </TimesheetSettingsProvider>
+          </WorkScheduleProvider>
+        </AuthProvider>
+      </AppProvider>
     </GlobalErrorBoundary>
   );
 }

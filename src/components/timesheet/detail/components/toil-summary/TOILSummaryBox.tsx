@@ -14,50 +14,17 @@ interface TOILSummaryBoxProps {
   showTooltip?: boolean;
 }
 
-// Function to check for unexpected props
-const checkForUnexpectedProps = (props: Record<string, any>, expectedProps: string[]): string[] => {
-  return Object.keys(props).filter(prop => !expectedProps.includes(prop));
-};
-
-const TOILSummaryBox: React.FC<TOILSummaryBoxProps> = (props) => {
-  const {
-    label,
-    value,
-    color,
-    border,
-    icon,
-    displaySign,
-    forceNegative,
-    isNegativeBalance,
-    showTooltip,
-    ...restProps
-  } = props;
-
-  // Log all props to see any unexpected ones
-  console.log(`TOILSummaryBox - Rendering with props for ${label}:`, { 
-    label, 
-    value, 
-    color, 
-    border, 
-    icon: !!icon, // Just logging that icon exists to avoid circular references
-    displaySign, 
-    forceNegative, 
-    isNegativeBalance, 
-    showTooltip
-  });
-  
-  // Check for any unexpected props
-  const expectedPropNames = ['label', 'value', 'color', 'border', 'icon', 'displaySign', 
-    'forceNegative', 'isNegativeBalance', 'showTooltip'];
-  
-  // Find unexpected props (could include data-lov-id)
-  const unexpectedProps = checkForUnexpectedProps(restProps, expectedPropNames);
-  
-  if (unexpectedProps.length > 0) {
-    console.warn(`TOILSummaryBox(${label}) - Received unexpected props:`, unexpectedProps);
-    console.log('TOILSummaryBox - Full props object:', props);
-  }
-  
+const TOILSummaryBox: React.FC<TOILSummaryBoxProps> = ({
+  label,
+  value,
+  color,
+  border,
+  icon,
+  displaySign,
+  forceNegative,
+  isNegativeBalance,
+  showTooltip
+}) => {
   let formattedValue;
   
   try {
@@ -68,7 +35,6 @@ const TOILSummaryBox: React.FC<TOILSummaryBoxProps> = (props) => {
     } else {
       formattedValue = formatDisplayHours(Math.abs(value)).replace(/^[+-]/, '');
     }
-    console.log(`TOILSummaryBox(${label}) - Formatted value:`, formattedValue);
   } catch (e) {
     console.error(`Error formatting value for ${label}`, e);
     formattedValue = "0h";

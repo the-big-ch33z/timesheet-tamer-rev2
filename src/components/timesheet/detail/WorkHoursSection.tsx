@@ -5,13 +5,14 @@ import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { createTimeLogger } from "@/utils/time/errors";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { useUserTimesheetContext } from "@/contexts/timesheet/user-context/UserTimesheetContext";
-import { useToilEffects } from "./work-hours/useToilEffects";
+import { useToilEffects } from "./hooks/useToilEffects";
 import { useTOILCalculations } from "@/hooks/timesheet/useTOILCalculations";
 import { getHolidays } from "@/lib/holidays";
 import { DebugPanel, WorkHoursContent } from "./work-hours-section";
 import { useTOILTriggers } from "@/hooks/timesheet/useTOILTriggers";
 import WorkHoursInterface from "./work-hours/WorkHoursInterface";
 import TimeEntryController from "../entry-control/TimeEntryController";
+import { TOILSummary } from "@/types/toil";
 import WorkHoursActions from "./components/WorkHoursActions";
 
 const logger = createTimeLogger('WorkHoursSection');

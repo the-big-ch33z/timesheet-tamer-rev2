@@ -1,79 +1,42 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
+import { TimesheetUIContextType } from '../types';
+import { createTimeLogger } from '@/utils/time/errors';
 
-// Define the context state interface
-export interface TimesheetUIState {
-  activeTab: string;
-  isLoading: boolean;
-  hasError: boolean;
-  errorMessage: string | null;
-  showHelpPanel: boolean;
+const logger = createTimeLogger('TimesheetUIContext');
+
+// Create the context
+const TimesheetUIContext = createContext<TimesheetUIContextType | undefined>(undefined);
+
+export interface TimesheetUIProviderProps {
+  children: ReactNode;
+  initialTab?: string;
 }
 
-// Define the context type including state and setters
-export interface TimesheetUIContextType extends TimesheetUIState {
-  setActiveTab: (tab: string) => void;
-  setLoading: (isLoading: boolean) => void;
-  setError: (hasError: boolean, message?: string) => void;
-  clearError: () => void;
-  setShowHelpPanel: (show: boolean) => void;
-}
-
-// Create the context with default values
-const TimesheetUIContext = createContext<TimesheetUIContextType>({
-  activeTab: 'timesheet',  // Changed default from 'daily' to 'timesheet' to match other code
-  isLoading: false,
-  hasError: false,
-  errorMessage: null,
-  showHelpPanel: false,
-  setActiveTab: () => {},
-  setLoading: () => {},
-  setError: () => {},
-  clearError: () => {},
-  setShowHelpPanel: () => {}
-});
-
-// Export the hook for consuming the context
-export const useTimesheetUIContext = () => {
-  const context = useContext(TimesheetUIContext);
-  if (!context) {
-    console.error('useTimesheetUIContext must be used within a TimesheetUIProvider');
-  }
-  return context;
-};
-
-// Provider component
-export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<string>('timesheet'); // Changed default from 'daily' to 'timesheet'
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [hasError, setHasError] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showHelpPanel, setShowHelpPanel] = useState<boolean>(false);
-
-  // Convenient methods for state management
-  const setLoading = (loading: boolean) => setIsLoading(loading);
+/**
+ * TimesheetUIProvider
+ * 
+ * Provides UI state for the timesheet
+ * 
+ * @dependency None - This is a root-level context that doesn't depend on other contexts
+ */
+export const TimesheetUIProvider: React.FC<TimesheetUIProviderProps> = ({
+  children, 
+  initialTab = 'timesheet'
+}) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
   
-  const setError = (error: boolean, message?: string) => {
-    setHasError(error);
-    setErrorMessage(message || null);
-  };
-  
-  const clearError = () => {
-    setHasError(false);
-    setErrorMessage(null);
-  };
+  // Log UI context initialization
+  React.useEffect(() => {
+    logger.debug('TimesheetUIContext initialized', { initialTab });
+  }, [initialTab]);
 
-  const value: TimesheetUIContextType = {
-    activeTab,
-    isLoading,
-    hasError,
-    errorMessage,
-    showHelpPanel,
+  const value: TimesheetUIContextType = { 
+    activeTab, 
     setActiveTab,
-    setLoading,
-    setError,
-    clearError,
-    setShowHelpPanel
+    showHelpPanel,
+    setShowHelpPanel 
   };
 
   return (
@@ -83,4 +46,18 @@ export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ c
   );
 };
 
-export default TimesheetUIContext;
+/**
+ * useTimesheetUIContext
+ * 
+ * Hook to access UI state for the timesheet
+ * 
+ * @returns {TimesheetUIContextType} Timesheet UI context value
+ * @throws {Error} If used outside of a TimesheetUIProvider
+ */
+export const useTimesheetUIContext = (): TimesheetUIContextType => {
+  const context = useContext(TimesheetUIContext);
+  if (!context) {
+    throw new Error('useTimesheetUIContext must be used within a TimesheetUIProvider');
+  }
+  return context;
+};
