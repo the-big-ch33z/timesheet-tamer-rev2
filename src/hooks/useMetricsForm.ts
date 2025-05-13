@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useUserMetrics } from "@/contexts/user-metrics/UserMetricsContext";
+import { useUserMetrics } from "@/contexts/user-metrics";
 import { UserMetrics, DEFAULT_USER_METRICS } from "@/contexts/user-metrics/types";
 import { useToast } from "@/hooks/use-toast";
 

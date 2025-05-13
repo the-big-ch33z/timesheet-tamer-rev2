@@ -1,35 +1,12 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { useErrorContext } from '../error/ErrorContext';
-import { BaseContextProvider, BaseContextState } from '../base/BaseContext';
+import { BaseContextProvider } from '../base/BaseContext';
 import { useLogger } from '@/hooks/useLogger';
-
-// Define types for user metrics
-export interface UserMetrics {
-  totalHoursWorked: number;
-  averageHoursPerWeek: number;
-  totalDaysWorked: number;
-  completionRate: number;
-}
-
-// Define the context type
-export interface UserMetricsContextType extends BaseContextState {
-  metrics: UserMetrics | null;
-  isLoading: boolean;
-  updateMetrics: (metrics: Partial<UserMetrics>) => void;
-  resetMetrics: () => void;
-}
+import { UserMetrics, UserMetricsContextType, DEFAULT_USER_METRICS } from './types';
 
 // Create context
 const UserMetricsContext = createContext<UserMetricsContextType | undefined>(undefined);
-
-// Initial state for metrics
-const initialMetrics: UserMetrics = {
-  totalHoursWorked: 0,
-  averageHoursPerWeek: 0,
-  totalDaysWorked: 0,
-  completionRate: 0
-};
 
 export interface UserMetricsProviderProps {
   children: ReactNode;
@@ -40,7 +17,7 @@ export interface UserMetricsProviderProps {
  */
 export const UserMetricsProvider: React.FC<UserMetricsProviderProps> = ({ children }) => {
   const logger = useLogger('UserMetricsContext');
-  const [metrics, setMetrics] = useState<UserMetrics | null>(initialMetrics);
+  const [metricsStore, setMetricsStore] = useState<Record<string, UserMetrics>>({});
   
   // Use try/catch for error context in case it's not available
   let errorHandler = { handleError: (error: any) => console.error(error) };
@@ -50,32 +27,66 @@ export const UserMetricsProvider: React.FC<UserMetricsProviderProps> = ({ childr
     logger.warn('ErrorContext not available in UserMetricsContext, using fallback');
   }
 
+  // Get metrics for a specific user
+  const getUserMetrics = useCallback((userId: string): UserMetrics => {
+    logger.debug(`Getting metrics for user ${userId}`);
+    return metricsStore[userId] || DEFAULT_USER_METRICS;
+  }, [metricsStore, logger]);
+
+  // Update metrics for a specific user
+  const updateUserMetrics = useCallback(async (userId: string, metrics: Partial<UserMetrics>): Promise<void> => {
+    logger.debug(`Updating metrics for user ${userId}:`, metrics);
+    try {
+      setMetricsStore(prev => ({
+        ...prev,
+        [userId]: {
+          ...getUserMetrics(userId),
+          ...metrics
+        }
+      }));
+      return Promise.resolve();
+    } catch (error) {
+      logger.error(`Failed to update metrics for user ${userId}:`, error);
+      errorHandler.handleError(error);
+      return Promise.reject(error);
+    }
+  }, [metricsStore, getUserMetrics, logger, errorHandler]);
+
+  // Reset metrics for a specific user
+  const resetUserMetrics = useCallback(async (userId: string): Promise<void> => {
+    logger.debug(`Resetting metrics for user ${userId}`);
+    try {
+      setMetricsStore(prev => {
+        const newStore = { ...prev };
+        delete newStore[userId];
+        return newStore;
+      });
+      return Promise.resolve();
+    } catch (error) {
+      logger.error(`Failed to reset metrics for user ${userId}:`, error);
+      errorHandler.handleError(error);
+      return Promise.reject(error);
+    }
+  }, [logger, errorHandler]);
+
   // Initialize metrics from storage or API
   const initializeMetrics = async () => {
     try {
       logger.debug('Initializing user metrics');
       
-      // For now just return the initial metrics
       // This could be extended to load from localStorage or an API
-      return initialMetrics;
+      return {};
     } catch (error) {
       logger.error('Failed to initialize metrics:', error);
-      errorHandler.handleError(error, 'UserMetricsContext initialization');
+      errorHandler.handleError(error);
       throw error;
     }
   };
 
-  // Update metrics
-  const updateMetrics = (newMetrics: Partial<UserMetrics>) => {
-    setMetrics(current => {
-      if (!current) return { ...initialMetrics, ...newMetrics };
-      return { ...current, ...newMetrics };
-    });
-  };
-
-  // Reset metrics to initial state
-  const resetMetrics = () => {
-    setMetrics(initialMetrics);
+  const contextValue: UserMetricsContextType = {
+    getUserMetrics,
+    updateUserMetrics,
+    resetUserMetrics
   };
 
   return (
@@ -84,19 +95,9 @@ export const UserMetricsProvider: React.FC<UserMetricsProviderProps> = ({ childr
       initializer={initializeMetrics}
       autoInitialize={true}
     >
-      {(baseContext) => (
-        <UserMetricsContext.Provider 
-          value={{
-            ...baseContext,
-            metrics,
-            isLoading: baseContext.status === 'loading',
-            updateMetrics,
-            resetMetrics
-          }}
-        >
-          {children}
-        </UserMetricsContext.Provider>
-      )}
+      <UserMetricsContext.Provider value={contextValue}>
+        {children}
+      </UserMetricsContext.Provider>
     </BaseContextProvider>
   );
 };
@@ -104,11 +105,11 @@ export const UserMetricsProvider: React.FC<UserMetricsProviderProps> = ({ childr
 /**
  * Hook for accessing user metrics context
  */
-export const useUserMetricsContext = (): UserMetricsContextType => {
+export const useUserMetrics = (): UserMetricsContextType => {
   const context = useContext(UserMetricsContext);
   
   if (!context) {
-    throw new Error('useUserMetricsContext must be used within a UserMetricsProvider');
+    throw new Error('useUserMetrics must be used within a UserMetricsProvider');
   }
   
   return context;
