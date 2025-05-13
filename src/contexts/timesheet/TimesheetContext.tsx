@@ -1,9 +1,9 @@
 
 import React, { ReactNode, useCallback } from 'react';
-import { CalendarProvider, useCalendarContext } from './calendar-context/CalendarContext';
-import { UserTimesheetProvider, useUserTimesheetContext } from './user-context/UserTimesheetContext';
+import { CalendarProvider, useCalendarContext } from './calendar-context';
+import { UserTimesheetProvider, useUserTimesheetContext } from './user-context';
 import { TimeEntryProvider } from './entries-context/TimeEntryContext';
-import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context/TimesheetUIContext';
+import { TimesheetUIProvider, useTimesheetUIContext } from './ui-context';
 import { WorkHoursProvider } from './work-hours-context/WorkHoursContext';
 import { createTimeLogger } from '@/utils/time/errors';
 import { UnifiedTimesheetContextType } from './types';
@@ -18,11 +18,11 @@ const logger = createTimeLogger('TimesheetContext');
  */
 
 // Re-export individual context hooks for easier access from components
-export { useCalendarContext } from './calendar-context/CalendarContext';
-export { useUserTimesheetContext } from './user-context/UserTimesheetContext';
+export { useCalendarContext } from './calendar-context';
+export { useUserTimesheetContext } from './user-context';
 export { useTimeEntryContext } from './entries-context/TimeEntryContext';
 export { useEntriesContext } from './entries-context/EntriesContext';
-export { useTimesheetUIContext } from './ui-context/TimesheetUIContext';
+export { useTimesheetUIContext } from './ui-context';
 export { useWorkHoursContext } from './work-hours-context/WorkHoursContext';
 
 // Custom event to trigger auto-save across components
@@ -85,6 +85,8 @@ interface TimesheetProviderProps {
  * @returns {JSX.Element} Provider component
  */
 export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }) => {
+  console.log("Initializing TimesheetProvider");
+  
   // This function will be called before the date changes
   const handleBeforeDateChange = useCallback(() => {
     logger.debug("Date is about to change - triggering save event");
@@ -117,7 +119,9 @@ export const TimesheetProvider: React.FC<TimesheetProviderProps> = ({ children }
       <UserTimesheetProvider>
         <WorkHoursProvider>
           <CalendarProvider onBeforeDateChange={handleBeforeDateChange}>
-            {children}
+            <TimeEntryProvider>
+              {children}
+            </TimeEntryProvider>
           </CalendarProvider>
         </WorkHoursProvider>
       </UserTimesheetProvider>

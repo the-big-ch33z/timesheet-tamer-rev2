@@ -5,7 +5,6 @@ import ErrorBoundary from "../common/ErrorBoundary";
 import { useToast } from "@/components/ui/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "@/components/common/ErrorFallback";
-import { ErrorProvider } from "@/contexts/error/ErrorContext";
 
 const logger = createTimeLogger('TimesheetWithErrorBoundary');
 
@@ -20,9 +19,12 @@ interface TimesheetWithErrorBoundaryProps {
  */
 const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = memo(({ children }) => {
   const { toast } = useToast();
+  
+  console.log("Rendering TimesheetWithErrorBoundary");
 
   const handleTimesheetError = (error: Error) => {
     logger.error("Timesheet error caught:", error);
+    console.error("TimesheetError:", error);
     
     // Show a toast notification for the error
     toast({
@@ -30,35 +32,37 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = me
       title: "Timesheet Error",
       description: "There was a problem with the timesheet. Please try again.",
     });
-    
-    // Optionally report to an error monitoring service here
   };
   
   // Create a specialized fallback for timesheet errors
-  const renderTimeSheetErrorFallback = ({ error, resetErrorBoundary }: any) => (
-    <div className="container py-6 max-w-7xl">
-      <div className="bg-white rounded-lg shadow p-6">
-        <ErrorFallback 
-          error={error} 
-          resetErrorBoundary={() => {
-            // First try the normal reset
-            resetErrorBoundary();
-            
-            // If it didn't work and we still have errors, try a more thorough reset
-            setTimeout(() => {
-              // Clear any timesheet specific storage that might be problematic
-              try {
-                localStorage.removeItem('timesheet-work-hours');
-                localStorage.removeItem('time-entries-cache-timestamp');
-              } catch (e) {
-                // Ignore errors during cleanup
-              }
-            }, 500);
-          }}
-        />
+  const renderTimeSheetErrorFallback = ({ error, resetErrorBoundary }: any) => {
+    console.error("Rendering error fallback with error:", error);
+    
+    return (
+      <div className="container py-6 max-w-7xl">
+        <div className="bg-white rounded-lg shadow p-6">
+          <ErrorFallback 
+            error={error} 
+            resetErrorBoundary={() => {
+              // First try the normal reset
+              resetErrorBoundary();
+              
+              // If it didn't work and we still have errors, try a more thorough reset
+              setTimeout(() => {
+                // Clear any timesheet specific storage that might be problematic
+                try {
+                  localStorage.removeItem('timesheet-work-hours');
+                  localStorage.removeItem('time-entries-cache-timestamp');
+                } catch (e) {
+                  // Ignore errors during cleanup
+                }
+              }, 500);
+            }}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <ErrorBoundary 

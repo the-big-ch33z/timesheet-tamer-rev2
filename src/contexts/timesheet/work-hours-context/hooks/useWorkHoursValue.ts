@@ -17,6 +17,8 @@ export const useWorkHoursValue = ({
   latestWorkHoursRef,
   getDefaultHoursFromSchedule
 }: UseWorkHoursValueProps): WorkHoursContextType => {
+  console.log("Initializing WorkHours value");
+  
   const { getWorkHours, hasCustomWorkHours } = useWorkHoursCore({
     workHoursMap,
     setWorkHoursMap,

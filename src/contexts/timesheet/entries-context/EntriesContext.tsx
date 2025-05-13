@@ -25,25 +25,48 @@ export const EntriesContext = createContext<EntriesContextValue | undefined>(und
  * Provider that wraps TimeEntryContext and exposes it through the old interface
  */
 export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use the unified context
-  const timeEntryContext = useTimeEntryContext();
+  console.log("Initializing EntriesProvider compatibility layer");
   
-  // Map to the old interface
-  const value: EntriesContextValue = {
-    entries: timeEntryContext.entries,
-    isLoading: timeEntryContext.isLoading,
-    createEntry: timeEntryContext.createEntry,
-    updateEntry: timeEntryContext.updateEntry,
-    deleteEntry: timeEntryContext.deleteEntry,
-    getDayEntries: (date: Date) => timeEntryContext.getDayEntries(date),
-    getMonthEntries: (date: Date, userId?: string) => timeEntryContext.getMonthEntries(date, userId || ''),
-  };
-  
-  return (
-    <EntriesContext.Provider value={value}>
-      {children}
-    </EntriesContext.Provider>
-  );
+  try {
+    // Use the unified context
+    const timeEntryContext = useTimeEntryContext();
+    
+    // Map to the old interface
+    const value: EntriesContextValue = {
+      entries: timeEntryContext.entries,
+      isLoading: timeEntryContext.isLoading,
+      createEntry: timeEntryContext.createEntry,
+      updateEntry: timeEntryContext.updateEntry,
+      deleteEntry: timeEntryContext.deleteEntry,
+      getDayEntries: (date: Date) => timeEntryContext.getDayEntries(date),
+      getMonthEntries: (date: Date, userId?: string) => timeEntryContext.getMonthEntries(date, userId || ''),
+    };
+    
+    return (
+      <EntriesContext.Provider value={value}>
+        {children}
+      </EntriesContext.Provider>
+    );
+  } catch (error) {
+    console.error("Error initializing EntriesProvider compatibility layer:", error);
+    
+    // Provide fallback values if timeEntryContext is not available
+    const fallbackValue: EntriesContextValue = {
+      entries: [],
+      isLoading: false,
+      createEntry: () => null,
+      updateEntry: () => {},
+      deleteEntry: async () => false,
+      getDayEntries: () => [],
+      getMonthEntries: () => [],
+    };
+    
+    return (
+      <EntriesContext.Provider value={fallbackValue}>
+        {children}
+      </EntriesContext.Provider>
+    );
+  }
 };
 
 /**
@@ -53,20 +76,45 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({ child
 export const useEntriesContext = (): EntriesContextValue => {
   const ctx = useContext(EntriesContext);
   
-  // If no context is available, delegate to the unified context directly
+  // If no context is available, try to delegate to the unified context directly
   if (!ctx) {
-    // Create adapter wrapper when using the unified context directly
-    const timeEntryContext = useTimeEntryContext();
+    console.warn("EntriesContext not found, attempting to use TimeEntryContext directly");
     
-    return {
-      entries: timeEntryContext.entries,
-      isLoading: timeEntryContext.isLoading,
-      createEntry: timeEntryContext.createEntry,
-      updateEntry: timeEntryContext.updateEntry,
-      deleteEntry: timeEntryContext.deleteEntry,
-      getDayEntries: (date: Date) => timeEntryContext.getDayEntries(date),
-      getMonthEntries: (date: Date, userId?: string) => timeEntryContext.getMonthEntries(date, userId || ''),
-    };
+    try {
+      // Create adapter wrapper when using the unified context directly
+      const timeEntryContext = useTimeEntryContext();
+      
+      return {
+        entries: timeEntryContext.entries,
+        isLoading: timeEntryContext.isLoading,
+        createEntry: timeEntryContext.createEntry,
+        updateEntry: timeEntryContext.updateEntry,
+        deleteEntry: timeEntryContext.deleteEntry,
+        getDayEntries: (date: Date) => timeEntryContext.getDayEntries(date),
+        getMonthEntries: (date: Date, userId?: string) => timeEntryContext.getMonthEntries(date, userId || ''),
+      };
+    } catch (error) {
+      console.error("Failed to use TimeEntryContext directly:", error);
+      
+      // Last resort fallback
+      return {
+        entries: [],
+        isLoading: false,
+        createEntry: () => {
+          console.error("Entries context not available");
+          return null;
+        },
+        updateEntry: () => {
+          console.error("Entries context not available");
+        },
+        deleteEntry: async () => {
+          console.error("Entries context not available");
+          return false;
+        },
+        getDayEntries: () => [],
+        getMonthEntries: () => [],
+      };
+    }
   }
   
   return ctx;

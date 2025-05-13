@@ -2,6 +2,7 @@
 import React, { ReactNode } from 'react';
 import { ErrorProvider } from './error/ErrorContext';
 import { Toaster } from '@/components/ui/toaster';
+import { UserMetricsProvider } from './user-metrics/UserMetricsContext';
 
 export interface AppProviderProps {
   children: ReactNode;
@@ -12,11 +13,14 @@ export interface AppProviderProps {
  * This establishes the context hierarchy and ensures correct initialization order
  */
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  console.log("Initializing AppProvider");
+  
   return (
     <ErrorProvider>
-      {/* Add other base-level providers here */}
-      {children}
-      <Toaster />
+      <UserMetricsProvider>
+        {children}
+        <Toaster />
+      </UserMetricsProvider>
     </ErrorProvider>
   );
 };

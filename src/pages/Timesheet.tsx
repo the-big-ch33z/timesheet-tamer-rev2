@@ -1,12 +1,6 @@
 
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import TimesheetWithErrorBoundary from "@/components/timesheet/TimesheetWithErrorBoundary";
-import { 
-  UserTimesheetProvider, 
-  CalendarProvider,
-  TimesheetUIProvider
-} from "@/contexts/timesheet";
-import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { initializeService } from "@/utils/time/services/api-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
@@ -103,6 +97,7 @@ const TimesheetContent = () => {
  * Provides error boundary and context providers
  */
 const Timesheet = () => {
+  console.log("Rendering Timesheet component");
   return (
     <TimesheetWithErrorBoundary>
       <TimesheetContent />
