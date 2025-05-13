@@ -1,103 +1,115 @@
 
-import React, { createContext, useContext } from "react";
-import { UserMetrics, UserMetricsContextType, DEFAULT_USER_METRICS } from "./types";
-import { useAuth } from "@/contexts/auth";
-import { useToast } from "@/hooks/use-toast";
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useErrorContext } from '../error/ErrorContext';
+import { BaseContextProvider, BaseContextState } from '../base/BaseContext';
+import { useLogger } from '@/hooks/useLogger';
 
-// Create the context with a default implementation
-const UserMetricsContext = createContext<UserMetricsContextType>({
-  getUserMetrics: () => DEFAULT_USER_METRICS,
-  updateUserMetrics: async () => {},
-  resetUserMetrics: async () => {}
-});
+// Define types for user metrics
+export interface UserMetrics {
+  totalHoursWorked: number;
+  averageHoursPerWeek: number;
+  totalDaysWorked: number;
+  completionRate: number;
+}
 
-export const UserMetricsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, updateUserMetrics: authUpdateUserMetrics } = useAuth();
-  const { toast } = useToast();
+// Define the context type
+export interface UserMetricsContextType extends BaseContextState {
+  metrics: UserMetrics | null;
+  isLoading: boolean;
+  updateMetrics: (metrics: Partial<UserMetrics>) => void;
+  resetMetrics: () => void;
+}
 
-  // Get user metrics with defaults for missing values
-  const getUserMetrics = (userId: string): UserMetrics => {
-    const user = users.find(u => u.id === userId);
-    
-    if (!user) {
-      console.log(`User ${userId} not found, returning default metrics`);
-      return DEFAULT_USER_METRICS;
-    }
-    
-    return {
-      fte: user.fte !== undefined ? user.fte : DEFAULT_USER_METRICS.fte,
-      fortnightHours: user.fortnightHours !== undefined ? user.fortnightHours : DEFAULT_USER_METRICS.fortnightHours,
-      workScheduleId: user.workScheduleId || DEFAULT_USER_METRICS.workScheduleId
-    };
-  };
+// Create context
+const UserMetricsContext = createContext<UserMetricsContextType | undefined>(undefined);
 
-  // Update user metrics with validation
-  const updateUserMetrics = async (userId: string, metrics: Partial<UserMetrics>): Promise<void> => {
+// Initial state for metrics
+const initialMetrics: UserMetrics = {
+  totalHoursWorked: 0,
+  averageHoursPerWeek: 0,
+  totalDaysWorked: 0,
+  completionRate: 0
+};
+
+export interface UserMetricsProviderProps {
+  children: ReactNode;
+}
+
+/**
+ * Provider component for user metrics
+ */
+export const UserMetricsProvider: React.FC<UserMetricsProviderProps> = ({ children }) => {
+  const logger = useLogger('UserMetricsContext');
+  const [metrics, setMetrics] = useState<UserMetrics | null>(initialMetrics);
+  
+  // Use try/catch for error context in case it's not available
+  let errorHandler = { handleError: (error: any) => console.error(error) };
+  try {
+    errorHandler = useErrorContext();
+  } catch (error) {
+    logger.warn('ErrorContext not available in UserMetricsContext, using fallback');
+  }
+
+  // Initialize metrics from storage or API
+  const initializeMetrics = async () => {
     try {
-      // Validate metrics before updating
-      const validatedMetrics: Partial<UserMetrics> = {};
+      logger.debug('Initializing user metrics');
       
-      if (metrics.fte !== undefined) {
-        validatedMetrics.fte = Number.isFinite(metrics.fte) ? metrics.fte : DEFAULT_USER_METRICS.fte;
-      }
-      
-      if (metrics.fortnightHours !== undefined) {
-        validatedMetrics.fortnightHours = Number.isFinite(metrics.fortnightHours) 
-          ? metrics.fortnightHours 
-          : DEFAULT_USER_METRICS.fortnightHours;
-      }
-      
-      if (metrics.workScheduleId !== undefined) {
-        validatedMetrics.workScheduleId = metrics.workScheduleId;
-      }
-      
-      await authUpdateUserMetrics(userId, validatedMetrics);
-      console.log(`Updated user ${userId} metrics:`, validatedMetrics);
-      
+      // For now just return the initial metrics
+      // This could be extended to load from localStorage or an API
+      return initialMetrics;
     } catch (error) {
-      console.error("Error updating user metrics:", error);
-      toast({
-        title: "Failed to update metrics",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
+      logger.error('Failed to initialize metrics:', error);
+      errorHandler.handleError(error, 'UserMetricsContext initialization');
       throw error;
     }
   };
 
-  // Reset user metrics to defaults
-  const resetUserMetrics = async (userId: string): Promise<void> => {
-    try {
-      await authUpdateUserMetrics(userId, DEFAULT_USER_METRICS);
-      console.log(`Reset user ${userId} metrics to defaults`);
-      
-      toast({
-        title: "Metrics reset",
-        description: "User metrics have been reset to default values",
-      });
-    } catch (error) {
-      console.error("Error resetting user metrics:", error);
-      toast({
-        title: "Failed to reset metrics",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
-      throw error;
-    }
+  // Update metrics
+  const updateMetrics = (newMetrics: Partial<UserMetrics>) => {
+    setMetrics(current => {
+      if (!current) return { ...initialMetrics, ...newMetrics };
+      return { ...current, ...newMetrics };
+    });
   };
 
-  const value: UserMetricsContextType = {
-    getUserMetrics,
-    updateUserMetrics,
-    resetUserMetrics
+  // Reset metrics to initial state
+  const resetMetrics = () => {
+    setMetrics(initialMetrics);
   };
 
   return (
-    <UserMetricsContext.Provider value={value}>
-      {children}
-    </UserMetricsContext.Provider>
+    <BaseContextProvider
+      contextName="UserMetrics"
+      initializer={initializeMetrics}
+      autoInitialize={true}
+    >
+      {(baseContext) => (
+        <UserMetricsContext.Provider 
+          value={{
+            ...baseContext,
+            metrics,
+            isLoading: baseContext.status === 'loading',
+            updateMetrics,
+            resetMetrics
+          }}
+        >
+          {children}
+        </UserMetricsContext.Provider>
+      )}
+    </BaseContextProvider>
   );
 };
 
-// Hook for using the context
-export const useUserMetrics = () => useContext(UserMetricsContext);
+/**
+ * Hook for accessing user metrics context
+ */
+export const useUserMetricsContext = (): UserMetricsContextType => {
+  const context = useContext(UserMetricsContext);
+  
+  if (!context) {
+    throw new Error('useUserMetricsContext must be used within a UserMetricsProvider');
+  }
+  
+  return context;
+};

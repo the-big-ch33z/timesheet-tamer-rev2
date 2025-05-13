@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 import { createSeedData } from './utils/seedData';
+import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
 
 // Initialize polyfills and compatibility layer
 import './utils/react-is-polyfill';
@@ -51,11 +52,11 @@ const mount = () => {
     
     root.render(
       <React.StrictMode>
-        <ErrorHandler>
+        <GlobalErrorBoundary>
           <BrowserRouter>
             <App />
           </BrowserRouter>
-        </ErrorHandler>
+        </GlobalErrorBoundary>
       </React.StrictMode>
     );
     
@@ -78,53 +79,6 @@ const mount = () => {
     `;
   }
 };
-
-// Simple error boundary component for catching React rendering errors
-function ErrorHandler({ children }: { children: React.ReactNode }) {
-  const [hasError, setHasError] = React.useState(false);
-  const [error, setError] = React.useState<Error | null>(null);
-
-  React.useEffect(() => {
-    const errorHandler = (event: ErrorEvent) => {
-      console.error('Error caught by ErrorHandler:', event.error);
-      setHasError(true);
-      setError(event.error);
-    };
-    
-    window.addEventListener('error', errorHandler);
-    return () => window.removeEventListener('error', errorHandler);
-  }, []);
-
-  if (hasError) {
-    return (
-      <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-        <h2 style={{ color: "#e11d48" }}>Application Error</h2>
-        <p>Something went wrong in the React application.</p>
-        {error && (
-          <pre style={{ background: "#f1f5f9", padding: "10px", borderRadius: "4px", overflow: "auto" }}>
-            {error.message}
-          </pre>
-        )}
-        <button 
-          onClick={() => window.location.reload()} 
-          style={{ 
-            marginTop: "10px", 
-            padding: "8px 16px", 
-            background: "#2563eb", 
-            color: "white", 
-            border: "none", 
-            borderRadius: "4px", 
-            cursor: "pointer" 
-          }}
-        >
-          Reload Application
-        </button>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-}
 
 // Initialize app
 console.log("Starting mount process...");

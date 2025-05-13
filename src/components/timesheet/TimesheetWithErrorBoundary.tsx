@@ -3,10 +3,7 @@ import React, { memo } from "react";
 import { TimesheetProvider } from "@/contexts/timesheet/TimesheetContext";
 import ErrorBoundary from "../common/ErrorBoundary";
 import { useToast } from "@/components/ui/use-toast";
-import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "@/components/common/ErrorFallback";
-
-const logger = createTimeLogger('TimesheetWithErrorBoundary');
 
 interface TimesheetWithErrorBoundaryProps {
   children: React.ReactNode;
@@ -23,7 +20,6 @@ const TimesheetWithErrorBoundary: React.FC<TimesheetWithErrorBoundaryProps> = me
   console.log("Rendering TimesheetWithErrorBoundary");
 
   const handleTimesheetError = (error: Error) => {
-    logger.error("Timesheet error caught:", error);
     console.error("TimesheetError:", error);
     
     // Show a toast notification for the error
