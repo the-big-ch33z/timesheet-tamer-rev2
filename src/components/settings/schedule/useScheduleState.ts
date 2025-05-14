@@ -53,20 +53,20 @@ export const useScheduleState = () => {
       userId: 'default-user',
       weeks: {
         1: {
-          monday: { startTime: '09:00', endTime: '17:00' },
-          tuesday: { startTime: '09:00', endTime: '17:00' },
-          wednesday: { startTime: '09:00', endTime: '17:00' },
-          thursday: { startTime: '09:00', endTime: '17:00' },
-          friday: { startTime: '09:00', endTime: '17:00' },
+          monday: { startTime: '', endTime: '' },
+          tuesday: { startTime: '', endTime: '' },
+          wednesday: { startTime: '', endTime: '' },
+          thursday: { startTime: '', endTime: '' },
+          friday: { startTime: '', endTime: '' },
           saturday: null,
           sunday: null
         },
         2: {
-          monday: { startTime: '09:00', endTime: '17:00' },
-          tuesday: { startTime: '09:00', endTime: '17:00' },
-          wednesday: { startTime: '09:00', endTime: '17:00' },
-          thursday: { startTime: '09:00', endTime: '17:00' },
-          friday: { startTime: '09:00', endTime: '17:00' },
+          monday: { startTime: '', endTime: '' },
+          tuesday: { startTime: '', endTime: '' },
+          wednesday: { startTime: '', endTime: '' },
+          thursday: { startTime: '', endTime: '' },
+          friday: { startTime: '', endTime: '' },
           saturday: null,
           sunday: null
         }
@@ -151,8 +151,8 @@ export const useScheduleState = () => {
     const updatedSchedule = {...editingSchedule};
     updatedSchedule.weeks[activeWeek][day] = isWorkDay 
       ? { 
-          startTime: '09:00', 
-          endTime: '17:00',
+          startTime: '', 
+          endTime: '',
           breaks: { lunch: false, smoko: false }
         } 
       : null;

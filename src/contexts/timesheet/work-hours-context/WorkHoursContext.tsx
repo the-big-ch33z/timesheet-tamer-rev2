@@ -43,8 +43,8 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       const schedule = getScheduleById(userScheduleId);
       
       if (!schedule) {
-        logger.debug(`No schedule found for user ${userId}, using default hours`);
-        return { startTime: '09:00', endTime: '17:00' };
+        logger.debug(`No schedule found for user ${userId}, using empty hours`);
+        return { startTime: '', endTime: '' };
       }
       
       // Determine the week in the fortnight cycle
@@ -57,17 +57,18 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       const dayConfig = schedule.weeks[fortnightWeek]?.[weekDay];
       
       if (!dayConfig || dayConfig === null) {
-        logger.debug(`No day config for ${weekDay} in week ${fortnightWeek}, using default hours`);
+        logger.debug(`No day config for ${weekDay} in week ${fortnightWeek}, using empty hours`);
         return { startTime: '', endTime: '' };
       }
       
+      // Return the actual schedule times without fallbacks
       return {
-        startTime: dayConfig.startTime || '09:00',
-        endTime: dayConfig.endTime || '17:00'
+        startTime: dayConfig.startTime || '',
+        endTime: dayConfig.endTime || ''
       };
     } catch (error) {
       logger.error('Error getting default hours from schedule', error);
-      return { startTime: '09:00', endTime: '17:00' };
+      return { startTime: '', endTime: '' };
     }
   };
   

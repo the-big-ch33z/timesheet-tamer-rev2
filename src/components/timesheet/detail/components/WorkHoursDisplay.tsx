@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Bell, Coffee } from "lucide-react";
 import TimeInput from "@/components/ui/time-input/TimeInput";
@@ -69,7 +70,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
             onChange={(value) => onTimeChange("start", value)} 
             disabled={!interactive}
             className="w-32"
-            placeholder="e.g. 8:30am"
+            placeholder="Enter start time"
           />
         </div>
 
@@ -81,7 +82,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
             onChange={(value) => onTimeChange("end", value)}
             disabled={!interactive}
             className="w-32"
-            placeholder="e.g. 5:00pm"
+            placeholder="Enter end time"
           />
         </div>
 

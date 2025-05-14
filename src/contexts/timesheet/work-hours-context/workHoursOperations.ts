@@ -47,16 +47,16 @@ export const createWorkHoursOperations = (
       if (daySchedule && daySchedule.isWorkingDay && daySchedule.hours) {
         logger.debug(`Derived hours for ${userId} on ${format(date, 'yyyy-MM-dd')} from schedule: ${daySchedule.hours.startTime}-${daySchedule.hours.endTime}`);
         return {
-          startTime: daySchedule.hours.startTime,
-          endTime: daySchedule.hours.endTime
+          startTime: daySchedule.hours.startTime || '',
+          endTime: daySchedule.hours.endTime || ''
         };
       }
       
-      logger.debug(`No schedule hours found for ${userId} on ${format(date, 'yyyy-MM-dd')}, using defaults`);
-      return { startTime: "09:00", endTime: "17:00" };
+      logger.debug(`No schedule hours found for ${userId} on ${format(date, 'yyyy-MM-dd')}, using empty defaults`);
+      return { startTime: "", endTime: "" };
     } catch (error) {
       logger.error(`Error getting default hours from schedule: ${error}`);
-      return { startTime: "09:00", endTime: "17:00" };
+      return { startTime: "", endTime: "" };
     }
   };
 
