@@ -1,13 +1,6 @@
 
 import React, { createContext, useContext, useState } from 'react';
-import { WorkSchedule } from '@/types';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { User, UserRole, WorkSchedule } from '@/types';
 
 interface UserTimesheetContextType {
   viewedUser: User | null;
@@ -33,7 +26,7 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
     id: 'current-user',
     name: 'Current User',
     email: 'user@example.com',
-    role: 'user'
+    role: 'team-member' // Now using the UserRole type
   });
 
   return (

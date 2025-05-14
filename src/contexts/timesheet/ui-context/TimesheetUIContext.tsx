@@ -1,16 +1,14 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
-type TabType = 'timesheet' | 'month' | 'leave' | 'stats';
-
-interface TimesheetUIContextProps {
-  activeTab: TabType;
-  setActiveTab: (tab: TabType) => void;
+interface TimesheetUIContextType {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   showHelpPanel: boolean;
   setShowHelpPanel: (show: boolean) => void;
 }
 
-const TimesheetUIContext = createContext<TimesheetUIContextProps | undefined>(undefined);
+const TimesheetUIContext = createContext<TimesheetUIContextType | undefined>(undefined);
 
 export const useTimesheetUIContext = () => {
   const context = useContext(TimesheetUIContext);
@@ -21,18 +19,16 @@ export const useTimesheetUIContext = () => {
 };
 
 export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('timesheet');
-  const [showHelpPanel, setShowHelpPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('timesheet');
+  const [showHelpPanel, setShowHelpPanel] = useState<boolean>(false);
 
   return (
-    <TimesheetUIContext.Provider 
-      value={{ 
-        activeTab, 
-        setActiveTab, 
-        showHelpPanel, 
-        setShowHelpPanel 
-      }}
-    >
+    <TimesheetUIContext.Provider value={{ 
+      activeTab, 
+      setActiveTab, 
+      showHelpPanel, 
+      setShowHelpPanel 
+    }}>
       {children}
     </TimesheetUIContext.Provider>
   );

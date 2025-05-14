@@ -4,19 +4,19 @@ import { addMonths, subMonths } from 'date-fns';
 
 interface CalendarContextType {
   currentMonth: Date;
-  selectedDay: Date;
+  selectedDay: Date | null;
   prevMonth: () => void;
   nextMonth: () => void;
   handleDayClick: (day: Date) => void;
-  setSelectedDay: (day: Date) => void;
+  setSelectedDay: (day: Date | null) => void;
 }
+
+const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
 interface CalendarProviderProps {
   children: React.ReactNode;
   onBeforeDateChange?: () => void;
 }
-
-const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
 export const useCalendarContext = () => {
   const context = useContext(CalendarContext);
@@ -27,11 +27,11 @@ export const useCalendarContext = () => {
 };
 
 export const CalendarProvider: React.FC<CalendarProviderProps> = ({ 
-  children, 
-  onBeforeDateChange 
+  children,
+  onBeforeDateChange
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
 
   const prevMonth = useCallback(() => {
     setCurrentMonth(subMonths(currentMonth, 1));
@@ -49,16 +49,14 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
   }, [onBeforeDateChange]);
 
   return (
-    <CalendarContext.Provider
-      value={{
-        currentMonth,
-        selectedDay,
-        prevMonth,
-        nextMonth,
-        handleDayClick,
-        setSelectedDay,
-      }}
-    >
+    <CalendarContext.Provider value={{
+      currentMonth,
+      selectedDay,
+      prevMonth,
+      nextMonth,
+      handleDayClick,
+      setSelectedDay
+    }}>
       {children}
     </CalendarContext.Provider>
   );
