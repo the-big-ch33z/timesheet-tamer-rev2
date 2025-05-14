@@ -12,6 +12,9 @@ import './utils/prop-types-polyfill';
 
 // Enhanced error logging for troubleshooting
 console.log("React version:", React.version);
+console.log("React available?", !!React);
+console.log("React.createElement available?", !!React.createElement);
+console.log("React.useState available?", !!React.useState);
 console.log("Application initializing...");
 
 // Mount the app with proper browser checks
@@ -52,6 +55,20 @@ const mount = () => {
     }
   } catch (error) {
     console.error("Error mounting application:", error);
+    console.error("Error details:", error.message);
+    
+    // Fallback rendering to show error to user
+    try {
+      const errorDiv = document.createElement('div');
+      errorDiv.style.padding = '20px';
+      errorDiv.style.color = 'red';
+      errorDiv.style.backgroundColor = '#fff';
+      errorDiv.innerHTML = `<h2>Application Error</h2><p>${error.message}</p>`;
+      rootElement.appendChild(errorDiv);
+    } catch (e) {
+      // Last resort error handling
+      document.body.innerHTML = `<div style="padding:20px;color:red;"><h2>Application Error</h2><p>${error.message}</p></div>`;
+    }
   }
 };
 

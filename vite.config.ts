@@ -30,8 +30,10 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      jsxImportSource: undefined,
+      jsxImportSource: 'react', // Explicitly use React for JSX
       devTarget: "es2020",
+      plugins: [],
+      tsDecorators: false,
     }),
     splitVendorChunkPlugin(),
     mode === "development" && componentTagger(),
@@ -45,7 +47,15 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Ensure React resolution is consistent
+      "react": path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+      "react-is": path.resolve(__dirname, "node_modules/react-is"),
+      "prop-types": path.resolve(__dirname, "node_modules/prop-types"),
     },
+    // Ensure proper extension resolution
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
+    dedupe: ['react', 'react-dom', 'react-is']
   },
   optimizeDeps: {
     include: [
@@ -61,9 +71,12 @@ export default defineConfig(({ mode }) => ({
       "clsx",
       "class-variance-authority",
     ],
+    exclude: [], // Ensure React is not excluded
     esbuildOptions: {
       target: "es2020",
-      jsx: "automatic",
+      jsx: "automatic", // Use automatic JSX transform
+      jsxFactory: "React.createElement",
+      jsxFragment: "React.Fragment",
       platform: "browser",
     },
   },
@@ -72,7 +85,8 @@ export default defineConfig(({ mode }) => ({
     minify: mode === "production" ? "terser" : "esbuild",
     cssMinify: true,
     commonjsOptions: {
-      transformMixedEsModules: true,
+      transformMixedEsModules: true, // Important for handling mixed module types
+      include: [/node_modules\/react\//, /node_modules\/react-dom\//, /node_modules\/react-is\//], // Force proper handling of React packages
       requireReturnsDefault: "auto",
     },
     sourcemap: mode !== "production",
@@ -80,7 +94,7 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-is")) {
-            return "react";
+            return "react"; // Bundle all React-related dependencies together
           }
           if (id.includes("node_modules/react-router-dom")) {
             return "router";
@@ -114,5 +128,12 @@ export default defineConfig(({ mode }) => ({
   esbuild: {
     jsxFactory: "React.createElement",
     jsxFragment: "React.Fragment",
+    jsx: "automatic", // Ensure consistent JSX handling
+  },
+  define: {
+    // Ensure React.createElement and React.Fragment are available
+    'process.env': {},
+    'React.createElement': ['react', 'createElement'],
+    'React.Fragment': ['react', 'Fragment'],
   },
 }));
