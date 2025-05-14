@@ -1,99 +1,85 @@
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { addMonths, subMonths } from 'date-fns';
-import { CalendarContextType } from '../types';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('CalendarContext');
 
-// Create context with default values
-const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
+export interface CalendarContextType {
+  currentMonth: Date;
+  selectedDay: Date;
+  prevMonth: () => void;
+  nextMonth: () => void;
+  handleDayClick: (day: Date) => void;
+  setSelectedDay: (day: Date) => void;
+}
 
-export interface CalendarProviderProps {
+interface CalendarProviderProps {
   children: React.ReactNode;
-  initialMonth?: Date;
-  initialDay?: Date | null;
   onBeforeDateChange?: () => void;
 }
 
-/**
- * CalendarProvider
- * 
- * Provides calendar state and navigation functions
- * 
- * @dependency None - This is a root-level context that doesn't depend on other contexts
- * 
- * Dependencies Flow:
- * - This context is used by TimeEntryContext to show entries for the selected day
- * - This context may trigger the onBeforeDateChange callback from TimesheetContext
- */
-export const CalendarProvider: React.FC<CalendarProviderProps> = ({
-  children,
-  initialMonth = new Date(),
-  initialDay = null,
-  onBeforeDateChange
+const CalendarContext = createContext<CalendarContextType | null>(null);
+
+export const CalendarProvider: React.FC<CalendarProviderProps> = ({ 
+  children, 
+  onBeforeDateChange 
 }) => {
-  // State for current month and selected day
-  const [currentMonth, setCurrentMonth] = useState(initialMonth);
-  const [selectedDay, setSelectedDay] = useState<Date | null>(initialDay);
-
-  /**
-   * Navigate to the previous month
-   */
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(new Date());
+  
+  // Navigate to previous month
   const prevMonth = useCallback(() => {
-    logger.debug('Navigating to previous month');
-    setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
+    setCurrentMonth(prevDate => {
+      const date = new Date(prevDate);
+      date.setMonth(date.getMonth() - 1);
+      return date;
+    });
   }, []);
-
-  /**
-   * Navigate to the next month
-   */
+  
+  // Navigate to next month
   const nextMonth = useCallback(() => {
-    logger.debug('Navigating to next month');
-    setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
+    setCurrentMonth(prevDate => {
+      const date = new Date(prevDate);
+      date.setMonth(date.getMonth() + 1);
+      return date;
+    });
   }, []);
-
-  /**
-   * Handle a day being clicked in the calendar
-   * 
-   * @param day - The day that was clicked
-   */
+  
+  // Handle day selection with callback for saving pending changes
   const handleDayClick = useCallback((day: Date) => {
-    logger.debug(`Day clicked: ${day.toISOString()}`);
+    logger.debug(`Day clicked: ${day.toLocaleDateString()}`);
     
+    // Trigger the before date change callback if provided
     if (onBeforeDateChange) {
       onBeforeDateChange();
     }
     
-    setSelectedDay(day);
+    // Set the selected day after a short delay to allow saving
+    setTimeout(() => {
+      setSelectedDay(day);
+    }, 10);
   }, [onBeforeDateChange]);
-
-  // Context value
-  const contextValue: CalendarContextType = {
-    currentMonth,
-    selectedDay,
-    prevMonth,
-    nextMonth,
-    handleDayClick,
-    setSelectedDay
-  };
-
+  
+  // Log when the selected day changes
+  useEffect(() => {
+    logger.debug(`Selected day set to: ${selectedDay.toLocaleDateString()}`);
+  }, [selectedDay]);
+  
   return (
-    <CalendarContext.Provider value={contextValue}>
+    <CalendarContext.Provider value={{
+      currentMonth,
+      selectedDay,
+      prevMonth,
+      nextMonth,
+      handleDayClick,
+      setSelectedDay
+    }}>
       {children}
     </CalendarContext.Provider>
   );
 };
 
-/**
- * useCalendarContext
- * 
- * Hook to access calendar state and navigation functions
- * 
- * @returns {CalendarContextType} Calendar context value
- * @throws {Error} If used outside of a CalendarProvider
- */
-export const useCalendarContext = (): CalendarContextType => {
+export const useCalendarContext = () => {
   const context = useContext(CalendarContext);
   if (!context) {
     throw new Error('useCalendarContext must be used within a CalendarProvider');

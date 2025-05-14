@@ -1,3 +1,4 @@
+
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -8,6 +9,16 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      // Forward requests to lovableproject.com to avoid CORS issues
+      "/.lovableproject.com": {
+        target: "https://lovableproject.com",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/.lovableproject\.com/, '')
+      }
+    },
+    cors: true, // Enable CORS for all origins
   },
   preview: {
     port: 4173,
