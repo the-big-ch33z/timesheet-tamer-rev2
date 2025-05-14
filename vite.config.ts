@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ["localhost", ".lovableproject.com"], // Allow all Lovable project domains
     proxy: {
       // Forward requests to lovableproject.com to avoid CORS issues
       "/.lovableproject.com": {
@@ -24,7 +25,7 @@ export default defineConfig(({ mode }) => ({
     port: 4173,
     open: true,
     fs: {
-      strict: false,
+      strict: false, // Important for fallback routing
     },
   },
   plugins: [
@@ -75,5 +76,43 @@ export default defineConfig(({ mode }) => ({
       requireReturnsDefault: "auto",
     },
     sourcemap: mode !== "production",
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-is")) {
+            return "react";
+          }
+          if (id.includes("node_modules/react-router-dom")) {
+            return "router";
+          }
+          if (id.includes("node_modules/@radix-ui")) {
+            return "radix";
+          }
+          if (
+            id.includes("node_modules/recharts") ||
+            id.includes("node_modules/lodash") ||
+            id.includes("node_modules/prop-types") ||
+            id.includes("node_modules/react-smooth") ||
+            id.includes("node_modules/eventemitter3")
+          ) {
+            return "charts";
+          }
+          if (id.includes("src/components/ui")) {
+            return "ui";
+          }
+          if (id.includes("src/lib/utils") || id.includes("src/lib/date-utils")) {
+            return "utils";
+          }
+          if (id.includes("src/contexts")) {
+            return "contexts";
+          }
+          return null;
+        },
+      },
+    },
+  },
+  esbuild: {
+    jsxFactory: "React.createElement",
+    jsxFragment: "React.Fragment",
   },
 }));
