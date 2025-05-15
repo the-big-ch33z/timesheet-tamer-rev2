@@ -1,3 +1,4 @@
+
 import { useWorkHoursContext } from '@/contexts/timesheet/work-hours-context/WorkHoursContext';
 import { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -184,7 +185,7 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
         toast({
           title: "Time Order Warning",
           description: validation.message,
-          variant: "warning"
+          variant: "default" // Changed from "warning" to "default"
         });
       }
       
@@ -402,3 +403,4 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
 };
 
 export default useWorkHours;
+
