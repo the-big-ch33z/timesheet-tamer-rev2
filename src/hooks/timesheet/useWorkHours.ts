@@ -11,6 +11,7 @@ import { UseTimeEntryFormReturn } from '@/hooks/timesheet/types/timeEntryTypes';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 import { WORK_HOURS_EVENTS } from '@/utils/events/eventTypes';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * Comprehensive hook for work hours management
@@ -47,6 +48,8 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
     onHoursChange
   } = options;
 
+  const { toast } = useToast();
+
   // Use the enhanced implementation for core functionality
   const {
     getWorkHoursForDate,
@@ -62,6 +65,7 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [calculatedHours, setCalculatedHours] = useState(0);
+  const [isProcessingSave, setIsProcessingSave] = useState(false);
   
   // Action states for leave, TOIL, etc.
   const [actionStates, setActionStates] = useState({
@@ -131,54 +135,87 @@ export const useWorkHours = (options: UseWorkHoursOptions = {}) => {
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     logger.debug(`Time change: ${type} = ${value}, interactive=${interactive}`);
     
-    if (!interactive || !userId || !date) {
+    if (!interactive || !userId || !date || isProcessingSave) {
       return;
     }
-    
+
     try {
-      // Make sure we have valid values to work with
+      // Process the new time value first
       const currentStartTime = type === 'start' ? value : startTime;
       const currentEndTime = type === 'end' ? value : endTime;
       
-      // Only validate if both times are set
-      if (currentStartTime && currentEndTime) {
-        // Validate the time order
-        const validation = validateTimeOrder(currentStartTime, currentEndTime);
-        
-        if (!validation.valid) {
-          logger.error(`Invalid time range: ${validation.message}`);
-          return;
-        }
-      }
-      
-      // If validation passes or one of the times is empty, update the times
+      // Update the local state immediately to reflect user input
       if (type === 'start') {
         setStartTime(value);
       } else {
         setEndTime(value);
       }
       
-      // Save the updated times
-      const timeToSave = {
-        startTime: type === 'start' ? value : startTime,
-        endTime: type === 'end' ? value : endTime
-      };
+      // Skip validation if one of the times is empty - we need both to validate
+      if (!currentStartTime || !currentEndTime) {
+        // We still want to save the partial state
+        setIsProcessingSave(true);
+        
+        // Save the updated times to persist the partial state
+        saveWorkHoursForDate(date, currentStartTime, currentEndTime, userId);
+        
+        logger.debug(`Saved partial time state: ${type} = ${value}`);
+        
+        // Notify about the change
+        timeEventsService.publish(WORK_HOURS_EVENTS.CHANGED, {
+          date: format(date, 'yyyy-MM-dd'),
+          userId,
+          startTime: currentStartTime,
+          endTime: currentEndTime,
+          timestamp: Date.now()
+        });
+        
+        setIsProcessingSave(false);
+        return;
+      }
+
+      // If we have both times, validate the time order
+      const validation = validateTimeOrder(currentStartTime, currentEndTime);
       
-      logger.debug(`Saving times: ${timeToSave.startTime} - ${timeToSave.endTime}`);
-      saveWorkHoursForDate(date, timeToSave.startTime, timeToSave.endTime, userId);
+      // Even if validation fails, we still save the values with a warning
+      if (!validation.valid) {
+        logger.warn(`Saving invalid time range: ${validation.message}`);
+        
+        toast({
+          title: "Time Order Warning",
+          description: validation.message,
+          variant: "warning"
+        });
+      }
+      
+      // Save the updated times regardless of validation outcome
+      // This allows users to save intermediate states, even if imperfect
+      setIsProcessingSave(true);
+      saveWorkHoursForDate(date, currentStartTime, currentEndTime, userId);
+      
+      logger.debug(`Saved times: ${currentStartTime} - ${currentEndTime}`);
       
       // Notify about the change
       timeEventsService.publish(WORK_HOURS_EVENTS.CHANGED, {
         date: format(date, 'yyyy-MM-dd'),
         userId,
-        startTime: timeToSave.startTime,
-        endTime: timeToSave.endTime,
+        startTime: currentStartTime,
+        endTime: currentEndTime,
         timestamp: Date.now()
       });
+      
+      setIsProcessingSave(false);
     } catch (error) {
       logger.error("Error updating time:", error);
+      setIsProcessingSave(false);
+      
+      toast({
+        title: "Error Updating Time",
+        description: "There was a problem saving your time change. Please try again.",
+        variant: "destructive"
+      });
     }
-  }, [startTime, endTime, interactive, date, userId, saveWorkHoursForDate]);
+  }, [startTime, endTime, interactive, date, userId, isProcessingSave, saveWorkHoursForDate, toast]);
   
   // Calculate day hours based on entries or schedule
   const calculateDayHours = useCallback((targetDate?: Date) => {

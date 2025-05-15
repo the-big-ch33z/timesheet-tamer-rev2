@@ -55,9 +55,11 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
     });
   }, [startTime, endTime, totalHours, calculatedHours, interactive]);
 
-  // Display placeholders instead of the actual values until user enters them
-  const displayStartTime = startTime || "";
-  const displayEndTime = endTime || "";
+  // Handle specific time change
+  const handleTimeInputChange = (type: 'start' | 'end', value: string) => {
+    console.debug(`[WorkHoursDisplay] Time ${type} changing to: ${value}`);
+    onTimeChange(type, value);
+  };
 
   return (
     <div className="w-full p-4 bg-white border-t border-gray-200 rounded-b-md">
@@ -66,8 +68,8 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           <TimeInput 
             id="start-time"
             label="Start Time"
-            value={displayStartTime}
-            onChange={(value) => onTimeChange("start", value)} 
+            value={startTime}
+            onChange={(value) => handleTimeInputChange("start", value)} 
             disabled={!interactive}
             className="w-32"
             placeholder="Enter start time"
@@ -78,8 +80,8 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
           <TimeInput 
             id="end-time"
             label="End Time"
-            value={displayEndTime}
-            onChange={(value) => onTimeChange("end", value)}
+            value={endTime}
+            onChange={(value) => handleTimeInputChange("end", value)}
             disabled={!interactive}
             className="w-32"
             placeholder="Enter end time"

@@ -21,7 +21,24 @@ export interface WorkHoursProviderProps {
 // Provider component
 export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }) => {
   // Main state for work hours
-  const [workHoursMap, setWorkHoursMap] = useState<Map<string, any>>(new Map());
+  const [workHoursMap, setWorkHoursMap] = useState<Map<string, any>>(() => {
+    // Initialize from localStorage if available
+    try {
+      const savedData = localStorage.getItem('work-hours-data');
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        const newMap = new Map();
+        Object.entries(parsed).forEach(([key, value]) => {
+          newMap.set(key, value);
+        });
+        logger.debug('Loaded work hours from localStorage');
+        return newMap;
+      }
+    } catch (error) {
+      logger.error('Error loading work hours from localStorage:', error);
+    }
+    return new Map();
+  });
   
   // Reference to always get the latest map without re-renders
   const latestWorkHoursRef = useRef<Map<string, any>>(workHoursMap);
@@ -29,6 +46,21 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   // Keep the ref in sync with state
   useEffect(() => {
     latestWorkHoursRef.current = workHoursMap;
+  }, [workHoursMap]);
+  
+  // Save to localStorage when workHoursMap changes
+  useEffect(() => {
+    try {
+      const storageData = Array.from(workHoursMap.entries()).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, any>);
+      
+      localStorage.setItem('work-hours-data', JSON.stringify(storageData));
+      logger.debug('Saved work hours to localStorage');
+    } catch (error) {
+      logger.error('Error saving to localStorage:', error);
+    }
   }, [workHoursMap]);
   
   // Get work schedule context for default hours calculation

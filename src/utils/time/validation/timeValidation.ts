@@ -75,7 +75,7 @@ export function validateTimeOrder(
   // Check if end time is before start time (standard day scenario)
   if (
     startHour > endHour ||
-    (startHour === endHour && startMin >= endMin)
+    (startHour === endHour && startMin > endMin)
   ) {
     return {
       valid: false,

@@ -1,8 +1,11 @@
 
-import React, { memo } from "react";
+import React, { memo, useCallback } from "react";
 import { Clock } from "lucide-react";
 import TimeInput from "@/components/ui/time-input/TimeInput";
 import { cn } from "@/lib/utils";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('TimeInputField');
 
 interface TimeInputFieldProps {
   label: string;
@@ -26,6 +29,11 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   // Remove default values - display empty string if no value is provided
   const displayValue = value || "";
   
+  const handleChange = useCallback((newValue: string) => {
+    logger.debug(`TimeInputField change: ${type} = ${newValue}`);
+    onChange(type, newValue);
+  }, [type, onChange]);
+  
   return (
     <div>
       <div className="text-sm text-amber-700 mb-1 mx-[9px]">{label}</div>
@@ -37,7 +45,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
           <TimeInput
             id={`time-input-${type}`}
             value={displayValue}
-            onChange={(newValue) => onChange(type, newValue)}
+            onChange={handleChange}
             disabled={!interactive}
             className="bg-transparent border-none shadow-none p-0 h-auto"
             placeholder={placeholder || `Enter ${label.toLowerCase()}`}

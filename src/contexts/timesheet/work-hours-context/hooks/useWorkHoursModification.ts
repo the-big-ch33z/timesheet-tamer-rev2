@@ -22,17 +22,38 @@ export const useWorkHoursModification = ({
     
     logger.debug(`Saving work hours for ${dateString}:`, { startTime, endTime, userId });
     
+    // Save to localStorage immediately
+    const saveToLocalStorage = (workHoursMap: Map<string, any>) => {
+      try {
+        const storageData = Array.from(workHoursMap.entries()).reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, any>);
+        
+        localStorage.setItem('work-hours-data', JSON.stringify(storageData));
+        logger.debug('Saved work hours to localStorage');
+      } catch (error) {
+        logger.error('Error saving to localStorage:', error);
+      }
+    };
+    
+    // If both times are empty, remove the entry
     if (!startTime && !endTime) {
       logger.debug(`Both times are empty, removing entry if exists`);
       
       setWorkHoursMap(prev => {
         const newMap = new Map(prev);
         newMap.delete(key);
+        
+        // Save to localStorage after state update
+        setTimeout(() => saveToLocalStorage(newMap), 0);
+        
         return newMap;
       });
       return;
     }
     
+    // Check if the times match the default schedule
     const defaultHours = getDefaultHoursFromSchedule(date, userId);
     const isDefault = startTime === defaultHours.startTime && endTime === defaultHours.endTime;
     
@@ -41,11 +62,16 @@ export const useWorkHoursModification = ({
       setWorkHoursMap(prev => {
         const newMap = new Map(prev);
         newMap.delete(key);
+        
+        // Save to localStorage after state update
+        setTimeout(() => saveToLocalStorage(newMap), 0);
+        
         return newMap;
       });
       return;
     }
     
+    // Save the custom hours
     setWorkHoursMap(prev => {
       const newMap = new Map(prev);
       newMap.set(key, {
@@ -56,6 +82,10 @@ export const useWorkHoursModification = ({
         isCustom: true,
         lastModified: Date.now()
       });
+      
+      // Save to localStorage after state update
+      setTimeout(() => saveToLocalStorage(newMap), 0);
+      
       return newMap;
     });
     
@@ -71,6 +101,19 @@ export const useWorkHoursModification = ({
       Array.from(newMap.entries())
         .filter(([key]) => key.startsWith(`${userId}-`))
         .forEach(([key]) => newMap.delete(key));
+      
+      // Save to localStorage after clearing
+      try {
+        const storageData = Array.from(newMap.entries()).reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, any>);
+        
+        localStorage.setItem('work-hours-data', JSON.stringify(storageData));
+        logger.debug('Saved cleared work hours to localStorage');
+      } catch (error) {
+        logger.error('Error saving cleared hours to localStorage:', error);
+      }
         
       return newMap;
     });

@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { format, parse } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { createTimeLogger } from "@/utils/time/errors";
+
+const logger = createTimeLogger('TimeInput');
 
 interface TimeInputProps {
   id?: string;
@@ -15,7 +18,7 @@ interface TimeInputProps {
   placeholder?: string;
 }
 
-// Parse time input in various formats
+// Parse time input in various formats with improved accuracy
 function parseTimeInput(input: string): string {
   // Return empty string for empty input
   if (!input || input.trim() === '') {
@@ -41,6 +44,10 @@ function parseTimeInput(input: string): string {
         hours = 0;
       }
       
+      // Apply bounds checking
+      if (hours >= 24) hours = 23;
+      if (hours < 0) hours = 0;
+      
       // Format as 24-hour time for the input
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     }
@@ -52,10 +59,16 @@ function parseTimeInput(input: string): string {
       }
       return timeString.substring(0, 2) + ':' + timeString.substring(2);
     }
+
+    // If input already matches HH:MM format, ensure it's valid
+    if (/^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/.test(timeString)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
     
     return input; // Return original if no pattern matched
   } catch (error) {
-    console.error("Error parsing time input:", error);
+    logger.error("Error parsing time input:", error);
     return input;
   }
 }
@@ -69,7 +82,7 @@ function formatDisplayTime(timeString: string): string {
     const date = parse(timeString, 'HH:mm', new Date());
     return format(date, 'h:mm a');
   } catch (error) {
-    console.error("Error formatting time:", error);
+    logger.error("Error formatting time:", error);
     return timeString; // Return original on parsing error
   }
 }
@@ -87,30 +100,44 @@ const TimeInput: React.FC<TimeInputProps> = ({
   const [displayValue, setDisplayValue] = useState(
     value ? formatDisplayTime(value) : ""
   );
+
+  const [isFocused, setIsFocused] = useState(false);
   
-  // Handle display updates when prop value changes
+  // Update display value when the prop value changes and we're not focused
   useEffect(() => {
-    if (value && (!document.activeElement || document.activeElement.id !== id)) {
-      setDisplayValue(formatDisplayTime(value));
+    if (!isFocused && (value || value === "")) {
+      setDisplayValue(value ? formatDisplayTime(value) : "");
     }
-  }, [value, id]);
+  }, [value, isFocused]);
   
   const handleChange = (newValue: string) => {
     setDisplayValue(newValue);
   };
   
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+  
   const handleBlur = () => {
+    setIsFocused(false);
+    
+    // Parse the input value to a standard time format
     const parsedTime = parseTimeInput(displayValue);
     
+    logger.debug(`TimeInput blur - parsed '${displayValue}' to '${parsedTime}'`);
+    
+    // Only call onChange if the value actually changed
     if (parsedTime !== value) {
+      logger.debug(`TimeInput calling onChange with value: ${parsedTime}`);
       onChange(parsedTime);
     }
     
-    // Update display format on blur for consistency
+    // Update display format for readability
     if (parsedTime) {
       setDisplayValue(formatDisplayTime(parsedTime));
     }
     
+    // Call the onBlur callback if provided
     if (onBlur) {
       onBlur();
     }
@@ -129,6 +156,7 @@ const TimeInput: React.FC<TimeInputProps> = ({
           type="text"
           value={displayValue}
           onChange={(e) => handleChange(e.target.value)}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
           className={`pr-10 ${className}`}
