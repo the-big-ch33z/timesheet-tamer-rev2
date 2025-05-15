@@ -3,22 +3,20 @@ import { User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface TeamMembersTableProps {
-  members: User[];
+  teamMembers: User[];
   onMemberSelect?: (user: User) => void;
   setUserToArchive?: (userId: string) => void;
   setUserToRestore?: (userId: string) => void;
 }
 
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ 
-  members, 
+  teamMembers, 
   onMemberSelect,
   setUserToArchive,
   setUserToRestore 
 }) => {
-  // Keep track of images that failed to load
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
-  // Generate initials for avatar fallback
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -28,7 +26,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
       .substring(0, 2);
   };
 
-  // Handle image loading error
   const handleImageError = (userId: string) => {
     setFailedImages(prev => ({
       ...prev,
@@ -48,7 +45,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {members.map((member) => (
+          {teamMembers.map((member) => (
             <tr
               key={member.id}
               className="border-t hover:bg-gray-50 cursor-pointer"
@@ -75,9 +72,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   className={`inline-block px-2 py-1 rounded-full text-xs ${
                     member.status === "active"
                       ? "bg-green-100 text-green-800"
-                      : member.status === "pending"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-gray-100 text-gray-800"
+                      : member.status === "archived"
+                      ? "bg-gray-100 text-gray-800"
+                      : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
                   {member.status || "unknown"}
