@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { useWorkHoursValue } from './hooks/useWorkHoursValue';
 import { WorkHoursContextType } from './types';
@@ -112,6 +111,24 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     getDefaultHoursFromSchedule
   });
   
+  // Add the missing refreshWorkHours method to the context value
+  const refreshWorkHours = (userId: string) => {
+    logger.debug(`Refreshing all work hours for user ${userId}`);
+    // Trigger a re-render of the context by creating a new map with the same values
+    setWorkHoursMap(prevMap => new Map(prevMap));
+    
+    // Publish a refresh event
+    timeEventsService.publish(WORK_HOURS_EVENTS.REFRESHED, {
+      userId,
+      timestamp: Date.now()
+    });
+  };
+  
+  const enhancedContextValue = {
+    ...contextValue,
+    refreshWorkHours
+  };
+  
   // Listen for work-hours-related events to keep synced
   useEffect(() => {
     const unsubscribeReset = timeEventsService.subscribe(WORK_HOURS_EVENTS.RESET, (event) => {
@@ -131,7 +148,7 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
   }, []);
   
   return (
-    <WorkHoursContext.Provider value={contextValue}>
+    <WorkHoursContext.Provider value={enhancedContextValue}>
       {children}
     </WorkHoursContext.Provider>
   );

@@ -17,4 +17,7 @@ export interface WorkHoursContextType {
   // Add the methods being used in useTimeEntryState
   getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean; calculatedHours?: number };
   saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;
+  
+  // Add the missing refreshWorkHours method
+  refreshWorkHours: (userId: string) => void;
 }
