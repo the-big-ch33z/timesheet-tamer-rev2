@@ -39,5 +39,5 @@ export interface TOILSummary {
   remaining: number;
 }
 
-// Special job number to identify TOIL usage
-export const TOIL_JOB_NUMBER = "TOIL";
+// The TOIL_JOB_NUMBER constant has been moved to src/utils/time/services/toil/storage/constants.ts
+// Import it from '@/utils/time/services/toil' when needed
