@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Clock, LogOut, Settings, UserRound } from "lucide-react";
+import { useAuth } from "@/contexts/auth";
 
 interface HeaderProps {
   userRole: string;
@@ -21,9 +22,16 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ userRole }) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
+  const { currentUser, logout } = useAuth();
+  
+  // Get user initials for the avatar fallback
+  const userInitials = currentUser?.name 
+    ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() 
+    : 'U';
   
   const handleSignOut = () => {
-    // Handle sign out logic
+    // Handle sign out logic using auth context
+    logout();
     navigate("/");
   };
 
@@ -47,15 +55,15 @@ const Header: React.FC<HeaderProps> = ({ userRole }) => {
                 <Avatar className="h-7 w-7">
                   {!imageError && (
                     <AvatarImage 
-                      src="" 
+                      src={currentUser?.avatarUrl || ""} 
                       alt="User avatar"
                       onError={() => setImageError(true)} 
                     />
                   )}
-                  <AvatarFallback>AH</AvatarFallback>
+                  <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
                 <span className="hidden md:inline-block text-sm font-normal">
-                  AH
+                  {currentUser?.name || 'User'}
                 </span>
               </Button>
             </DropdownMenuTrigger>

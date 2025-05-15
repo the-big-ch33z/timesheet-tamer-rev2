@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -8,7 +9,7 @@ export interface User {
   workScheduleId?: string;
   fte?: number;
   fortnightHours?: number;
-  status?: 'active' | 'archived';
+  status?: 'active' | 'archived' | 'pending';
   avatarUrl?: string;
   createdAt?: string;
   updatedAt?: string;

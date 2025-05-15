@@ -1,6 +1,7 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, WorkSchedule } from '@/types';
+import { useAuth } from '@/contexts/auth';
 
 interface UserTimesheetContextType {
   viewedUser: User | null;
@@ -21,21 +22,22 @@ export const useUserTimesheetContext = () => {
 };
 
 export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Mock data for demonstration purposes
-  const [viewedUser] = useState<User>({
-    id: 'current-user',
-    name: 'Current User',
-    email: 'user@example.com',
-    role: 'team-member' // Now using the UserRole type
-  });
+  // Get the actual authenticated user from auth context
+  const { currentUser } = useAuth();
+  const [viewedUser, setViewedUser] = useState<User | null>(currentUser);
+
+  // Update viewedUser when currentUser changes
+  useEffect(() => {
+    setViewedUser(currentUser);
+  }, [currentUser]);
 
   return (
     <UserTimesheetContext.Provider 
       value={{ 
         viewedUser, 
         isViewingOtherUser: false, 
-        canViewTimesheet: true, 
-        canEditTimesheet: true,
+        canViewTimesheet: !!viewedUser, 
+        canEditTimesheet: !!viewedUser,
         workSchedule: null
       }}
     >
