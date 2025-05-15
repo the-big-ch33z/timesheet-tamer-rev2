@@ -1,8 +1,11 @@
 
-import React, { useEffect } from "react";
-import { Bell, Coffee } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Bell, Coffee, Save } from "lucide-react";
 import TimeInput from "@/components/ui/time-input/TimeInput";
 import { BreakConfig } from '@/contexts/timesheet/types';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('WorkHoursDisplay');
 
 // Helper to round to nearest 0.25 for summary display
 function roundToQuarter(value: number) {
@@ -43,21 +46,50 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   // Ensure we display actual hours / target hours for clarity
   const displayTotalHours = totalHours;
   const displayCalculatedHours = calculatedHours;
+  
+  // Add state for save feedback
+  const [showSaved, setShowSaved] = useState(false);
+  
+  // Track local values to detect changes
+  const [lastStartTime, setLastStartTime] = useState(startTime);
+  const [lastEndTime, setLastEndTime] = useState(endTime);
 
   // For debugging
   useEffect(() => {
-    console.debug('[WorkHoursDisplay] Received props:', { 
+    logger.debug('[WorkHoursDisplay] Received props:', { 
       startTime, 
       endTime, 
       totalHours, 
       calculatedHours, 
       interactive 
     });
-  }, [startTime, endTime, totalHours, calculatedHours, interactive]);
+    
+    // Check if values have changed since last render
+    if (startTime !== lastStartTime || endTime !== lastEndTime) {
+      logger.debug('[WorkHoursDisplay] Time values updated:', {
+        startTime: `${lastStartTime} -> ${startTime}`,
+        endTime: `${lastEndTime} -> ${endTime}`
+      });
+      
+      // Show save indicator
+      setShowSaved(true);
+      
+      // Update tracked values
+      setLastStartTime(startTime);
+      setLastEndTime(endTime);
+      
+      // Hide save indicator after 2 seconds
+      const timer = setTimeout(() => {
+        setShowSaved(false);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [startTime, endTime, totalHours, calculatedHours, interactive, lastStartTime, lastEndTime]);
 
   // Handle specific time change
   const handleTimeInputChange = (type: 'start' | 'end', value: string) => {
-    console.debug(`[WorkHoursDisplay] Time ${type} changing to: ${value}`);
+    logger.debug(`[WorkHoursDisplay] Time ${type} changing to: ${value}`);
     onTimeChange(type, value);
   };
 
@@ -95,6 +127,14 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
             {displayTotalHours.toFixed(2)} / {displayCalculatedHours.toFixed(2)} hours
           </div>
         </div>
+
+        {/* Show saved status indicator */}
+        {showSaved && (
+          <div className="flex items-center text-green-600 text-xs animate-fade-in">
+            <Save className="h-3 w-3 mr-1" />
+            <span>Times saved!</span>
+          </div>
+        )}
 
         {/* Break chips - only show when they're actually being subtracted */}
         <div className="flex items-center gap-2 ml-4">

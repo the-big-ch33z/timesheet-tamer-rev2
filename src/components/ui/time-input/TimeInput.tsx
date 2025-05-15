@@ -82,7 +82,7 @@ function formatDisplayTime(timeString: string): string {
     const date = parse(timeString, 'HH:mm', new Date());
     return format(date, 'h:mm a');
   } catch (error) {
-    logger.error("Error formatting time:", error);
+    logger.error("Error formatting time:", error, { timeString });
     return timeString; // Return original on parsing error
   }
 }
@@ -106,15 +106,19 @@ const TimeInput: React.FC<TimeInputProps> = ({
   // Update display value when the prop value changes and we're not focused
   useEffect(() => {
     if (!isFocused && (value || value === "")) {
-      setDisplayValue(value ? formatDisplayTime(value) : "");
+      const formattedValue = value ? formatDisplayTime(value) : "";
+      logger.debug(`TimeInput effect - updating display from prop: ${value} -> ${formattedValue}`);
+      setDisplayValue(formattedValue);
     }
   }, [value, isFocused]);
   
   const handleChange = (newValue: string) => {
+    logger.debug(`TimeInput handleChange: ${newValue}`);
     setDisplayValue(newValue);
   };
   
   const handleFocus = () => {
+    logger.debug(`TimeInput focus: ${value}`);
     setIsFocused(true);
   };
   
@@ -126,15 +130,15 @@ const TimeInput: React.FC<TimeInputProps> = ({
     
     logger.debug(`TimeInput blur - parsed '${displayValue}' to '${parsedTime}'`);
     
-    // Only call onChange if the value actually changed
-    if (parsedTime !== value) {
-      logger.debug(`TimeInput calling onChange with value: ${parsedTime}`);
-      onChange(parsedTime);
-    }
+    // Always call onChange with the parsed value to ensure it's saved
+    logger.debug(`TimeInput calling onChange with value: ${parsedTime}`);
+    onChange(parsedTime);
     
     // Update display format for readability
     if (parsedTime) {
-      setDisplayValue(formatDisplayTime(parsedTime));
+      const formatted = formatDisplayTime(parsedTime);
+      logger.debug(`TimeInput setting display value: ${formatted}`);
+      setDisplayValue(formatted);
     }
     
     // Call the onBlur callback if provided
@@ -161,6 +165,7 @@ const TimeInput: React.FC<TimeInputProps> = ({
           disabled={disabled}
           className={`pr-10 ${className}`}
           placeholder={placeholder}
+          data-testid={id}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <Clock className="h-4 w-4 text-gray-500" />

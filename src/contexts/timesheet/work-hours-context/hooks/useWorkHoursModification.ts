@@ -53,23 +53,8 @@ export const useWorkHoursModification = ({
       return;
     }
     
-    // Check if the times match the default schedule
-    const defaultHours = getDefaultHoursFromSchedule(date, userId);
-    const isDefault = startTime === defaultHours.startTime && endTime === defaultHours.endTime;
-    
-    if (isDefault) {
-      logger.debug(`Hours match schedule default, removing custom entry`);
-      setWorkHoursMap(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(key);
-        
-        // Save to localStorage after state update
-        setTimeout(() => saveToLocalStorage(newMap), 0);
-        
-        return newMap;
-      });
-      return;
-    }
+    // IMPORTANT: Remove the default schedule comparison that was preventing custom times from being saved
+    // We now always save the user's input as a custom entry
     
     // Save the custom hours
     setWorkHoursMap(prev => {
