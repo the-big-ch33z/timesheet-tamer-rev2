@@ -1,43 +1,46 @@
 
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/auth/AuthProvider";
+import React, { useState } from "react";
 import { User } from "@/types";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 
 interface UserInfoProps {
-  user?: User | null;
+  user: User;
 }
 
 const UserInfo: React.FC<UserInfoProps> = ({ user }) => {
-  const { currentUser } = useAuth();
-  const displayUser = user || currentUser;
-  
-  if (!displayUser) return null;
-  
+  const [imageError, setImageError] = useState(false);
+
+  // Generate initials from user name for avatar fallback
+  const getUserInitials = (name: string): string => {
+    return name
+      .split(" ")
+      .map(part => part[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
-    <Card className="mb-6">
-      <CardContent className="pt-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">{displayUser.name}</h1>
-            <p className="text-muted-foreground">{displayUser.email}</p>
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            <Tabs defaultValue="timesheet" className="w-full md:w-auto">
-              <TabsList>
-                <TabsTrigger value="timesheet" className="text-xs md:text-sm">
-                  Current Week
-                </TabsTrigger>
-                <TabsTrigger value="month" className="text-xs md:text-sm">
-                  Month View
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+    <Card className="p-4 mb-6">
+      <div className="flex items-center gap-4">
+        <Avatar className="h-12 w-12">
+          {!imageError && user.avatarUrl && (
+            <AvatarImage 
+              src={user.avatarUrl} 
+              alt={user.name}
+              onError={() => setImageError(true)}
+            />
+          )}
+          <AvatarFallback>
+            {getUserInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <h2 className="text-xl font-bold">{user.name}</h2>
+          <p className="text-sm text-gray-500">{user.role}</p>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };

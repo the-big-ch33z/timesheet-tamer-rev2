@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ userRole }) => {
   const navigate = useNavigate();
+  const [imageError, setImageError] = useState(false);
   
   const handleSignOut = () => {
     // Handle sign out logic
@@ -44,7 +45,13 @@ const Header: React.FC<HeaderProps> = ({ userRole }) => {
                 className="p-1 h-9 flex items-center gap-2"
               >
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src="" />
+                  {!imageError && (
+                    <AvatarImage 
+                      src="" 
+                      alt="User avatar"
+                      onError={() => setImageError(true)} 
+                    />
+                  )}
                   <AvatarFallback>AH</AvatarFallback>
                 </Avatar>
                 <span className="hidden md:inline-block text-sm font-normal">
