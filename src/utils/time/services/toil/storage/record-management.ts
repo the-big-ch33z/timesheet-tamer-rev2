@@ -4,59 +4,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { TOILRecord, TOILUsage } from '@/types/toil';
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY } from './constants';
-import { attemptStorageOperation, safelyParseJSON } from './utils';
+import { 
+  attemptStorageOperation,
+  loadTOILRecords,
+  loadTOILUsage,
+  clearSummaryCache
+} from './core';
 
 const logger = createTimeLogger('TOILRecordManagement');
-
-/**
- * Load all TOIL records from storage
- */
-export function loadTOILRecords(filterUserId?: string): TOILRecord[] {
-  try {
-    logger.debug(`Loading TOIL records${filterUserId ? ` for user: ${filterUserId}` : ''}`);
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    
-    if (!records) {
-      return [];
-    }
-    
-    const allRecords = safelyParseJSON<TOILRecord[]>(records, []);
-    
-    if (filterUserId) {
-      return allRecords.filter(record => record.userId === filterUserId);
-    }
-    
-    return allRecords;
-  } catch (error) {
-    logger.error('Error loading TOIL records:', error);
-    return [];
-  }
-}
-
-/**
- * Load all TOIL usage records from storage
- */
-export function loadTOILUsage(filterUserId?: string): TOILUsage[] {
-  try {
-    logger.debug(`Loading TOIL usage${filterUserId ? ` for user: ${filterUserId}` : ''}`);
-    const usage = localStorage.getItem(TOIL_USAGE_KEY);
-    
-    if (!usage) {
-      return [];
-    }
-    
-    const allUsage = safelyParseJSON<TOILUsage[]>(usage, []);
-    
-    if (filterUserId) {
-      return allUsage.filter(record => record.userId === filterUserId);
-    }
-    
-    return allUsage;
-  } catch (error) {
-    logger.error('Error loading TOIL usage:', error);
-    return [];
-  }
-}
 
 /**
  * Store a TOIL record
@@ -89,6 +44,11 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
     
     // Save records back to storage
     localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
+    
+    // Clear the summary cache for this user and month
+    if (record.monthYear) {
+      await clearSummaryCache(record.userId, record.monthYear);
+    }
     
     return true;
   }, `storeTOILRecord-${record.id}`);
@@ -126,6 +86,119 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
     // Save records back to storage
     localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(usages));
     
+    // Clear the summary cache for this user and month
+    if (usage.monthYear) {
+      await clearSummaryCache(usage.userId, usage.monthYear);
+    }
+    
     return true;
   }, `storeTOILUsage-${usage.id}`);
+}
+
+/**
+ * Delete TOIL records for a specific user
+ */
+export async function deleteUserTOILRecords(userId: string): Promise<boolean> {
+  return attemptStorageOperation(async () => {
+    logger.debug(`Deleting all TOIL records for user: ${userId}`);
+    
+    // Get existing records
+    const records = loadTOILRecords();
+    const usages = loadTOILUsage();
+    
+    // Filter out records for this user
+    const filteredRecords = records.filter(r => r.userId !== userId);
+    const filteredUsages = usages.filter(u => u.userId !== userId);
+    
+    // Save filtered records back to storage
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+    localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsages));
+    
+    // Clear all cache for this user
+    await clearSummaryCache(userId);
+    
+    logger.debug(`Deleted TOIL records for user: ${userId}`);
+    return true;
+  }, `deleteUserTOILRecords-${userId}`);
+}
+
+/**
+ * Delete a specific TOIL record by ID
+ */
+export async function deleteTOILRecordById(id: string): Promise<boolean> {
+  return attemptStorageOperation(async () => {
+    logger.debug(`Deleting TOIL record with ID: ${id}`);
+    
+    // Get existing records
+    const records = loadTOILRecords();
+    
+    // Find the record to delete
+    const recordToDelete = records.find(r => r.id === id);
+    if (!recordToDelete) {
+      logger.debug(`No TOIL record found with ID: ${id}`);
+      return false;
+    }
+    
+    // Filter out the record to delete
+    const filteredRecords = records.filter(r => r.id !== id);
+    
+    // Save filtered records back to storage
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+    
+    // Clear cache for this user and month
+    if (recordToDelete.monthYear) {
+      await clearSummaryCache(recordToDelete.userId, recordToDelete.monthYear);
+    }
+    
+    logger.debug(`Deleted TOIL record with ID: ${id}`);
+    return true;
+  }, `deleteTOILRecordById-${id}`);
+}
+
+/**
+ * Delete TOIL records associated with a specific time entry
+ */
+export async function deleteTOILRecordsByEntryId(entryId: string): Promise<boolean> {
+  return attemptStorageOperation(async () => {
+    logger.debug(`Deleting TOIL records for entry: ${entryId}`);
+    
+    // Get existing records
+    const records = loadTOILRecords();
+    
+    // Find records to delete
+    const recordsToDelete = records.filter(r => r.entryId === entryId);
+    if (recordsToDelete.length === 0) {
+      logger.debug(`No TOIL records found for entry: ${entryId}`);
+      return true;
+    }
+    
+    // Filter out records for this entry
+    const filteredRecords = records.filter(r => r.entryId !== entryId);
+    
+    // Save filtered records back to storage
+    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+    
+    // Clear cache for affected users and months
+    const affectedUserMonths = new Map<string, Set<string>>();
+    
+    recordsToDelete.forEach(record => {
+      if (!record.userId || !record.monthYear) return;
+      
+      if (!affectedUserMonths.has(record.userId)) {
+        affectedUserMonths.set(record.userId, new Set());
+      }
+      
+      affectedUserMonths.get(record.userId)?.add(record.monthYear);
+    });
+    
+    // Clear cache for each affected user and month
+    for (const [userId, months] of affectedUserMonths.entries()) {
+      for (const month of months) {
+        await clearSummaryCache(userId, month);
+      }
+    }
+    
+    logger.debug(`Deleted ${recordsToDelete.length} TOIL records for entry: ${entryId}`);
+    return true;
+  }, `deleteTOILRecordsByEntryId-${entryId}`);
 }

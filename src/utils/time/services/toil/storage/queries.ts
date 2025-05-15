@@ -1,7 +1,14 @@
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
-import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
-import { attemptStorageOperation, safelyParseJSON } from './utils';
+import { TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { 
+  loadTOILRecords, 
+  loadTOILUsage, 
+  filterRecordsByDate,
+  filterRecordsByMonth,
+  getSummaryCacheKey,
+  safelyParseJSON
+} from './core';
 import { TOILSummary } from '@/types/toil';
 
 const logger = createTimeLogger('TOILStorageQueries');
@@ -15,22 +22,7 @@ export interface TOILDayInfo {
 
 // Get all TOIL records for a specific user
 export const getUserTOILRecords = (userId: string) => {
-  try {
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (!records) {
-      logger.debug(`No TOIL records found for user ${userId}`);
-      return [];
-    }
-    
-    const allRecords = JSON.parse(records);
-    const userRecords = allRecords.filter((record: any) => record.userId === userId);
-    
-    logger.debug(`Found ${userRecords.length} TOIL records for user ${userId}`);
-    return userRecords;
-  } catch (error) {
-    logger.error(`Error getting TOIL records for user ${userId}:`, error);
-    return [];
-  }
+  return loadTOILRecords(userId);
 };
 
 /**
@@ -38,14 +30,8 @@ export const getUserTOILRecords = (userId: string) => {
  */
 export const findTOILRecordsByEntryId = (entryId: string) => {
   try {
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (!records) {
-      logger.debug(`No TOIL records found for entry ${entryId}`);
-      return [];
-    }
-    
-    const allRecords = JSON.parse(records);
-    const entryRecords = allRecords.filter((record: any) => record.entryId === entryId);
+    const allRecords = loadTOILRecords();
+    const entryRecords = allRecords.filter(record => record.entryId === entryId);
     
     logger.debug(`Found ${entryRecords.length} TOIL records for entry ${entryId}`);
     return entryRecords;
@@ -57,31 +43,12 @@ export const findTOILRecordsByEntryId = (entryId: string) => {
 
 /**
  * Delete TOIL records associated with a specific time entry
+ * @deprecated Use deleteTOILRecordsByEntryId from record-management.ts instead
  */
 export const deleteTOILRecordByEntryId = async (entryId: string): Promise<boolean> => {
-  return attemptStorageOperation(async () => {
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (!records) {
-      logger.debug(`No TOIL records found to delete for entry ${entryId}`);
-      return true; // Consider it successful if there's nothing to delete
-    }
-    
-    let allRecords = JSON.parse(records);
-    const initialLength = allRecords.length;
-    
-    // Filter out records associated with the entryId
-    allRecords = allRecords.filter((record: any) => record.entryId !== entryId);
-    
-    if (allRecords.length === initialLength) {
-      logger.debug(`No TOIL records found to delete for entry ${entryId}`);
-      return true; // Consider it successful if there's nothing to delete
-    }
-    
-    localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(allRecords));
-    
-    logger.debug(`Deleted TOIL records for entry ${entryId}`);
-    return true;
-  }, `deleteTOILRecordByEntryId-${entryId}`);
+  // Import dynamically to avoid circular dependencies
+  const { deleteTOILRecordsByEntryId } = await import('./record-management');
+  return deleteTOILRecordsByEntryId(entryId);
 };
 
 /**
@@ -90,13 +57,13 @@ export const deleteTOILRecordByEntryId = async (entryId: string): Promise<boolea
  * @param dateOrMonth Date object or string in 'yyyy-MM' format
  * @returns TOILSummary object or null if not found
  */
-export const getTOILSummary = (userId: string, dateOrMonth: Date | string): TOILSummary | null => {
+export const getTOILSummary = (userId: string, dateOrMonth: Date | string): TOILSummary => {
   // Normalize to yyyy-MM format
   const monthYear = typeof dateOrMonth === 'string' 
     ? dateOrMonth.includes('-') ? dateOrMonth.substring(0, 7) : dateOrMonth
     : format(dateOrMonth, 'yyyy-MM');
   
-  const cacheKey = `${TOIL_SUMMARY_CACHE_KEY}-${userId}-${monthYear}`;
+  const cacheKey = getSummaryCacheKey(userId, monthYear);
   
   try {
     const cachedSummary = localStorage.getItem(cacheKey);
@@ -104,21 +71,25 @@ export const getTOILSummary = (userId: string, dateOrMonth: Date | string): TOIL
     // If we have a cached summary, return it
     if (cachedSummary) {
       logger.debug(`Returning cached TOIL summary for ${userId} on ${monthYear}`);
-      return JSON.parse(cachedSummary);
+      return safelyParseJSON<TOILSummary>(cachedSummary, {
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      });
     }
     
     // Otherwise, calculate summary from records
-    const records = getUserTOILRecords(userId);
-    const monthRecords = records.filter((record: any) => record.monthYear === monthYear);
+    const records = loadTOILRecords(userId);
+    const monthRecords = filterRecordsByMonth(records, monthYear);
     
-    const usages = localStorage.getItem(TOIL_USAGE_KEY);
-    const allUsages = usages ? JSON.parse(usages) : [];
-    const userUsages = allUsages.filter((usage: any) => usage.userId === userId);
-    const monthUsages = userUsages.filter((usage: any) => usage.monthYear === monthYear);
+    const usages = loadTOILUsage(userId);
+    const monthUsages = filterRecordsByMonth(usages, monthYear);
     
     // Calculate totals
-    const accrued = monthRecords.reduce((sum: number, record: any) => sum + (record.hours || 0), 0);
-    const used = monthUsages.reduce((sum: number, usage: any) => sum + (usage.hours || 0), 0);
+    const accrued = monthRecords.reduce((sum, record) => sum + (record.hours || 0), 0);
+    const used = monthUsages.reduce((sum, usage) => sum + (usage.hours || 0), 0);
     const remaining = Math.max(0, accrued - used);
     
     // Create summary object
@@ -154,41 +125,24 @@ export const getTOILSummary = (userId: string, dateOrMonth: Date | string): TOIL
  */
 export const hasTOILForDay = (userId: string, date: Date): TOILDayInfo => {
   try {
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
-    if (!records) {
-      return { hasAccrued: false, hasUsed: false, toilHours: 0 };
-    }
-    
-    const allRecords = JSON.parse(records);
-    
-    // Format the date for comparison
     const formattedDate = format(date, 'yyyy-MM-dd');
     
-    // Check accrued TOIL
-    const accrued = allRecords.some(
-      (record: any) => 
-        record.userId === userId && 
-        format(new Date(record.date), 'yyyy-MM-dd') === formattedDate
-    );
+    // Get records for this user
+    const records = loadTOILRecords(userId);
+    const usages = loadTOILUsage(userId);
     
-    // Check for TOIL usage
-    const usages = localStorage.getItem(TOIL_USAGE_KEY);
-    const allUsages = usages ? JSON.parse(usages) : [];
-    const used = allUsages.some(
-      (usage: any) => 
-        usage.userId === userId && 
-        format(new Date(usage.date), 'yyyy-MM-dd') === formattedDate
-    );
+    // Filter records for this day
+    const dayRecords = filterRecordsByDate(records, date);
+    const dayUsages = filterRecordsByDate(usages, date);
     
     // Calculate total TOIL hours for day
-    const toilRecords = allRecords.filter(
-      (record: any) => 
-        record.userId === userId && 
-        format(new Date(record.date), 'yyyy-MM-dd') === formattedDate
-    );
-    const toilHours = toilRecords.reduce((sum: number, record: any) => sum + (record.hours || 0), 0);
+    const toilHours = dayRecords.reduce((sum, record) => sum + (record.hours || 0), 0);
     
-    return { hasAccrued: accrued, hasUsed: used, toilHours };
+    return { 
+      hasAccrued: dayRecords.length > 0, 
+      hasUsed: dayUsages.length > 0, 
+      toilHours 
+    };
   } catch (error) {
     logger.error(`Error checking TOIL for day ${date} and user ${userId}:`, error);
     return { hasAccrued: false, hasUsed: false, toilHours: 0 };

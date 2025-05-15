@@ -1,9 +1,14 @@
 
 import { format } from "date-fns";
 import { createTimeLogger } from '@/utils/time/errors';
-import { clearSummaryCache } from './core';
-import { loadTOILRecords, loadTOILUsage } from './record-management';
-import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_CACHE_KEY } from './constants';
+import { 
+  loadTOILRecords, 
+  loadTOILUsage,
+  clearSummaryCache,
+  filterRecordsByMonth
+} from './core';
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY } from './constants';
+import { attemptStorageOperation } from './core';
 
 const logger = createTimeLogger('TOILCleanup');
 
@@ -13,7 +18,7 @@ const logger = createTimeLogger('TOILCleanup');
  * @returns Promise resolving to the number of duplicates removed
  */
 export async function cleanupDuplicateTOILRecords(userId: string): Promise<number> {
-  try {
+  return attemptStorageOperation(async () => {
     logger.debug(`Cleaning up duplicate TOIL records for user: ${userId}`);
     
     // Get all records
@@ -76,10 +81,7 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
     }
     
     return duplicatesRemoved;
-  } catch (error) {
-    logger.error('Error cleaning up duplicate TOIL records:', error);
-    return 0;
-  }
+  }, 'cleanupDuplicateTOILRecords');
 }
 
 /**
@@ -88,7 +90,7 @@ export async function cleanupDuplicateTOILRecords(userId: string): Promise<numbe
  * @returns Promise resolving to the number of duplicates removed
  */
 export async function cleanupDuplicateTOILUsage(userId: string): Promise<number> {
-  try {
+  return attemptStorageOperation(async () => {
     logger.debug(`Cleaning up duplicate TOIL usage for user: ${userId}`);
     
     // Get all usage records
@@ -151,10 +153,7 @@ export async function cleanupDuplicateTOILUsage(userId: string): Promise<number>
     }
     
     return duplicatesRemoved;
-  } catch (error) {
-    logger.error('Error cleaning up duplicate TOIL usage:', error);
-    return 0;
-  }
+  }, 'cleanupDuplicateTOILUsage');
 }
 
 /**
@@ -193,4 +192,28 @@ export function clearTOILStorageForMonth(userId: string, monthYear: string): boo
     logger.error(`Error clearing TOIL storage for month ${monthYear}:`, error);
     return false;
   }
+}
+
+/**
+ * Batch clean up TOIL data for multiple users
+ * @param userIds Array of user IDs to clean
+ * @returns Number of duplicates removed
+ */
+export async function batchCleanupTOILData(userIds: string[]): Promise<number> {
+  let totalDuplicatesRemoved = 0;
+  
+  for (const userId of userIds) {
+    try {
+      const recordsRemoved = await cleanupDuplicateTOILRecords(userId);
+      const usagesRemoved = await cleanupDuplicateTOILUsage(userId);
+      
+      totalDuplicatesRemoved += recordsRemoved + usagesRemoved;
+      
+      logger.debug(`Cleaned up ${recordsRemoved + usagesRemoved} duplicates for user ${userId}`);
+    } catch (error) {
+      logger.error(`Error during batch cleanup for user ${userId}:`, error);
+    }
+  }
+  
+  return totalDuplicatesRemoved;
 }

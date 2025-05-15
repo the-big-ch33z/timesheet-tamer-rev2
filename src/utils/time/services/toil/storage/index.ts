@@ -10,31 +10,33 @@ export {
   TOIL_SUMMARY_CACHE_KEY
 } from './constants';
 
-// Export utilities
+// Export core utilities
 export {
   attemptStorageOperation,
-  safelyParseJSON
-} from './utils';
-
-// Export core functions
-export {
+  safelyParseJSON,
+  loadTOILRecords,
+  loadTOILUsage,
+  filterRecordsByMonth,
+  filterRecordsByDate,
   clearSummaryCache,
-  clearAllTOILCaches
+  clearAllTOILCaches,
+  getSummaryCacheKey
 } from './core';
 
 // Export record management functions
 export {
-  loadTOILRecords,
-  loadTOILUsage,
   storeTOILRecord,
-  storeTOILUsage
+  storeTOILUsage,
+  deleteUserTOILRecords,
+  deleteTOILRecordById,
+  deleteTOILRecordsByEntryId
 } from './record-management';
 
 // Export query functions
 export {
   getUserTOILRecords,
   findTOILRecordsByEntryId,
-  deleteTOILRecordByEntryId,
+  deleteTOILRecordByEntryId, // Deprecated but still exported
   getTOILSummary,
   hasTOILForDay,
   hasTOILForMonth
@@ -44,7 +46,8 @@ export {
 export {
   cleanupDuplicateTOILRecords,
   cleanupDuplicateTOILUsage,
-  clearTOILStorageForMonth
+  clearTOILStorageForMonth,
+  batchCleanupTOILData
 } from './cleanup';
 
 // Export TOILDayInfo interface

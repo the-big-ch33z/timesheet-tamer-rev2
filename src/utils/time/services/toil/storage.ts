@@ -8,7 +8,7 @@
 export * from './storage/index';
 
 // Re-export TOILDayInfo type
-export type { TOILDayInfo } from './types';
+export type { TOILDayInfo } from './storage/queries';
 
 // Re-export TOIL constants for backwards compatibility
 export {
