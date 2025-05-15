@@ -18,49 +18,38 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'active' | 'pending' | 'archived';
-  avatarUrl?: string;
-}
+import { User } from "@/types";
 
 interface TeamMembersTableProps {
-  members: TeamMember[];
-  onArchive: (memberId: string) => void;
-  onRestore: (memberId: string) => void;
+  teamMembers: User[];
+  onMemberSelect?: (user: User) => void;
+  setUserToArchive: React.Dispatch<React.SetStateAction<string | null>>;
+  setUserToRestore: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ 
-  members, 
-  onArchive,
-  onRestore 
+  teamMembers, 
+  onMemberSelect,
+  setUserToArchive,
+  setUserToRestore 
 }) => {
   const { toast } = useToast();
   
-  const handleArchive = (member: TeamMember) => {
-    onArchive(member.id);
+  const handleArchive = (member: User) => {
+    setUserToArchive(member.id);
     toast({
-      title: "Member archived",
-      description: `${member.name} has been archived from the team.`
+      title: "Member archive requested",
+      description: `${member.name} will be archived from the team.`
     });
   };
   
-  const handleRestore = (member: TeamMember) => {
-    onRestore(member.id);
+  const handleRestore = (member: User) => {
+    setUserToRestore(member.id);
     toast({
-      title: "Member restored",
-      description: `${member.name} has been restored to the team.`
+      title: "Member restore requested",
+      description: `${member.name} will be restored to the team.`
     });
   };
-
-  // Group members by status
-  const activeMembers = members.filter(m => m.status === "active");
-  const pendingMembers = members.filter(m => m.status === "pending");
-  const archivedMembers = members.filter(m => m.status === "archived");
 
   return (
     <Card>
@@ -78,7 +67,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map(member => (
+            {teamMembers.map(member => (
               <TableRow key={member.id}>
                 <TableCell className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
@@ -108,7 +97,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       "secondary"
                     }
                   >
-                    {member.status}
+                    {member.status || 'active'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
