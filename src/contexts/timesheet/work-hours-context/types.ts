@@ -18,6 +18,7 @@ export interface WorkHoursContextType {
   getWorkHoursForDate?: (date: Date, userId: string) => { startTime: string; endTime: string; isCustom?: boolean; hasData?: boolean; calculatedHours?: number };
   saveWorkHoursForDate?: (date: Date, startTime: string, endTime: string, userId: string) => void;
   
-  // Add the missing refreshWorkHours method
-  refreshWorkHours: (userId: string) => void;
+  // Updated the refreshWorkHours method signature
+  refreshWorkHours: (date?: Date | string, userId?: string) => void;
 }
+

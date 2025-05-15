@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { useWorkHoursValue } from './hooks/useWorkHoursValue';
 import { WorkHoursContextType } from './types';
@@ -111,15 +112,22 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
     getDefaultHoursFromSchedule
   });
   
-  // Add the missing refreshWorkHours method to the context value
-  const refreshWorkHours = (userId: string) => {
-    logger.debug(`Refreshing all work hours for user ${userId}`);
+  // Update refreshWorkHours to match the required signature
+  const refreshWorkHours = (date?: Date | string, userId?: string) => {
+    if (!userId) {
+      logger.warn('refreshWorkHours called without userId');
+      return;
+    }
+    
+    logger.debug(`Refreshing all work hours for user ${userId}${date ? `, date: ${date}` : ''}`);
+    
     // Trigger a re-render of the context by creating a new map with the same values
     setWorkHoursMap(prevMap => new Map(prevMap));
     
     // Publish a refresh event
     timeEventsService.publish(WORK_HOURS_EVENTS.REFRESHED, {
       userId,
+      date: date ? (typeof date === 'string' ? date : date.toISOString()) : undefined,
       timestamp: Date.now()
     });
   };

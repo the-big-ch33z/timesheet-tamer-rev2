@@ -65,6 +65,7 @@ export const useWorkHoursValue = ({
     getDefaultScheduleHours,
     getWorkHoursForDate,
     saveWorkHoursForDate,
-    refreshWorkHours: () => {} // This will be overridden in WorkHoursContext.tsx
+    refreshWorkHours: (date?: Date | string, userId?: string) => {} // Updated signature to match interface
   };
 };
+

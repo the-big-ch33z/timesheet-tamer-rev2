@@ -19,7 +19,8 @@ export const WORK_HOURS_EVENTS = {
   RESET: 'work-hours:reset',
   LOADED: 'work-hours:loaded',
   CHANGED: 'work-hours:changed',
-  ACTION_TOGGLED: 'work-hours:action-toggled'
+  ACTION_TOGGLED: 'work-hours:action-toggled',
+  REFRESHED: 'work-hours:refreshed'  // Added this event
 };
 
 // TOIL events
