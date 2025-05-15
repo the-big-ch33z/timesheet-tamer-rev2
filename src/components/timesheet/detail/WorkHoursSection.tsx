@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -109,18 +108,18 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     setShowDebugPanel(isDevMode);
   }, [effectiveWorkSchedule]);
   
-  // Call updated hook with object-based parameters, using the wrapper function
+  // Use the unified useToilEffects hook with the full set of parameters
   useToilEffects({
+    userId,
+    date,
+    entries: dayEntries,
+    schedule: effectiveWorkSchedule,
     hasEntries: dayEntries.length > 0,
     leaveActive: false,
     toilActive: false,
     isComplete: true,
     calculateToilForDay: calculateToilWrapper,
-    entriesCount: dayEntries.length,
-    userId,
-    date,
-    entries: dayEntries,
-    schedule: effectiveWorkSchedule
+    entriesCount: dayEntries.length
   });
 
   // Handle entry creation
