@@ -6,6 +6,8 @@ import { toilService } from '@/utils/time/services/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
 import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { eventBus } from '@/utils/events/EventBus';
 
 const logger = createTimeLogger('useTOILSummary');
 
@@ -82,6 +84,8 @@ export const useTOILSummary = ({
     lastOperationTime = now;
     
     logger.debug(`Refresh requested for ${userId}`);
+    // Clear cache before refreshing to ensure we get fresh data
+    toilService.clearCache();
     setRefreshCounter(c => c + 1);
   }, [userId]);
 
@@ -131,17 +135,37 @@ export const useTOILSummary = ({
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     logger.debug(`Added event listener for toil:summary-updated`);
     
-    const sub = timeEventsService.subscribe('toil-updated', data => {
+    // Subscribe to both TOIL event types for more reliable updates
+    const sub1 = timeEventsService.subscribe('toil-updated', data => {
       logger.debug(`toil-updated event received:`, data);
-      if (data?.userId === userId && data?.date) {
+      if (data?.userId === userId) {
         logger.debug(`Refreshing based on toil-updated event`);
+        refreshSummary();
+      }
+    });
+
+    // Add a direct subscription to the centralized event bus as well
+    const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, data => {
+      logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
+      if (data?.userId === userId) {
+        logger.debug(`Refreshing based on TOIL_EVENTS.SUMMARY_UPDATED`);
+        refreshSummary();
+      }
+    });
+
+    // Also subscribe to hours-updated events since they may affect TOIL
+    const sub3 = timeEventsService.subscribe('hours-updated', data => {
+      if (data?.userId === userId) {
+        logger.debug(`TOIL summary refresh triggered by hours-updated event`);
         refreshSummary();
       }
     });
 
     return () => {
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
-      sub.unsubscribe();
+      sub1.unsubscribe();
+      sub2.unsubscribe();
+      sub3.unsubscribe();
       logger.debug(`Removed event listeners`);
     };
   }, [userId, monthYear, refreshSummary]);

@@ -1,6 +1,7 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from "react";
 
+// Define the shape of our UI context
 export interface TimesheetUIContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -8,30 +9,44 @@ export interface TimesheetUIContextType {
   setShowHelpPanel: (show: boolean) => void;
 }
 
+// Create the context with default values
 const TimesheetUIContext = createContext<TimesheetUIContextType | undefined>(undefined);
 
-export const useTimesheetUIContext = () => {
-  const context = useContext(TimesheetUIContext);
-  if (context === undefined) {
-    throw new Error('useTimesheetUIContext must be used within a TimesheetUIProvider');
-  }
-  return context;
-};
+// Provider props
+interface TimesheetUIProviderProps {
+  children: React.ReactNode;
+}
 
-export const TimesheetUIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<string>('timesheet');
-  const [showHelpPanel, setShowHelpPanel] = useState<boolean>(false);
-
-  const value: TimesheetUIContextType = {
-    activeTab,
-    setActiveTab,
-    showHelpPanel,
-    setShowHelpPanel
-  };
-
+// Provider component
+export const TimesheetUIProvider: React.FC<TimesheetUIProviderProps> = ({ children }) => {
+  const [activeTab, setActiveTab] = useState("timesheet");
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
+  
+  // Memoize the value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      activeTab,
+      setActiveTab,
+      showHelpPanel,
+      setShowHelpPanel
+    }),
+    [activeTab, showHelpPanel]
+  );
+  
   return (
-    <TimesheetUIContext.Provider value={value}>
+    <TimesheetUIContext.Provider value={contextValue}>
       {children}
     </TimesheetUIContext.Provider>
   );
+};
+
+// Hook for consuming the UI context
+export const useTimesheetUIContext = (): TimesheetUIContextType => {
+  const context = useContext(TimesheetUIContext);
+  
+  if (context === undefined) {
+    throw new Error("useTimesheetUIContext must be used within a TimesheetUIProvider");
+  }
+  
+  return context;
 };

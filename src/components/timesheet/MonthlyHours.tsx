@@ -44,6 +44,12 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     setErrorMessage(error);
   };
   
+  // Handle refresh request from the card
+  const handleRefreshRequest = () => {
+    logger.debug('Refresh requested from TOILSummaryCard');
+    refreshSummary();
+  };
+  
   // Add logging to help debug the TOIL summary
   useEffect(() => {
     logger.debug(`MonthlyHours component for ${monthName}:`, {
@@ -77,8 +83,19 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   
   // Force a refresh when the component mounts to ensure data is loaded
   useEffect(() => {
+    logger.debug(`MonthlyHours component mounted, refreshing summary for ${user.id}`);
     refreshSummary();
-  }, [refreshSummary]);
+    
+    // Set up an interval to periodically refresh the summary
+    const refreshInterval = setInterval(() => {
+      logger.debug('Periodic refresh of TOIL summary');
+      refreshSummary();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [refreshSummary, user.id]);
 
   return (
     <TOILEventProvider>
@@ -106,7 +123,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
             <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg flex flex-col gap-2">
               <div>Failed to load TOIL summary: {toilError}</div>
               <button 
-                onClick={refreshSummary} 
+                onClick={() => refreshSummary()} 
                 className="ml-2 px-4 py-1.5 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"
               >
                 Retry
@@ -121,6 +138,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
               showRollover={rolloverHours > 0}
               rolloverHours={rolloverHours}
               useSimpleView={false}
+              onRefreshRequest={handleRefreshRequest}
             />
           )}
           

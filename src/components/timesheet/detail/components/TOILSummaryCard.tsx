@@ -1,9 +1,12 @@
 
-import React, { memo, useEffect } from "react";
+import React, { memo, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { Clock } from "lucide-react";
 import { useTOILEvents } from "@/utils/time/events/toilEventService";
+import { createTimeLogger } from "@/utils/time/errors";
+import { eventBus } from '@/utils/events/EventBus';
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 
 import {
   TOILSummaryBoxes,
@@ -17,6 +20,9 @@ import {
 // Import the unified TOILSummary component
 import UnifiedTOILSummary from "@/components/toil/TOILSummary";
 
+// Create logger
+const logger = createTimeLogger('TOILSummaryCard');
+
 interface TOILSummaryCardProps {
   summary: TOILSummary | null;
   loading?: boolean;
@@ -26,6 +32,7 @@ interface TOILSummaryCardProps {
   showRollover?: boolean;
   rolloverHours?: number;
   useSimpleView?: boolean;
+  onRefreshRequest?: () => void;
 }
 
 // Main TOILSummaryCard component with improved error handling
@@ -37,7 +44,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   onError,
   showRollover = false,
   rolloverHours = 0,
-  useSimpleView = false
+  useSimpleView = false,
+  onRefreshRequest
 }) => {
   // Subscribe to TOIL events if available
   const toilEvents = React.useRef<ReturnType<typeof useTOILEvents> | null>(null);
@@ -46,24 +54,54 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     toilEvents.current = useTOILEvents();
   } catch (e) {
     // Context not available, continue without it
-    console.debug('TOIL Events context not available');
+    logger.debug('TOIL Events context not available');
   }
+  
+  // Handle refresh request
+  const handleRefresh = useCallback(() => {
+    logger.debug('TOILSummaryCard requesting refresh');
+    if (onRefreshRequest) {
+      onRefreshRequest();
+    }
+  }, [onRefreshRequest]);
   
   // Subscribe to TOIL updates
   useEffect(() => {
     if (!toilEvents.current) return;
     
     const unsubscribe = toilEvents.current.subscribe('toil-updated', (event) => {
-      console.log('TOIL update event received:', event);
+      logger.debug('TOIL update event received in TOILSummaryCard:', event);
+      handleRefresh();
     });
     
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [handleRefresh]);
+  
+  // Subscribe to centralized event bus for TOIL updates
+  useEffect(() => {
+    if (!onRefreshRequest) return;
+    
+    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, () => {
+      logger.debug('TOIL_EVENTS.SUMMARY_UPDATED received in TOILSummaryCard');
+      handleRefresh();
+    });
+    
+    // Also subscribe to the updated event
+    const unsubscribe2 = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
+      logger.debug('TOIL_EVENTS.UPDATED received in TOILSummaryCard');
+      handleRefresh();
+    });
+    
+    return () => {
+      unsubscribe();
+      unsubscribe2();
+    };
+  }, [onRefreshRequest, handleRefresh]);
   
   try {
-    console.log('TOILSummaryCard received summary:', summary, 'loading:', loading);
+    logger.debug('TOILSummaryCard received summary:', summary, 'loading:', loading);
     
     // Validate the summary data
     const hasSummary = summary !== null && summary !== undefined;
@@ -75,7 +113,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     
     // Safety checks for null or invalid summary
     if (!hasSummary && !loading) {
-      console.warn('TOILSummaryCard received null summary and not in loading state');
+      logger.warn('TOILSummaryCard received null summary and not in loading state');
       
       if (onError) {
         onError('No TOIL data available');
@@ -89,7 +127,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     
     // Additional validation
     if (hasValidStructure && (isNaN(accrued) || isNaN(used) || isNaN(remaining))) {
-      console.error('TOILSummaryCard received invalid numeric values:', { accrued, used, remaining });
+      logger.error('TOILSummaryCard received invalid numeric values:', { accrued, used, remaining });
       
       if (onError) {
         onError('TOIL data contains invalid numeric values');
@@ -158,7 +196,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       </Card>
     );
   } catch (err) {
-    console.error("TOILSummaryCard crashed while rendering:", err);
+    logger.error("TOILSummaryCard crashed while rendering:", err);
     
     if (onError) {
       onError(`Error rendering TOIL summary: ${String(err)}`);

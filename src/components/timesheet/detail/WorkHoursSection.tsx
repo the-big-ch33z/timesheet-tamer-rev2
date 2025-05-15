@@ -14,6 +14,9 @@ import WorkHoursInterface from "./work-hours/WorkHoursInterface";
 import TimeEntryController from "../entry-control/TimeEntryController";
 import { TOILSummary } from "@/types/toil";
 import WorkHoursActions from "./components/WorkHoursActions";
+import { eventBus } from '@/utils/events/EventBus';
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { format } from 'date-fns';
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -64,7 +67,26 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   // Fix: Create a wrapper function that conforms to the expected type
   const calculateToilWrapper = useCallback(async (): Promise<void> => {
     try {
-      await calculateToilForDay();
+      const summary = await calculateToilForDay();
+      
+      // Explicitly notify the TOIL summary components about the update
+      // This ensures the monthly view gets updated when day entries change
+      if (summary) {
+        logger.debug(`Broadcasting TOIL summary update after day calculation`);
+        
+        // Use the event bus for centralized event distribution
+        eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
+          ...summary,
+          timestamp: new Date(),
+          monthYear: format(date, 'yyyy-MM')
+        });
+        
+        // Also dispatch legacy event for backward compatibility
+        window.dispatchEvent(new CustomEvent('toil:summary-updated', { 
+          detail: summary 
+        }));
+      }
+      
       // Explicitly return undefined to satisfy the Promise<void> return type
       return undefined;
     } catch (error) {
@@ -72,7 +94,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       // Still return undefined even in case of error
       return undefined;
     }
-  }, [calculateToilForDay]);
+  }, [calculateToilForDay, date]);
 
   useEffect(() => {
     if (effectiveWorkSchedule) {
@@ -114,8 +136,13 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         userId,
         date: date.toISOString()
       });
+      
+      // Explicitly trigger TOIL calculation after entry creation
+      setTimeout(() => {
+        triggerTOILCalculation();
+      }, 300);
     }
-  }, [onCreateEntry, userId, date]);
+  }, [onCreateEntry, userId, date, triggerTOILCalculation]);
 
   const handleAddEntry = useCallback(() => {
     setShowEntryForm(true);
