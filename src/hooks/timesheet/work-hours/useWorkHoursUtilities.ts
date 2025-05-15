@@ -1,8 +1,10 @@
 
 import { useCallback } from 'react';
+import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors/timeLogger';
 import { calculateHoursVariance, isUndertime } from '@/utils/time/calculations/timeCalculations';
 import { UseWorkHoursOptions } from '../types/workHoursTypes';
+import { WorkHoursData } from '@/contexts/timesheet/types';
 
 const logger = createTimeLogger('useWorkHoursUtilities');
 
@@ -65,10 +67,20 @@ export const useWorkHoursUtilities = (options: UseWorkHoursOptions = {}, calcula
   }, [entries]);
 
   // Add a wrapper method for test compatibility
-  const getWorkHoursForDateWithCalculated = useCallback((date: Date, targetUserId?: string) => {
+  const getWorkHoursForDateWithCalculated = useCallback((date: Date, targetUserId?: string): WorkHoursData & { calculatedHours: number } => {
     const effectiveUserId = targetUserId || userId;
     if (!effectiveUserId) {
-      return { startTime: "", endTime: "", calculatedHours: 0, isCustom: false, hasData: false };
+      // Return a valid WorkHoursData object with calculatedHours
+      return {
+        startTime: "",
+        endTime: "",
+        calculatedHours: 0,
+        isCustom: false,
+        hasData: false,
+        date: format(date, 'yyyy-MM-dd'),
+        userId: "",
+        lastModified: Date.now()
+      };
     }
     
     const hours = options.getWorkHoursForDate?.(date, effectiveUserId);
@@ -76,10 +88,17 @@ export const useWorkHoursUtilities = (options: UseWorkHoursOptions = {}, calcula
       ? calculateAutoHours(hours.startTime, hours.endTime) 
       : 0;
       
+    // Return a complete WorkHoursData object with calculatedHours
     return {
-      ...hours,
+      startTime: hours?.startTime || "",
+      endTime: hours?.endTime || "",
       calculatedHours,
-      isCustom: !!hours?.hasData
+      isCustom: !!hours?.hasData,
+      hasData: !!hours?.hasData,
+      // Add the required WorkHoursData properties
+      date: format(date, 'yyyy-MM-dd'),
+      userId: effectiveUserId,
+      lastModified: hours?.lastModified || Date.now()
     };
   }, [options.getWorkHoursForDate, calculateAutoHours, userId]);
 

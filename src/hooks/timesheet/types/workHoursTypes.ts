@@ -14,7 +14,7 @@ export interface UseWorkHoursOptions {
   interactive?: boolean;
   formHandlers?: UseTimeEntryFormReturn[];
   onHoursChange?: (hours: number) => void;
-  getWorkHoursForDate?: (date: Date, userId?: string) => { startTime: string, endTime: string, hasData?: boolean };
+  getWorkHoursForDate?: (date: Date, userId?: string) => { startTime: string, endTime: string, hasData?: boolean, lastModified?: number };
   resetWorkHoursForDate?: (date: Date, userId?: string) => void;
   refreshWorkHours?: (date?: Date | string, userId?: string) => void;
 }
