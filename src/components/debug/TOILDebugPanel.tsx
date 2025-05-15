@@ -16,6 +16,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Check, RefreshCw, Trash2 } from 'lucide-react';
+import { createTOILUpdateHandler } from '@/utils/time/events/toilEventService';
 
 const logger = createTimeLogger('TOILDebugPanel');
 
@@ -94,8 +95,32 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     }
   }, [userId, monthYear, refreshCount]);
   
-  // Listen for TOIL updates
+  // Listen for TOIL updates using the unified handler
   useEffect(() => {
+    const handleTOILUpdate = createTOILUpdateHandler(
+      userId,
+      monthYear,
+      {
+        onValidUpdate: (data) => {
+          logger.debug('TOIL summary update received in debug panel:', data);
+          console.log('[TOILDebugPanel] TOIL summary update received:', data);
+          // No need to set summary directly here as we'll refresh
+          setRefreshCount(prev => prev + 1);
+          setStatus({message: 'TOIL update detected', type: 'info'});
+        },
+        onRefresh: () => {
+          logger.debug('TOIL update - triggering refresh in debug panel');
+          console.log('[TOILDebugPanel] TOIL update - triggering refresh');
+          setRefreshCount(prev => prev + 1);
+          setStatus({message: 'TOIL update detected', type: 'info'});
+        },
+        onLog: (message, data) => {
+          // Special debug panel logging
+          console.log(`[TOILDebugPanel] ${message}`, data);
+        }
+      }
+    );
+    
     const subscription = timeEventsService.subscribe('toil-updated', (data) => {
       if (data.userId === userId) {
         logger.debug('TOIL update detected in debug panel:', data);
@@ -107,24 +132,13 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     });
     
     // Also listen to DOM events for backward compatibility
-    const handleTOILUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const data = customEvent.detail;
-      if (data?.userId === userId) {
-        logger.debug('TOIL DOM event detected in debug panel:', data);
-        console.log('[TOILDebugPanel] TOIL DOM event detected:', data);
-        setRefreshCount(prev => prev + 1);
-        setStatus({message: 'TOIL DOM event detected', type: 'info'});
-      }
-    };
-    
-    window.addEventListener('toil:summary-updated', handleTOILUpdate);
+    window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener('toil:summary-updated', handleTOILUpdate);
+      window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     };
-  }, [userId]);
+  }, [userId, monthYear]);
   
   // Handle manual calculation
   const handleCalculate = useCallback(() => {

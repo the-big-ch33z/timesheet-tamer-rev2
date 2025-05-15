@@ -8,6 +8,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
+import { createTOILUpdateHandler } from '@/utils/time/events/toilEventService';
 
 const logger = createTimeLogger('useTOILSummary');
 
@@ -107,30 +108,25 @@ export const useTOILSummary = ({
   }, [userId, monthYear]);
 
   useEffect(() => {
-    const handleTOILUpdate = (event: CustomEvent) => {
-      if (!isMountedRef.current) return;
-      const data = event.detail;
-      logger.debug(`TOIL update event received:`, data);
-      
-      const valid = data?.userId === userId && (!data.monthYear || data.monthYear === monthYear);
-      if (valid) {
-        logger.debug(`Valid update for current user and month`);
-        if (typeof data.accrued === 'number') {
-          setSummary({
-            userId,
-            monthYear: data.monthYear || monthYear,
-            accrued: data.accrued,
-            used: data.used,
-            remaining: data.remaining
-          });
-          setIsLoading(false);
-          logger.debug(`Updated summary from event data`);
-        } else {
-          logger.debug(`No accrued data, refreshing summary`);
-          refreshSummary();
+    // Create a unified handler using the factory function
+    const handleTOILUpdate = createTOILUpdateHandler(
+      userId,
+      monthYear,
+      {
+        onValidUpdate: (data) => {
+          if (isMountedRef.current) {
+            setSummary(data);
+            setIsLoading(false);
+          }
+        },
+        onRefresh: refreshSummary,
+        onLog: (message, data) => {
+          if (isMountedRef.current) {
+            logger.debug(message, data);
+          }
         }
       }
-    };
+    );
 
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     logger.debug(`Added event listener for toil:summary-updated`);
@@ -182,4 +178,3 @@ export const useTOILSummary = ({
     refreshSummary
   };
 };
-
