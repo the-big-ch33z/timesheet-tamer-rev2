@@ -1,9 +1,11 @@
-
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { visualizer } from "rollup-plugin-visualizer";
+
+// Common build target for consistency
+const TARGET = "es2020";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -19,7 +21,11 @@ export default defineConfig(({ mode }) => ({
         rewrite: (path) => path.replace(/^\/.lovableproject\.com/, '')
       }
     },
-    cors: true, // Enable CORS for all origins
+    cors: {
+      origin: ["http://localhost:8080", "https://*.lovableproject.com"],
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      credentials: true,
+    }, // Improved CORS configuration
   },
   preview: {
     port: 4173,
@@ -31,7 +37,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react({
       jsxImportSource: 'react', // Explicitly use React for JSX
-      devTarget: "es2020",
+      devTarget: TARGET,
       plugins: [],
       tsDecorators: false,
     }),
@@ -55,7 +61,7 @@ export default defineConfig(({ mode }) => ({
     },
     // Ensure proper extension resolution
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-    dedupe: ['react', 'react-dom', 'react-is']
+    dedupe: ['react', 'react-dom', 'react-is', 'prop-types']
   },
   optimizeDeps: {
     include: [
@@ -73,7 +79,7 @@ export default defineConfig(({ mode }) => ({
     ],
     exclude: [], // Ensure React is not excluded
     esbuildOptions: {
-      target: "es2020",
+      target: TARGET,
       jsx: "automatic", // Use automatic JSX transform
       jsxFactory: "React.createElement",
       jsxFragment: "React.Fragment",
@@ -81,9 +87,9 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    target: "es2015",
-    minify: mode === "production" ? "terser" : "esbuild",
-    cssMinify: true,
+    target: TARGET, // Consistent target
+    minify: mode === "production" ? "terser" : false, // Only minify in production
+    cssMinify: mode === "production", // Only minify CSS in production
     commonjsOptions: {
       transformMixedEsModules: true, // Important for handling mixed module types
       include: [/node_modules\/react\//, /node_modules\/react-dom\//, /node_modules\/react-is\//], // Force proper handling of React packages
@@ -122,17 +128,26 @@ export default defineConfig(({ mode }) => ({
           }
           return null;
         },
-      },
+        entryFileNames: mode === "production" ? "assets/[name].[hash].js" : "assets/[name].js",
+        chunkFileNames: mode === "production" ? "assets/[name].[hash].js" : "assets/[name].js",
+        assetFileNames: mode === "production" ? "assets/[name].[hash].[ext]" : "assets/[name].[ext]",
+      }
     },
+    assetsInlineLimit: 4096, // Only inline assets smaller than 4KB
+    emptyOutDir: true, // Clean the output directory before each build
   },
   esbuild: {
     jsxFactory: "React.createElement",
     jsxFragment: "React.Fragment",
     jsx: "automatic", // Ensure consistent JSX handling
+    legalComments: "none", // Remove legal comments in production
   },
   define: {
+    // Environment variables
+    'process.env': {
+      NODE_ENV: JSON.stringify(mode),
+    },
     // Ensure React.createElement and React.Fragment are available
-    'process.env': {},
     'React.createElement': ['react', 'createElement'],
     'React.Fragment': ['react', 'Fragment'],
   },

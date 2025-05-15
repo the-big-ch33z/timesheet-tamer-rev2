@@ -1,119 +1,141 @@
-import React, { useState } from "react";
-import { User } from "@/types";
+
+import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { 
+  Card, 
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: 'active' | 'pending' | 'archived';
+  avatarUrl?: string;
+}
 
 interface TeamMembersTableProps {
-  teamMembers: User[];
-  onMemberSelect?: (user: User) => void;
-  setUserToArchive?: (userId: string) => void;
-  setUserToRestore?: (userId: string) => void;
+  members: TeamMember[];
+  onArchive: (memberId: string) => void;
+  onRestore: (memberId: string) => void;
 }
 
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ 
-  teamMembers, 
-  onMemberSelect,
-  setUserToArchive,
-  setUserToRestore 
+  members, 
+  onArchive,
+  onRestore 
 }) => {
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(part => part[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
+  const { toast } = useToast();
+  
+  const handleArchive = (member: TeamMember) => {
+    onArchive(member.id);
+    toast({
+      title: "Member archived",
+      description: `${member.name} has been archived from the team.`
+    });
+  };
+  
+  const handleRestore = (member: TeamMember) => {
+    onRestore(member.id);
+    toast({
+      title: "Member restored",
+      description: `${member.name} has been restored to the team.`
+    });
   };
 
-  const handleImageError = (userId: string) => {
-    setFailedImages(prev => ({
-      ...prev,
-      [userId]: true
-    }));
-  };
+  // Group members by status
+  const activeMembers = members.filter(m => m.status === "active");
+  const pendingMembers = members.filter(m => m.status === "pending");
+  const archivedMembers = members.filter(m => m.status === "archived");
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="px-4 py-2 text-left">Member</th>
-            <th className="px-4 py-2 text-left">Role</th>
-            <th className="px-4 py-2 text-left">Status</th>
-            <th className="px-4 py-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teamMembers.map((member) => (
-            <tr
-              key={member.id}
-              className="border-t hover:bg-gray-50 cursor-pointer"
-              onClick={() => onMemberSelect?.(member)}
-            >
-              <td className="px-4 py-2">
-                <div className="flex items-center">
-                  <Avatar className="h-8 w-8 mr-2">
-                    {!failedImages[member.id] && member.avatarUrl && (
-                      <AvatarImage
-                        src={member.avatarUrl}
-                        alt={member.name}
-                        onError={() => handleImageError(member.id)}
-                      />
-                    )}
-                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+    <Card>
+      <CardHeader>
+        <CardTitle>Team Members</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {members.map(member => (
+              <TableRow key={member.id}>
+                <TableCell className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage 
+                      src={member.avatarUrl} 
+                      alt={member.name}
+                      onError={(e) => {
+                        // Set fallback when image fails to load
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <AvatarFallback>
+                      {member.name.split(' ').map(name => name[0]).join('')}
+                    </AvatarFallback>
                   </Avatar>
-                  <span>{member.name}</span>
-                </div>
-              </td>
-              <td className="px-4 py-2">{member.role}</td>
-              <td className="px-4 py-2">
-                <span
-                  className={`inline-block px-2 py-1 rounded-full text-xs ${
-                    member.status === "active"
-                      ? "bg-green-100 text-green-800"
-                      : member.status === "archived"
-                      ? "bg-gray-100 text-gray-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {member.status || "unknown"}
-                </span>
-              </td>
-              <td className="px-4 py-2 text-right">
-                {member.status === "active" && setUserToArchive && (
-                  <button 
-                    className="text-amber-500 hover:text-amber-700 mr-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setUserToArchive(member.id);
-                    }}
+                  <div>
+                    <div className="font-medium">{member.name}</div>
+                    <div className="text-sm text-muted-foreground">{member.email}</div>
+                  </div>
+                </TableCell>
+                <TableCell>{member.role}</TableCell>
+                <TableCell>
+                  <Badge 
+                    variant={
+                      member.status === "active" ? "default" : 
+                      member.status === "pending" ? "outline" : 
+                      "secondary"
+                    }
                   >
-                    Archive
-                  </button>
-                )}
-                {member.status === "archived" && setUserToRestore && (
-                  <button 
-                    className="text-green-500 hover:text-green-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setUserToRestore(member.id);
-                    }}
-                  >
-                    Restore
-                  </button>
-                )}
-                {!member.status && (
-                  <button className="text-blue-500 hover:text-blue-700">
-                    View
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                    {member.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {member.status === "archived" ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleRestore(member)}
+                    >
+                      Restore
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleArchive(member)}
+                    >
+                      Archive
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 };
 
