@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Bell, Coffee, Save } from "lucide-react";
 import TimeInput from "@/components/ui/time-input/TimeInput";
 import { BreakConfig } from '@/contexts/timesheet/types';
@@ -29,6 +29,7 @@ interface WorkHoursDisplayProps {
   };
 }
 
+// A more optimized WorkHoursDisplay component with better memoization and controlled re-renders
 const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   startTime,
   endTime,
@@ -51,32 +52,63 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
   const [showSaved, setShowSaved] = useState(false);
   
   // Track local values to detect changes
-  const [lastStartTime, setLastStartTime] = useState(startTime);
-  const [lastEndTime, setLastEndTime] = useState(endTime);
-
-  // For debugging
-  useEffect(() => {
-    logger.debug('[WorkHoursDisplay] Received props:', { 
-      startTime, 
-      endTime, 
-      totalHours, 
-      calculatedHours, 
-      interactive 
-    });
+  const [lastValues, setLastValues] = useState({ startTime, endTime });
+  
+  // Memoize time handlers for better performance
+  const handleStartTimeChange = useCallback((value: string) => {
+    logger.debug(`[WorkHoursDisplay] Start time changing to: ${value}`);
+    onTimeChange('start', value);
+  }, [onTimeChange]);
+  
+  const handleEndTimeChange = useCallback((value: string) => {
+    logger.debug(`[WorkHoursDisplay] End time changing to: ${value}`);
+    onTimeChange('end', value);
+  }, [onTimeChange]);
+  
+  // Memoize break displays for better performance
+  const breakElements = useMemo(() => {
+    const elements = [];
     
-    // Check if values have changed since last render
-    if (startTime !== lastStartTime || endTime !== lastEndTime) {
-      logger.debug('[WorkHoursDisplay] Time values updated:', {
-        startTime: `${lastStartTime} -> ${startTime}`,
-        endTime: `${lastEndTime} -> ${endTime}`
-      });
+    if (breaksIncluded.lunch) {
+      elements.push(
+        <span key="lunch" className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-lime-50 border border-lime-200 text-lime-700 text-xs">
+          <Bell className="h-3 w-3 mr-1" />
+          Lunch subtracted
+        </span>
+      );
+    }
+    
+    if (overrideStates.lunch) {
+      elements.push(
+        <span key="lunch-override" className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs">
+          <Bell className="h-3 w-3 mr-1" />
+          Lunch override
+        </span>
+      );
+    }
+    
+    if (breaksIncluded.smoko) {
+      elements.push(
+        <span key="smoko" className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs">
+          <Coffee className="h-3 w-3 mr-1" />
+          Smoko subtracted
+        </span>
+      );
+    }
+    
+    return elements;
+  }, [breaksIncluded.lunch, breaksIncluded.smoko, overrideStates.lunch]);
+  
+  // Show saved indicator when times change
+  useEffect(() => {
+    if (startTime !== lastValues.startTime || endTime !== lastValues.endTime) {
+      logger.debug('[WorkHoursDisplay] Time values updated');
       
       // Show save indicator
       setShowSaved(true);
       
       // Update tracked values
-      setLastStartTime(startTime);
-      setLastEndTime(endTime);
+      setLastValues({ startTime, endTime });
       
       // Hide save indicator after 2 seconds
       const timer = setTimeout(() => {
@@ -85,13 +117,12 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [startTime, endTime, totalHours, calculatedHours, interactive, lastStartTime, lastEndTime]);
-
-  // Handle specific time change
-  const handleTimeInputChange = (type: 'start' | 'end', value: string) => {
-    logger.debug(`[WorkHoursDisplay] Time ${type} changing to: ${value}`);
-    onTimeChange(type, value);
-  };
+  }, [startTime, endTime, lastValues]);
+  
+  // Memoize hours summary to avoid recalculation on render
+  const hoursSummary = useMemo(() => {
+    return `${displayTotalHours.toFixed(2)} / ${displayCalculatedHours.toFixed(2)} hours`;
+  }, [displayTotalHours, displayCalculatedHours]);
 
   return (
     <div className="w-full p-4 bg-white border-t border-gray-200 rounded-b-md">
@@ -101,10 +132,11 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
             id="start-time"
             label="Start Time"
             value={startTime}
-            onChange={(value) => handleTimeInputChange("start", value)} 
+            onChange={handleStartTimeChange}
             disabled={!interactive}
             className="w-32"
             placeholder="Enter start time"
+            debounceMs={300}
           />
         </div>
 
@@ -113,10 +145,11 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
             id="end-time"
             label="End Time"
             value={endTime}
-            onChange={(value) => handleTimeInputChange("end", value)}
+            onChange={handleEndTimeChange}
             disabled={!interactive}
             className="w-32"
             placeholder="Enter end time"
+            debounceMs={300}
           />
         </div>
 
@@ -124,7 +157,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
         <div className="flex flex-col justify-center">
           <div className="text-xs text-gray-500">Hours Summary</div>
           <div className="text-sm font-semibold text-gray-800">
-            {displayTotalHours.toFixed(2)} / {displayCalculatedHours.toFixed(2)} hours
+            {hoursSummary}
           </div>
         </div>
 
@@ -138,24 +171,7 @@ const WorkHoursDisplay: React.FC<WorkHoursDisplayProps> = ({
 
         {/* Break chips - only show when they're actually being subtracted */}
         <div className="flex items-center gap-2 ml-4">
-          {breaksIncluded.lunch && (
-            <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-lime-50 border border-lime-200 text-lime-700 text-xs">
-              <Bell className="h-3 w-3 mr-1" />
-              Lunch subtracted
-            </span>
-          )}
-          {overrideStates.lunch && (
-            <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs">
-              <Bell className="h-3 w-3 mr-1" />
-              Lunch override
-            </span>
-          )}
-          {breaksIncluded.smoko && (
-            <span className="flex items-center px-[0.5em] py-[0.15em] rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs">
-              <Coffee className="h-3 w-3 mr-1" />
-              Smoko subtracted
-            </span>
-          )}
+          {breakElements}
         </div>
       </div>
     </div>
