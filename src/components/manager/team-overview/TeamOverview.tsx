@@ -69,7 +69,7 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
           </div>
           
           <TeamMembersTable 
-            members={teamMembers} 
+            teamMembers={teamMembers}
             onMemberSelect={onEditUser}
             setUserToArchive={setUserToArchive}
             setUserToRestore={setUserToRestore}
