@@ -145,9 +145,11 @@ export const useTOILSummary = ({
     });
 
     // Add a direct subscription to the centralized event bus as well
-    const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, data => {
+    // Fix: Properly type the event data and handle the EventUnsubscribe return type
+    const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
-      if (data?.userId === userId) {
+      // Fix: Add type checking before accessing userId
+      if (data && typeof data === 'object' && data.userId === userId) {
         logger.debug(`Refreshing based on TOIL_EVENTS.SUMMARY_UPDATED`);
         refreshSummary();
       }
@@ -164,7 +166,10 @@ export const useTOILSummary = ({
     return () => {
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
       sub1.unsubscribe();
-      sub2.unsubscribe();
+      // Fix: Handle the EventUnsubscribe return type correctly
+      if (typeof sub2 === 'function') {
+        sub2();  // EventBus.subscribe returns a function to unsubscribe
+      }
       sub3.unsubscribe();
       logger.debug(`Removed event listeners`);
     };
@@ -177,3 +182,4 @@ export const useTOILSummary = ({
     refreshSummary
   };
 };
+
