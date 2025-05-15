@@ -145,12 +145,22 @@ export const WorkHoursProvider: React.FC<WorkHoursProviderProps> = ({ children }
       }
     });
     
+    // Subscribe to CHANGED events to update UI immediately
+    const unsubscribeChanged = timeEventsService.subscribe(WORK_HOURS_EVENTS.CHANGED, (event) => {
+      if (event.date && event.userId) {
+        logger.debug(`Received work hours changed event for ${event.date}, ${event.userId}`);
+        // Refresh the UI immediately by triggering a state update
+        refreshWorkHours(event.date, event.userId);
+      }
+    });
+    
     const unsubscribeSchedule = timeEventsService.subscribe(SCHEDULE_EVENTS.UPDATED, () => {
       logger.debug('Received schedule update event, will refresh hours as needed');
     });
     
     return () => {
       unsubscribeReset.unsubscribe();
+      unsubscribeChanged.unsubscribe();
       unsubscribeSchedule.unsubscribe();
     };
   }, []);
