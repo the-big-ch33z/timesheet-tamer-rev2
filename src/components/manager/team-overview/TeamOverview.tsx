@@ -3,7 +3,7 @@ import React from "react";
 import { Team, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { TeamHeader } from "./TeamHeader";
-import { TeamMembersTable } from "./TeamMembersTable";
+import TeamMembersTable from "./TeamMembersTable";
 import { TeamPlaceholder } from "./TeamPlaceholder";
 import { AddTeamMemberDialog } from "../AddTeamMemberDialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -69,8 +69,8 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
           </div>
           
           <TeamMembersTable 
-            teamMembers={teamMembers} 
-            onEditUser={onEditUser}
+            members={teamMembers} 
+            onMemberSelect={onEditUser}
             setUserToArchive={setUserToArchive}
             setUserToRestore={setUserToRestore}
           />

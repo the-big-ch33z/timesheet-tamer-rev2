@@ -5,9 +5,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 interface TeamMembersTableProps {
   members: User[];
   onMemberSelect?: (user: User) => void;
+  setUserToArchive?: (userId: string) => void;
+  setUserToRestore?: (userId: string) => void;
 }
 
-const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ members, onMemberSelect }) => {
+const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ 
+  members, 
+  onMemberSelect,
+  setUserToArchive,
+  setUserToRestore 
+}) => {
   // Keep track of images that failed to load
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
@@ -73,13 +80,37 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ members, onMemberSe
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  {member.status}
+                  {member.status || "unknown"}
                 </span>
               </td>
               <td className="px-4 py-2 text-right">
-                <button className="text-blue-500 hover:text-blue-700">
-                  View
-                </button>
+                {member.status === "active" && setUserToArchive && (
+                  <button 
+                    className="text-amber-500 hover:text-amber-700 mr-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUserToArchive(member.id);
+                    }}
+                  >
+                    Archive
+                  </button>
+                )}
+                {member.status === "archived" && setUserToRestore && (
+                  <button 
+                    className="text-green-500 hover:text-green-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUserToRestore(member.id);
+                    }}
+                  >
+                    Restore
+                  </button>
+                )}
+                {!member.status && (
+                  <button className="text-blue-500 hover:text-blue-700">
+                    View
+                  </button>
+                )}
               </td>
             </tr>
           ))}
