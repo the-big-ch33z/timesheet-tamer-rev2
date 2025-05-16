@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
 import MonthSummary from "./MonthSummary";
@@ -8,6 +9,9 @@ import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useToast } from "@/hooks/use-toast";
 import { TOILEventProvider } from "@/utils/time/events/toil";
+import { toilService, clearCache } from "@/utils/time/services/toil";
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { eventBus } from '@/utils/events/EventBus';
 
 // Create a logger for this component
 const logger = createTimeLogger('MonthlyHours');
@@ -34,8 +38,10 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   const { toast } = useToast();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [rolloverHours, setRolloverHours] = useState<number>(0);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   const monthName = format(currentMonth, 'MMMM yyyy');
+  const monthYear = format(currentMonth, 'yyyy-MM');
   
   // Handle TOIL errors from the card component
   const handleTOILError = (error: string) => {
@@ -43,11 +49,20 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     setErrorMessage(error);
   };
   
-  // Handle refresh request from the card
-  const handleRefreshRequest = () => {
+  // Handle refresh request from the card - now with force flag
+  const handleRefreshRequest = useCallback(() => {
     logger.debug('Refresh requested from TOILSummaryCard');
+    clearCache();
     refreshSummary();
-  };
+    setRefreshCount(prev => prev + 1);
+    
+    // Broadcast a global refresh event
+    eventBus.publish(TOIL_EVENTS.REFRESH_REQUESTED, {
+      userId: user.id,
+      monthYear,
+      timestamp: new Date()
+    });
+  }, [refreshSummary, user.id, monthYear]);
   
   // Add logging to help debug the TOIL summary
   useEffect(() => {
@@ -80,21 +95,38 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     }
   }, [toilSummary, toilLoading, toilError, monthName, user.id, toast]);
   
-  // Force a refresh when the component mounts to ensure data is loaded
+  // Force a refresh when the component mounts or month changes
   useEffect(() => {
-    logger.debug(`MonthlyHours component mounted, refreshing summary for ${user.id}`);
+    logger.debug(`MonthlyHours component mounted or month changed, refreshing summary for ${user.id}`);
+    
+    // Aggressive clearing on mount/change
+    clearCache();
     refreshSummary();
     
     // Set up an interval to periodically refresh the summary
     const refreshInterval = setInterval(() => {
       logger.debug('Periodic refresh of TOIL summary');
       refreshSummary();
-    }, 30000); // Refresh every 30 seconds
+    }, 15000); // Refresh every 15 seconds
     
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [refreshSummary, user.id]);
+  }, [refreshSummary, user.id, currentMonth]);
+
+  // Subscribe to TOIL events
+  useEffect(() => {
+    const subscription = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
+      logger.debug('Received TOIL.UPDATED event, refreshing summary');
+      refreshSummary();
+    });
+    
+    return () => {
+      if (typeof subscription === 'function') {
+        subscription();
+      }
+    };
+  }, [refreshSummary]);
 
   return (
     <TOILEventProvider>
@@ -122,7 +154,10 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
             <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg flex flex-col gap-2">
               <div>Failed to load TOIL summary: {toilError}</div>
               <button 
-                onClick={() => refreshSummary()} 
+                onClick={() => {
+                  clearCache();
+                  refreshSummary();
+                }} 
                 className="ml-2 px-4 py-1.5 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"
               >
                 Retry
@@ -130,6 +165,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
             </div>
           ) : (
             <TOILSummaryCard
+              key={`toil-summary-${refreshCount}`}
               summary={toilSummary}
               loading={toilLoading}
               monthName={monthName}

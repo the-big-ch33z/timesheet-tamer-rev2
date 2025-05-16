@@ -86,7 +86,16 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="contents">
-                      <TOILSummaryBox {...boxConfig} />
+                      <TOILSummaryBox 
+                        label={boxConfig.label}
+                        value={boxConfig.value}
+                        color={boxConfig.color}
+                        border={boxConfig.border}
+                        icon={boxConfig.icon}
+                        displaySign={boxConfig.displaySign}
+                        forceNegative={boxConfig.forceNegative}
+                        isNegativeBalance={boxConfig.isNegativeBalance}
+                      />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -103,7 +112,16 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <TOILSummaryBox {...boxConfig} />
+              <TOILSummaryBox 
+                label={boxConfig.label}
+                value={boxConfig.value}
+                color={boxConfig.color}
+                border={boxConfig.border}
+                icon={boxConfig.icon}
+                displaySign={boxConfig.displaySign}
+                forceNegative={boxConfig.forceNegative}
+                isNegativeBalance={boxConfig.isNegativeBalance}
+              />
             )}
           </React.Fragment>
         ))}

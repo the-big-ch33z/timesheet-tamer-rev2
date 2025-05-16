@@ -1,111 +1,45 @@
 
 /**
- * Standard event types for the application
- * Centralizing these prevents typos and inconsistencies
+ * Centralized event type definitions
+ * This ensures consistent event naming across the application
  */
 
-// Time entry events
-export const TIME_ENTRY_EVENTS = {
-  CREATED: 'entry:created',
-  UPDATED: 'entry:updated',
-  DELETED: 'entry:deleted',
-  BATCH_UPDATED: 'entries:batch-updated',
-  LOADED: 'entries:loaded'
+// TOIL related events
+export const TOIL_EVENTS = {
+  UPDATED: 'toil:updated', // General TOIL data changed
+  SUMMARY_UPDATED: 'toil:summary-updated', // TOIL summary data updated
+  RECORD_CREATED: 'toil:record-created', // New TOIL record created
+  RECORD_UPDATED: 'toil:record-updated', // Existing TOIL record updated
+  RECORD_DELETED: 'toil:record-deleted', // TOIL record deleted
+  REFRESH_REQUESTED: 'toil:refresh-requested', // Explicit refresh requested
+  ERROR: 'toil:error' // Error in TOIL processing
 };
 
-// Work hours events
+// Time entry related events
+export const TIME_ENTRY_EVENTS = {
+  CREATED: 'time-entry:created',
+  UPDATED: 'time-entry:updated',
+  DELETED: 'time-entry:deleted',
+  BATCH_UPDATED: 'time-entry:batch-updated',
+  LOAD_COMPLETED: 'time-entry:load-completed'
+};
+
+// Work hours related events
 export const WORK_HOURS_EVENTS = {
   UPDATED: 'work-hours:updated',
-  RESET: 'work-hours:reset',
-  LOADED: 'work-hours:loaded',
-  CHANGED: 'work-hours:changed',
-  ACTION_TOGGLED: 'work-hours:action-toggled',
-  REFRESHED: 'work-hours:refreshed'  // Added this event
+  SCHEDULE_CHANGED: 'work-hours:schedule-changed',
+  DAY_COMPLETED: 'work-hours:day-completed'
 };
 
-// TOIL events
-export const TOIL_EVENTS = {
-  CALCULATED: 'toil:calculated',
-  UPDATED: 'toil:updated',
-  CONSUMED: 'toil:consumed',
-  SUMMARY_UPDATED: 'toil:summary-updated'
+// User related events
+export const USER_EVENTS = {
+  PROFILE_UPDATED: 'user:profile-updated',
+  PREFERENCES_CHANGED: 'user:preferences-changed'
 };
 
-// Calendar events
-export const CALENDAR_EVENTS = {
-  DATE_CHANGED: 'calendar:date-changed',
-  MONTH_CHANGED: 'calendar:month-changed',
-  SELECTION_CHANGED: 'calendar:selection-changed'
+// App lifecycle events
+export const APP_EVENTS = {
+  INITIALIZED: 'app:initialized',
+  CONFIG_LOADED: 'app:config-loaded',
+  ERROR: 'app:error'
 };
-
-// System events
-export const SYSTEM_EVENTS = {
-  SYNC_STORAGE: 'system:storage-sync',
-  SAVE_PENDING: 'system:save-pending',
-  ERROR: 'system:error',
-  SERVICE_READY: 'system:service-ready'
-};
-
-// Schedule events - adding these new constants
-export const SCHEDULE_EVENTS = {
-  UPDATED: 'schedules:updated',
-  CREATED: 'schedules:created',
-  DELETED: 'schedules:deleted',
-  USER_CHANGED: 'user-schedule:changed'
-};
-
-// Collection of all event types for easier import
-export const EVENT_TYPES = {
-  ...TIME_ENTRY_EVENTS,
-  ...WORK_HOURS_EVENTS,
-  ...TOIL_EVENTS,
-  ...CALENDAR_EVENTS,
-  ...SYSTEM_EVENTS,
-  ...SCHEDULE_EVENTS
-};
-
-// Helper type for typed event handling
-export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES];
-
-// Typed event data interfaces
-export interface TimeEntryEventData {
-  entryId?: string;
-  entry?: any;
-  entries?: any[];
-  userId?: string;
-  date?: Date;
-}
-
-export interface WorkHoursEventData {
-  userId?: string;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
-  hours?: number;
-  isCustom?: boolean;
-  actionType?: string;
-  scheduledHours?: number;
-  timestamp?: number;
-}
-
-export interface TOILEventData {
-  userId?: string;
-  date?: Date;
-  hours?: number;
-  summary?: any;
-  monthYear?: string;
-}
-
-export interface CalendarEventData {
-  previousDate?: Date;
-  newDate?: Date;
-  previousMonth?: string;
-  newMonth?: string;
-}
-
-export interface SystemEventData {
-  source?: string;
-  error?: any;
-  context?: string;
-  timestamp?: number;
-}

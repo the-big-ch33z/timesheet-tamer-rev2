@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
-import { toilService } from '@/utils/time/services/toil';
+import { toilService, clearCache } from '@/utils/time/services/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
 import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
@@ -40,6 +40,9 @@ export const useTOILSummary = ({
   const isMountedRef = useRef(true);
 
   const monthYear = format(date, 'yyyy-MM');
+  
+  // Store last loaded summary for comparison
+  const lastSummaryRef = useRef<TOILSummary | null>(null);
 
   const loadSummary = useCallback(() => {
     if (!userId) {
@@ -53,17 +56,35 @@ export const useTOILSummary = ({
 
     try {
       logger.debug(`Loading summary for ${userId} in ${monthYear}`);
+      
+      // Aggressively clear cache before loading
+      clearCache();
+      
       // Use the toilService directly
       const result = toilService.getTOILSummary(userId, monthYear);
       if (!isMountedRef.current) return;
 
       logger.debug(`Summary result:`, result);
       
+      // Check if the summary has changed
+      const hasChanged = !lastSummaryRef.current || 
+                         !result || 
+                         lastSummaryRef.current.accrued !== result.accrued ||
+                         lastSummaryRef.current.used !== result.used || 
+                         lastSummaryRef.current.remaining !== result.remaining;
+      
       if (!result) {
-        setSummary({ userId, monthYear, accrued: 0, used: 0, remaining: 0 });
+        const defaultSummary = { userId, monthYear, accrued: 0, used: 0, remaining: 0 };
+        setSummary(defaultSummary);
+        lastSummaryRef.current = defaultSummary;
         logger.debug(`No summary found, using default`);
       } else {
         setSummary(result);
+        lastSummaryRef.current = result;
+        
+        if (hasChanged) {
+          logger.debug(`Summary changed: ${JSON.stringify(result)}`);
+        }
       }
     } catch (err) {
       logger.error(`Error getting summary:`, err);
@@ -86,22 +107,32 @@ export const useTOILSummary = ({
     
     logger.debug(`Refresh requested for ${userId}`);
     // Clear cache before refreshing to ensure we get fresh data
-    toilService.clearCache();
+    clearCache();
     setRefreshCounter(c => c + 1);
   }, [userId]);
 
   useEffect(() => {
     isMountedRef.current = true;
     loadSummary();
+    
+    // Set up a refresh interval to ensure we get updated data
+    const refreshInterval = setInterval(() => {
+      if (isMountedRef.current) {
+        logger.debug('Periodic refresh');
+        refreshSummary();
+      }
+    }, 10000); // Refresh every 10 seconds
+    
     return () => {
       isMountedRef.current = false;
+      clearInterval(refreshInterval);
     };
-  }, [loadSummary]);
+  }, [loadSummary, refreshSummary]);
 
   useEffect(() => {
     logger.debug(`Clearing cache for ${userId}`);
     try {
-      toilService.clearCache();
+      clearCache();
     } catch (err) {
       logger.error(`Error clearing cache:`, err);
     }
@@ -115,7 +146,9 @@ export const useTOILSummary = ({
       {
         onValidUpdate: (data) => {
           if (isMountedRef.current) {
+            logger.debug('Received valid TOIL update:', data);
             setSummary(data);
+            lastSummaryRef.current = data;
             setIsLoading(false);
           }
         },
@@ -128,10 +161,11 @@ export const useTOILSummary = ({
       }
     );
 
+    // Listen for DOM events
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     logger.debug(`Added event listener for toil:summary-updated`);
     
-    // Subscribe to both TOIL event types for more reliable updates
+    // Listen via timeEventsService
     const sub1 = timeEventsService.subscribe('toil-updated', data => {
       logger.debug(`toil-updated event received:`, data);
       if (data?.userId === userId) {
@@ -140,18 +174,16 @@ export const useTOILSummary = ({
       }
     });
 
-    // Add a direct subscription to the centralized event bus as well
-    // Fix: Properly type the event data and handle the EventUnsubscribe return type
+    // Listen via centralized event bus
     const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
-      // Fix: Add type checking before accessing userId
       if (data && typeof data === 'object' && data.userId === userId) {
         logger.debug(`Refreshing based on TOIL_EVENTS.SUMMARY_UPDATED`);
         refreshSummary();
       }
     });
 
-    // Also subscribe to hours-updated events since they may affect TOIL
+    // Also listen for hours-updated events
     const sub3 = timeEventsService.subscribe('hours-updated', data => {
       if (data?.userId === userId) {
         logger.debug(`TOIL summary refresh triggered by hours-updated event`);
@@ -159,14 +191,19 @@ export const useTOILSummary = ({
       }
     });
 
+    // Special listening for any TOIL-related events
+    const sub4 = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
+      logger.debug('General TOIL update detected, refreshing');
+      refreshSummary();
+    });
+
     return () => {
+      // Clean up all event listeners properly
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
-      sub1.unsubscribe();
-      // Fix: Handle the EventUnsubscribe return type correctly
-      if (typeof sub2 === 'function') {
-        sub2();  // EventBus.subscribe returns a function to unsubscribe
-      }
-      sub3.unsubscribe();
+      if (sub1 && typeof sub1.unsubscribe === 'function') sub1.unsubscribe();
+      if (typeof sub2 === 'function') sub2();
+      if (sub3 && typeof sub3.unsubscribe === 'function') sub3.unsubscribe();
+      if (typeof sub4 === 'function') sub4();
       logger.debug(`Removed event listeners`);
     };
   }, [userId, monthYear, refreshSummary]);

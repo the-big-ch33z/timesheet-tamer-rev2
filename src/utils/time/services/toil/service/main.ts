@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILServiceCore } from "./core";
 import { TOILServiceCalculation } from "./calculation";
@@ -6,6 +5,7 @@ import { TOILServiceUsage } from "./usage";
 import { TOILServiceProcessing } from "./processing";
 import { TOILServiceSettings } from "./settings";
 import { toilQueueManager } from "../queue/TOILQueueManager";
+import { clearSummaryCache } from "../storage";
 
 const logger = createTimeLogger('TOILService');
 
@@ -18,6 +18,7 @@ export class TOILService extends TOILServiceCore {
   private processingService: TOILServiceProcessing;
   private settingsService: TOILServiceSettings;
   private initialized: boolean = false;
+  private initializationError: Error | null = null;
   
   constructor(calculationQueueEnabled: boolean = true) {
     super(calculationQueueEnabled);
@@ -44,14 +45,21 @@ export class TOILService extends TOILServiceCore {
     try {
       logger.debug('Initializing TOILService and dependent components');
       
+      // Clear any stored cache on initialization
+      this.clearCache();
+      
       // Initialize the queue manager now that all dependencies are ready
       toilQueueManager.initialize();
       
       this.initialized = true;
+      this.initializationError = null;
       logger.debug('TOILService fully initialized');
     } catch (error) {
       logger.error('Error initializing TOILService:', error);
-      throw new Error('Failed to initialize TOIL service: ' + (error instanceof Error ? error.message : String(error)));
+      this.initializationError = error instanceof Error 
+        ? error 
+        : new Error('Failed to initialize TOIL service: ' + String(error));
+      throw this.initializationError;
     }
   }
   
@@ -62,9 +70,37 @@ export class TOILService extends TOILServiceCore {
     return this.initialized;
   }
   
+  /**
+   * Get the error that occurred during initialization, if any
+   */
+  public getInitializationError(): Error | null {
+    return this.initializationError;
+  }
+  
+  /**
+   * Clear all caches
+   */
+  public clearCache(): void {
+    try {
+      logger.debug('Clearing all TOIL caches');
+      clearSummaryCache();
+      logger.debug('Cache cleared successfully');
+    } catch (error) {
+      logger.error('Error clearing cache:', error);
+    }
+  }
+  
   // ======= Delegation methods for calculation service =======
   public async calculateAndStoreTOIL(...args: Parameters<TOILServiceCalculation['calculateAndStoreTOIL']>) {
-    return this.calculationService.calculateAndStoreTOIL(...args);
+    try {
+      const result = await this.calculationService.calculateAndStoreTOIL(...args);
+      // Clear cache after calculation
+      this.clearCache();
+      return result;
+    } catch (error) {
+      logger.error('Error in calculateAndStoreTOIL:', error);
+      throw error;
+    }
   }
   
   public queueCalculation(...args: Parameters<TOILServiceCalculation['queueCalculation']>) {
@@ -73,7 +109,15 @@ export class TOILService extends TOILServiceCore {
   
   // ======= Delegation methods for usage service =======
   public async recordTOILUsage(...args: Parameters<TOILServiceUsage['recordTOILUsage']>) {
-    return this.usageService.recordTOILUsage(...args);
+    try {
+      const result = await this.usageService.recordTOILUsage(...args);
+      // Clear cache after usage recording
+      this.clearCache();
+      return result;
+    } catch (error) {
+      logger.error('Error in recordTOILUsage:', error);
+      throw error;
+    }
   }
   
   // ======= Delegation methods for processing service =======

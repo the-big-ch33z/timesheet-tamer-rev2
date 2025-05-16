@@ -1,47 +1,61 @@
 
-export * from './service';
+/**
+ * Main TOIL service export file
+ * Re-exports everything from the TOIL service
+ */
+
+import { TOILService, toilService } from './service/main';
+import { clearSummaryCache } from './storage';
+import { createTimeLogger } from '@/utils/time/errors';
+
+const logger = createTimeLogger('TOIL-Service');
+
+// Initialize TOIL service when imported
+try {
+  toilService.initialize();
+  logger.debug('TOIL service initialized on import');
+} catch (e) {
+  logger.error('Failed to initialize TOIL service:', e);
+}
+
+// Re-export everything from the TOIL modules
 export * from './calculation';
-export type { TOILDayInfo } from './types';
+export * from './queue';
 export * from './storage';
-export * from './batch-processing';
-export * from './holiday-utils';
 export * from './events';
-export * from './types';
+export * from './service/main';
+export * from './service/core';
 
-// Re-export queue manager
-export { toilQueueManager } from './queue/TOILQueueManager';
+// Re-export the toilService singleton instance directly
+export { toilService };
 
-// Re-export settings defaults
-export { TOIL_DEFAULT_THRESHOLDS } from './service/settings';
+// Add a more aggressive cache clearing function
+export function clearCache() {
+  try {
+    logger.debug('Aggressive cache clearing requested');
+    // Clear cache in local storage
+    clearSummaryCache();
+    
+    // Also invalidate any in-memory caches
+    toilService.clearCache();
+    
+    logger.debug('All TOIL caches cleared');
+    return true;
+  } catch (e) {
+    logger.error('Error clearing TOIL caches:', e);
+    return false;
+  }
+}
 
-// Re-export keys from constants
-export { 
-  TOIL_JOB_NUMBER,
-  TOIL_RECORDS_KEY,
-  TOIL_USAGE_KEY,
-  TOIL_SUMMARY_CACHE_KEY,
-  TOIL_PROCESSING_RECORDS_KEY,
-  TOIL_MONTH_PROCESSING_STATE_KEY,
-  TOIL_THRESHOLDS_KEY,
-  DEBOUNCE_PERIOD
-} from './storage/constants';
+// Add debug utilities
+export function getDebugInfo() {
+  return {
+    serviceInitialized: toilService.isInitialized(),
+    queueLength: toilService.getQueueLength(),
+    isQueueProcessing: toilService.isQueueProcessing()
+  };
+}
 
-// Make sure the critical functions are properly exported
-import { 
-  getTOILSummary,
-  findTOILRecordsByEntryId,
-  deleteTOILRecordByEntryId,
-  hasTOILForDay,
-  hasTOILForMonth
-} from './storage';
+// Module initialization marker
+logger.debug('TOIL service module initialized');
 
-// Re-export them
-export {
-  getTOILSummary,
-  findTOILRecordsByEntryId,
-  deleteTOILRecordByEntryId,
-  hasTOILForDay,
-  hasTOILForMonth
-};
-
-console.log('[TOIL-INDEX] TOIL module loaded and configured');
