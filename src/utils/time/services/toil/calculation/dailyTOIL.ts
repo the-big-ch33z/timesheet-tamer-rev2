@@ -75,7 +75,16 @@ export function calculateDailyTOIL({
     : 7.6; // Default to standard day if no schedule
   
   // Check if this is a special day (holiday, weekend, RDO)
-  const { isHolidayDay, isWeekend, isRDO } = isSpecialDay(date, workSchedule || { weeks: [] });
+  // Fixed: Use proper default for workSchedule
+  const defaultWorkSchedule: WorkSchedule = workSchedule || { 
+    id: 'default',
+    name: 'Default',
+    userId: '',
+    weeks: [], 
+    rdoDays: [] 
+  };
+  
+  const { isHolidayDay, isWeekend, isRDO } = isSpecialDay(date, defaultWorkSchedule);
   const isSpecialWorkDay = isHolidayDay || isWeekend || isRDO;
   
   logger.debug(

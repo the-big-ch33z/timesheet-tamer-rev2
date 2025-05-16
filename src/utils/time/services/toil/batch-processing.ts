@@ -1,34 +1,23 @@
+
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
-import { TOILRecord, TOILSummary } from "@/types/toil";
-import { v4 as uuidv4 } from "uuid";
-import { createTimeLogger } from '@/utils/time/errors';
-import { format, isSameMonth } from 'date-fns';
-import { timeEventsService } from '@/utils/time/events/timeEventsService';
-import { calculateTOILHours } from "./calculation";
-import { 
-  storeTOILRecord, 
-  getTOILSummary, 
-  cleanupDuplicateTOILRecords 
-} from "./storage/index";
-import { eventBus } from '@/utils/events/EventBus';
-import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { TOILSummary } from "@/types/toil";
+import { createTimeLogger } from "@/utils/time/errors";
+import { calculateDailyTOIL } from "./calculation/dailyTOIL";
+import { storeTOILSummary } from "./storage";
+import { dispatchTOILEvent } from "./events";
 
-// Re-export queue types and functions for backward compatibility
-export type { PendingTOILCalculation } from './types';
-
-export {
-  hasRecentlyProcessed,
-  clearRecentProcessing,
-  queueTOILCalculation,
-  processTOILQueue
-} from './queue/TOILQueueManager';
-
-const logger = createTimeLogger('TOILBatchProcessor');
+const logger = createTimeLogger('TOIL-BatchProcessing');
 
 /**
- * Perform a TOIL calculation for a single batch of entries
- * This function remains in this file as it's the core calculation logic
+ * Perform a single TOIL calculation for one day.
+ * 
+ * @param entries - Time entries to calculate TOIL for
+ * @param date - The date to calculate TOIL for
+ * @param userId - The user ID
+ * @param workSchedule - Optional work schedule for the user
+ * @param holidays - Optional array of holidays
+ * @returns The TOIL summary or null if calculation failed
  */
 export async function performSingleCalculation(
   entries: TimeEntry[],
@@ -38,83 +27,39 @@ export async function performSingleCalculation(
   holidays: Holiday[] = []
 ): Promise<TOILSummary | null> {
   try {
-    if (!workSchedule || !userId) {
-      logger.debug('Missing required workSchedule or userId for TOIL calculation');
-      return null;
-    }
-
-    // First, cleanup any existing duplicate records
-    // This runs asynchronously but we don't need to wait for it
-    cleanupDuplicateTOILRecords(userId).catch(err => 
-      logger.error('Error while cleaning up duplicate records:', err)
-    );
-
-    // Filter entries to same month only
-    const filteredEntries = entries.filter(entry => {
-      if (!entry.date) return false;
-      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-      return isSameMonth(entryDate, date);
+    logger.debug(`Performing single calculation for ${userId} on ${date.toISOString().slice(0, 10)}`);
+    
+    // Calculate TOIL hours for the day
+    const toilHours = calculateDailyTOIL({
+      entries,
+      date,
+      workSchedule,
+      userId
     });
     
-    if (filteredEntries.length === 0) {
-      logger.debug(`No valid entries for TOIL calculation on ${date.toISOString().slice(0, 10)}`);
-      return getTOILSummary(userId, format(date, 'yyyy-MM'));
-    }
-
-    logger.debug(`Processing ${filteredEntries.length} entries for TOIL calculation for date: ${format(date, 'yyyy-MM-dd')}`);
+    // Store the summary for the month
+    const monthYear = date.toISOString().slice(0, 7); // YYYY-MM format
     
-    // Calculate TOIL hours
-    const toilHours = calculateTOILHours(filteredEntries, date, workSchedule, holidays);
-    
-    // Added better validation to prevent insignificant TOIL amounts
-    if (toilHours <= 0.01) {
-      logger.debug(`No significant TOIL hours (${toilHours}) calculated for ${format(date, 'yyyy-MM-dd')}, skipping record creation`);
-      return getTOILSummary(userId, format(date, 'yyyy-MM'));
-    }
-    
-    // Find the primary entry to associate the TOIL record with
-    const primaryEntry = [...filteredEntries].sort((a, b) => b.hours - a.hours)[0];
-    const entryId = primaryEntry?.id;
-    
-    // Create a TOIL record
-    const record: TOILRecord = {
-      id: uuidv4(),
+    // Get existing summary or create new one
+    const summary: TOILSummary = {
       userId,
-      date,
-      hours: toilHours,
-      monthYear: format(date, 'yyyy-MM'),
-      entryId: entryId || uuidv4(),
-      status: 'active'
+      monthYear,
+      accrued: toilHours > 0 ? toilHours : 0,
+      used: 0,
+      remaining: toilHours > 0 ? toilHours : 0
     };
     
-    // Enhanced logging 
-    logger.debug(`Creating TOIL record for ${format(date, 'yyyy-MM-dd')} with ${toilHours} hours`);
+    // Store the updated summary
+    const storedSummary = await storeTOILSummary(summary);
     
-    // Store the record - the improved storeTOILRecord will handle duplicates
-    const success = await storeTOILRecord(record);
-    
-    if (!success) {
-      logger.error('Failed to store TOIL record');
-      return null;
+    // Dispatch events to notify subscribers
+    if (storedSummary) {
+      dispatchTOILEvent(storedSummary);
     }
     
-    // Return the updated TOIL summary
-    const monthYear = format(date, 'yyyy-MM');
-    const summary = getTOILSummary(userId, monthYear);
-    
-    // Dispatch event using both the legacy and new systems
-    timeEventsService.publish('toil-updated', {
-      userId,
-      date: date.toISOString(),
-      summary
-    });
-    
-    // Use EventBus for the centralized event system
-    eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary);
-    
-    return summary;
+    return storedSummary;
   } catch (error) {
-    logger.error('Error in TOIL calculation:', error);
+    logger.error(`Error in performSingleCalculation: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   }
 }

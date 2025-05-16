@@ -114,13 +114,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <Clock className="w-6 h-6 text-blue-400" />
             TOIL Summary {monthName}
             
-            {/* Debug indicator */}
+            {/* Debug indicator - fixed: removed 'title' prop and use aria-label instead */}
             {debugMode && (
               <Bug 
                 size={16} 
                 className="ml-2 text-amber-500"
                 onClick={handleManualRefresh}
-                title="Click to force refresh"
+                aria-label="Click to force refresh"
               />
             )}
           </CardTitle>
