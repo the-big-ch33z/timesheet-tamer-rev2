@@ -38,7 +38,7 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
     );
     
     logger.debug(`TOIL record ${success ? 'successfully' : 'failed to be'} stored: ${record.id}`);
-    return success;
+    return !!success; // Convert to boolean explicitly
   } catch (error) {
     logger.error(`Error storing TOIL record: ${error instanceof Error ? error.message : String(error)}`);
     return false;
@@ -68,7 +68,7 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
     );
     
     logger.debug(`TOIL usage ${success ? 'successfully' : 'failed to be'} stored: ${usage.id}`);
-    return success;
+    return !!success; // Convert to boolean explicitly
   } catch (error) {
     logger.error(`Error storing TOIL usage: ${error instanceof Error ? error.message : String(error)}`);
     return false;
@@ -97,7 +97,7 @@ export async function storeTOILSummary(summary: TOILSummary): Promise<TOILSummar
       'storing TOIL summary'
     );
     
-    if (success) {
+    if (!!success) {  // Convert to boolean explicitly with double negation
       logger.debug(`TOIL summary successfully stored for ${summary.userId} - ${summary.monthYear}`);
       return summary;
     } else {
@@ -135,8 +135,8 @@ export async function deleteUserTOILRecords(userId: string): Promise<boolean> {
       `deleting TOIL records for user ${userId}`
     );
     
-    logger.debug(`TOIL records for user ${userId} ${success ? 'successfully deleted' : 'failed to delete'}`);
-    return success;
+    logger.debug(`TOIL records for user ${userId} ${!!success ? 'successfully deleted' : 'failed to delete'}`);
+    return !!success; // Convert to boolean explicitly
   } catch (error) {
     logger.error(`Error deleting TOIL records for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
     return false;
@@ -168,8 +168,8 @@ export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
       `deleting TOIL record ${recordId}`
     );
     
-    logger.debug(`TOIL record ${recordId} ${success ? 'successfully deleted' : 'failed to delete'}`);
-    return success;
+    logger.debug(`TOIL record ${recordId} ${!!success ? 'successfully deleted' : 'failed to delete'}`);
+    return !!success; // Convert to boolean explicitly
   } catch (error) {
     logger.error(`Error deleting TOIL record ${recordId}: ${error instanceof Error ? error.message : String(error)}`);
     return false;
@@ -201,8 +201,8 @@ export async function deleteTOILRecordsByEntryId(entryId: string): Promise<boole
       `deleting TOIL records for entry ${entryId}`
     );
     
-    logger.debug(`TOIL records for entry ${entryId} ${success ? 'successfully deleted' : 'failed to delete'}`);
-    return success;
+    logger.debug(`TOIL records for entry ${entryId} ${!!success ? 'successfully deleted' : 'failed to delete'}`);
+    return !!success; // Convert to boolean explicitly
   } catch (error) {
     logger.error(`Error deleting TOIL records for entry ${entryId}: ${error instanceof Error ? error.message : String(error)}`);
     return false;
