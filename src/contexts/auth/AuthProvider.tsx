@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from './useAuthState';
@@ -18,21 +18,24 @@ const defaultAuthContext: AuthContextType = {
   teamMemberships: [],
   isAuthenticated: false,
   setTeams: () => {},
-  login: async () => {},
+  login: async () => { throw new Error('Not implemented'); },
   logout: () => {},
-  register: async () => {},
-  createTeam: async () => ({ id: '', name: '', organizationId: '', managerId: '' }),
-  addUser: async () => ({ id: '', email: '', name: '', role: 'team-member', organizationId: '' }),
-  addTeamMember: async () => ({ id: '', email: '', name: '', role: 'team-member', organizationId: '' }),
+  register: async () => { throw new Error('Not implemented'); },
+  updateUser: async () => {},
   updateUserRole: async () => {},
+  updateUserWorkScheduleId: async () => {},
   updateUserMetrics: async () => {},
-  assignManagerToTeam: async () => {},
+  createTeam: async () => ({ id: '', name: '', organizationId: '', managerId: '' }),
+  addUser: async () => ({ id: '', email: '', name: '', role: 'team-member' }),
+  addTeamMember: async () => ({ id: '', email: '', name: '', role: 'team-member' }),
+  getUser: () => null,
+  getUserById: () => undefined,
   getUsersByRole: () => [],
   getUsersByTeam: () => [],
   getTeamsByManager: () => [],
   getOrganizationById: () => undefined,
   getTeamById: () => undefined,
-  getUserById: () => undefined,
+  assignManagerToTeam: async () => {},
   removeUserFromTeam: async () => {},
   deleteTeam: async () => {},
   archiveUser: async () => {},

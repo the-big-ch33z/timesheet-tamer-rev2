@@ -5,22 +5,7 @@ import { mockUsers } from './mockData';
 import { v4 as uuidv4 } from 'uuid';
 import { eventBus } from '@/utils/events/EventBus';
 import { AUTH_EVENTS } from './index';
-
-interface AuthContextType {
-  currentUser: User | null;
-  users: User[];
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  logout: () => void;
-  register: (user: Partial<User>) => Promise<User>;
-  updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
-  updateUserRole: (userId: string, role: UserRole) => Promise<void>;
-  updateUserWorkScheduleId: (userId: string, scheduleId: string) => Promise<void>;
-  getUser: (userId: string) => User | null;
-  archiveUser: (userId: string) => Promise<void>;
-  restoreUser: (userId: string) => Promise<void>;
-  permanentDeleteUser: (userId: string) => Promise<void>;
-}
+import { AuthContextType, UserMetrics } from './types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -66,13 +51,14 @@ export const authContextValue = (
       id: userData.id || `user-${Date.now()}`,
       name: userData.name || 'New User',
       email: userData.email || `user-${uuidv4().slice(0, 8)}@example.com`,
-      role: userData.role || 'user',
+      role: userData.role || 'team-member',
       status: 'active',
       createdAt: new Date().toISOString(),
+      workScheduleId: userData.workScheduleId || 'default', // Default schedule ID
+      // Optional properties below
       avatar: userData.avatar || null,
       department: userData.department || null,
-      position: userData.position || null,
-      workScheduleId: userData.workScheduleId || 'default' // Default schedule ID
+      position: userData.position || null
     };
 
     const updatedUsers = [...users, newUser];
@@ -120,8 +106,32 @@ export const authContextValue = (
     });
   };
 
+  const updateUserMetrics = async (userId: string, metrics: UserMetrics) => {
+    // This would update user metrics in a real app
+    console.log(`Updating metrics for user ${userId}:`, metrics);
+    return Promise.resolve();
+  };
+
   const getUser = (userId: string) => {
     return users.find((user) => user.id === userId) || null;
+  };
+
+  const getUserById = (userId: string) => {
+    return users.find((user) => user.id === userId);
+  };
+
+  const getUsersByRole = (role: UserRole) => {
+    return users.filter(user => user.role === role);
+  };
+
+  const getUsersByTeam = (teamId: string) => {
+    // Mock implementation
+    return users.filter(user => user.teamIds?.includes(teamId));
+  };
+
+  const getTeamsByManager = (managerId: string) => {
+    // Mock implementation
+    return [];
   };
 
   const archiveUser = async (userId: string) => {
@@ -138,19 +148,54 @@ export const authContextValue = (
     localStorage.setItem('users', JSON.stringify(updatedUsers));
   };
 
+  // Mock implementations for team operations
+  const teams = [];
+  const organizations = [];
+  const teamMemberships = [];
+  const setTeams = () => {};
+  const createTeam = async () => ({ id: '', name: '', organizationId: '', managerId: '' });
+  const getTeamById = () => undefined;
+  const assignManagerToTeam = async () => {};
+  const addTeamMember = async () => ({ id: '', email: '', name: '', role: 'team-member' as UserRole });
+  const removeUserFromTeam = async () => {};
+  const deleteTeam = async () => {};
+  const getOrganizationById = () => undefined;
+  const addUser = async () => ({ id: '', email: '', name: '', role: 'team-member' as UserRole });
+  const syncData = async () => {};
+  const getAuditLogs = async () => [];
+
   return {
     currentUser,
     users,
     isAuthenticated,
+    teams,
+    organizations,
+    teamMemberships,
+    setTeams,
     login,
     logout,
     register,
     updateUser,
     updateUserRole,
     updateUserWorkScheduleId,
+    updateUserMetrics,
+    addUser,
     getUser,
+    getUserById,
+    getUsersByRole,
+    getUsersByTeam,
+    getTeamsByManager,
     archiveUser,
     restoreUser,
-    permanentDeleteUser
+    permanentDeleteUser,
+    createTeam,
+    getTeamById,
+    assignManagerToTeam,
+    addTeamMember,
+    removeUserFromTeam,
+    deleteTeam,
+    getOrganizationById,
+    syncData,
+    getAuditLogs
   };
 };
