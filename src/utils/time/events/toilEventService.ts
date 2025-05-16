@@ -1,23 +1,24 @@
 
 // This file now serves as a re-export module for backward compatibility
 import { 
-  TOILEventType,
-  TOILEvent,
-  TOILEventContextType,
-  TOILEventProvider,
-  useTOILEvents,
   dispatchTOILSummaryEvent,
   dispatchTOILEvent,
   createTOILUpdateHandler
 } from './toil';
 
-// Re-export everything
-export {
-  TOILEventType,
-  TOILEvent,
-  TOILEventContextType,
+// Re-export types with 'export type' for TypeScript isolatedModules
+export type { TOILEventType } from './toil';
+export type { TOILEvent } from './toil';
+export type { TOILEventContextType } from './toil';
+
+// Re-export components and functions
+export { 
   TOILEventProvider,
-  useTOILEvents,
+  useTOILEvents
+} from './toil';
+
+// Re-export the handler functions
+export {
   dispatchTOILSummaryEvent,
   dispatchTOILEvent,
   createTOILUpdateHandler

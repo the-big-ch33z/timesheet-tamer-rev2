@@ -4,6 +4,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { useTOILEvents } from "@/utils/time/events/toil";
+import { TOILEventContextType } from "@/utils/time/events/toil/types";
 
 const logger = createTimeLogger('useTOILEventHandling');
 
@@ -12,7 +13,7 @@ const logger = createTimeLogger('useTOILEventHandling');
  */
 export const useTOILEventHandling = (onRefreshRequest?: () => void) => {
   // Subscribe to TOIL events if available
-  const toilEvents = useRef<ReturnType<typeof useTOILEvents> | null>(null);
+  const toilEvents = useRef<TOILEventContextType | null>(null);
   
   try {
     toilEvents.current = useTOILEvents();
