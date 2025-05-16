@@ -52,7 +52,7 @@ export {
   batchCleanupTOILData
 } from './cleanup';
 
-// Import and re-export TOILDayInfo type from the dedicated types file
+// Re-export TOILDayInfo type
 import { TOILDayInfo } from '../types';
 export type { TOILDayInfo };
 

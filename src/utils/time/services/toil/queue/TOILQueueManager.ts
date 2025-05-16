@@ -1,4 +1,3 @@
-
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILSummary } from "@/types/toil";
@@ -6,19 +5,9 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 import { performSingleCalculation } from "../batch-processing";
+import { PendingTOILCalculation } from "../types";
 
 const logger = createTimeLogger('TOILQueueManager');
-
-// Queue of pending TOIL calculations
-export interface PendingTOILCalculation {
-  userId: string;
-  date: Date;
-  entries: TimeEntry[];
-  workSchedule: WorkSchedule;
-  holidays: Holiday[];
-  resolve: (summary: TOILSummary | null) => void;
-  reject?: (error: Error) => void;
-}
 
 /**
  * Manages the queue of TOIL calculations

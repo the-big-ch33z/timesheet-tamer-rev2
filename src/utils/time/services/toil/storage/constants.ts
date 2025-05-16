@@ -22,6 +22,13 @@ export const DEBOUNCE_PERIOD = 300; // ms
 // TOIL job number constant
 export const TOIL_JOB_NUMBER = "TOIL";
 
+// Default thresholds
+export const DEFAULT_THRESHOLDS = {
+  daily: 2,
+  monthly: 40,
+  carryOver: 20
+};
+
 // Fixed export for consistent reference
 export default {
   TOIL_RECORDS_KEY,
@@ -33,5 +40,6 @@ export default {
   STORAGE_RETRY_DELAY,
   STORAGE_MAX_RETRIES,
   DEBOUNCE_PERIOD,
-  TOIL_JOB_NUMBER
+  TOIL_JOB_NUMBER,
+  DEFAULT_THRESHOLDS
 };

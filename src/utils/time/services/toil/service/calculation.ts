@@ -15,7 +15,7 @@ import { TOILServiceCore } from "./core";
 import { calculateTOILHours } from "../calculation";
 import { dispatchTOILEvent } from "../events";
 import { PendingTOILCalculation } from "../types";
-import { queueTOILCalculation } from "../batch-processing";
+import { queueTOILCalculation } from "../queue/TOILQueueManager";
 
 const logger = createTimeLogger('TOILService-Calculation');
 

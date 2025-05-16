@@ -16,8 +16,11 @@ import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 
 // Re-export queue types and functions for backward compatibility
-export { 
-  PendingTOILCalculation,
+export type { 
+  PendingTOILCalculation
+} from './queue/TOILQueueManager';
+
+export {
   hasRecentlyProcessed,
   clearRecentProcessing,
   queueTOILCalculation,
