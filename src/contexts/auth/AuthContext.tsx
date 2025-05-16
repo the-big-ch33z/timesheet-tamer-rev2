@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { mockUsers } from './mockData';
@@ -54,12 +53,13 @@ export const authContextValue = (
       role: userData.role || 'team-member',
       status: 'active',
       createdAt: new Date().toISOString(),
-      workScheduleId: userData.workScheduleId || 'default', // Default schedule ID
-      // Optional properties below - only include if they exist in userData
-      ...(userData.avatar !== undefined && { avatar: userData.avatar }),
-      ...(userData.department !== undefined && { department: userData.department }),
-      ...(userData.position !== undefined && { position: userData.position })
+      workScheduleId: userData.workScheduleId || 'default' // Default schedule ID
     };
+
+    // Add optional fields if they exist
+    if (typeof userData.avatar !== 'undefined') newUser.avatar = userData.avatar;
+    if (typeof userData.department !== 'undefined') newUser.department = userData.department;
+    if (typeof userData.position !== 'undefined') newUser.position = userData.position;
 
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);

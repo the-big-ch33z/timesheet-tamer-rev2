@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { User } from '@/types';
+import { DEFAULT_USER_METRICS } from './types';
 
 export interface UserMetrics {
   fte: number;
@@ -10,6 +11,8 @@ export interface UserMetrics {
 
 interface UserMetricsContextType {
   setUserMetrics: (userId: string, metrics: UserMetrics) => Promise<void>;
+  getUserMetrics: (userId: string) => UserMetrics;
+  updateUserMetrics: (userId: string, metrics: Partial<UserMetrics>) => Promise<void>;
 }
 
 const UserMetricsContext = createContext<UserMetricsContextType | undefined>(undefined);
@@ -25,6 +28,14 @@ export const useUserMetrics = () => {
 export const UserMetricsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useAuth();
   const [metricsState, setMetricsState] = useState<Record<string, UserMetrics>>({});
+
+  // Get metrics for a user
+  const getUserMetrics = (userId: string): UserMetrics => {
+    return metricsState[userId] || {
+      fte: 1.0,
+      fortnightHours: 76
+    };
+  };
 
   // Function to update a user's metrics
   const setUserMetrics = async (userId: string, metrics: UserMetrics) => {
@@ -44,8 +55,21 @@ export const UserMetricsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  // Function to update partial metrics
+  const updateUserMetrics = async (userId: string, metrics: Partial<UserMetrics>) => {
+    const currentMetrics = getUserMetrics(userId);
+    const updatedMetrics = {
+      ...currentMetrics,
+      ...metrics
+    };
+
+    return setUserMetrics(userId, updatedMetrics);
+  };
+
   const value = {
-    setUserMetrics
+    setUserMetrics,
+    getUserMetrics,
+    updateUserMetrics
   };
 
   return (

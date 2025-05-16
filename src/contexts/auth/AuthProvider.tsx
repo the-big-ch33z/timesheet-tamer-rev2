@@ -64,6 +64,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const orgOperations = createOrganizationOperations(state);
   const authOperations = createAuthOperations(state, toast, navigate);
 
+  // Default implementation for missing methods
+  const defaultUpdateUser = async (userId: string, updates: Partial<User>) => {
+    console.log(`Default implementation of updateUser: ${userId}`, updates);
+  };
+
+  const defaultWorkScheduleId = async (userId: string, scheduleId: string) => {
+    console.log(`Default implementation of updateUserWorkScheduleId: ${userId}, ${scheduleId}`);
+  };
+
+  const defaultGetUser = (userId: string) => {
+    return state.users.find(user => user.id === userId) || null;
+  };
+
   // Combine all operations into context value
   const value: AuthContextType = {
     currentUser: state.currentUser,
@@ -73,15 +86,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     teamMemberships: state.teamMemberships,
     setTeams: state.setTeams,
     isAuthenticated: state.isAuthenticated,
-    ...authOperations,
+    login: authOperations.login || defaultAuthContext.login,
+    logout: authOperations.logout || defaultAuthContext.logout,
+    register: authOperations.register || defaultAuthContext.register,
     ...userOperations,
     ...teamOperations,
     ...orgOperations,
-    // Ensure all required properties are included
-    updateUser: userOperations.updateUser || (async (userId: string, updates: Partial<User>) => {}),
-    updateUserWorkScheduleId: userOperations.updateUserWorkScheduleId || (async (userId: string, scheduleId: string) => {}),
-    updateUserMetrics: userOperations.updateUserMetrics || (async (userId: string, metrics: UserMetrics) => {}),
-    getUser: userOperations.getUser || ((userId: string) => null)
+    // Ensure all required properties are included with fallbacks
+    updateUser: userOperations.updateUser || defaultUpdateUser,
+    updateUserWorkScheduleId: userOperations.updateUserWorkScheduleId || defaultWorkScheduleId,
+    updateUserMetrics: userOperations.updateUserMetrics || defaultAuthContext.updateUserMetrics,
+    getUser: userOperations.getUser || defaultGetUser,
+    getUserById: userOperations.getUserById || defaultAuthContext.getUserById,
+    getUsersByRole: userOperations.getUsersByRole || defaultAuthContext.getUsersByRole,
+    getUsersByTeam: userOperations.getUsersByTeam || defaultAuthContext.getUsersByTeam,
+    getTeamsByManager: teamOperations.getTeamsByManager || defaultAuthContext.getTeamsByManager,
+    addUser: userOperations.addUser || defaultAuthContext.addUser,
+    syncData: authOperations.syncData || defaultAuthContext.syncData,
+    getAuditLogs: authOperations.getAuditLogs || defaultAuthContext.getAuditLogs,
   };
 
   return (
