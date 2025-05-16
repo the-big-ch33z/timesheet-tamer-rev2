@@ -7,6 +7,7 @@ export type EventUnsubscribe = () => void;
 export type EventOptions = {
   debounce?: number;
   deduplicate?: boolean;
+  throttle?: number;
 };
 
 /**
@@ -17,6 +18,7 @@ export class EventBus {
   private static instance: EventBus;
   private eventListeners = new Map<string, Set<EventHandler>>();
   private debouncedEvents = new Map<string, NodeJS.Timeout>();
+  private lastEventTimes = new Map<string, number>();
   private eventHistory: Array<{type: string, time: number, data: any}> = [];
   private readonly MAX_HISTORY = 50;
 
@@ -68,7 +70,7 @@ export class EventBus {
   }
 
   /**
-   * Publish an event with optional debouncing
+   * Publish an event with optional debouncing and throttling
    * 
    * @param eventType - The event type to publish
    * @param data - The data to pass to subscribers
@@ -76,16 +78,25 @@ export class EventBus {
    * @returns True if the event was published or scheduled
    */
   public publish<T>(eventType: string, data?: T, options: EventOptions = {}): boolean {
-    const { debounce = 0, deduplicate = false } = options;
+    const { debounce = 0, deduplicate = false, throttle = 0 } = options;
+    const now = Date.now();
 
     // Record event in history
-    const now = Date.now();
     this.eventHistory.unshift({ type: eventType, time: now, data });
     if (this.eventHistory.length > this.MAX_HISTORY) {
       this.eventHistory.pop();
     }
 
     try {
+      // Apply throttling if configured (skip event if too recent)
+      if (throttle > 0) {
+        const lastTime = this.lastEventTimes.get(eventType) || 0;
+        if (now - lastTime < throttle) {
+          logger.debug(`Throttled event '${eventType}' (fired too recently)`);
+          return false;
+        }
+      }
+      
       // Handle debouncing if configured
       if (debounce > 0) {
         const debouncedKey = `${eventType}${deduplicate ? JSON.stringify(data) : ''}`;
@@ -100,6 +111,7 @@ export class EventBus {
           setTimeout(() => {
             this.executePublish(eventType, data);
             this.debouncedEvents.delete(debouncedKey);
+            this.lastEventTimes.set(eventType, Date.now());
           }, debounce)
         );
         
@@ -107,6 +119,7 @@ export class EventBus {
       }
 
       // Otherwise publish immediately
+      this.lastEventTimes.set(eventType, now);
       return this.executePublish(eventType, data);
     } catch (error) {
       logger.error(`Error publishing ${eventType}:`, error);
@@ -145,16 +158,8 @@ export class EventBus {
       }
     });
 
-    // Also dispatch legacy DOM event for compatibility
-    if (typeof window !== 'undefined') {
-      try {
-        const event = new CustomEvent(eventType, { detail: data });
-        window.dispatchEvent(event);
-      } catch (error) {
-        logger.error(`Error dispatching DOM event for ${eventType}:`, error);
-      }
-    }
-
+    // Do NOT broadcast DOM events if we already have direct subscribers
+    // This helps prevent circular event loops
     return true;
   }
 
@@ -172,6 +177,7 @@ export class EventBus {
     this.eventListeners.clear();
     this.debouncedEvents.forEach((timeout) => clearTimeout(timeout));
     this.debouncedEvents.clear();
+    this.lastEventTimes.clear();
     logger.debug('All event listeners cleared');
   }
 

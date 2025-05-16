@@ -39,6 +39,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [rolloverHours, setRolloverHours] = useState<number>(0);
   const [refreshCount, setRefreshCount] = useState(0);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
 
   const monthName = format(currentMonth, 'MMMM yyyy');
   const monthYear = format(currentMonth, 'yyyy-MM');
@@ -49,20 +50,28 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     setErrorMessage(error);
   };
   
-  // Handle refresh request from the card - now with force flag
+  // Handle refresh request from the card - now with debounce protection
   const handleRefreshRequest = useCallback(() => {
+    const now = Date.now();
+    // Debounce refresh requests to prevent infinite loops - only allow refresh every 2 seconds
+    if (now - lastRefreshTime < 2000) {
+      logger.debug('Skipping refresh request due to debounce protection');
+      return;
+    }
+    
     logger.debug('Refresh requested from TOILSummaryCard');
+    setLastRefreshTime(now);
     clearCache();
     refreshSummary();
     setRefreshCount(prev => prev + 1);
     
-    // Broadcast a global refresh event
+    // Broadcast a global refresh event - with debounce option
     eventBus.publish(TOIL_EVENTS.REFRESH_REQUESTED, {
       userId: user.id,
       monthYear,
       timestamp: new Date()
-    });
-  }, [refreshSummary, user.id, monthYear]);
+    }, { debounce: 1000 }); // Use debounce to prevent event storms
+  }, [refreshSummary, user.id, monthYear, lastRefreshTime]);
   
   // Add logging to help debug the TOIL summary
   useEffect(() => {
@@ -95,30 +104,46 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     }
   }, [toilSummary, toilLoading, toilError, monthName, user.id, toast]);
   
-  // Force a refresh when the component mounts or month changes
+  // Force a refresh when the component mounts or month changes, but with circuit breaker
   useEffect(() => {
     logger.debug(`MonthlyHours component mounted or month changed, refreshing summary for ${user.id}`);
     
-    // Aggressive clearing on mount/change
+    // Clear cache and refresh summary once on mount/change
     clearCache();
     refreshSummary();
     
-    // Set up an interval to periodically refresh the summary
+    // Set up a much less frequent interval to periodically refresh the summary
+    // Increased from 15 seconds to 60 seconds to reduce update frequency
     const refreshInterval = setInterval(() => {
       logger.debug('Periodic refresh of TOIL summary');
       refreshSummary();
-    }, 15000); // Refresh every 15 seconds
+    }, 60000); // Refresh every 60 seconds instead of 15
     
     return () => {
       clearInterval(refreshInterval);
     };
   }, [refreshSummary, user.id, currentMonth]);
 
-  // Subscribe to TOIL events
+  // Subscribe to TOIL events with circuit breaker protection
   useEffect(() => {
+    let eventCount = 0;
+    const resetTime = Date.now();
+    
     const subscription = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
-      logger.debug('Received TOIL.UPDATED event, refreshing summary');
-      refreshSummary();
+      const now = Date.now();
+      // Reset counter after 10 seconds
+      if (now - resetTime > 10000) {
+        eventCount = 0;
+      }
+      
+      // Circuit breaker - only allow 5 events within 10 seconds
+      if (eventCount < 5) {
+        eventCount++;
+        logger.debug(`Received TOIL.UPDATED event (${eventCount}/5), refreshing summary`);
+        refreshSummary();
+      } else {
+        logger.warn('Too many TOIL update events, circuit breaker engaged');
+      }
     });
     
     return () => {

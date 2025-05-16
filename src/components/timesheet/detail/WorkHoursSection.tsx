@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { createTimeLogger } from "@/utils/time/errors";
@@ -40,6 +41,10 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showEntryForm, setShowEntryForm] = useState(false);
   
+  // Add protection against multiple rapid calculations
+  const lastCalculationTime = useRef<number>(0);
+  const calculationInProgress = useRef<boolean>(false);
+  
   // Get the holidays once
   const holidays = React.useMemo(() => getHolidays(), []);
   
@@ -66,30 +71,46 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   // Fix: Create a wrapper function that conforms to the expected type
   const calculateToilWrapper = useCallback(async (): Promise<void> => {
     try {
+      // Add circuit breaker for calculations
+      const now = Date.now();
+      if (calculationInProgress.current) {
+        logger.debug('Skipping TOIL calculation - another one is in progress');
+        return undefined;
+      }
+      
+      // Prevent calculations more frequently than every 3 seconds
+      if (now - lastCalculationTime.current < 3000) {
+        logger.debug('Skipping TOIL calculation due to rate limiting');
+        return undefined;
+      }
+      
+      // Mark calculation as in progress and update last calculation time
+      calculationInProgress.current = true;
+      lastCalculationTime.current = now;
+      
       const summary = await calculateToilForDay();
       
-      // Explicitly notify the TOIL summary components about the update
-      // This ensures the monthly view gets updated when day entries change
+      // Only notify if we actually got a summary
       if (summary) {
         logger.debug(`Broadcasting TOIL summary update after day calculation`);
         
-        // Use the event bus for centralized event distribution
+        // Use the event bus with debounce to prevent excessive event firing
         eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
           ...summary,
           timestamp: new Date(),
           monthYear: format(date, 'yyyy-MM')
-        });
-        
-        // Also dispatch legacy event for backward compatibility
-        window.dispatchEvent(new CustomEvent('toil:summary-updated', { 
-          detail: summary 
-        }));
+        }, { debounce: 1000 });  // Add 1 second debounce
       }
+      
+      // Release the lock
+      calculationInProgress.current = false;
       
       // Explicitly return undefined to satisfy the Promise<void> return type
       return undefined;
     } catch (error) {
       logger.error('Error in TOIL calculation wrapper:', error);
+      // Release the lock even on error
+      calculationInProgress.current = false;
       // Still return undefined even in case of error
       return undefined;
     }
@@ -122,7 +143,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     entriesCount: dayEntries.length
   });
 
-  // Handle entry creation
+  // Handle entry creation with debounce protection
   const handleCreateEntry = useCallback((startTime: string, endTime: string, hours: number) => {
     if (onCreateEntry) {
       logger.debug(`[WorkHoursSection] Creating entry: ${startTime}-${endTime}, ${hours} hours`);
@@ -136,12 +157,15 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         date: date.toISOString()
       });
       
-      // Explicitly trigger TOIL calculation after entry creation
-      setTimeout(() => {
-        triggerTOILCalculation();
-      }, 300);
+      // Use a longer timeout and only trigger calculation once
+      const triggerTime = Date.now();
+      if (triggerTime - lastCalculationTime.current > 5000) {
+        setTimeout(() => {
+          triggerTOILCalculation();
+        }, 1000);
+      }
     }
-  }, [onCreateEntry, userId, date, triggerTOILCalculation]);
+  }, [onCreateEntry, userId, date, triggerTOILCalculation, lastCalculationTime]);
 
   const handleAddEntry = useCallback(() => {
     setShowEntryForm(true);
