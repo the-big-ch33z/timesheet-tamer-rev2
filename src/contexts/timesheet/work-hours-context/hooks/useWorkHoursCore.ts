@@ -1,4 +1,3 @@
-
 import { useCallback, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { useWorkHoursLogger } from './useWorkHoursLogger';
@@ -58,8 +57,9 @@ export const useWorkHoursCore = ({
       clearCache();
     });
     
-    const scheduleChangedUnsubscribe = timeEventsService.subscribe(SCHEDULE_EVENTS.USER_CHANGED, () => {
-      logger.debug('Received user-schedule-changed event, clearing cache');
+    // Changed from USER_CHANGED to ASSIGNED as that's what exists in SCHEDULE_EVENTS
+    const scheduleChangedUnsubscribe = timeEventsService.subscribe(SCHEDULE_EVENTS.ASSIGNED, () => {
+      logger.debug('Received schedule-assigned event, clearing cache');
       clearCache();
     });
     

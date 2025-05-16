@@ -4,7 +4,8 @@ import { Holiday } from "@/lib/holidays";
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { calculateDailyTOIL } from "./calculation/dailyTOIL";
-import { storeTOILSummary } from "./storage";
+import { getTOILSummary } from "./storage";
+import { storeTOILSummary } from "./storage/record-management";
 import { dispatchTOILEvent } from "./events";
 
 const logger = createTimeLogger('TOIL-BatchProcessing');
@@ -41,12 +42,13 @@ export async function performSingleCalculation(
     const monthYear = date.toISOString().slice(0, 7); // YYYY-MM format
     
     // Get existing summary or create new one
+    const existingSummary = getTOILSummary(userId, monthYear);
     const summary: TOILSummary = {
       userId,
       monthYear,
-      accrued: toilHours > 0 ? toilHours : 0,
-      used: 0,
-      remaining: toilHours > 0 ? toilHours : 0
+      accrued: (existingSummary?.accrued || 0) + (toilHours > 0 ? toilHours : 0),
+      used: existingSummary?.used || 0,
+      remaining: (existingSummary?.remaining || 0) + (toilHours > 0 ? toilHours : 0)
     };
     
     // Store the updated summary

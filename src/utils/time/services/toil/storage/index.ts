@@ -52,8 +52,5 @@ export {
   batchCleanupTOILData
 } from './cleanup';
 
-// Re-export TOILDayInfo type
-import { TOILDayInfo } from '../types';
-export type { TOILDayInfo };
-
+// Remove the incorrect TOILDayInfo type export
 console.log('[TOIL-STORAGE] Storage module index initialized');
