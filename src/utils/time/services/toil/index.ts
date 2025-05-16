@@ -1,9 +1,17 @@
+
 export * from './service';
 export * from './calculation';
 export * from './storage';
 export * from './batch-processing';
 export * from './holiday-utils';
 export * from './events';
+export * from './types';
+
+// Re-export queue manager
+export { toilQueueManager } from './queue/TOILQueueManager';
+
+// Re-export settings defaults
+export { TOIL_DEFAULT_THRESHOLDS } from './service/settings';
 
 // Re-export keys from constants
 export { 
@@ -34,8 +42,5 @@ export {
   hasTOILForDay,
   hasTOILForMonth
 };
-
-// Use export type to fix the TypeScript 'isolatedModules' issue
-export type { TOILDayInfo } from './types';
 
 console.log('[TOIL-INDEX] TOIL module loaded and configured');

@@ -3,6 +3,8 @@ import { useState, useCallback } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { createTimeLogger } from '@/utils/time/errors';
 import { useTOILCalculations } from './useTOILCalculations';
+import { eventBus } from '@/utils/events/EventBus';
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 
 const logger = createTimeLogger('useTOILTriggers');
 
@@ -37,14 +39,44 @@ export const useTOILTriggers = ({
     setIsCalculating(true);
     
     try {
-      await calculateToilForDay();
+      // Notify that calculation is starting
+      eventBus.publish(TOIL_EVENTS.CALCULATED, {
+        userId,
+        date,
+        status: 'starting',
+        timestamp: new Date()
+      });
+      
+      const result = await calculateToilForDay();
+      
+      // Notify that calculation is complete
+      eventBus.publish(TOIL_EVENTS.CALCULATED, {
+        userId,
+        date,
+        status: 'completed',
+        summary: result,
+        timestamp: new Date()
+      });
+      
       logger.debug('Manual TOIL calculation complete');
+      return result;
     } catch (error) {
       logger.error('Error during manual TOIL calculation:', error);
+      
+      // Notify about error
+      eventBus.publish(TOIL_EVENTS.CALCULATED, {
+        userId,
+        date,
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date()
+      });
+      
+      throw error;
     } finally {
       setIsCalculating(false);
     }
-  }, [calculateToilForDay]);
+  }, [calculateToilForDay, userId, date]);
 
   return {
     triggerTOILCalculation,

@@ -2,34 +2,34 @@
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOILSummary } from '@/types/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
+import { eventBus } from '@/utils/events/EventBus';
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 
 const logger = createTimeLogger('TOILEvents');
 
-// Custom event to trigger auto-save across components
-let lastTriggerTime = 0;
-
 /**
  * Trigger a TOIL save event with debouncing
+ * Now using EventBus which has built-in debouncing support
  * @returns {boolean} Whether the event was triggered
  */
 export const triggerTOILSave = () => {
-  // Prevent multiple triggers in quick succession
-  const now = Date.now();
-  if (now - lastTriggerTime < 300) {
-    logger.debug('Skipping duplicate TOIL save event trigger');
-    return false;
-  }
-  
   logger.debug('Dispatching TOIL save event');
+  
+  // Use EventBus with debouncing option
+  eventBus.publish('toil:save-pending-changes', {}, {
+    debounce: 300,
+    deduplicate: true
+  });
+  
+  // For backward compatibility, also dispatch the old-style DOM event
   const event = new CustomEvent('toil:save-pending-changes');
   window.dispatchEvent(event);
   
-  lastTriggerTime = now;
   return true;
 };
 
 /**
- * Dispatch a TOIL event with enhanced error handling
+ * Dispatch a TOIL event using the centralized EventBus
  * @param {TOILSummary} summary The TOIL summary to dispatch
  * @returns {boolean} Whether the event was successfully dispatched
  */
@@ -63,13 +63,16 @@ export const dispatchTOILEvent = (summary: TOILSummary) => {
       // Continue with event dispatch but log error
     }
     
+    // Dispatch through the centralized event bus
+    eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary);
+    
     // Dispatch old-style DOM event for backward compatibility
     const event = new CustomEvent('toil:summary-updated', { 
       detail: summary 
     });
     window.dispatchEvent(event);
     
-    // Also dispatch through the improved event service
+    // Also dispatch through the timeEventsService for complete backward compatibility
     timeEventsService.publish('toil-updated', {
       userId: summary.userId,
       monthYear: summary.monthYear,
@@ -93,6 +96,14 @@ export const dispatchTOILEvent = (summary: TOILSummary) => {
 export const dispatchTOILErrorEvent = (errorMessage: string, data?: any, userId?: string) => {
   try {
     logger.error(`TOIL Error: ${errorMessage}`, data);
+    
+    // Dispatch through EventBus
+    eventBus.publish('toil:error', { 
+      message: errorMessage, 
+      data, 
+      userId,
+      timestamp: new Date()
+    });
     
     // Dispatch through DOM event
     const event = new CustomEvent('toil:error', { 

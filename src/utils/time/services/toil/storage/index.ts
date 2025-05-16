@@ -7,7 +7,9 @@ export {
   STORAGE_MAX_RETRIES,
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
-  TOIL_SUMMARY_CACHE_KEY
+  TOIL_SUMMARY_CACHE_KEY,
+  TOIL_THRESHOLDS_KEY,
+  DEFAULT_THRESHOLDS,
 } from './constants';
 
 // Export core utilities
@@ -50,7 +52,8 @@ export {
   batchCleanupTOILData
 } from './cleanup';
 
-// Export TOILDayInfo interface
-export type { TOILDayInfo } from './queries';
+// Import and re-export TOILDayInfo type from the dedicated types file
+import { TOILDayInfo } from '../types';
+export type { TOILDayInfo };
 
 console.log('[TOIL-STORAGE] Storage module index initialized');

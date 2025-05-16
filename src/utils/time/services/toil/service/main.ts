@@ -5,7 +5,7 @@ import { TOILServiceCalculation } from "./calculation";
 import { TOILServiceUsage } from "./usage";
 import { TOILServiceProcessing } from "./processing";
 import { TOILServiceSettings } from "./settings";
-import { processTOILQueue } from "../batch-processing";
+import { toilQueueManager } from "../queue/TOILQueueManager";
 
 const logger = createTimeLogger('TOILService');
 
@@ -78,6 +78,10 @@ export class TOILService extends TOILServiceCore {
     return this.settingsService.fetchToilThresholds();
   }
   
+  public getToilThreshold(employmentType: string): number {
+    return this.settingsService.getToilThreshold(employmentType);
+  }
+  
   public saveToilThresholds(...args: Parameters<TOILServiceSettings['saveToilThresholds']>) {
     return this.settingsService.saveToilThresholds(...args);
   }
@@ -85,10 +89,23 @@ export class TOILService extends TOILServiceCore {
   public resetToilThresholds() {
     return this.settingsService.resetToilThresholds();
   }
+  
+  // ======= Queue management helpers =======
+  public getQueueLength(): number {
+    return toilQueueManager.getQueueLength();
+  }
+  
+  public isQueueProcessing(): boolean {
+    return toilQueueManager.isQueueProcessing();
+  }
+  
+  public clearQueue(): void {
+    toilQueueManager.clearQueue();
+  }
 }
 
 // Export a singleton instance of the TOILService
 export const toilService = new TOILService();
 
 // Start processing the queue
-processTOILQueue();
+toilQueueManager.processQueue();

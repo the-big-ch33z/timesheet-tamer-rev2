@@ -12,103 +12,23 @@ import {
   getTOILSummary, 
   cleanupDuplicateTOILRecords 
 } from "./storage/index";
+import { eventBus } from '@/utils/events/EventBus';
+import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+
+// Re-export queue types and functions for backward compatibility
+export { 
+  PendingTOILCalculation,
+  hasRecentlyProcessed,
+  clearRecentProcessing,
+  queueTOILCalculation,
+  processTOILQueue
+} from './queue/TOILQueueManager';
 
 const logger = createTimeLogger('TOILBatchProcessor');
 
-// Track recently processed dates to prevent redundant calculations
-const recentlyProcessed = new Map<string, number>();
-const RECENT_THRESHOLD_MS = 2000; // 2 seconds
-
-/**
- * Check if a date was recently processed for a user
- */
-export function hasRecentlyProcessed(userId: string, date: Date): boolean {
-  const dateKey = `${userId}-${date.toISOString().slice(0, 10)}`;
-  const lastProcessed = recentlyProcessed.get(dateKey);
-  
-  if (!lastProcessed) {
-    return false;
-  }
-  
-  return Date.now() - lastProcessed < RECENT_THRESHOLD_MS;
-}
-
-/**
- * Clear the recent processing cache
- */
-export function clearRecentProcessing(): void {
-  recentlyProcessed.clear();
-  logger.debug('Cleared recently processed cache');
-}
-
-// Queue of pending TOIL calculations
-export interface PendingTOILCalculation {
-  userId: string;
-  date: Date;
-  entries: TimeEntry[];
-  workSchedule: WorkSchedule;
-  holidays: Holiday[];
-  resolve: (summary: TOILSummary | null) => void;
-}
-
-const calculationQueue: PendingTOILCalculation[] = [];
-let isProcessing = false;
-
-// Add a calculation task to the queue
-export function queueTOILCalculation(calculation: PendingTOILCalculation): void {
-  calculationQueue.push(calculation);
-  logger.debug(`TOIL calculation queued for ${calculation.date.toISOString().slice(0, 10)}, queue length: ${calculationQueue.length}`);
-  
-  // Start processing if not already running
-  if (!isProcessing) {
-    processTOILQueue();
-  }
-}
-
-// Process the TOIL calculation queue
-export function processTOILQueue(): void {
-  if (isProcessing || calculationQueue.length === 0) {
-    return;
-  }
-  
-  isProcessing = true;
-  
-  const processNext = () => {
-    if (calculationQueue.length === 0) {
-      isProcessing = false;
-      return;
-    }
-    
-    const calculation = calculationQueue.shift()!;
-    
-    performSingleCalculation(
-      calculation.entries,
-      calculation.date,
-      calculation.userId,
-      calculation.workSchedule,
-      calculation.holidays
-    )
-      .then(result => {
-        calculation.resolve(result);
-        
-        // Process next item in queue
-        setTimeout(processNext, 0);
-      })
-      .catch(error => {
-        logger.error('Error processing TOIL calculation:', error);
-        calculation.resolve(null);
-        
-        // Continue processing queue despite error
-        setTimeout(processNext, 0);
-      });
-  };
-  
-  processNext();
-}
-
 /**
  * Perform a TOIL calculation for a single batch of entries
- * FIXED: Added cleanup call and improved validation to prevent duplicate/incorrect records
+ * This function remains in this file as it's the core calculation logic
  */
 export async function performSingleCalculation(
   entries: TimeEntry[],
@@ -143,23 +63,10 @@ export async function performSingleCalculation(
 
     logger.debug(`Processing ${filteredEntries.length} entries for TOIL calculation for date: ${format(date, 'yyyy-MM-dd')}`);
     
-    // Calculate TOIL hours - This now correctly calculates only excess hours as TOIL
+    // Calculate TOIL hours
     const toilHours = calculateTOILHours(filteredEntries, date, workSchedule, holidays);
     
-    // Mark this date as recently processed
-    const dateKey = `${userId}-${date.toISOString().slice(0, 10)}`;
-    recentlyProcessed.set(dateKey, Date.now());
-    
-    // Remove old keys to prevent memory leaks
-    if (recentlyProcessed.size > 100) {
-      const oldestEntries = Array.from(recentlyProcessed.entries())
-        .sort((a, b) => a[1] - b[1])
-        .slice(0, 50);
-        
-      oldestEntries.forEach(([key]) => recentlyProcessed.delete(key));
-    }
-    
-    // FIXED: Added better validation to prevent insignificant TOIL amounts
+    // Added better validation to prevent insignificant TOIL amounts
     if (toilHours <= 0.01) {
       logger.debug(`No significant TOIL hours (${toilHours}) calculated for ${format(date, 'yyyy-MM-dd')}, skipping record creation`);
       return getTOILSummary(userId, format(date, 'yyyy-MM'));
@@ -191,16 +98,19 @@ export async function performSingleCalculation(
       return null;
     }
     
-    // Return the updated TOIL summary - getTOILSummary can accept Date or string
+    // Return the updated TOIL summary
     const monthYear = format(date, 'yyyy-MM');
     const summary = getTOILSummary(userId, monthYear);
     
-    // Dispatch event to notify subscribers of TOIL update
+    // Dispatch event using both the legacy and new systems
     timeEventsService.publish('toil-updated', {
       userId,
       date: date.toISOString(),
       summary
     });
+    
+    // Use EventBus for the centralized event system
+    eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary);
     
     return summary;
   } catch (error) {

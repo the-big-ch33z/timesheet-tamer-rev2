@@ -1,19 +1,10 @@
 
-import { TimeEntry, WorkSchedule } from "@/types";
-import { TOILSummary } from "@/types/toil";
-import { Holiday } from "@/lib/holidays";
+/**
+ * TOIL types that are used across multiple modules
+ * Extracted to prevent circular dependencies
+ */
 
-// Interface for pending TOIL calculation
-export interface PendingTOILCalculation {
-  userId: string;
-  date: Date;
-  entries: TimeEntry[];
-  workSchedule: WorkSchedule;
-  holidays: Holiday[];
-  resolve: (summary: TOILSummary | null) => void;
-}
-
-// Standardized interface for TOIL day info
+// Export TOILDayInfo interface
 export interface TOILDayInfo {
   hasAccrued: boolean;
   hasUsed: boolean;
