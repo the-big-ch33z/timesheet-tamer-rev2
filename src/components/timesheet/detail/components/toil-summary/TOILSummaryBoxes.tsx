@@ -80,7 +80,7 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
       )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {boxConfigs.map((boxConfig) => (
-          <React.Fragment key={boxConfig.label}>
+          <div key={boxConfig.label}>
             {boxConfig.label === "Earned" && boxConfig.showTooltip ? (
               <TooltipProvider>
                 <Tooltip>
@@ -123,7 +123,7 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
                 isNegativeBalance={boxConfig.isNegativeBalance}
               />
             )}
-          </React.Fragment>
+          </div>
         ))}
       </div>
     </>
