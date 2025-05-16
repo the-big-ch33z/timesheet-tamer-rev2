@@ -11,7 +11,6 @@ import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import {
   TOILSummaryBoxes,
   TOILLoadingState,
-  TOILEmptyState,
   TOILErrorState,
   TOILNegativeBalanceWarning,
   TOILProgressBar
@@ -135,7 +134,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
     
     const isNegativeBalance = remaining < 0;
-    const hasNoTOILActivity = loading || (accrued === 0 && used === 0);
+    
+    // Always display the summary - removed the hasNoTOILActivity check
     
     return (
       <Card 
@@ -152,8 +152,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
         <CardContent className="pt-0">
           {loading ? (
             <TOILLoadingState />
-          ) : hasNoTOILActivity ? (
-            <TOILEmptyState />
           ) : useSimpleView ? (
             <UnifiedTOILSummary 
               summary={summary} 

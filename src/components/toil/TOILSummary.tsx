@@ -24,19 +24,10 @@ export const TOILSummary: React.FC<TOILSummaryProps> = ({
   rolloverHours = 0,
   variant = "simple"
 }) => {
-  if (!summary) {
-    return (
-      <div className="space-y-2 py-4">
-        <div className="text-center text-muted-foreground">
-          No TOIL data available for this month
-        </div>
-      </div>
-    );
-  }
-
-  const totalAccrued = summary.accrued || 0;
-  const totalUsed = summary.used || 0;
-  const remaining = summary.remaining || 0;
+  // Always show a summary with default values of zero if no summary is provided
+  const totalAccrued = summary?.accrued || 0;
+  const totalUsed = summary?.used || 0;
+  const remaining = summary?.remaining || 0;
   
   // Calculate percentage for progress bar (cap at 100%)
   const usedPercentage = totalAccrued > 0 
