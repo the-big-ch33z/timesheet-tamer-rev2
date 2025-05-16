@@ -1,23 +1,12 @@
 
-import React, { memo, useEffect, useCallback } from "react";
+import React, { memo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { Clock } from "lucide-react";
-import { useTOILEvents } from "@/utils/time/events/toilEventService";
 import { createTimeLogger } from "@/utils/time/errors";
-import { eventBus } from '@/utils/events/EventBus';
-import { TOIL_EVENTS } from '@/utils/events/eventTypes';
-
-import {
-  TOILSummaryBoxes,
-  TOILLoadingState,
-  TOILErrorState,
-  TOILNegativeBalanceWarning,
-  TOILProgressBar
-} from "./toil-summary";
-
-// Import the unified TOILSummary component
-import UnifiedTOILSummary from "@/components/toil/TOILSummary";
+import { TOILErrorState } from "./toil-summary";
+import { useTOILEventHandling } from "../hooks/useTOILEventHandling";
+import TOILCardContent from "./toil-summary/TOILCardContent";
 
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
@@ -46,96 +35,11 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   useSimpleView = false,
   onRefreshRequest
 }) => {
-  // Subscribe to TOIL events if available
-  const toilEvents = React.useRef<ReturnType<typeof useTOILEvents> | null>(null);
-  
-  try {
-    toilEvents.current = useTOILEvents();
-  } catch (e) {
-    // Context not available, continue without it
-    logger.debug('TOIL Events context not available');
-  }
-  
-  // Handle refresh request
-  const handleRefresh = useCallback(() => {
-    logger.debug('TOILSummaryCard requesting refresh');
-    if (onRefreshRequest) {
-      onRefreshRequest();
-    }
-  }, [onRefreshRequest]);
-  
-  // Subscribe to TOIL updates
-  useEffect(() => {
-    if (!toilEvents.current) return;
-    
-    const unsubscribe = toilEvents.current.subscribe('toil-updated', (event) => {
-      logger.debug('TOIL update event received in TOILSummaryCard:', event);
-      handleRefresh();
-    });
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [handleRefresh]);
-  
-  // Subscribe to centralized event bus for TOIL updates
-  useEffect(() => {
-    if (!onRefreshRequest) return;
-    
-    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, () => {
-      logger.debug('TOIL_EVENTS.SUMMARY_UPDATED received in TOILSummaryCard');
-      handleRefresh();
-    });
-    
-    // Also subscribe to the updated event
-    const unsubscribe2 = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
-      logger.debug('TOIL_EVENTS.UPDATED received in TOILSummaryCard');
-      handleRefresh();
-    });
-    
-    return () => {
-      unsubscribe();
-      unsubscribe2();
-    };
-  }, [onRefreshRequest, handleRefresh]);
+  // Use our custom hook for event handling
+  const { handleRefresh } = useTOILEventHandling(onRefreshRequest);
   
   try {
     logger.debug('TOILSummaryCard received summary:', summary, 'loading:', loading);
-    
-    // Validate the summary data
-    const hasSummary = summary !== null && summary !== undefined;
-    const hasValidStructure = hasSummary && 
-      typeof summary === 'object' && 
-      'accrued' in summary &&
-      'used' in summary &&
-      'remaining' in summary;
-    
-    // Safety checks for null or invalid summary
-    if (!hasSummary && !loading) {
-      logger.warn('TOILSummaryCard received null summary and not in loading state');
-      
-      if (onError) {
-        onError('No TOIL data available');
-      }
-    }
-    
-    // Default values
-    const accrued = hasValidStructure ? summary.accrued : 0;
-    const used = hasValidStructure ? summary.used : 0;
-    const remaining = hasValidStructure ? summary.remaining : 0;
-    
-    // Additional validation
-    if (hasValidStructure && (isNaN(accrued) || isNaN(used) || isNaN(remaining))) {
-      logger.error('TOILSummaryCard received invalid numeric values:', { accrued, used, remaining });
-      
-      if (onError) {
-        onError('TOIL data contains invalid numeric values');
-      }
-    }
-    
-    const isNegativeBalance = remaining < 0;
-    
-    // Always display the summary - removed the hasNoTOILActivity check
     
     return (
       <Card 
@@ -150,46 +54,14 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          {loading ? (
-            <TOILLoadingState />
-          ) : useSimpleView ? (
-            <UnifiedTOILSummary 
-              summary={summary} 
-              showRollover={showRollover} 
-              rolloverHours={rolloverHours}
-              variant="simple"
-            />
-          ) : (
-            <>
-              <TOILSummaryBoxes 
-                accrued={accrued} 
-                used={used} 
-                remaining={remaining} 
-                onError={onError}
-              />
-
-              {isNegativeBalance && <TOILNegativeBalanceWarning />}
-
-              <TOILProgressBar 
-                remaining={remaining} 
-                accrued={accrued} 
-                isNegativeBalance={isNegativeBalance} 
-              />
-              
-              {/* Added rollover hours display from unified TOILSummary */}
-              {showRollover && rolloverHours > 0 && (
-                <div className="mt-4 p-3 bg-muted/50 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Roll-over TOIL</span>
-                    <span className="font-semibold text-green-600">{rolloverHours.toFixed(1)} hours</span>
-                  </div>
-                  <p className="text-xs mt-1 text-muted-foreground">
-                    These hours have been rolled over and will be used first when taking TOIL.
-                  </p>
-                </div>
-              )}
-            </>
-          )}
+          <TOILCardContent
+            summary={summary}
+            loading={loading}
+            useSimpleView={useSimpleView}
+            showRollover={showRollover}
+            rolloverHours={rolloverHours}
+            onError={onError}
+          />
         </CardContent>
       </Card>
     );
