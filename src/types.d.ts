@@ -40,6 +40,7 @@ export interface Organization {
   id: string;
   name: string;
   createdAt: string;
+  ownerId: string; // Added required property
 }
 
 // Audit log related types
@@ -60,4 +61,10 @@ export interface SyncStatus {
   status: 'success' | 'failed' | 'in_progress';
   recordsProcessed?: number;
   errorMessage?: string;
+}
+
+// User metrics related types
+export interface UserMetrics {
+  fte: number;
+  fortnightHours: number;
 }

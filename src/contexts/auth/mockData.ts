@@ -55,7 +55,8 @@ export const mockOrganizations: Organization[] = [
   {
     id: 'org-1',
     name: 'Example Organization',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    ownerId: 'user-1' // Adding required ownerId property
   }
 ];
 

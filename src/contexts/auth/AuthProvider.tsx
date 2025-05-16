@@ -8,6 +8,7 @@ import { createTeamOperations } from './operations/team';
 import { createOrganizationOperations } from './organizationOperations';
 import { createAuthOperations } from './operations/authOperations';
 import { AuthContextType } from './types';
+import { User, UserRole, UserMetrics } from '@/types';
 
 // Create a default context
 const defaultAuthContext: AuthContextType = {
@@ -75,7 +76,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ...authOperations,
     ...userOperations,
     ...teamOperations,
-    ...orgOperations
+    ...orgOperations,
+    // Ensure all required properties are included
+    updateUser: userOperations.updateUser || (async (userId: string, updates: Partial<User>) => {}),
+    updateUserWorkScheduleId: userOperations.updateUserWorkScheduleId || (async (userId: string, scheduleId: string) => {}),
+    updateUserMetrics: userOperations.updateUserMetrics || (async (userId: string, metrics: UserMetrics) => {}),
+    getUser: userOperations.getUser || ((userId: string) => null)
   };
 
   return (

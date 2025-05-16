@@ -15,6 +15,7 @@ export const ENTRY_EVENTS = {
   UPDATED: 'entry:updated',
   DELETED: 'entry:deleted',
   VALIDATION_ERROR: 'entry:validation-error',
+  LOADED: 'entry:loaded', // Add missing event
 };
 
 // Alias for backward compatibility
@@ -46,7 +47,11 @@ export const WORK_HOURS_EVENTS = {
   CALCULATED: 'work-hours:calculated',
   SAVED: 'work-hours:saved',
   LOADED: 'work-hours:loaded',
-  ERROR: 'work-hours:error'
+  ERROR: 'work-hours:error',
+  RESET: 'work-hours:reset', // Add missing event
+  CHANGED: 'work-hours:changed', // Add missing event
+  REFRESHED: 'work-hours:refreshed', // Add missing event
+  ACTION_TOGGLED: 'work-hours:action-toggled', // Add missing event
 };
 
 // Type for event names

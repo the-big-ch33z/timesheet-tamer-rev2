@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,11 @@ export const SignupForm = () => {
     setIsLoading(true);
 
     try {
-      await register(email, name, password, organization);
+      // Update to match the register function signature
+      await register({ 
+        email, 
+        name,
+      });
       
       toast({
         title: "Account created",

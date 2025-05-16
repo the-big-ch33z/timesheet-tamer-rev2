@@ -55,10 +55,10 @@ export const authContextValue = (
       status: 'active',
       createdAt: new Date().toISOString(),
       workScheduleId: userData.workScheduleId || 'default', // Default schedule ID
-      // Optional properties below
-      avatar: userData.avatar || null,
-      department: userData.department || null,
-      position: userData.position || null
+      // Optional properties below - only include if they exist in userData
+      ...(userData.avatar !== undefined && { avatar: userData.avatar }),
+      ...(userData.department !== undefined && { department: userData.department }),
+      ...(userData.position !== undefined && { position: userData.position })
     };
 
     const updatedUsers = [...users, newUser];
