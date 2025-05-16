@@ -1,3 +1,3 @@
 
-export * from './UserMetricsContext';
+export { useUserMetrics, UserMetricsProvider } from './UserMetricsContext';
 export * from './types';

@@ -77,6 +77,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.users.find(user => user.id === userId) || null;
   };
 
+  // Ensure login function returns a User
+  const safeLogin = async (email: string, password: string): Promise<User> => {
+    if (authOperations.login) {
+      return await authOperations.login(email, password);
+    }
+    throw new Error('Login not implemented');
+  };
+
+  // Ensure register function returns a User
+  const safeRegister = async (userData: Partial<User>): Promise<User> => {
+    if (authOperations.register) {
+      const user = await authOperations.register(userData as any);
+      return user as User;
+    }
+    throw new Error('Register not implemented');
+  };
+
   // Combine all operations into context value
   const value: AuthContextType = {
     currentUser: state.currentUser,
@@ -86,14 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     teamMemberships: state.teamMemberships,
     setTeams: state.setTeams,
     isAuthenticated: state.isAuthenticated,
-    login: authOperations.login || defaultAuthContext.login,
+    login: safeLogin,
     logout: authOperations.logout || defaultAuthContext.logout,
-    register: authOperations.register || defaultAuthContext.register,
-    ...userOperations,
-    ...teamOperations,
-    ...orgOperations,
-    // Ensure all required properties are included with fallbacks
+    register: safeRegister,
     updateUser: userOperations.updateUser || defaultUpdateUser,
+    updateUserRole: userOperations.updateUserRole || defaultAuthContext.updateUserRole,
     updateUserWorkScheduleId: userOperations.updateUserWorkScheduleId || defaultWorkScheduleId,
     updateUserMetrics: userOperations.updateUserMetrics || defaultAuthContext.updateUserMetrics,
     getUser: userOperations.getUser || defaultGetUser,
@@ -102,8 +116,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getUsersByTeam: userOperations.getUsersByTeam || defaultAuthContext.getUsersByTeam,
     getTeamsByManager: teamOperations.getTeamsByManager || defaultAuthContext.getTeamsByManager,
     addUser: userOperations.addUser || defaultAuthContext.addUser,
+    addTeamMember: teamOperations.addTeamMember || defaultAuthContext.addTeamMember,
+    createTeam: teamOperations.createTeam || defaultAuthContext.createTeam,
+    getTeamById: teamOperations.getTeamById || defaultAuthContext.getTeamById,
+    assignManagerToTeam: teamOperations.assignManagerToTeam || defaultAuthContext.assignManagerToTeam,
+    removeUserFromTeam: teamOperations.removeUserFromTeam || defaultAuthContext.removeUserFromTeam,
+    deleteTeam: teamOperations.deleteTeam || defaultAuthContext.deleteTeam,
+    getOrganizationById: orgOperations.getOrganizationById || defaultAuthContext.getOrganizationById,
+    archiveUser: userOperations.archiveUser || defaultAuthContext.archiveUser,
+    restoreUser: userOperations.restoreUser || defaultAuthContext.restoreUser,
+    permanentDeleteUser: userOperations.permanentDeleteUser || defaultAuthContext.permanentDeleteUser,
     syncData: authOperations.syncData || defaultAuthContext.syncData,
-    getAuditLogs: authOperations.getAuditLogs || defaultAuthContext.getAuditLogs,
+    getAuditLogs: authOperations.getAuditLogs || defaultAuthContext.getAuditLogs
   };
 
   return (

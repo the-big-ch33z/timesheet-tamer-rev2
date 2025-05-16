@@ -1,4 +1,3 @@
-
 // User related types
 export type UserRole = 'admin' | 'manager' | 'team-member';
 export type UserStatus = 'active' | 'archived' | 'pending';
@@ -28,13 +27,6 @@ export interface Team {
   createdAt?: string;
 }
 
-export interface TeamMembership {
-  id: string;
-  userId: string;
-  teamId: string;
-  createdAt: string;
-}
-
 // Organization related types
 export interface Organization {
   id: string;
@@ -61,6 +53,14 @@ export interface SyncStatus {
   status: 'success' | 'failed' | 'in_progress';
   recordsProcessed?: number;
   errorMessage?: string;
+}
+
+// Update TeamMembership to include createdAt
+export interface TeamMembership {
+  id: string;
+  userId: string;
+  teamId: string;
+  createdAt: string;
 }
 
 // User metrics related types

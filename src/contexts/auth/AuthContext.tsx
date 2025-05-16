@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
-import { mockUsers } from './mockData';
+import { mockUsers } from '@/contexts/auth/mockData';
 import { v4 as uuidv4 } from 'uuid';
 import { eventBus } from '@/utils/events/EventBus';
 import { AUTH_EVENTS } from './index';
@@ -57,9 +57,9 @@ export const authContextValue = (
     };
 
     // Add optional fields if they exist
-    if (typeof userData.avatar !== 'undefined') newUser.avatar = userData.avatar;
-    if (typeof userData.department !== 'undefined') newUser.department = userData.department;
-    if (typeof userData.position !== 'undefined') newUser.position = userData.position;
+    if (userData.avatar !== undefined) newUser.avatar = userData.avatar;
+    if (userData.department !== undefined) newUser.department = userData.department;
+    if (userData.position !== undefined) newUser.position = userData.position;
 
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);

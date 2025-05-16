@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { User } from '@/types';
-import { DEFAULT_USER_METRICS } from './types';
 
 export interface UserMetrics {
   fte: number;
@@ -10,8 +9,8 @@ export interface UserMetrics {
 }
 
 interface UserMetricsContextType {
-  setUserMetrics: (userId: string, metrics: UserMetrics) => Promise<void>;
   getUserMetrics: (userId: string) => UserMetrics;
+  setUserMetrics: (userId: string, metrics: UserMetrics) => Promise<void>;
   updateUserMetrics: (userId: string, metrics: Partial<UserMetrics>) => Promise<void>;
 }
 
@@ -67,8 +66,8 @@ export const UserMetricsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const value = {
-    setUserMetrics,
     getUserMetrics,
+    setUserMetrics,
     updateUserMetrics
   };
 
