@@ -69,6 +69,7 @@ export class TOILServiceCalculation extends TOILServiceCore {
       const monthYear = format(date, 'yyyy-MM');
       
       // Calculate TOIL hours based on real entries, not synthetic ones
+      // This now uses the corrected calculateTOILHours function that properly handles RDOs
       const toilHours = calculateTOILHours(nonToilEntries, date, workSchedule, holidays);
       
       logger.debug(`TOIL hours calculated: ${toilHours}`);

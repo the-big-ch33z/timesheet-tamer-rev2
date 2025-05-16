@@ -6,7 +6,12 @@ import { TOILRecord } from "@/types/toil";
 import { isValidTOILHours } from "../../validation/toilValidation";
 import { createTimeLogger } from "../../errors/timeLogger";
 import { isHoliday } from "./holiday-utils";
-import { calculateDayHoursWithBreaks } from "../../scheduleUtils";
+import { 
+  calculateDayHoursWithBreaks,
+  getFortnightWeek,
+  getWeekDay,
+  isRDODay
+} from "../../scheduleUtils";
 
 const logger = createTimeLogger('TOILCalculation');
 
@@ -21,6 +26,8 @@ const logger = createTimeLogger('TOILCalculation');
  * 
  * FIXED: Enhanced logging and validation to prevent incorrect TOIL calculation
  * FIXED: Only calculate TOIL for hours exceeding the scheduled hours
+ * FIXED: Properly handle RDO days, holidays, and weekends to accrue all hours as TOIL
+ * FIXED: Use correct fortnight week calculation from scheduleUtils
  */
 export function calculateDailyTOIL(
   entries: TimeEntry[],
@@ -58,6 +65,9 @@ export function calculateDailyTOIL(
     const isHolidayDay = isHoliday(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6; // 0 = Sunday, 6 = Saturday
     
+    // FIXED: Check if it's an RDO day
+    const isRDO = isRDODay(date, workSchedule);
+    
     if (isHolidayDay) {
       logger.debug(`${dateString} is a holiday, all hours are TOIL`);
     }
@@ -66,16 +76,20 @@ export function calculateDailyTOIL(
       logger.debug(`${dateString} is a weekend (${date.getDay()}), all hours are TOIL`);
     }
     
-    // Get scheduled hours from work schedule
+    if (isRDO) {
+      logger.debug(`${dateString} is an RDO day, all hours are TOIL`);
+    }
+    
+    // Get scheduled hours from work schedule - FIXED: Use proper fortnight week calculation
     const dayOfWeek = date.getDay();
-    const weekNumber = Math.floor(date.getDate() / 7);
+    const weekday = getWeekDay(date);
+    const fortnightWeek = getFortnightWeek(date);
     let scheduledHours = 0;
     
     try {
-      // Calculate scheduled hours for the day based on work schedule
-      const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
-      const week = weekNumber % 2; // Alternate between 0 and 1 for fortnight
-      const dayConfig = workSchedule.weeks[week]?.[weekday];
+      // Calculate scheduled hours for the day based on work schedule - FIXED: use fortnightWeek from util
+      const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
+      logger.debug(`Getting schedule for ${weekday} in week ${fortnightWeek}`, { dayConfig });
       
       if (dayConfig && dayConfig.startTime && dayConfig.endTime) {
         scheduledHours = calculateDayHoursWithBreaks(
@@ -104,9 +118,9 @@ export function calculateDailyTOIL(
     const totalHours = nonToilEntries.reduce((sum, entry) => sum + entry.hours, 0);
     logger.debug(`Total hours for ${dateString}: ${totalHours}`);
     
-    // FIXED: Only count hours over scheduled hours as TOIL, unless weekend or holiday
-    // For holidays or weekends, count all hours as TOIL
-    const toilHours = (isHolidayDay || isWeekend) ? totalHours : Math.max(0, totalHours - scheduledHours);
+    // FIXED: Count all hours as TOIL if it's a holiday, weekend, or RDO day
+    // For regular days, only count hours over scheduled hours as TOIL
+    const toilHours = (isHolidayDay || isWeekend || isRDO) ? totalHours : Math.max(0, totalHours - scheduledHours);
     
     // Enhanced logging for better debugging
     logger.debug(`
@@ -117,6 +131,9 @@ export function calculateDailyTOIL(
       - Scheduled hours: ${scheduledHours}
       - Is holiday: ${isHolidayDay}
       - Is weekend: ${isWeekend}
+      - Is RDO: ${isRDO}
+      - Fortnight week: ${fortnightWeek}
+      - Weekday: ${weekday}
       - TOIL hours (difference): ${toilHours}
     `);
     
@@ -154,7 +171,8 @@ export function calculateDailyTOIL(
 
 /**
  * Calculate TOIL hours for a given set of time entries
- * FIXED: Similar fix to ensure TOIL is only calculated for excess hours
+ * FIXED: Properly handle RDO days, holidays, and weekends to accrue all hours as TOIL
+ * FIXED: Use correct fortnight week calculation from scheduleUtils
  */
 export function calculateTOILHours(
   entries: TimeEntry[],
@@ -187,16 +205,17 @@ export function calculateTOILHours(
     const isHolidayDay = isHoliday(date);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     
-    // Get the scheduled hours for the day
-    const dayOfWeek = date.getDay();
-    const weekNumber = Math.floor(date.getDate() / 7);
+    // FIXED: Check if it's an RDO day
+    const isRDO = isRDODay(date, workSchedule);
+    
+    // Get the scheduled hours for the day - FIXED: Use proper fortnight week calculation
+    const weekday = getWeekDay(date);
+    const fortnightWeek = getFortnightWeek(date);
     let scheduledHours = 0;
     
     try {
-      // Calculate scheduled hours based on work schedule
-      const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
-      const week = weekNumber % 2;
-      const dayConfig = workSchedule.weeks[week]?.[weekday];
+      // Calculate scheduled hours based on work schedule - FIXED: use fortnightWeek from util
+      const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
       
       if (dayConfig && dayConfig.startTime && dayConfig.endTime) {
         scheduledHours = calculateDayHoursWithBreaks(
@@ -219,9 +238,8 @@ export function calculateTOILHours(
     // Calculate total hours worked from non-TOIL entries only
     const totalHours = nonToilEntries.reduce((sum, entry) => sum + entry.hours, 0);
     
-    // FIXED: Only count hours over scheduled hours as TOIL, unless weekend or holiday
-    // For holidays or weekends, count all hours as TOIL
-    const toilHours = (isHolidayDay || isWeekend) ? totalHours : Math.max(0, totalHours - scheduledHours);
+    // FIXED: Count all hours as TOIL if it's a holiday, weekend, or RDO day
+    const toilHours = (isHolidayDay || isWeekend || isRDO) ? totalHours : Math.max(0, totalHours - scheduledHours);
     
     // Add more detailed logging
     logger.debug(`
@@ -229,8 +247,11 @@ export function calculateTOILHours(
       - Date: ${dateString}
       - Total hours: ${totalHours}
       - Scheduled hours: ${scheduledHours}
+      - Fortnight week: ${fortnightWeek}
+      - Weekday: ${weekday}
       - Is holiday: ${isHolidayDay}
       - Is weekend: ${isWeekend}
+      - Is RDO: ${isRDO}
       - TOIL hours: ${toilHours}
       - Entries count: ${nonToilEntries.length}
     `);
