@@ -66,6 +66,7 @@ export const mockTeamMemberships: TeamMembership[] = [
     id: 'membership-1',
     userId: 'user-3',
     teamId: 'team-1',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    joinedAt: new Date().toISOString()
   }
 ];

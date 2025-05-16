@@ -1,3 +1,4 @@
+
 // User related types
 export type UserRole = 'admin' | 'manager' | 'team-member';
 export type UserStatus = 'active' | 'archived' | 'pending';
@@ -61,6 +62,9 @@ export interface TeamMembership {
   userId: string;
   teamId: string;
   createdAt: string;
+  joinedAt?: string;
+  role?: string;
+  managerId?: string;
 }
 
 // User metrics related types

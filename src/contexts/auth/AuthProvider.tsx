@@ -80,7 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Ensure login function returns a User
   const safeLogin = async (email: string, password: string): Promise<User> => {
     if (authOperations.login) {
-      return await authOperations.login(email, password);
+      const user = await authOperations.login(email, password);
+      return user as User;
     }
     throw new Error('Login not implemented');
   };
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Ensure register function returns a User
   const safeRegister = async (userData: Partial<User>): Promise<User> => {
     if (authOperations.register) {
-      const user = await authOperations.register(userData as any);
+      const user = await authOperations.register(userData);
       return user as User;
     }
     throw new Error('Register not implemented');

@@ -5,5 +5,6 @@ export const DEFAULT_USER_METRICS = {
   fortnightHours: 76
 };
 
-// Re-export the interface from the main context file
-export type { UserMetrics } from './UserMetricsContext';
+// Import UserMetrics type from types.d.ts
+import type { UserMetrics } from '@/types';
+export type { UserMetrics };

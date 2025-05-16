@@ -1,10 +1,11 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '@/types';
+import { User, UserRole, UserMetrics } from '@/types';
 import { mockUsers } from '@/contexts/auth/mockData';
 import { v4 as uuidv4 } from 'uuid';
 import { eventBus } from '@/utils/events/EventBus';
 import { AUTH_EVENTS } from './index';
-import { AuthContextType, UserMetrics } from './types';
+import { AuthContextType } from './types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -24,7 +25,7 @@ export const authContextValue = (
 ): AuthContextType => {
   const isAuthenticated = !!currentUser;
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const user = users.find(
       (u) => u.email.toLowerCase() === email.toLowerCase()
     );
@@ -45,7 +46,7 @@ export const authContextValue = (
     localStorage.removeItem('currentUser');
   };
 
-  const register = async (userData: Partial<User>) => {
+  const register = async (userData: Partial<User>): Promise<User> => {
     const newUser: User = {
       id: userData.id || `user-${Date.now()}`,
       name: userData.name || 'New User',

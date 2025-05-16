@@ -1,12 +1,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
-import { User } from '@/types';
-
-export interface UserMetrics {
-  fte: number;
-  fortnightHours: number;
-}
+import { User, UserMetrics } from '@/types';
 
 interface UserMetricsContextType {
   getUserMetrics: (userId: string) => UserMetrics;
