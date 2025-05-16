@@ -1,6 +1,7 @@
 
 export * from './service';
 export * from './calculation';
+export { TOILDayInfo } from './types';
 export * from './storage';
 export * from './batch-processing';
 export * from './holiday-utils';

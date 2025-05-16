@@ -1,4 +1,3 @@
-
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILRecord, TOILSummary } from "@/types/toil";
@@ -16,9 +15,7 @@ import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 
 // Re-export queue types and functions for backward compatibility
-export type { 
-  PendingTOILCalculation
-} from './queue/TOILQueueManager';
+export type { PendingTOILCalculation } from './types';
 
 export {
   hasRecentlyProcessed,
