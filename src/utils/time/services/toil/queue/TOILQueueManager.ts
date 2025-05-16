@@ -1,3 +1,4 @@
+
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILSummary } from "@/types/toil";
@@ -18,9 +19,27 @@ class TOILQueueManager {
   private isProcessing: boolean = false;
   private recentlyProcessed: Map<string, number> = new Map();
   private readonly RECENT_THRESHOLD_MS: number = 2000; // 2 seconds
+  private isInitialized: boolean = false;
   
   constructor() {
     logger.debug('TOILQueueManager initialized');
+  }
+  
+  /**
+   * Initialize the queue manager and start processing
+   * This method should only be called once the entire system is ready
+   */
+  public initialize(): void {
+    if (this.isInitialized) {
+      logger.debug('TOILQueueManager already initialized');
+      return;
+    }
+    
+    this.isInitialized = true;
+    logger.debug('TOILQueueManager fully initialized, starting queue processing');
+    
+    // Start processing the queue only when explicitly initialized
+    this.processQueue();
   }
   
   /**
@@ -52,8 +71,8 @@ class TOILQueueManager {
     this.calculationQueue.push(calculation);
     logger.debug(`TOIL calculation queued for ${calculation.date.toISOString().slice(0, 10)}, queue length: ${this.calculationQueue.length}`);
     
-    // Start processing if not already running
-    if (!this.isProcessing) {
+    // Start processing if not already running and we're initialized
+    if (!this.isProcessing && this.isInitialized) {
       this.processQueue();
     }
     
@@ -70,6 +89,11 @@ class TOILQueueManager {
    * Process the TOIL calculation queue
    */
   public processQueue(): void {
+    if (!this.isInitialized) {
+      logger.debug('Queue processing requested but manager not initialized yet');
+      return;
+    }
+    
     if (this.isProcessing || this.calculationQueue.length === 0) {
       return;
     }
@@ -162,6 +186,13 @@ class TOILQueueManager {
   }
   
   /**
+   * Check if queue manager is initialized
+   */
+  public isInitializedStatus(): boolean {
+    return this.isInitialized;
+  }
+  
+  /**
    * Clear the queue (for testing)
    */
   public clearQueue(): void {
@@ -190,3 +221,6 @@ export const queueTOILCalculation = (calculation: PendingTOILCalculation): void 
 export const processTOILQueue = (): void => {
   toilQueueManager.processQueue();
 };
+
+// Export the specific type needed for backwards compatibility
+export type { PendingTOILCalculation };

@@ -1,34 +1,68 @@
 
+import { timeEntryService } from './time-entry-service';
+import { toilService } from './toil/service';
+import { createTimeLogger } from '../errors';
+
+const logger = createTimeLogger('TimeServiceInitializer');
+
 /**
- * This file provides compatibility with existing code that imports from api-wrapper
+ * Track initialization status
  */
+let isInitialized = false;
+let initializationError: Error | null = null;
 
-import { 
-  timeEntryService,
-  unifiedTimeEntryService,
-  createTimeEntryService,
-  STORAGE_KEY, 
-  DELETED_ENTRIES_KEY,
-  TimeEntryService
-} from './time-entry-service';
-
-// Re-export for backward compatibility
-export { 
-  unifiedTimeEntryService,
-  timeEntryService,
-  createTimeEntryService,
-  TimeEntryService,
-  STORAGE_KEY, 
-  DELETED_ENTRIES_KEY
+/**
+ * Initialize all time-related services in the correct order
+ * This ensures dependencies are properly set up before use
+ */
+export const initializeService = async (): Promise<void> => {
+  if (isInitialized) {
+    logger.debug("Services already initialized");
+    return;
+  }
+  
+  try {
+    logger.debug("Beginning service initialization");
+    
+    // Initialize timeEntryService first
+    timeEntryService.init();
+    logger.debug("Time entry service initialized");
+    
+    // Then initialize the TOIL service which depends on time entries
+    toilService.initialize();
+    logger.debug("TOIL service initialized");
+    
+    isInitialized = true;
+    initializationError = null;
+    logger.debug("All time services successfully initialized");
+  } catch (error) {
+    initializationError = error instanceof Error 
+      ? error
+      : new Error('Unknown error during service initialization');
+    
+    logger.error("Service initialization failed:", error);
+    throw initializationError;
+  }
 };
 
-// Safe initialization function with retry logic
-export const initializeService = async (): Promise<void> => {
-  try {
-    // Our service auto-initializes, this is just a no-op for compatibility
-    return Promise.resolve();
-  } catch (error) {
-    // Maintain API compatibility
-    return Promise.reject(error);
-  }
+/**
+ * Check if services have been initialized
+ */
+export const areServicesInitialized = (): boolean => {
+  return isInitialized;
+};
+
+/**
+ * Get any initialization error that occurred
+ */
+export const getInitializationError = (): Error | null => {
+  return initializationError;
+};
+
+/**
+ * Reset initialization status (for testing)
+ */
+export const resetInitialization = (): void => {
+  isInitialized = false;
+  initializationError = null;
 };

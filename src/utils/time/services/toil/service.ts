@@ -15,4 +15,4 @@ export { TOILServiceProcessing } from './service/processing';
 export { TOILServiceSettings } from './service/settings';
 
 // Log module initialization for debugging
-console.log('[TOIL-SERVICE] Service module initialized and ready for use');
+console.log('[TOIL-SERVICE] Service module initialized');
