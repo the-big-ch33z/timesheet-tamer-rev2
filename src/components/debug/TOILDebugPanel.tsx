@@ -16,7 +16,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Check, RefreshCw, Trash2 } from 'lucide-react';
-import { createTOILUpdateHandler } from '@/utils/time/events/toilEventService';
+import { createTOILUpdateHandler } from '@/utils/time/events/toil';
 
 const logger = createTimeLogger('TOILDebugPanel');
 

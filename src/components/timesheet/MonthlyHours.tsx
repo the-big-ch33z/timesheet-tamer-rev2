@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
@@ -8,7 +7,7 @@ import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useToast } from "@/hooks/use-toast";
-import { TOILEventProvider } from "@/utils/time/events/toilEventService";
+import { TOILEventProvider } from "@/utils/time/events/toil";
 
 // Create a logger for this component
 const logger = createTimeLogger('MonthlyHours');

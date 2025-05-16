@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
-import { useTOILEvents } from "@/utils/time/events/toilEventService";
+import { useTOILEvents } from "@/utils/time/events/toil";
 
 const logger = createTimeLogger('useTOILEventHandling');
 
