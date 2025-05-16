@@ -5,7 +5,7 @@ import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { calculateDailyTOIL } from "./calculation/dailyTOIL";
 import { getTOILSummary } from "./storage";
-import { storeTOILSummary } from "./storage/record-management";
+import { storeTOILSummary } from "./storage/summary-operations";
 import { dispatchTOILEvent } from "./events";
 
 const logger = createTimeLogger('TOIL-BatchProcessing');
@@ -61,7 +61,7 @@ export async function performSingleCalculation(
     
     return storedSummary;
   } catch (error) {
-    logger.error(`Error in performSingleCalculation: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Error in performSingleCalculation: ${error instanceof Error ? error.message : String(error)}`, error);
     return null;
   }
 }

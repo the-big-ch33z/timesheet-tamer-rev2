@@ -25,14 +25,20 @@ export {
   getSummaryCacheKey
 } from './core';
 
-// Export record management functions
+// Export record management functions - via the record management re-export file
 export {
   storeTOILRecord,
   storeTOILUsage,
+  storeTOILSummary,
   deleteUserTOILRecords,
   deleteTOILRecordById,
   deleteTOILRecordsByEntryId
 } from './record-management';
+
+// Export individual operations directly for specialized imports
+export * from './record-operations';
+export * from './usage-operations';
+export * from './summary-operations';
 
 // Export query functions
 export {
@@ -52,5 +58,4 @@ export {
   batchCleanupTOILData
 } from './cleanup';
 
-// Remove the incorrect TOILDayInfo type export
-console.log('[TOIL-STORAGE] Storage module index initialized');
+console.log('[TOIL-STORAGE] Storage module index initialized with refactored operations');
