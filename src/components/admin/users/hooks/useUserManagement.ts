@@ -7,6 +7,12 @@ import { useUserMetrics } from "@/contexts/user-metrics";
 import { useToast } from "@/hooks/use-toast";
 import { UserEditFormValues } from "../hooks/useEditUserForm";
 import { calculateFortnightHoursFromSchedule } from "@/components/timesheet/utils/scheduleUtils";
+import { createTimeLogger } from "@/utils/time/errors";
+import { eventBus } from '@/utils/events/EventBus';
+import { SCHEDULE_EVENTS } from '@/utils/events/eventTypes';
+
+// Create a logger for this component
+const logger = createTimeLogger('useUserManagement');
 
 export const useUserManagement = () => {
   const { toast } = useToast();
@@ -20,7 +26,7 @@ export const useUserManagement = () => {
   const [forceRefresh, setForceRefresh] = useState(0); // Add a state to force re-renders
 
   // Access authentication, work schedule, and metrics contexts
-  const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser } = useAuth();
+  const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser, updateUserWorkScheduleId } = useAuth();
   const { assignScheduleToUser, resetUserSchedule, defaultSchedule, getScheduleById } = useWorkSchedule();
   const { updateUserMetrics } = useUserMetrics();
 
@@ -36,7 +42,7 @@ export const useUserManagement = () => {
   
   // Handle edit user button click
   const handleEditUser = (user: User) => {
-    console.log("Editing user with current data:", user);
+    logger.debug("Editing user with current data:", user);
     setSelectedUser(user);
     setIsEditUserOpen(true);
   };
@@ -81,14 +87,16 @@ export const useUserManagement = () => {
     if (!selectedUser) return;
     
     try {
-      console.log("Updating user with data:", data);
+      logger.debug("Updating user with data:", data);
       
       // Calculate the actual fortnight hours based on FTE and schedule
       let baseHours = 0;
+      let scheduleToUse = defaultSchedule.id; // Default to the default schedule ID
       
       if (data.useDefaultSchedule) {
         baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
       } else if (data.scheduleId) {
+        scheduleToUse = data.scheduleId;
         const selectedSchedule = getScheduleById(data.scheduleId);
         if (selectedSchedule) {
           baseHours = calculateFortnightHoursFromSchedule(selectedSchedule);
@@ -102,7 +110,7 @@ export const useUserManagement = () => {
         const adjustedHours = baseHours * data.fte;
         // Round to nearest 0.5
         actualFortnightHours = Math.round(adjustedHours * 2) / 2;
-        console.log(`Final fortnight hours calculation: base=${baseHours}, FTE=${data.fte}, adjusted=${actualFortnightHours}`);
+        logger.debug(`Final fortnight hours calculation: base=${baseHours}, FTE=${data.fte}, adjusted=${actualFortnightHours}`);
       }
       
       // First update user metrics (FTE and fortnight hours)
@@ -114,14 +122,24 @@ export const useUserManagement = () => {
       // Update user's role
       await updateUserRole(selectedUser.id, data.role);
       
+      // Update the user's workScheduleId property directly
+      await updateUserWorkScheduleId(selectedUser.id, data.useDefaultSchedule ? 'default' : data.scheduleId);
+      
       // Handle work schedule assignment - either reset to default or assign specific
       if (data.useDefaultSchedule) {
-        console.log("Resetting user schedule to default");
+        logger.debug("Resetting user schedule to default");
         await resetUserSchedule(selectedUser.id);
       } else if (data.scheduleId) {
-        console.log(`Assigning schedule ${data.scheduleId} to user ${selectedUser.id}`);
+        logger.debug(`Assigning schedule ${data.scheduleId} to user ${selectedUser.id}`);
         await assignScheduleToUser(selectedUser.id, data.scheduleId);
       }
+      
+      // Notify that a schedule has been updated
+      eventBus.publish(SCHEDULE_EVENTS.USER_SCHEDULE_UPDATED, {
+        userId: selectedUser.id,
+        scheduleId: scheduleToUse,
+        timestamp: Date.now()
+      });
       
       // Force refresh to update UI
       setForceRefresh(prev => prev + 1);
