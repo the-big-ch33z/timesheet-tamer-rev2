@@ -16,13 +16,23 @@ export function createTOILRecord(
   hours: number,
   entryId?: string
 ): TOILRecord {
-  logger.debug(`Creating TOIL record: ${userId}, date: ${format(date, 'yyyy-MM-dd')}, hours: ${hours}`);
+  const dateString = format(date, 'yyyy-MM-dd');
+  logger.debug(`Creating TOIL record: ${userId}, date: ${dateString}, hours: ${hours}`);
+  
+  // Ensure hours value is a valid number and not too small (minimum 0.25)
+  const validHours = isNaN(hours) || hours < 0.01 ? 0 : Math.round(hours * 4) / 4;
+  
+  if (validHours <= 0) {
+    logger.debug(`Not creating TOIL record for ${dateString} as hours (${hours}) are invalid or zero`);
+  } else {
+    logger.debug(`Created valid TOIL record with ${validHours} hours for ${dateString}`);
+  }
   
   return {
     id: uuidv4(),
     userId,
     date: new Date(date),
-    hours,
+    hours: validHours,
     monthYear: format(date, 'yyyy-MM'),
     entryId: entryId || uuidv4(), // If no entry ID provided, create a synthetic one
     status: 'active'

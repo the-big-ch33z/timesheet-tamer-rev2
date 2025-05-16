@@ -1,5 +1,5 @@
 
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TOILSummary } from "@/types/toil";
 import { Clock } from "lucide-react";
@@ -7,6 +7,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { TOILErrorState } from "./toil-summary";
 import { useTOILEventHandling } from "../hooks/useTOILEventHandling";
 import TOILCardContent from "./toil-summary/TOILCardContent";
+import { toilService } from "@/utils/time/services/toil";
 
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
@@ -38,8 +39,29 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   // Use our custom hook for event handling
   const { handleRefresh } = useTOILEventHandling(onRefreshRequest);
   
+  // Force clear cache on mount to ensure fresh data
+  useEffect(() => {
+    logger.debug('TOILSummaryCard mounted, clearing cache');
+    toilService.clearCache();
+    
+    // Set up a refresh interval
+    const refreshInterval = setInterval(() => {
+      if (onRefreshRequest) {
+        logger.debug('Auto-refreshing TOIL summary');
+        onRefreshRequest();
+      }
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, [onRefreshRequest]);
+  
+  // Log when summary changes
+  useEffect(() => {
+    logger.debug('TOILSummaryCard received summary update:', summary);
+  }, [summary]);
+  
   try {
-    logger.debug('TOILSummaryCard received summary:', summary, 'loading:', loading);
+    logger.debug('TOILSummaryCard rendering with summary:', summary, 'loading:', loading);
     
     return (
       <Card 

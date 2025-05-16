@@ -9,6 +9,7 @@ import {
   getWeekDay,
   isRDODay
 } from "@/utils/time/scheduleUtils";
+import { format as dateFnsFormat } from "date-fns";
 
 const logger = createTimeLogger('TOILUtils');
 
@@ -16,10 +17,10 @@ const logger = createTimeLogger('TOILUtils');
  * Filter time entries for a specific date
  */
 export function filterEntriesForDate(entries: TimeEntry[], date: Date): TimeEntry[] {
-  const dateString = format(date, 'yyyy-MM-dd');
+  const dateString = dateFnsFormat(date, 'yyyy-MM-dd');
   return entries.filter(entry => {
     const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-    return format(entryDate, 'yyyy-MM-dd') === dateString;
+    return dateFnsFormat(entryDate, 'yyyy-MM-dd') === dateString;
   });
 }
 
@@ -80,20 +81,8 @@ export function getScheduledHours(
  * Format date for logging and display
  */
 export function format(date: Date, formatStr: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-AU', {
-      year: formatStr.includes('yyyy') ? 'numeric' : undefined,
-      month: formatStr.includes('MM') ? '2-digit' : undefined,
-      day: formatStr.includes('dd') ? '2-digit' : undefined
-    }).format(date).split('/').reverse().join('-');
-  } catch (e) {
-    // Fall back to simple formatting if Intl API fails
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+  // Use date-fns format directly to ensure consistency
+  return dateFnsFormat(date, formatStr);
 }
 
 /**
