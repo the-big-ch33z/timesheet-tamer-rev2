@@ -5,12 +5,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
 
 export function LoginForm() {
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
@@ -34,17 +32,6 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Alert className="bg-blue-50 text-blue-800 border-blue-100 mb-4">
-        <AlertDescription className="flex items-start">
-          <InfoIcon className="h-5 w-5 mr-2 mt-0.5" />
-          <div>
-            <p className="font-medium">Demo Account</p>
-            <p className="text-sm">Email: admin@example.com</p>
-            <p className="text-sm">Password: password</p>
-          </div>
-        </AlertDescription>
-      </Alert>
-      
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input 

@@ -1,4 +1,3 @@
-
 import { auditService } from '@/services/auditService';
 import { syncService } from '@/services/syncService';
 import { AuthStateType } from '../AuthProvider';
@@ -13,30 +12,14 @@ export const createAuthenticationOperations = (
 ) => {
   const login = async (email: string, password: string) => {
     try {
-      // For demo purposes, we're not checking passwords
       const user = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!user) {
-        // Look for any user if the specific email is not found
-        const anyUser = state.users[0];
-        if (anyUser) {
-          console.log('Default user login:', anyUser.email);
-          state.setCurrentUser(anyUser);
-          state.setIsAuthenticated(true);
-          localStorage.setItem('currentUser', JSON.stringify(anyUser));
-          
-          toast.toast({
-            title: "Logged in as demo user",
-            description: `Welcome, ${anyUser.name}`,
-            variant: "success"
-          });
-          
-          navigate('/timesheet');
-          return;
-        }
-        
-        throw new Error("No users found in the system. Please sign up.");
+        throw new Error("Invalid email or password. Please try again.");
       }
+      
+      // In a real application, we would verify the password here
+      // For now, we're just checking if the user exists
       
       state.setCurrentUser(user);
       state.setIsAuthenticated(true);

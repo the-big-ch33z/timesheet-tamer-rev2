@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
@@ -11,7 +10,7 @@ import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
 import { AppProvider } from './contexts/AppProvider';
 import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
-import { initializeService } from './utils/time/services/api-wrapper';
+import { initializeService, createSeedData } from './utils/time/services/api-wrapper';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Lazy load pages to improve initial load time
@@ -67,8 +66,11 @@ function App() {
           }
         }
         
-        // Initialize core services
+        // Initialize core services and ensure no demo data is created
         await initializeService();
+        
+        // Call createSeedData with false to ensure no demo data is created
+        createSeedData(false);
         
         // Mark app as initialized
         globalAppState.isInitialized = true;

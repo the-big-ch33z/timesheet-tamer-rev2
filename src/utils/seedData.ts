@@ -1,14 +1,13 @@
 
 import { Organization, Team, User } from '@/types';
-import { format } from 'date-fns';
 
-// Create seed data if no users exist in the system
-export const createSeedData = () => {
+// Create seed data if no users exist in the system and createDemoData is true
+export const createSeedData = (createDemoData = false) => {
   const existingUsers = localStorage.getItem('users');
   const existingOrganizations = localStorage.getItem('organizations');
   
-  // Only create seed data if it doesn't exist already
-  if (!existingUsers || JSON.parse(existingUsers).length === 0) {
+  // Only create seed data if it doesn't exist already and createDemoData is true
+  if (createDemoData && (!existingUsers || JSON.parse(existingUsers).length === 0)) {
     console.log('Creating seed data for initial application use');
     
     const userId = `user-${Date.now()}`;
