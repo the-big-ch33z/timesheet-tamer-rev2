@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,16 +27,10 @@ interface UseEditUserFormProps {
 }
 
 export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEditUserFormProps) => {
-  // Access toast for notifications
   const { toast } = useToast();
-  
-  // Access work schedule context to get schedules
-  const { getAllSchedules } = useWorkSchedule();
-  
-  // Get all available schedules
+  const { getAllSchedules, assignScheduleToUser } = useWorkSchedule();
   const schedules = getAllSchedules();
-  
-  // Setup form for editing a user
+
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
     defaultValues: {
@@ -50,48 +43,47 @@ export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEdi
     },
   });
 
-  // Initialize form values when selected user changes
-  useFormInitialization({ 
-    selectedUser, 
-    setValue: form.setValue 
+  useFormInitialization({
+    selectedUser,
+    setValue: form.setValue,
   });
 
-  // Handle schedule-related calculations
-  const { calculateFinalHours } = useScheduleValues({ 
+  const { calculateFinalHours } = useScheduleValues({
     watch: form.watch,
-    setValue: form.setValue
+    setValue: form.setValue,
   });
 
-  // Handle form submission
   const handleSubmit = async (values: UserEditFormValues) => {
     if (!selectedUser) return;
-    
+
     try {
       console.log("Submitting form with values:", values);
-      
-      // Update fortnightHours with the calculated value based on schedule and FTE
+
       values.fortnightHours = calculateFinalHours();
       console.log(`Final submission hours: ${values.fortnightHours}`);
-      
-      // Submit all form values
+
+      // ⬇️ Persist form changes via parent-provided handler
       await onSubmit(values);
-      
-      // Show success toast notification
+
+      // ⬇️ Persist the schedule assignment to user
+      const resolvedScheduleId = values.useDefaultSchedule ? "default" : values.scheduleId;
+      if (resolvedScheduleId) {
+        await assignScheduleToUser(selectedUser.id, resolvedScheduleId);
+      }
+
       toast({
         title: "User updated successfully",
         description: `${selectedUser.name}'s information has been updated.`,
         variant: "default",
-        className: "bg-green-50 border-green-200"
+        className: "bg-green-50 border-green-200",
       });
-      
-      // Close the form
+
       onOpenChange(false);
     } catch (error) {
-      // Show error toast notification
       toast({
         title: "Update failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive"
+        variant: "destructive",
       });
       console.error("Error updating user:", error);
     }
@@ -100,6 +92,6 @@ export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEdi
   return {
     form,
     schedules,
-    handleSubmit
+    handleSubmit,
   };
 };
