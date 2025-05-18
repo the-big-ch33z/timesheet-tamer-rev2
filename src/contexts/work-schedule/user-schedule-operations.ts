@@ -26,7 +26,7 @@ export const createUserScheduleOperations = ({
   updateUserWorkScheduleId,
   toast
 }: UserScheduleProps): UserScheduleOperations => {
-  // Assign a schedule to a user
+  // Assign a schedule to a user - this is the primary function that needs to be updated
   const assignScheduleToUser = async (userId: string, scheduleId: string) => {
     console.log(`Assigning schedule ${scheduleId} to user ${userId}`);
     
@@ -40,20 +40,21 @@ export const createUserScheduleOperations = ({
     }
     
     try {
-      // First update the user object to store the schedule ID - this is critical
-      // Let's update this in the database first to ensure persistence
+      // THE KEY CHANGE: Focus solely on updating the user object first
+      // This makes the user.workScheduleId the single source of truth
       await updateUserWorkScheduleId(userId, scheduleId);
       
-      // Then update the local state
+      // Once user object is updated, then update our in-memory cache
+      // This is now a derived state, not a source of truth
       if (scheduleId === 'default') {
-        // If assigning default, just remove from userSchedules
+        // If assigning default, just remove from userSchedules cache
         setState(prev => {
           const newUserSchedules = { ...prev.userSchedules };
           delete newUserSchedules[userId];
           return { ...prev, userSchedules: newUserSchedules };
         });
       } else {
-        // Assign the custom schedule
+        // Store in cache for quick lookups
         setState(prev => ({
           ...prev,
           userSchedules: {
@@ -63,7 +64,7 @@ export const createUserScheduleOperations = ({
         }));
       }
       
-      // Clear cache for this user when schedule changes
+      // Clear schedule cache for this user to ensure fresh data
       scheduleCache.delete(userId);
       
       console.log(`Schedule ${scheduleId} successfully assigned to user ${userId}`);
@@ -98,6 +99,7 @@ export const createUserScheduleOperations = ({
       console.debug(`Getting schedule for user ${userId}, assigned ID: ${state.userSchedules[userId]}`);
     }
     
+    // First try to get from the in-memory userSchedules cache
     const assignedScheduleId = state.userSchedules[userId];
     
     if (!assignedScheduleId) {
@@ -128,32 +130,38 @@ export const createUserScheduleOperations = ({
     return assignedSchedule;
   };
 
-  // Clear cache when schedules change - helper method
-  const clearScheduleCache = () => {
-    scheduleCache.clear();
-  };
-
   // Reset a user to the default schedule
   const resetUserSchedule = async (userId: string) => {
     console.log(`Resetting user ${userId} to default schedule`);
     
-    // First update the user object to remove the custom schedule ID
-    await updateUserWorkScheduleId(userId, 'default');
-    
-    // Then update the local state
-    setState(prev => {
-      const newUserSchedules = { ...prev.userSchedules };
-      delete newUserSchedules[userId];
-      return { ...prev, userSchedules: newUserSchedules };
-    });
-    
-    // Clear cache for this user
-    scheduleCache.delete(userId);
-    
-    toast({
-      title: 'Schedule reset',
-      description: 'User will now use the default work schedule',
-    });
+    try {
+      // First update the user object to remove the custom schedule ID
+      // This is the source of truth
+      await updateUserWorkScheduleId(userId, 'default');
+      
+      // Then update the local state (cache)
+      setState(prev => {
+        const newUserSchedules = { ...prev.userSchedules };
+        delete newUserSchedules[userId];
+        return { ...prev, userSchedules: newUserSchedules };
+      });
+      
+      // Clear cache for this user
+      scheduleCache.delete(userId);
+      
+      toast({
+        title: 'Schedule reset',
+        description: 'User will now use the default work schedule',
+      });
+    } catch (error) {
+      console.error("Error resetting user schedule:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset user schedule',
+        variant: 'destructive',
+      });
+      throw error;
+    }
   };
 
   return {

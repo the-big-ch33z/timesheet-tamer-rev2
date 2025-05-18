@@ -22,6 +22,8 @@ export const useFormInitialization = ({ selectedUser, setValue }: UseFormInitial
       setValue("teamIds", selectedUser.teamIds || []);
       
       // Determine if user has a custom schedule
+      // A workScheduleId value that is anything other than 'default' or undefined 
+      // indicates a custom schedule
       const hasCustomSchedule = selectedUser.workScheduleId && 
                                selectedUser.workScheduleId !== 'default' && 
                                selectedUser.workScheduleId !== undefined;
@@ -32,7 +34,8 @@ export const useFormInitialization = ({ selectedUser, setValue }: UseFormInitial
       setValue("useDefaultSchedule", !hasCustomSchedule);
       
       if (hasCustomSchedule) {
-        setValue("scheduleId", selectedUser.workScheduleId || undefined);
+        // Ensure workScheduleId is treated as a string
+        setValue("scheduleId", String(selectedUser.workScheduleId));
         console.log(`Setting schedule ID in form to: ${selectedUser.workScheduleId}`);
       } else {
         setValue("scheduleId", undefined);

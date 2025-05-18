@@ -21,7 +21,7 @@ export const useUserManagement = () => {
 
   // Access authentication, work schedule, and metrics contexts
   const { users, updateUserRole, archiveUser, restoreUser, permanentDeleteUser } = useAuth();
-  const { assignScheduleToUser, resetUserSchedule, defaultSchedule, getScheduleById } = useWorkSchedule();
+  const { assignScheduleToUser, getScheduleById, defaultSchedule, verifyUserScheduleConsistency } = useWorkSchedule();
   const { updateUserMetrics } = useUserMetrics();
 
   // Handle search term changes
@@ -76,6 +76,23 @@ export const useUserManagement = () => {
     }
   };
 
+  // Check for data consistency on component mount
+  useEffect(() => {
+    const result = verifyUserScheduleConsistency();
+    if (!result.consistent) {
+      console.warn("User schedule inconsistencies detected:", result.issues);
+      
+      if (process.env.NODE_ENV === 'development') {
+        // Only show this in development
+        toast({
+          title: "Schedule inconsistencies detected",
+          description: `${result.issues.length} issues found. See console for details.`,
+          variant: "destructive"
+        });
+      }
+    }
+  }, []);
+
   // Handle edit user submission
   const onSubmitEditUser = async (data: UserEditFormValues) => {
     if (!selectedUser) return;
@@ -85,9 +102,11 @@ export const useUserManagement = () => {
       
       // Calculate the actual fortnight hours based on FTE and schedule
       let baseHours = 0;
+      let scheduleId = data.scheduleId || 'default';
       
       if (data.useDefaultSchedule) {
         baseHours = calculateFortnightHoursFromSchedule(defaultSchedule);
+        scheduleId = 'default'; // Ensure we use default ID
       } else if (data.scheduleId) {
         const selectedSchedule = getScheduleById(data.scheduleId);
         if (selectedSchedule) {
@@ -105,23 +124,16 @@ export const useUserManagement = () => {
         console.log(`Final fortnight hours calculation: base=${baseHours}, FTE=${data.fte}, adjusted=${actualFortnightHours}`);
       }
       
-      // First update user metrics (FTE and fortnight hours)
-      await updateUserMetrics(selectedUser.id, {
-        fte: data.fte,
-        fortnightHours: actualFortnightHours
-      });
-      
-      // Update user's role
+      // First update user role
       await updateUserRole(selectedUser.id, data.role);
       
-      // Handle work schedule assignment - either reset to default or assign specific
-      if (data.useDefaultSchedule) {
-        console.log("Resetting user schedule to default");
-        await resetUserSchedule(selectedUser.id);
-      } else if (data.scheduleId) {
-        console.log(`Assigning schedule ${data.scheduleId} to user ${selectedUser.id}`);
-        await assignScheduleToUser(selectedUser.id, data.scheduleId);
-      }
+      // Then update user metrics and schedule in a single operation
+      // This ensures the workScheduleId (source of truth) is updated
+      await updateUserMetrics(selectedUser.id, {
+        fte: data.fte,
+        fortnightHours: actualFortnightHours,
+        workScheduleId: scheduleId
+      });
       
       // Force refresh to update UI
       setForceRefresh(prev => prev + 1);

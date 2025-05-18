@@ -73,6 +73,17 @@ export const useEditUserForm = ({ selectedUser, onSubmit, onOpenChange }: UseEdi
       values.fortnightHours = calculateFinalHours();
       console.log(`Final submission hours: ${values.fortnightHours}`);
       
+      // Ensure scheduleId is properly set for submission
+      if (values.useDefaultSchedule) {
+        values.scheduleId = 'default';
+      } else if (!values.scheduleId) {
+        // If no custom schedule was selected but useDefaultSchedule is false,
+        // this is an error state - fallback to default
+        console.warn("No schedule selected but useDefaultSchedule is false. Using default schedule.");
+        values.scheduleId = 'default';
+        values.useDefaultSchedule = true;
+      }
+      
       // Submit all form values
       await onSubmit(values);
       

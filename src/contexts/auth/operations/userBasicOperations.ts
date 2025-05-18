@@ -57,12 +57,12 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       
       await syncService.recordSync('users', 'success', 1);
       
-      toast.toast({
+      toast({
         title: "Role updated",
         description: `${targetUser.name}'s role has been updated to ${newRole}`,
       });
     } catch (error) {
-      toast.toast({
+      toast({
         title: "Failed to update role",
         description: (error as Error).message,
         variant: "destructive",
@@ -130,14 +130,14 @@ export const createUserBasicOperations = (state: AuthStateType, toast: ReturnTyp
       );
       
       // Add a notification about the successful update
-      toast.toast({
+      toast({
         title: "User metrics updated",
         description: `Updated user settings successfully`,
       });
       
     } catch (error) {
       console.error("Error updating user metrics:", error);
-      toast.toast({
+      toast({
         title: "Failed to update user metrics",
         description: (error as Error).message,
         variant: "destructive",
