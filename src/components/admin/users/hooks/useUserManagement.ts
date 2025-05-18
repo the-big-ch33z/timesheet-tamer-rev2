@@ -127,13 +127,16 @@ export const useUserManagement = () => {
       // First update user role
       await updateUserRole(selectedUser.id, data.role);
       
-      // Then update user metrics and schedule in a single operation
-      // This ensures the workScheduleId (source of truth) is updated
+      // Then update user metrics WITHOUT the workScheduleId
       await updateUserMetrics(selectedUser.id, {
         fte: data.fte,
-        fortnightHours: actualFortnightHours,
-        workScheduleId: scheduleId
+        fortnightHours: actualFortnightHours
+        // Removed workScheduleId from here
       });
+      
+      // Finally, use assignScheduleToUser to properly set the schedule
+      // This ensures all the proper events are triggered and localStorage is updated
+      await assignScheduleToUser(selectedUser.id, scheduleId);
       
       // Force refresh to update UI
       setForceRefresh(prev => prev + 1);
