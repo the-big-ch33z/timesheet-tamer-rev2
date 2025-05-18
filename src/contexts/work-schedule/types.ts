@@ -14,7 +14,10 @@ export interface WorkScheduleContextType {
   getUserSchedule: (userId: string) => WorkSchedule;
   resetUserSchedule: (userId: string) => void;
   getAllSchedules: () => WorkSchedule[];
-  verifyUserScheduleConsistency: () => { consistent: boolean; issues: string[] };
+  verifyUserScheduleConsistency: () => { 
+    consistent: boolean; 
+    issues: { userId: string; userName: string; issue: string }[] 
+  };
 }
 
 // Local storage keys

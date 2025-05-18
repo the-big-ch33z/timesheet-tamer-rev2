@@ -56,7 +56,7 @@ const WorkScheduleSettings: React.FC = () => {
     toast({
       title: "Schedule saved",
       description: "Your schedule has been saved successfully. Work hours will automatically update.",
-      duration: 3000,
+      duration: 3000
     });
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useUnifiedTimeEntries } from './useUnifiedTimeEntries';
 import { UseUnifiedTimeEntriesOptions, UnifiedTimeEntriesResult } from './types';
@@ -57,8 +56,7 @@ export const useTimeEntriesWithRecovery = (
         if (retryCount === 0 && options.showToasts) {
           toast({
             title: "Timesheet service issue",
-            description: "Attempting to reconnect...",
-            duration: 3000
+            description: "Attempting to reconnect..."
           });
         }
         
@@ -78,8 +76,7 @@ export const useTimeEntriesWithRecovery = (
           toast({
             title: "Service unavailable",
             description: "Could not connect to timesheet service. Please try again later.",
-            variant: "destructive",
-            duration: 5000
+            variant: "destructive"
           });
         }
       }
@@ -92,8 +89,7 @@ export const useTimeEntriesWithRecovery = (
         if (options.showToasts) {
           toast({
             title: "Connection restored",
-            description: "Timesheet service is now available.",
-            duration: 3000
+            description: "Timesheet service is now available."
           });
         }
       }
