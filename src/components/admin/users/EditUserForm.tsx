@@ -1,60 +1,68 @@
+// --- File: src/components/admin/users/hooks/useEditUserForm.ts ---
 
-import React from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
+import { useForm } from "react-hook-form";
+import { UserEditFormValues } from "../form-sections/UserFormContent";
+import { useWorkSchedule } from "@/contexts/work-schedule";
+import { useUserManagement } from "./useUserManagement";
+import { useEffect } from "react";
 import { User } from "@/types";
-import { useEditUserForm } from "./hooks/useEditUserForm";
-import { UserFormContent } from "./form-sections/UserFormContent";
 
-interface EditUserFormProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+interface UseEditUserFormProps {
   selectedUser: User | null;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: UserEditFormValues) => void;
+  onOpenChange: (open: boolean) => void;
 }
 
-export const EditUserForm: React.FC<EditUserFormProps> = ({
-  isOpen,
-  onOpenChange,
+export const useEditUserForm = ({
   selectedUser,
-  onSubmit
-}) => {
-  const { form, schedules, handleSubmit } = useEditUserForm({ 
-    selectedUser, 
-    onSubmit, 
-    onOpenChange 
+  onSubmit,
+  onOpenChange,
+}: UseEditUserFormProps) => {
+  const { assignScheduleToUser, schedules } = useWorkSchedule();
+  const { updateUserMetrics, updateUserRole } = useUserManagement();
+
+  const form = useForm<UserEditFormValues>({
+    defaultValues: {
+      name: "",
+      email: "",
+      role: "team-member",
+      metrics: {},
+      scheduleId: "default",
+    },
   });
 
-  return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Edit User</SheetTitle>
-          <SheetDescription>
-            {selectedUser ? `Update details for ${selectedUser.name}` : "Update user details"}
-          </SheetDescription>
-        </SheetHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pt-6">
-            <UserFormContent 
-              form={form}
-              schedules={schedules}
-            />
+  // Prepopulate the form when selectedUser changes
+  useEffect(() => {
+    if (selectedUser) {
+      form.reset({
+        name: selectedUser.name || "",
+        email: selectedUser.email || "",
+        role: selectedUser.role || "team-member",
+        metrics: selectedUser.metrics || {},
+        scheduleId: selectedUser.workScheduleId || "default",
+      });
+    }
+  }, [selectedUser, form]);
 
-            <SheetFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Update User</Button>
-            </SheetFooter>
-          </form>
-        </Form>
-      </SheetContent>
-    </Sheet>
-  );
+  // 🔧 Ensures workSchedule assignment comes after metrics and role updates
+  const handleSubmit = async (data: UserEditFormValues) => {
+    if (!selectedUser) return;
+
+    try {
+      await updateUserRole(selectedUser.id, data.role);
+      await updateUserMetrics(selectedUser.id, data.metrics);
+      await assignScheduleToUser(selectedUser.id, data.scheduleId);
+
+      await onSubmit(data);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+    }
+  };
+
+  return {
+    form,
+    schedules,
+    handleSubmit,
+  };
 };
-
-// Change the re-export to use the `export type` syntax for TypeScript types
-export type { UserEditFormValues } from "./hooks/useEditUserForm";
