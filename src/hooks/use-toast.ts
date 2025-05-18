@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -15,6 +16,23 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
   className?: string
   duration?: number
+}
+
+// Define the ToastAPI interface to properly type the toast function
+export interface ToastAPI {
+  (props: {
+    title?: string;
+    description?: React.ReactNode;
+    action?: ToastActionElement;
+    variant?: "default" | "destructive" | "success";
+    className?: string;
+    duration?: number;
+  }): { 
+    id: string;
+    dismiss: () => void;
+    update: (props: ToasterToast) => void;
+  };
+  dismiss: (toastId?: string) => void;
 }
 
 const actionTypes = {
@@ -139,11 +157,11 @@ function dispatch(action: Action) {
   })
 }
 
-// Define the toast function with the correct shape
+// Define the toast function with proper typing
 const toast = ((props: {
   title?: string;
   description?: React.ReactNode;
-  action?: React.ReactNode;
+  action?: ToastActionElement;
   variant?: "default" | "destructive" | "success";
   className?: string;
   duration?: number;
@@ -175,7 +193,7 @@ const toast = ((props: {
     dismiss,
     update,
   }
-}) as any  // Using 'any' temporarily to avoid circular type issues
+}) as ToastAPI  // Using the properly defined ToastAPI interface
 
 // Add the dismiss method to the toast function to match ToastAPI
 toast.dismiss = (toastId?: string) => {
