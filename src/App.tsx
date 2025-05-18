@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
@@ -10,7 +11,8 @@ import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
 import { AppProvider } from './contexts/AppProvider';
 import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
-import { initializeService, createSeedData } from './utils/time/services/api-wrapper';
+import { initializeService } from './utils/time/services/api-wrapper';
+import { createSeedData } from './utils/seedData';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Lazy load pages to improve initial load time
