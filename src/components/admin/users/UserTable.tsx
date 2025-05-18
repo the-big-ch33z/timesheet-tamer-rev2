@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -26,17 +25,14 @@ export const UserTable: React.FC<UserTableProps> = ({
   onRestoreUser,
   onDeleteUser 
 }) => {
-  const { getTeamById, teamMemberships } = useAuth();
-  const { getScheduleById, defaultSchedule } = useWorkSchedule();
+  const { teamMemberships, teams } = useAuth();
+  const { getScheduleById, defaultSchedule, userSchedules } = useWorkSchedule();
 
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
-      case "admin":
-        return "bg-red-100 text-red-800";
-      case "manager":
-        return "bg-blue-100 text-blue-800";
-      case "team-member":
-        return "bg-green-100 text-green-800";
+      case "admin": return "bg-red-100 text-red-800";
+      case "manager": return "bg-blue-100 text-blue-800";
+      case "team-member": return "bg-green-100 text-green-800";
     }
   };
 
@@ -52,27 +48,18 @@ export const UserTable: React.FC<UserTableProps> = ({
       .filter(membership => membership.userId === userId)
       .map(membership => membership.teamId);
       
-    return useAuth().teams.filter(team => userTeamIds.includes(team.id) || team.managerId === userId);
+    return teams.filter(team => userTeamIds.includes(team.id) || team.managerId === userId);
   };
 
   const getScheduleName = (user: User) => {
-    if (!user.workScheduleId || user.workScheduleId === 'default') {
-      return defaultSchedule.name + " (Default)";
+    const assignedScheduleId = userSchedules[user.id] || user.workScheduleId;
+    if (!assignedScheduleId || assignedScheduleId === 'default') {
+      return `${defaultSchedule.name} (Default)`;
     }
-    
-    const schedule = getScheduleById(user.workScheduleId);
+
+    const schedule = getScheduleById(assignedScheduleId);
     return schedule ? schedule.name : "Unknown Schedule";
   };
-
-  // Function to refresh content
-  const forceRerender = () => {
-    console.log("Refreshing user table display");
-  };
-
-  // Use effect to refresh on any user changes
-  React.useEffect(() => {
-    forceRerender();
-  }, [filteredUsers]);
 
   return (
     <Table>
@@ -89,7 +76,7 @@ export const UserTable: React.FC<UserTableProps> = ({
       <TableBody>
         {filteredUsers.map(user => {
           const userTeams = getUserTeams(user.id);
-          
+
           return (
             <TableRow key={user.id} className={user.status === 'archived' ? 'bg-muted/30' : ''}>
               <TableCell className="font-medium">
@@ -127,7 +114,6 @@ export const UserTable: React.FC<UserTableProps> = ({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {/* View Timesheet Button */}
                   <Link to={`/timesheet/${user.id}`}>
                     <Button 
                       variant="ghost" 
@@ -138,7 +124,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                       <Calendar className="h-4 w-4" />
                     </Button>
                   </Link>
-                  
+
                   {!showArchived ? (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => onEditUser(user)}>
