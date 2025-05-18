@@ -152,3 +152,4 @@ export default defineConfig(({ mode }) => ({
     'React.Fragment': ['react', 'Fragment'],
   },
 }));
+// minor formatiing update
