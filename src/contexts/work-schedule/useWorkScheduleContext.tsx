@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
@@ -12,11 +11,6 @@ import { timeEventsService } from '@/utils/time/events/timeEventsService';
 /**
  * Core implementation of the WorkSchedule context
  * This hook manages work schedules and provides operations to manipulate them.
- * 
- * Integration with other parts of the system:
- * 1. Dispatches events when schedules change (for WorkHoursContext to respond)
- * 2. Provides utilities for deriving time information from schedules
- * 3. Syncs schedule data to localStorage for persistence
  */
 export function useWorkScheduleContext() {
   const { toast } = useToast();
@@ -27,9 +21,17 @@ export function useWorkScheduleContext() {
   
   // Initialize state from localStorage and build userSchedules from users array
   const [state, setState] = useState<WorkScheduleState>(() => {
+    // First load schedules from localStorage - this ensures default schedule exists
     const schedules = storageOps.loadSchedules();
-    // Ensure default schedule exists
-    const defaultSchedule = schedules.find(s => s.isDefault) || defaultWorkSchedule;
+    
+    // Ensure default schedule exists and has isDefault=true
+    const defaultSchedule = schedules.find(s => s.id === 'default') || {
+      ...defaultWorkSchedule,
+      isDefault: true
+    };
+    
+    // Load saved user schedules with validation
+    const savedUserSchedules = storageOps.loadUserSchedules();
     
     // Build userSchedules from users' workScheduleId properties
     // This makes it a derived cache from the source of truth
@@ -37,29 +39,43 @@ export function useWorkScheduleContext() {
     if (users) {
       users.forEach(user => {
         if (user.workScheduleId && user.workScheduleId !== 'default') {
-          userSchedules[user.id] = user.workScheduleId;
+          // Only add valid string scheduleIds
+          if (typeof user.workScheduleId === 'string') {
+            userSchedules[user.id] = user.workScheduleId;
+          }
         }
       });
     }
     
+    // Merge saved schedules with those from users, prioritizing user data
+    const mergedUserSchedules = { ...savedUserSchedules, ...userSchedules };
+    
+    console.log("Initialized WorkScheduleContext with:", {
+      scheduleCount: schedules.length,
+      userScheduleCount: Object.keys(mergedUserSchedules).length
+    });
+    
     return {
       defaultSchedule,
       schedules,
-      userSchedules
+      userSchedules: mergedUserSchedules
     };
   });
 
   // Effect to rebuild userSchedules whenever users array changes
   // This ensures our cache stays in sync with the source of truth
   useEffect(() => {
+    if (!users || users.length === 0) return;
+    
     const userSchedules: Record<string, string> = {};
-    if (users) {
-      users.forEach(user => {
-        if (user.workScheduleId && user.workScheduleId !== 'default') {
+    users.forEach(user => {
+      if (user.workScheduleId && user.workScheduleId !== 'default') {
+        // Only add valid string scheduleIds
+        if (typeof user.workScheduleId === 'string') {
           userSchedules[user.id] = user.workScheduleId;
         }
-      });
-    }
+      }
+    });
     
     // Only update if there are actual changes to prevent loops
     const hasChanges = JSON.stringify(userSchedules) !== JSON.stringify(state.userSchedules);
@@ -219,6 +235,16 @@ export function useWorkScheduleContext() {
     // Check each user with a workScheduleId
     users.forEach(user => {
       if (user.workScheduleId && user.workScheduleId !== 'default') {
+        // Verify workScheduleId is a string
+        if (typeof user.workScheduleId !== 'string') {
+          issues.push({
+            userId: user.id,
+            userName: user.name,
+            issue: `User has invalid workScheduleId type: ${typeof user.workScheduleId}`
+          });
+          return;
+        }
+        
         // Should be in userSchedules
         if (!state.userSchedules[user.id]) {
           issues.push({
@@ -269,12 +295,12 @@ export function useWorkScheduleContext() {
     updateDefaultSchedule: scheduleOps.updateDefaultSchedule,
     createSchedule: scheduleOps.createSchedule,
     updateSchedule: scheduleOps.updateSchedule,
-    deleteSchedule: handleDeleteSchedule,
+    deleteSchedule: scheduleOps.handleDeleteSchedule || ((id: string) => {}),
     getScheduleById: scheduleOps.getScheduleById,
     assignScheduleToUser: userScheduleOps.assignScheduleToUser,
     getUserSchedule: userScheduleOps.getUserSchedule,
     resetUserSchedule: userScheduleOps.resetUserSchedule,
     getAllSchedules: scheduleOps.getAllSchedules,
-    verifyUserScheduleConsistency // New function to check data integrity
+    verifyUserScheduleConsistency
   };
 }

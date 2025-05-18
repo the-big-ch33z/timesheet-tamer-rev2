@@ -12,7 +12,7 @@ import NotFound from './pages/NotFound';
 import { AppProvider } from './contexts/AppProvider';
 import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
 import { initializeService } from './utils/time/services/api-wrapper';
-import { createSeedData } from './utils/seedData';
+import { createSeedData, validateStorageFormat } from './utils/seedData';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Lazy load pages to improve initial load time
@@ -68,10 +68,14 @@ function App() {
           }
         }
         
-        // Initialize core services and ensure no demo data is created
+        // Run data format validation and fix any issues
+        await validateStorageFormat();
+        
+        // Initialize core services
         await initializeService();
         
-        // Call createSeedData with false to ensure no demo data is created
+        // Only create seed data if needed - with false to ensure no demo data is created
+        // This is important - only call createSeedData once
         createSeedData(false);
         
         // Mark app as initialized

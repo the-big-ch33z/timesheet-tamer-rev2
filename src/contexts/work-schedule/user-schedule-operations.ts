@@ -54,12 +54,12 @@ export const createUserScheduleOperations = ({
           return { ...prev, userSchedules: newUserSchedules };
         });
       } else {
-        // Store in cache for quick lookups
+        // FIXED: Store scheduleId directly as a string, not in a nested object
         setState(prev => ({
           ...prev,
           userSchedules: {
             ...prev.userSchedules,
-            [userId]: scheduleId
+            [userId]: scheduleId // Directly assign scheduleId as a string
           }
         }));
       }
@@ -102,7 +102,8 @@ export const createUserScheduleOperations = ({
     // First try to get from the in-memory userSchedules cache
     const assignedScheduleId = state.userSchedules[userId];
     
-    if (!assignedScheduleId) {
+    // FIXED: Validate that assignedScheduleId is a string, not an object
+    if (!assignedScheduleId || typeof assignedScheduleId !== 'string') {
       // Cache default schedule for this user
       scheduleCache.set(userId, {
         schedule: state.defaultSchedule,

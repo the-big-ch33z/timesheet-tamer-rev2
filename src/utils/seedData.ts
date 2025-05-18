@@ -1,8 +1,17 @@
 
 import { Organization, Team, User } from '@/types';
 
+// Flag to track if seed data has already been created in this session
+let seedDataCreated = false;
+
 // Create seed data if no users exist in the system and createDemoData is true
 export const createSeedData = (createDemoData = false) => {
+  // Skip if we've already created seed data in this session
+  if (seedDataCreated) {
+    console.log('Seed data creation skipped - already created in this session');
+    return false;
+  }
+
   const existingUsers = localStorage.getItem('users');
   const existingOrganizations = localStorage.getItem('organizations');
   
@@ -55,8 +64,61 @@ export const createSeedData = (createDemoData = false) => {
       joinedAt: new Date().toISOString()
     }]));
     
+    seedDataCreated = true;
     console.log('Seed data created successfully');
     return true;
   }
   return false;
+};
+
+// Add a function to fix the nested userSchedules format if found
+export const migrateUserSchedulesFormat = () => {
+  try {
+    const userSchedulesJson = localStorage.getItem('timesheet-app-user-schedules');
+    if (!userSchedulesJson) return;
+
+    let needsMigration = false;
+    const userSchedules = JSON.parse(userSchedulesJson);
+    const migratedData: Record<string, string> = {};
+
+    // Check if any value is an object (nested structure) rather than a string
+    Object.entries(userSchedules).forEach(([userId, scheduleData]) => {
+      if (typeof scheduleData === 'object' && scheduleData !== null) {
+        needsMigration = true;
+        // Get the first schedule ID from the nested object (usually there's just one)
+        const nestedValues = Object.values(scheduleData as Record<string, string>);
+        if (nestedValues.length > 0) {
+          migratedData[userId] = nestedValues[0];
+        }
+      } else if (typeof scheduleData === 'string') {
+        // Already correct format
+        migratedData[userId] = scheduleData as string;
+      }
+    });
+
+    if (needsMigration) {
+      console.log('Migrating user schedules from nested format to flat format');
+      localStorage.setItem('timesheet-app-user-schedules', JSON.stringify(migratedData));
+      console.log('User schedules migration complete');
+    }
+  } catch (error) {
+    console.error('Error migrating user schedules format:', error);
+  }
+};
+
+// This function will run data validation and fix any issues found
+export const validateStorageFormat = () => {
+  try {
+    console.log('Validating storage format...');
+    
+    // Run the user schedules migration
+    migrateUserSchedulesFormat();
+    
+    // Could add more validation for other storage keys here
+    
+    return true;
+  } catch (error) {
+    console.error('Error validating storage format:', error);
+    return false;
+  }
 };
