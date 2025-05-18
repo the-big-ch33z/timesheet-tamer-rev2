@@ -6,7 +6,9 @@ import { AuthStateType } from '../AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { USER_DEFAULTS } from '@/constants/defaults';
 
-export const createUserBasicOperations = (state: AuthStateType, toast: ReturnType<typeof useToast>) => {
+export const createUserBasicOperations = (state: AuthStateType, toastApi: ReturnType<typeof useToast>) => {
+  const { toast } = toastApi;
+  
   const getUsersByRole = (role: UserRole) => {
     return state.users.filter(user => user.role === role);
   };

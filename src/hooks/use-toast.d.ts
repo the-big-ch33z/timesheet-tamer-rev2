@@ -7,6 +7,8 @@ export interface Toast {
   description?: React.ReactNode;
   action?: React.ReactNode;
   variant?: "default" | "destructive" | "success";
+  className?: string;
+  duration?: number;
 }
 
 export interface ToastAPI {
@@ -15,6 +17,8 @@ export interface ToastAPI {
     description?: React.ReactNode;
     action?: React.ReactNode;
     variant?: "default" | "destructive" | "success";
+    className?: string;
+    duration?: number;
   }): {
     id: string;
     dismiss: () => void;
