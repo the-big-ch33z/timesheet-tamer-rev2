@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
@@ -295,7 +296,7 @@ export function useWorkScheduleContext() {
     updateDefaultSchedule: scheduleOps.updateDefaultSchedule,
     createSchedule: scheduleOps.createSchedule,
     updateSchedule: scheduleOps.updateSchedule,
-    deleteSchedule: scheduleOps.handleDeleteSchedule || ((id: string) => {}),
+    deleteSchedule: handleDeleteSchedule, // Fix: Using our local function instead of scheduleOps.handleDeleteSchedule
     getScheduleById: scheduleOps.getScheduleById,
     assignScheduleToUser: userScheduleOps.assignScheduleToUser,
     getUserSchedule: userScheduleOps.getUserSchedule,
