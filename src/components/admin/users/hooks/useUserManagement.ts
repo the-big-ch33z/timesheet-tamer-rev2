@@ -23,6 +23,16 @@ export const useUserManagement = () => {
   } = useUserFilter(users);
 
   const { 
+    isEditUserOpen, 
+    isAddUserOpen, 
+    showOrgTree, 
+    setIsEditUserOpen, 
+    setIsAddUserOpen, 
+    setShowOrgTree, 
+    handleAddUser 
+  } = useDialogStates();
+
+  const { 
     selectedUser, 
     confirmDeleteUser, 
     forceRefresh,
@@ -34,17 +44,7 @@ export const useUserManagement = () => {
     handleRestoreUser, 
     handleDeleteUserConfirm, 
     confirmAndDeleteUser 
-  } = useUserActions();
-
-  const { 
-    isEditUserOpen, 
-    isAddUserOpen, 
-    showOrgTree, 
-    setIsEditUserOpen, 
-    setIsAddUserOpen, 
-    setShowOrgTree, 
-    handleAddUser 
-  } = useDialogStates();
+  } = useUserActions(setIsEditUserOpen); // Pass setIsEditUserOpen here
 
   // Handle successful user edit
   const handleEditSuccess = () => {

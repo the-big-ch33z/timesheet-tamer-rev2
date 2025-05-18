@@ -4,7 +4,7 @@ import { User } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 
-export const useUserActions = () => {
+export const useUserActions = (setIsEditUserOpen?: (isOpen: boolean) => void) => {
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null);
@@ -17,6 +17,11 @@ export const useUserActions = () => {
   const handleEditUser = (user: User) => {
     console.log("Editing user with current data:", user);
     setSelectedUser(user);
+    
+    // Open the edit dialog when a user is selected for editing
+    if (setIsEditUserOpen) {
+      setIsEditUserOpen(true);
+    }
   };
   
   // Handle archive user button click
