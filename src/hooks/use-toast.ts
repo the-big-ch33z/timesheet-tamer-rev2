@@ -14,8 +14,6 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
-  className?: string  // Add className property
-  duration?: number   // Add duration property
 }
 
 const actionTypes = {
@@ -140,15 +138,13 @@ function dispatch(action: Action) {
   })
 }
 
-// Define the ToastAPI interface with the updated properties
+// Define the ToastAPI interface
 export interface ToastAPI {
   (props: {
     title?: string;
     description?: React.ReactNode;
     action?: React.ReactNode;
     variant?: "default" | "destructive" | "success";
-    className?: string; // Add className property
-    duration?: number;  // Add duration property
   }): { 
     id: string;
     dismiss: () => void;
@@ -172,9 +168,6 @@ const toast = ((props: Toast) => {
     
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
-  // Configure automatic dismissal if duration is set
-  const duration = props.duration || TOAST_REMOVE_DELAY
-  
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -186,13 +179,6 @@ const toast = ((props: Toast) => {
       },
     },
   })
-
-  // If a custom duration is provided, set up automatic dismissal
-  if (duration !== TOAST_REMOVE_DELAY) {
-    setTimeout(() => {
-      dismiss();
-    }, duration);
-  }
 
   return {
     id,
