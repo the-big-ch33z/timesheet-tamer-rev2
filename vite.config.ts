@@ -1,3 +1,4 @@
+
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -11,6 +12,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    strictPort: false, // Allow fallback to another port
     allowedHosts: ["localhost", ".lovableproject.com"], // Allow all Lovable project domains
     proxy: {
       // Forward requests to lovableproject.com to avoid CORS issues
@@ -152,4 +154,3 @@ export default defineConfig(({ mode }) => ({
     'React.Fragment': ['react', 'Fragment'],
   },
 }));
-// minor formatiing update

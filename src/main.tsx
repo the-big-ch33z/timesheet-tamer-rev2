@@ -56,6 +56,7 @@ const mount = () => {
   } catch (error) {
     console.error("Error mounting application:", error);
     console.error("Error details:", error.message);
+    console.error("Stack trace:", error.stack);
     
     // Fallback rendering to show error to user
     try {
@@ -72,6 +73,8 @@ const mount = () => {
   }
 };
 
-// Initialize app
+// Initialize app with timeout to handle potential timing issues
 console.log("Starting mount process...");
-mount();
+setTimeout(() => {
+  mount();
+}, 0);

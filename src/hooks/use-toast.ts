@@ -153,10 +153,11 @@ export interface ToastAPI {
   dismiss: (toastId?: string) => void;
 }
 
-// Fix the toast function to properly implement the ToastAPI interface
+// Create a toast function that implements the ToastAPI interface
 type Toast = Omit<ToasterToast, "id">
 
-function toast(props: Toast): { id: string; dismiss: () => void; update: (props: ToasterToast) => void; } {
+// Define the toast function with the correct shape
+const toast = ((props: Toast) => {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -184,7 +185,7 @@ function toast(props: Toast): { id: string; dismiss: () => void; update: (props:
     dismiss,
     update,
   }
-}
+}) as ToastAPI
 
 // Add the dismiss method to the toast function to match ToastAPI
 toast.dismiss = (toastId?: string) => {
