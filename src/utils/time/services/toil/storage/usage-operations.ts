@@ -1,7 +1,7 @@
 
 import { TOILUsage } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
-import { TOIL_USAGE_KEY } from "./constants";
+import { TOIL_USAGE_KEY, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
 import { attemptStorageOperation, loadTOILUsage } from "./core";
 
 const logger = createTimeLogger('TOIL-Storage-UsageOperations');
@@ -25,7 +25,8 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
     // Store the updated usages array
     await attemptStorageOperation(
       () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsages)),
-      'storing TOIL usage'
+      STORAGE_RETRY_DELAY,
+      STORAGE_MAX_RETRIES
     );
     
     logger.debug(`TOIL usage successfully stored: ${usage.id}`);

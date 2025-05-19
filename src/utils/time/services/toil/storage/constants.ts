@@ -4,6 +4,8 @@ export const TOIL_RECORDS_KEY = 'toil_records';
 export const TOIL_USAGE_KEY = 'toil_usage';
 export const TOIL_SUMMARY_CACHE_KEY = 'toil_summary_cache';
 export const TOIL_THRESHOLDS_KEY = 'toil_thresholds';
+export const TOIL_PROCESSING_RECORDS_KEY = 'toil_processing_records';
+export const TOIL_MONTH_PROCESSING_STATE_KEY = 'toil_month_processing_state';
 
 // Operation constants
 export const STORAGE_RETRY_DELAY = 200;

@@ -12,6 +12,13 @@ import {
 
 const logger = createTimeLogger('TOILQueries');
 
+// Add the missing TOILDayInfo type
+export interface TOILDayInfo {
+  date: string;
+  hours: number;
+  status: 'active' | 'expired' | 'used';
+}
+
 /**
  * Get all TOIL records for a specific user
  */

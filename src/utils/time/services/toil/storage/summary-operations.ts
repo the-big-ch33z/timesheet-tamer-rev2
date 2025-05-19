@@ -3,6 +3,7 @@ import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { getSummaryCacheKey } from "./core";
 import { attemptStorageOperation } from "./core";
+import { STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
 
 const logger = createTimeLogger('TOIL-Storage-SummaryOperations');
 
@@ -25,7 +26,8 @@ export async function storeTOILSummary(summary: TOILSummary): Promise<TOILSummar
     // Store the summary in local storage
     await attemptStorageOperation(
       () => localStorage.setItem(cacheKey, JSON.stringify(summary)),
-      'storing TOIL summary'
+      STORAGE_RETRY_DELAY,
+      STORAGE_MAX_RETRIES
     );
     
     logger.debug(`TOIL summary successfully stored for ${summary.userId} - ${summary.monthYear}`);

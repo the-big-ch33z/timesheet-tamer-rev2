@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { useLogger } from '@/hooks/useLogger';
 import { toilService } from '@/utils/time/services/toil';
 import { UseTOILCalculatorProps, UseTOILCalculatorResult } from './types';
-import { useToilEntryChecker } from './useToilEntryChecker';
+import { useTOILEntryChecker } from './useTOILEntryChecker';
 
 /**
  * Hook to calculate TOIL for a specific day

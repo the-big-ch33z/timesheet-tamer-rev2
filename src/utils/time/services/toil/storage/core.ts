@@ -5,7 +5,9 @@ import { format } from 'date-fns';
 import { 
   TOIL_RECORDS_KEY, 
   TOIL_USAGE_KEY, 
-  TOIL_SUMMARY_CACHE_KEY 
+  TOIL_SUMMARY_CACHE_KEY,
+  STORAGE_RETRY_DELAY,
+  STORAGE_MAX_RETRIES
 } from './constants';
 
 const logger = createTimeLogger('TOILStorageCore');
@@ -32,8 +34,8 @@ export function safelyParseJSON<T>(jsonString: string | null, defaultValue: T): 
  */
 export async function attemptStorageOperation<T>(
   operation: () => Promise<T> | T, 
-  retryDelay = 200,
-  maxRetries = 3
+  retryDelay: number = STORAGE_RETRY_DELAY,
+  maxRetries: number = STORAGE_MAX_RETRIES
 ): Promise<T> {
   let retryCount = 0;
   
