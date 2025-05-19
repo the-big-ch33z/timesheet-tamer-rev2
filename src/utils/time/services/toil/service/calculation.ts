@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary
 } from "@/types/toil";
@@ -15,6 +16,7 @@ import { TOILServiceCore } from "./core";
 import { calculateTOILHours } from "../calculation";
 import { dispatchTOILEvent } from "../events";
 import { loadTOILRecords } from "../storage/core";
+import { queueTOILCalculation } from "../queue";
 
 const logger = createTimeLogger('TOILService-Calculation');
 

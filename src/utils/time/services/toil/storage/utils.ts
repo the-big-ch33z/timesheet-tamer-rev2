@@ -5,12 +5,20 @@
  */
 
 import { 
-  safelyParseJSON as _safelyParseJSON,
   attemptStorageOperation as _attemptStorageOperation
 } from './core';
 
 // Re-export for backward compatibility
-export const safelyParseJSON = _safelyParseJSON;
+export const safelyParseJSON = (json: string | null, defaultValue: any) => {
+  if (!json) return defaultValue;
+  try {
+    return JSON.parse(json);
+  } catch (error) {
+    console.error('Error parsing JSON:', error);
+    return defaultValue;
+  }
+};
+
 export const attemptStorageOperation = _attemptStorageOperation;
 
 // Export constants for backward compatibility

@@ -2,38 +2,26 @@
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { getSummaryCacheKey } from "./core";
-import { attemptStorageOperation } from "./core";
-import { STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
 
 const logger = createTimeLogger('TOIL-Storage-SummaryOperations');
 
 /**
- * Store a TOIL summary in local storage
+ * Store a TOIL summary in local storage cache
  * 
- * @param summary - The TOIL summary to store
- * @returns Promise that resolves to the stored summary if successful, null otherwise
+ * @param summary The TOIL summary to store
+ * @returns Promise that resolves to true if successful, false otherwise
  */
-export async function storeTOILSummary(summary: TOILSummary): Promise<TOILSummary | null> {
+export async function storeTOILSummary(summary: TOILSummary): Promise<boolean> {
   try {
-    if (!summary || !summary.userId || !summary.monthYear) {
-      logger.error('Invalid TOIL summary data provided');
-      return null;
-    }
+    const { userId, monthYear } = summary;
+    const cacheKey = getSummaryCacheKey(userId, monthYear);
     
-    // Create a cache key for this summary
-    const cacheKey = getSummaryCacheKey(summary.userId, summary.monthYear);
+    localStorage.setItem(cacheKey, JSON.stringify(summary));
     
-    // Store the summary in local storage
-    await attemptStorageOperation(
-      () => localStorage.setItem(cacheKey, JSON.stringify(summary)),
-      STORAGE_RETRY_DELAY,
-      STORAGE_MAX_RETRIES
-    );
-    
-    logger.debug(`TOIL summary successfully stored for ${summary.userId} - ${summary.monthYear}`);
-    return summary;
+    logger.debug(`TOIL summary successfully stored for ${userId} - ${monthYear}`);
+    return true;
   } catch (error) {
     logger.error(`Error storing TOIL summary: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    return false;
   }
 }

@@ -1,4 +1,5 @@
-import { TOILRecord, TOILSummary } from '@/types/toil';
+
+import { TOILRecord, TOILSummary, TOILUsage } from '@/types/toil';
 import { createTimeLogger } from '@/utils/time/errors';
 import { 
   TOIL_RECORDS_KEY, 
@@ -10,6 +11,19 @@ import {
 import { format } from 'date-fns';
 
 const logger = createTimeLogger('TOIL-Storage-Core');
+
+/**
+ * Safely parse JSON with error handling
+ */
+export function safelyParseJSON<T>(json: string | null, defaultValue: T): T {
+  if (!json) return defaultValue;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    logger.error('Error parsing JSON:', error);
+    return defaultValue;
+  }
+}
 
 /**
  * Load TOIL records from storage
@@ -29,6 +43,28 @@ export function loadTOILRecords(userId?: string): TOILRecord[] {
     return records;
   } catch (error) {
     logger.error('Error loading TOIL records:', error);
+    return [];
+  }
+}
+
+/**
+ * Load TOIL usage records from storage
+ */
+export function loadTOILUsage(userId?: string): TOILUsage[] {
+  try {
+    const usageJson = localStorage.getItem(TOIL_USAGE_KEY);
+    if (!usageJson) return [];
+    
+    const usage: TOILUsage[] = JSON.parse(usageJson);
+    
+    // Filter by userId if provided
+    if (userId) {
+      return usage.filter(record => record.userId === userId);
+    }
+    
+    return usage;
+  } catch (error) {
+    logger.error('Error loading TOIL usage:', error);
     return [];
   }
 }
@@ -104,6 +140,44 @@ export function filterRecordsByDate(records: TOILRecord[], date: Date): TOILReco
     const recordDateString = format(new Date(record.date), 'yyyy-MM-dd');
     return recordDateString === dateString;
   });
+}
+
+/**
+ * Clear summary cache for a user and month
+ */
+export function clearSummaryCache(userId?: string, monthYear?: string): void {
+  try {
+    if (userId && monthYear) {
+      // Clear specific cache
+      const key = getSummaryCacheKey(userId, monthYear);
+      localStorage.removeItem(key);
+      logger.debug(`Cleared TOIL summary cache for ${userId}, ${monthYear}`);
+      return;
+    }
+    
+    // Clear all summary caches if no specific one is requested
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
+        localStorage.removeItem(key);
+        logger.debug(`Cleared TOIL summary cache: ${key}`);
+      }
+    }
+  } catch (error) {
+    logger.error('Error clearing TOIL summary cache:', error);
+  }
+}
+
+/**
+ * Clear all TOIL-related caches
+ */
+export function clearAllTOILCaches(): void {
+  try {
+    clearSummaryCache();
+    logger.debug('Cleared all TOIL caches');
+  } catch (error) {
+    logger.error('Error clearing all TOIL caches:', error);
+  }
 }
 
 /**

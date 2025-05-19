@@ -1,4 +1,5 @@
 
+
 import { TOILUsage } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOIL_USAGE_KEY, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
@@ -36,3 +37,4 @@ export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
     return false;
   }
 }
+
