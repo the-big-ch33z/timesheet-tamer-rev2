@@ -14,7 +14,8 @@ export {
 
 // Re-export usage operations
 export {
-  storeTOILUsage 
+  storeTOILUsage,
+  cleanupDuplicateTOILUsage
 } from './usage-operations';
 
 // Re-export summary operations
@@ -23,7 +24,7 @@ export {
 } from './summary-operations';
 
 // Re-export query operations
+export type { TOILDayInfo } from './queries';
 export {
-  hasTOILForDay,
-  TOILDayInfo
+  hasTOILForDay
 } from './queries';

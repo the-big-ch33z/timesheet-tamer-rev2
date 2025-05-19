@@ -12,8 +12,11 @@ export {
   storeTOILUsage,
   storeTOILSummary,
   hasTOILForDay,
-  TOILDayInfo
+  cleanupDuplicateTOILUsage
 } from './record-management';
+
+// Re-export type definitions 
+export type { TOILDayInfo } from './queries';
 
 // Re-export constants
 export * from './constants';
@@ -26,7 +29,10 @@ export {
   loadTOILUsage,
   getSummaryCacheKey,
   clearSummaryCache,
-  clearAllTOILCaches
+  clearAllTOILCaches,
+  getTOILSummary,
+  filterRecordsByDate,
+  filterRecordsByEntryId
 } from './core';
 
 // Re-export cleanup functions

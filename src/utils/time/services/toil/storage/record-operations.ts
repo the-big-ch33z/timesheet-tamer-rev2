@@ -7,7 +7,7 @@ import {
   STORAGE_RETRY_DELAY,
   STORAGE_MAX_RETRIES
 } from './constants';
-import { attemptStorageOperation, loadTOILRecords, filterRecordsByEntryId } from './core';
+import { attemptStorageOperation, loadTOILRecords, filterRecordsByDate, filterRecordsByEntryId } from './core';
 import { format } from 'date-fns';
 
 const logger = createTimeLogger('TOIL-Storage');
@@ -18,7 +18,7 @@ const logger = createTimeLogger('TOIL-Storage');
  */
 export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
   try {
-    const records = await loadTOILRecords();
+    const records = loadTOILRecords();
     
     // Check for existing records with the same date and userId
     const dateKey = format(record.date, 'yyyy-MM-dd');
@@ -46,14 +46,15 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
     }
     
     // Save back to storage
-    return await attemptStorageOperation(
+    await attemptStorageOperation(
       () => {
         localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
-        return true;
       },
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
     );
+    
+    return true;
   } catch (error) {
     logger.error('Failed to store TOIL record:', error);
     return false;
@@ -65,7 +66,7 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
  */
 export async function deleteUserTOILRecords(userId: string): Promise<number> {
   try {
-    const allRecords = await loadTOILRecords();
+    const allRecords = loadTOILRecords();
     const filteredRecords = allRecords.filter(record => record.userId !== userId);
     const deletedCount = allRecords.length - filteredRecords.length;
     
@@ -74,7 +75,6 @@ export async function deleteUserTOILRecords(userId: string): Promise<number> {
       await attemptStorageOperation(
         () => {
           localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
-          return true;
         },
         STORAGE_RETRY_DELAY,
         STORAGE_MAX_RETRIES
@@ -95,7 +95,7 @@ export async function deleteUserTOILRecords(userId: string): Promise<number> {
  */
 export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
   try {
-    const allRecords = await loadTOILRecords();
+    const allRecords = loadTOILRecords();
     const filteredRecords = allRecords.filter(record => record.id !== recordId);
     
     // Check if a record was actually removed
@@ -108,7 +108,6 @@ export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
     await attemptStorageOperation(
       () => {
         localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
-        return true;
       },
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
@@ -128,7 +127,7 @@ export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
  */
 export async function deleteTOILRecordsByEntryId(entryId: string): Promise<number> {
   try {
-    const allRecords = await loadTOILRecords();
+    const allRecords = loadTOILRecords();
     
     // Find records with matching entry ID
     const recordsToDelete = filterRecordsByEntryId(allRecords, entryId);
@@ -145,7 +144,6 @@ export async function deleteTOILRecordsByEntryId(entryId: string): Promise<numbe
     await attemptStorageOperation(
       () => {
         localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
-        return true;
       },
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES

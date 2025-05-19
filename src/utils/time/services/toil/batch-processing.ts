@@ -4,7 +4,7 @@ import { Holiday } from "@/lib/holidays";
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { calculateDailyTOIL } from "./calculation/dailyTOIL";
-import { getTOILSummary } from "./storage";
+import { getTOILSummary } from "./storage/core";
 import { storeTOILSummary } from "./storage/summary-operations";
 import { dispatchTOILEvent } from "./events";
 

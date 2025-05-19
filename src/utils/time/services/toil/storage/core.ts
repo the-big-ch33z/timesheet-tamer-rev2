@@ -1,7 +1,8 @@
 
 import { TOILRecord, TOILSummary, TOILUsage } from "@/types/toil";
-import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_PREFIX } from "./constants";
+import { TOIL_RECORDS_KEY, TOIL_USAGE_KEY, TOIL_SUMMARY_PREFIX, TOIL_SUMMARY_CACHE_KEY } from "./constants";
 import { createTimeLogger } from "@/utils/time/errors";
+import { format } from "date-fns";
 
 const logger = createTimeLogger('TOIL-Storage-Core');
 
@@ -52,21 +53,37 @@ export async function attemptStorageOperation(
 /**
  * Load all TOIL records from storage
  * 
+ * @param userId Optional user ID to filter records
  * @returns Array of TOIL records
  */
-export function loadTOILRecords(): TOILRecord[] {
+export function loadTOILRecords(userId?: string): TOILRecord[] {
   const rawRecords = localStorage.getItem(TOIL_RECORDS_KEY);
-  return safelyParseJSON<TOILRecord[]>(rawRecords, []);
+  const allRecords = safelyParseJSON<TOILRecord[]>(rawRecords, []);
+  
+  // Filter by userId if provided
+  if (userId) {
+    return allRecords.filter(record => record.userId === userId);
+  }
+  
+  return allRecords;
 }
 
 /**
  * Load all TOIL usage records from storage
  * 
+ * @param userId Optional user ID to filter usage records
  * @returns Array of TOIL usage records
  */
-export function loadTOILUsage(): TOILUsage[] {
+export function loadTOILUsage(userId?: string): TOILUsage[] {
   const rawUsage = localStorage.getItem(TOIL_USAGE_KEY);
-  return safelyParseJSON<TOILUsage[]>(rawUsage, []);
+  const allUsage = safelyParseJSON<TOILUsage[]>(rawUsage, []);
+  
+  // Filter by userId if provided
+  if (userId) {
+    return allUsage.filter(usage => usage.userId === userId);
+  }
+  
+  return allUsage;
 }
 
 /**
@@ -83,13 +100,25 @@ export function getSummaryCacheKey(userId: string, monthYear: string): string {
 /**
  * Clear the TOIL summary cache for a specific user and month
  * 
- * @param userId User ID
- * @param monthYear Month-year string (YYYY-MM)
+ * @param userId User ID (optional)
+ * @param monthYear Month-year string (YYYY-MM) (optional) 
  */
-export function clearSummaryCache(userId: string, monthYear: string): void {
-  const cacheKey = getSummaryCacheKey(userId, monthYear);
-  localStorage.removeItem(cacheKey);
-  logger.debug(`Cleared TOIL summary cache for ${userId} - ${monthYear}`);
+export function clearSummaryCache(userId?: string, monthYear?: string): void {
+  if (userId && monthYear) {
+    // Clear specific user and month
+    const cacheKey = getSummaryCacheKey(userId, monthYear);
+    localStorage.removeItem(cacheKey);
+    logger.debug(`Cleared TOIL summary cache for ${userId} - ${monthYear}`);
+  } else {
+    // Clear all summary caches
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(TOIL_SUMMARY_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    }
+    logger.debug(`Cleared all TOIL summary caches`);
+  }
 }
 
 /**
@@ -111,4 +140,62 @@ export function clearAllTOILCaches(): void {
   keysToRemove.forEach(key => localStorage.removeItem(key));
   
   logger.debug(`Cleared ${keysToRemove.length} TOIL summary caches`);
+}
+
+/**
+ * Filter records by date
+ */
+export function filterRecordsByDate(records: TOILRecord[], date: Date): TOILRecord[] {
+  const dateStr = format(date, 'yyyy-MM-dd');
+  return records.filter(record => {
+    const recordDate = new Date(record.date);
+    return format(recordDate, 'yyyy-MM-dd') === dateStr;
+  });
+}
+
+/**
+ * Filter records by entry ID
+ */
+export function filterRecordsByEntryId(records: TOILRecord[], entryId: string): TOILRecord[] {
+  return records.filter(record => record.entryId === entryId);
+}
+
+/**
+ * Get TOIL summary for a user and month
+ */
+export function getTOILSummary(userId: string, monthYear: string): TOILSummary {
+  try {
+    const cacheKey = getSummaryCacheKey(userId, monthYear);
+    const cachedSummary = localStorage.getItem(cacheKey);
+    
+    if (cachedSummary) {
+      return safelyParseJSON<TOILSummary>(cachedSummary, {
+        userId,
+        monthYear,
+        accrued: 0,
+        used: 0,
+        remaining: 0
+      });
+    }
+    
+    // No cached summary found, return default
+    return {
+      userId,
+      monthYear,
+      accrued: 0,
+      used: 0,
+      remaining: 0
+    };
+  } catch (error) {
+    logger.error(`Error getting TOIL summary: ${error instanceof Error ? error.message : String(error)}`);
+    
+    // Return a default summary on error
+    return {
+      userId,
+      monthYear,
+      accrued: 0,
+      used: 0,
+      remaining: 0
+    };
+  }
 }
