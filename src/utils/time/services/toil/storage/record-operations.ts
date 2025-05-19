@@ -1,136 +1,126 @@
 
-import { TOILRecord } from "@/types/toil";
-import { createTimeLogger } from "@/utils/time/errors";
-import { TOIL_RECORDS_KEY } from "./constants";
-import { attemptStorageOperation, loadTOILRecords } from "./core";
+import { v4 as uuidv4 } from 'uuid';
+import { TOILRecord } from '@/types/toil';
+import { createTimeLogger } from '@/utils/time/errors';
+import { 
+  TOIL_RECORDS_KEY,
+  STORAGE_RETRY_DELAY,
+  STORAGE_MAX_RETRIES
+} from './constants';
+import { attemptStorageOperation, loadTOILRecords, filterRecordsByEntryId } from './core';
 
-const logger = createTimeLogger('TOIL-Storage-RecordOperations');
+const logger = createTimeLogger('TOIL-Storage');
 
 /**
  * Store a TOIL record in local storage
- * 
- * @param record - The TOIL record to store
- * @returns Promise that resolves to true if successful, false otherwise
  */
 export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
   try {
-    const records = loadTOILRecords();
+    const records = await loadTOILRecords();
     
-    // Remove any existing records with the same ID (update case)
-    const filteredRecords = records.filter(r => r.id !== record.id);
+    // Add the new record
+    records.push(record);
     
-    // Add the new/updated record
-    filteredRecords.push(record);
-    
-    // Store the updated records array
-    await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
-      'storing TOIL record'
+    // Save back to storage
+    return await attemptStorageOperation(
+      () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records)),
+      STORAGE_RETRY_DELAY,
+      STORAGE_MAX_RETRIES
     );
-    
-    logger.debug(`TOIL record successfully stored: ${record.id}`);
-    return true;
   } catch (error) {
-    logger.error(`Error storing TOIL record: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error('Failed to store TOIL record:', error);
     return false;
   }
 }
 
 /**
  * Delete all TOIL records for a specific user
- * 
- * @param userId - The user ID to delete records for
- * @returns Promise that resolves to true if successful, false otherwise
  */
-export async function deleteUserTOILRecords(userId: string): Promise<boolean> {
+export async function deleteUserTOILRecords(userId: string): Promise<number> {
   try {
-    const records = loadTOILRecords();
+    const allRecords = await loadTOILRecords();
+    const filteredRecords = allRecords.filter(record => record.userId !== userId);
+    const deletedCount = allRecords.length - filteredRecords.length;
     
-    // Filter out records for the specified user
-    const filteredRecords = records.filter(r => r.userId !== userId);
-    
-    // Check if any records were removed
-    if (filteredRecords.length === records.length) {
-      logger.debug(`No TOIL records found for user ${userId}`);
-      return true;
+    // Save back to storage if records were actually removed
+    if (deletedCount > 0) {
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      
+      logger.debug(`Deleted ${deletedCount} TOIL records for user ${userId}`);
     }
     
-    // Store the filtered records
-    await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
-      `deleting TOIL records for user ${userId}`
-    );
-    
-    logger.debug(`TOIL records for user ${userId} successfully deleted`);
-    return true;
+    return deletedCount;
   } catch (error) {
-    logger.error(`Error deleting TOIL records for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
-    return false;
+    logger.error('Failed to delete user TOIL records:', error);
+    return 0;
   }
 }
 
 /**
  * Delete a specific TOIL record by ID
- * 
- * @param recordId - The ID of the record to delete
- * @returns Promise that resolves to true if successful, false otherwise
  */
 export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
   try {
-    const records = loadTOILRecords();
+    const allRecords = await loadTOILRecords();
+    const filteredRecords = allRecords.filter(record => record.id !== recordId);
     
-    // Filter out the specified record
-    const filteredRecords = records.filter(r => r.id !== recordId);
-    
-    // Check if any record was removed
-    if (filteredRecords.length === records.length) {
+    // Check if a record was actually removed
+    if (filteredRecords.length === allRecords.length) {
       logger.debug(`No TOIL record found with ID ${recordId}`);
       return false;
     }
     
-    // Store the filtered records
+    // Save back to storage
     await attemptStorageOperation(
       () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
-      `deleting TOIL record ${recordId}`
+      STORAGE_RETRY_DELAY,
+      STORAGE_MAX_RETRIES
     );
     
-    logger.debug(`TOIL record ${recordId} successfully deleted`);
+    logger.debug(`Deleted TOIL record with ID ${recordId}`);
     return true;
   } catch (error) {
-    logger.error(`Error deleting TOIL record ${recordId}: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error('Failed to delete TOIL record by ID:', error);
     return false;
   }
 }
 
 /**
- * Delete TOIL records associated with a specific time entry
- * 
- * @param entryId - The time entry ID
- * @returns Promise that resolves to true if successful, false otherwise
+ * Delete all TOIL records associated with a specific time entry
+ * This is important for cleanup when a time entry is deleted
  */
-export async function deleteTOILRecordsByEntryId(entryId: string): Promise<boolean> {
+export async function deleteTOILRecordsByEntryId(entryId: string): Promise<number> {
   try {
-    const records = loadTOILRecords();
+    const allRecords = await loadTOILRecords();
     
-    // Filter out records associated with the specified entry
-    const filteredRecords = records.filter(r => r.entryId !== entryId);
+    // Find records with matching entry ID
+    const recordsToDelete = filterRecordsByEntryId(allRecords, entryId);
     
-    // Check if any records were removed
-    if (filteredRecords.length === records.length) {
-      logger.debug(`No TOIL records found for entry ${entryId}`);
-      return true;
+    if (recordsToDelete.length === 0) {
+      logger.debug(`No TOIL records found for entry ID ${entryId}`);
+      return 0;
     }
     
-    // Store the filtered records
+    // Filter out the records with this entry ID
+    const filteredRecords = allRecords.filter(record => record.entryId !== entryId);
+    
+    // Save back to storage
     await attemptStorageOperation(
       () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
-      `deleting TOIL records for entry ${entryId}`
+      STORAGE_RETRY_DELAY,
+      STORAGE_MAX_RETRIES
     );
     
-    logger.debug(`TOIL records for entry ${entryId} successfully deleted`);
-    return true;
+    const deletedCount = allRecords.length - filteredRecords.length;
+    logger.debug(`Deleted ${deletedCount} TOIL records for entry ID ${entryId}`);
+    
+    return deletedCount;
   } catch (error) {
-    logger.error(`Error deleting TOIL records for entry ${entryId}: ${error instanceof Error ? error.message : String(error)}`);
-    return false;
+    logger.error(`Failed to delete TOIL records for entry ID ${entryId}:`, error);
+    return 0;
   }
 }

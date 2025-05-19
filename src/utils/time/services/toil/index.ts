@@ -8,6 +8,7 @@ import { TOILService, toilService } from './service/main';
 import { clearSummaryCache } from './storage';
 import { createTimeLogger } from '@/utils/time/errors';
 import { format } from 'date-fns';
+import { initializeTOILEntryEventHandlers } from './entryEventHandler';
 
 const logger = createTimeLogger('TOIL-Service');
 
@@ -15,6 +16,12 @@ const logger = createTimeLogger('TOIL-Service');
 try {
   toilService.initialize();
   logger.debug('TOIL service initialized on import');
+  
+  // Initialize TOIL entry event handlers
+  if (typeof window !== 'undefined') {
+    initializeTOILEntryEventHandlers();
+    logger.debug('TOIL entry event handlers initialized');
+  }
 } catch (e) {
   logger.error('Failed to initialize TOIL service:', e);
 }
@@ -26,6 +33,7 @@ export * from './storage';
 export * from './events';
 export * from './service/main';
 export * from './service/core';
+export * from './entryEventHandler';  // Export the new event handler
 
 // Re-export the toilService singleton instance directly
 export { toilService };
@@ -91,4 +99,4 @@ export function getDebugInfo() {
 }
 
 // Module initialization marker
-logger.debug('TOIL service module initialized');
+logger.debug('TOIL service module initialized with entry event handlers');
