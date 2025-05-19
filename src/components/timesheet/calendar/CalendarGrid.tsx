@@ -156,7 +156,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         shiftReason,
         isLeaveDay: hasLeaveEntry,
         isSickDay: hasSickEntry,
-        isToilDay: hasToilEntry || toilInfo.hasUsed, // Use the property from toilInfo
+        isToilDay: hasToilEntry || toilInfo.hasUsed,
         hasTOILAccrued: toilInfo.hasAccrued,
         hasTOILUsed: toilInfo.hasUsed,
         toilHours: toilInfo.toilHours

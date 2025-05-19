@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from '@/utils/time/errors';
 import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
@@ -122,15 +121,9 @@ export function loadTOILUsage(filterUserId?: string): TOILUsage[] {
 }
 
 /**
- * Filter records by entryId
- * @param records Array of records to filter
- * @param entryId Entry ID to filter by
- * @returns Filtered array of records
+ * Filter records by entry ID
  */
-export function filterRecordsByEntryId<T extends { entryId?: string }>(
-  records: T[], 
-  entryId: string
-): T[] {
+export function filterRecordsByEntryId(records: TOILRecord[], entryId: string): TOILRecord[] {
   return records.filter(record => record.entryId === entryId);
 }
 

@@ -15,3 +15,9 @@ export const useToilEntryChecker = (): UseTOILEntryCheckerResult => {
 
   return { isToilEntry };
 };
+
+/**
+ * Hook to check if an entry is a TOIL usage entry
+ * @deprecated Use useToilEntryChecker instead
+ */
+export const useTOILEntryChecker = useToilEntryChecker;

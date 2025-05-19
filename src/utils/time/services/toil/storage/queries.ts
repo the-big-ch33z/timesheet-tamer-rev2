@@ -1,4 +1,3 @@
-
 import { TOILRecord, TOILSummary } from '@/types/toil';
 import { createTimeLogger } from '@/utils/time/errors';
 import { format } from 'date-fns';
@@ -12,11 +11,11 @@ import {
 
 const logger = createTimeLogger('TOILQueries');
 
-// Add the missing TOILDayInfo type
+// Add the missing TOILDayInfo type with the correct properties used in CalendarGrid
 export interface TOILDayInfo {
-  date: string;
-  hours: number;
-  status: 'active' | 'expired' | 'used';
+  hasAccrued: boolean;
+  hasUsed: boolean;
+  toilHours: number;
 }
 
 /**
@@ -111,14 +110,33 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
 /**
  * Check if a user has TOIL records for a specific day
  */
-export function hasTOILForDay(userId: string, date: Date): boolean {
+export function hasTOILForDay(userId: string, date: Date): TOILDayInfo {
   try {
     const records = getUserTOILRecords(userId);
     const dayRecords = filterRecordsByDate(records, date);
-    return dayRecords.length > 0;
+    
+    // Get usage records to check for TOIL usage
+    const usageJson = localStorage.getItem('toil_usage');
+    const allUsage = usageJson ? JSON.parse(usageJson) : [];
+    const userUsage = allUsage.filter((usage: any) => usage.userId === userId);
+    const dayUsage = filterRecordsByDate(userUsage, date);
+    
+    // Calculate total TOIL hours for this day (both accrued and used)
+    const accruedHours = dayRecords.reduce((sum, record) => sum + record.hours, 0);
+    const usedHours = dayUsage.reduce((sum: number, usage: any) => sum + usage.hours, 0);
+    
+    return {
+      hasAccrued: dayRecords.length > 0,
+      hasUsed: dayUsage.length > 0,
+      toilHours: accruedHours - usedHours
+    };
   } catch (error) {
     logger.error('Error checking for TOIL on day:', error);
-    return false;
+    return {
+      hasAccrued: false,
+      hasUsed: false,
+      toilHours: 0
+    };
   }
 }
 
