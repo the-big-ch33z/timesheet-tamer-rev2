@@ -46,6 +46,20 @@ export const useTOILCalculations = ({
   // Get the current month-year string
   const currentMonthYear = format(date, 'yyyy-MM');
   
+  // Log schedule information when it changes for debugging
+  useEffect(() => {
+    if (workSchedule) {
+      logger.debug(`Using work schedule for TOIL calculation:`, {
+        name: workSchedule.name,
+        id: workSchedule.id,
+        isDefault: workSchedule.isDefault,
+        weekPattern: workSchedule.weekPattern
+      });
+    } else {
+      logger.warn(`No work schedule provided for user ${userId} - TOIL calculation may be incorrect`);
+    }
+  }, [workSchedule, userId, logger]);
+  
   // Clear caches when month changes
   useEffect(() => {
     logger.debug(`Month changed to ${currentMonthYear}, clearing TOIL cache`);
@@ -89,7 +103,7 @@ export const useTOILCalculations = ({
       logger.debug(`calculateToilForDay called for date ${format(date, 'yyyy-MM-dd')}`);
       
       // Return early if missing required data or component unmounted
-      if (!userId || !date || !workSchedule || !isMountedRef.current) {
+      if (!userId || !date || !isMountedRef.current) {
         logger.debug('Missing required data for TOIL calculation or component unmounted', {
           hasUserId: !!userId,
           hasDate: !!date,
@@ -102,6 +116,14 @@ export const useTOILCalculations = ({
         }
         
         return null;
+      }
+      
+      // Check for missing work schedule - this is critical
+      if (!workSchedule) {
+        logger.warn(`Missing work schedule for user ${userId} - TOIL calculation will use default schedule`);
+        // Continue with calculation - the toilService will use default schedule
+      } else {
+        logger.debug(`Using schedule "${workSchedule.name}" (${workSchedule.id}) for TOIL calculation`);
       }
       
       // Return early if no entries

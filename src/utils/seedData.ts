@@ -100,6 +100,11 @@ export const migrateUserSchedulesFormat = () => {
       console.log('Migrating user schedules from nested format to flat format');
       localStorage.setItem('timesheet-app-user-schedules', JSON.stringify(migratedData));
       console.log('User schedules migration complete');
+      
+      // After migration, trigger a storage validation event to ensure other components are aware
+      window.dispatchEvent(new CustomEvent('storage-migrated', { 
+        detail: { type: 'user-schedules' }
+      }));
     }
   } catch (error) {
     console.error('Error migrating user schedules format:', error);
@@ -114,11 +119,65 @@ export const validateStorageFormat = () => {
     // Run the user schedules migration
     migrateUserSchedulesFormat();
     
+    // Verify work schedule assignments format
+    const workSchedulesJson = localStorage.getItem('timesheet-app-schedules');
+    if (workSchedulesJson) {
+      try {
+        const schedules = JSON.parse(workSchedulesJson);
+        console.log(`Found ${schedules.length} work schedules in storage`);
+        
+        // Log the first schedule for debugging
+        if (schedules.length > 0) {
+          console.log('Sample schedule available:', schedules[0].name);
+        }
+      } catch (e) {
+        console.error('Invalid work schedules format in localStorage:', e);
+      }
+    } else {
+      console.log('No work schedules found in localStorage');
+    }
+    
     // Could add more validation for other storage keys here
     
     return true;
   } catch (error) {
     console.error('Error validating storage format:', error);
     return false;
+  }
+};
+
+// Add a debug function to log all user-schedule associations
+export const logUserScheduleAssociations = () => {
+  try {
+    console.group('User Schedule Associations:');
+    
+    // Get users
+    const usersJson = localStorage.getItem('users');
+    const users = usersJson ? JSON.parse(usersJson) : [];
+    
+    // Get user schedules
+    const userSchedulesJson = localStorage.getItem('timesheet-app-user-schedules');
+    const userSchedules = userSchedulesJson ? JSON.parse(userSchedulesJson) : {};
+    
+    // Get schedules
+    const schedulesJson = localStorage.getItem('timesheet-app-schedules');
+    const schedules = schedulesJson ? JSON.parse(schedulesJson) : [];
+    
+    // Map scheduleIds to names for easier reading
+    const scheduleMap = schedules.reduce((acc: Record<string, string>, s: any) => {
+      acc[s.id] = s.name || 'Unnamed schedule';
+      return acc;
+    }, {});
+    
+    // Log each user and their associated schedule
+    users.forEach((user: any) => {
+      const scheduleId = userSchedules[user.id] || user.workScheduleId || 'default';
+      const scheduleName = scheduleMap[scheduleId] || 'Default schedule';
+      console.log(`User: ${user.name} (${user.id}) → Schedule: ${scheduleName} (${scheduleId})`);
+    });
+    
+    console.groupEnd();
+  } catch (error) {
+    console.error('Error logging user-schedule associations:', error);
   }
 };

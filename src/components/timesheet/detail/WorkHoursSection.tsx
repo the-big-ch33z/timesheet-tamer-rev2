@@ -37,7 +37,29 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 }) => {
   const { getDayEntries } = useTimeEntryContext();
   const userContext = useUserTimesheetContext();
+  
+  // Log the schedule assignment for debugging
+  useEffect(() => {
+    logger.debug("WorkHoursSection mounted with user context and props:", {
+      propWorkSchedule: workSchedule ? `${workSchedule.name}(${workSchedule.id})` : 'none',
+      contextWorkSchedule: userContext.workSchedule ? `${userContext.workSchedule.name}(${userContext.workSchedule.id})` : 'none',
+      date: format(date, 'yyyy-MM-dd'),
+      userId
+    });
+  }, [workSchedule, userContext.workSchedule, date, userId]);
+
+  // Use the schedule from props first, then fall back to the context
   const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
+  
+  // If we still don't have a schedule, log a warning
+  useEffect(() => {
+    if (!effectiveWorkSchedule) {
+      logger.warn(`No work schedule available for user ${userId} - TOIL calculations may be incorrect`);
+    } else {
+      logger.debug(`Using effective work schedule: ${effectiveWorkSchedule.name || 'unnamed'} (${effectiveWorkSchedule.id})`);
+    }
+  }, [effectiveWorkSchedule, userId]);
+
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showEntryForm, setShowEntryForm] = useState(false);
   

@@ -36,6 +36,15 @@ export const useTimesheetContext = () => {
   // Get the user's work schedule
   const userWorkSchedule = viewedUser ? getUserSchedule(viewedUser.id) : undefined;
   
+  // Log the work schedule assignment
+  if (viewedUser) {
+    if (userWorkSchedule) {
+      logger.debug(`Work schedule for ${viewedUser.name}: ${userWorkSchedule.name} (${userWorkSchedule.id})`);
+    } else {
+      logger.warn(`No work schedule found for user ${viewedUser.id}`);
+    }
+  }
+  
   // Check permission to view this timesheet
   const canViewTimesheet = !isViewingOtherUser || isAdmin() || isManager();
 
