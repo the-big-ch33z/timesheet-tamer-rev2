@@ -1,64 +1,56 @@
 
-import { format } from "date-fns";
-import { createTimeLogger } from "@/utils/time/errors";
-import { loadTOILRecords, loadTOILUsage } from "./core";
-
-const logger = createTimeLogger('TOIL-Storage-Queries');
+import { format } from 'date-fns';
+import { loadTOILRecords, loadTOILUsage } from './core';
 
 /**
- * Information about TOIL status for a specific day
+ * Interface for day-specific TOIL information
  */
 export interface TOILDayInfo {
-  hasToil: boolean;
-  hasAccrued: boolean;
-  hasUsed: boolean;
-  toilHours: number;
+  hasToil: boolean;   // Whether the day has any TOIL (either accrued or used)
+  hasAccrued: boolean; // Whether TOIL was accrued on this day
+  hasUsed: boolean;   // Whether TOIL was used on this day
+  toilHours: number;  // Net TOIL hours for this day
 }
 
 /**
- * Check if there is TOIL for a specific day
- * 
- * @param userId User ID
+ * Check if a user has TOIL records for a specific day
+ * @param userId User ID to check
  * @param date Date to check
- * @returns TOILDayInfo with details about TOIL for the day
+ * @returns TOILDayInfo with information about TOIL for the day
  */
 export function hasTOILForDay(userId: string, date: Date): TOILDayInfo {
   try {
-    const dayString = format(date, 'yyyy-MM-dd');
-    logger.debug(`Checking TOIL for ${userId} on ${dayString}`);
+    const dateKey = format(date, 'yyyy-MM-dd');
     
-    // Check for TOIL accrual records
+    // Load TOIL records
     const records = loadTOILRecords(userId);
-    const dayRecords = records.filter(record => {
-      const recordDate = new Date(record.date);
-      return format(recordDate, 'yyyy-MM-dd') === dayString;
-    });
+    const accrualRecords = records.filter(record => 
+      format(new Date(record.date), 'yyyy-MM-dd') === dateKey
+    );
     
-    // Check for TOIL usage records
+    // Load TOIL usage
     const usageRecords = loadTOILUsage(userId);
-    const dayUsage = usageRecords.filter(usage => {
-      const usageDate = new Date(usage.date);
-      return format(usageDate, 'yyyy-MM-dd') === dayString;
-    });
+    const usageForDay = usageRecords.filter(usage => 
+      format(new Date(usage.date), 'yyyy-MM-dd') === dateKey
+    );
     
-    // Calculate total TOIL hours for the day
-    const accrualHours = dayRecords.reduce((sum, record) => sum + record.hours, 0);
-    const usageHours = dayUsage.reduce((sum, usage) => sum + usage.hours, 0);
-    const netHours = accrualHours - usageHours;
+    // Calculate hours based on records
+    const accrued = accrualRecords.reduce((sum, record) => sum + record.hours, 0);
+    const used = usageForDay.reduce((sum, usage) => sum + usage.hours, 0);
     
     return {
-      hasToil: dayRecords.length > 0 || dayUsage.length > 0,
-      hasAccrued: dayRecords.length > 0 && accrualHours > 0,
-      hasUsed: dayUsage.length > 0 && usageHours > 0,
-      toilHours: netHours
+      hasToil: accrualRecords.length > 0 || usageForDay.length > 0,
+      hasAccrued: accrualRecords.length > 0,
+      hasUsed: usageForDay.length > 0,
+      toilHours: accrued - used
     };
   } catch (error) {
-    logger.error(`Error checking TOIL for day: ${error instanceof Error ? error.message : String(error)}`);
-    return {
+    console.error('Error checking TOIL for day:', error);
+    return { 
       hasToil: false,
-      hasAccrued: false,
-      hasUsed: false,
-      toilHours: 0
+      hasAccrued: false, 
+      hasUsed: false, 
+      toilHours: 0 
     };
   }
 }

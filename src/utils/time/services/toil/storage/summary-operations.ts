@@ -1,27 +1,31 @@
 
 import { TOILSummary } from "@/types/toil";
-import { createTimeLogger } from "@/utils/time/errors";
 import { getSummaryCacheKey } from "./core";
+import { createTimeLogger } from "@/utils/time/errors";
 
-const logger = createTimeLogger('TOIL-Storage-SummaryOperations');
+const logger = createTimeLogger('TOIL-Summary-Operations');
 
 /**
- * Store a TOIL summary in local storage cache
- * 
+ * Store TOIL summary for a specific user and month
  * @param summary The TOIL summary to store
- * @returns Promise that resolves to the stored summary if successful, null otherwise
+ * @returns The stored summary
  */
-export async function storeTOILSummary(summary: TOILSummary): Promise<TOILSummary | null> {
+export function storeTOILSummary(summary: TOILSummary): TOILSummary {
   try {
-    const { userId, monthYear } = summary;
-    const cacheKey = getSummaryCacheKey(userId, monthYear);
+    if (!summary || !summary.userId || !summary.monthYear) {
+      logger.error("Invalid TOIL summary provided", summary);
+      throw new Error("Invalid TOIL summary");
+    }
     
+    const cacheKey = getSummaryCacheKey(summary.userId, summary.monthYear);
     localStorage.setItem(cacheKey, JSON.stringify(summary));
     
-    logger.debug(`TOIL summary successfully stored for ${userId} - ${monthYear}`);
+    logger.debug(`Stored TOIL summary for ${summary.userId} in ${summary.monthYear}:`, 
+      { accrued: summary.accrued, used: summary.used, remaining: summary.remaining });
+    
     return summary;
   } catch (error) {
-    logger.error(`Error storing TOIL summary: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    logger.error("Error storing TOIL summary:", error);
+    throw error;
   }
 }

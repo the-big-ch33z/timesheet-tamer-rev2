@@ -1,4 +1,3 @@
-
 import React, { useMemo, memo } from "react";
 import { 
   startOfMonth, 
@@ -119,8 +118,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       // Add logging for TOIL check
       console.log(`[CalendarGrid] Checking TOIL for day: ${format(day, 'yyyy-MM-dd')}`);
       
-      // Check for TOIL records for this day
+      // Initialize with default values that match TOILDayInfo interface
       let toilInfo: TOILDayInfo = {
+        hasToil: false,
         hasAccrued: false,
         hasUsed: false,
         toilHours: 0
