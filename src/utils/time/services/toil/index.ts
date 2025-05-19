@@ -7,6 +7,7 @@
 import { TOILService, toilService } from './service/main';
 import { clearSummaryCache } from './storage';
 import { createTimeLogger } from '@/utils/time/errors';
+import { format } from 'date-fns';
 
 const logger = createTimeLogger('TOIL-Service');
 
@@ -29,17 +30,40 @@ export * from './service/core';
 // Re-export the toilService singleton instance directly
 export { toilService };
 
-// Add a more aggressive cache clearing function
-export function clearCache() {
+// Track the last time we cleared the cache to prevent excessive clearing
+let lastCacheClearTime = 0;
+const CACHE_CLEAR_THROTTLE = 5000; // 5 seconds
+
+/**
+ * Add a more selective cache clearing function
+ * Avoid clearing caches too frequently or when not needed
+ */
+export function clearCache(userId?: string, monthYear?: string) {
   try {
-    logger.debug('Aggressive cache clearing requested');
-    // Clear cache in local storage
-    clearSummaryCache();
+    const now = Date.now();
+    
+    // Throttle cache clearing operations
+    if (now - lastCacheClearTime < CACHE_CLEAR_THROTTLE) {
+      logger.debug('Cache clearing throttled - ignoring request');
+      return false;
+    }
+    
+    lastCacheClearTime = now;
+    
+    if (userId && monthYear) {
+      // Selective cache clearing - only clear for specified user and month
+      logger.debug(`Selective cache clearing for user ${userId}, month ${monthYear}`);
+      clearSummaryCache(userId, monthYear);
+    } else {
+      // Broader but still controlled cache clearing
+      logger.debug('Broader cache clearing requested');
+      clearSummaryCache();
+    }
     
     // Also invalidate any in-memory caches
     toilService.clearCache();
     
-    logger.debug('All TOIL caches cleared');
+    logger.debug('TOIL caches cleared');
     return true;
   } catch (e) {
     logger.error('Error clearing TOIL caches:', e);
@@ -47,15 +71,24 @@ export function clearCache() {
   }
 }
 
+/**
+ * Clear cache only for a specific time period
+ * Used for more targeted cache invalidation
+ */
+export function clearCacheForCurrentMonth(userId: string, date: Date) {
+  const monthYear = format(date, 'yyyy-MM');
+  return clearCache(userId, monthYear);
+}
+
 // Add debug utilities
 export function getDebugInfo() {
   return {
     serviceInitialized: toilService.isInitialized(),
     queueLength: toilService.getQueueLength(),
-    isQueueProcessing: toilService.isQueueProcessing()
+    isQueueProcessing: toilService.isQueueProcessing(),
+    lastCacheClear: new Date(lastCacheClearTime).toISOString()
   };
 }
 
 // Module initialization marker
 logger.debug('TOIL service module initialized');
-

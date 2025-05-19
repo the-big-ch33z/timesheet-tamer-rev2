@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
 import MonthSummary from "./MonthSummary";
@@ -9,9 +9,10 @@ import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useToast } from "@/hooks/use-toast";
 import { TOILEventProvider } from "@/utils/time/events/toil";
-import { toilService, clearCache } from "@/utils/time/services/toil";
+import { clearCacheForCurrentMonth } from "@/utils/time/services/toil";
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
+import { useDebounce } from "@/hooks/useDebounce";
 
 // Create a logger for this component
 const logger = createTimeLogger('MonthlyHours');
@@ -41,16 +42,24 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   const [refreshCount, setRefreshCount] = useState(0);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
 
-  const monthName = format(currentMonth, 'MMMM yyyy');
-  const monthYear = format(currentMonth, 'yyyy-MM');
+  // Memoize these values to prevent unnecessary renders
+  const monthName = useMemo(() => format(currentMonth, 'MMMM yyyy'), [currentMonth]);
+  const monthYear = useMemo(() => format(currentMonth, 'yyyy-MM'), [currentMonth]);
   
   // Handle TOIL errors from the card component
-  const handleTOILError = (error: string) => {
+  const handleTOILError = useCallback((error: string) => {
     logger.error(`TOIL error from summary card: ${error}`);
     setErrorMessage(error);
-  };
+  }, []);
   
-  // Handle refresh request from the card - now with debounce protection
+  // Create debounced refresh function
+  const debouncedRefresh = useDebounce(() => {
+    logger.debug('Executing debounced refresh');
+    refreshSummary();
+    setRefreshCount(prev => prev + 1);
+  }, 2000);
+  
+  // Handle refresh request from the card - with debounce protection
   const handleRefreshRequest = useCallback(() => {
     const now = Date.now();
     // Debounce refresh requests to prevent infinite loops - only allow refresh every 2 seconds
@@ -61,17 +70,16 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     
     logger.debug('Refresh requested from TOILSummaryCard');
     setLastRefreshTime(now);
-    clearCache();
-    refreshSummary();
-    setRefreshCount(prev => prev + 1);
+    clearCacheForCurrentMonth(user.id, currentMonth);
+    debouncedRefresh();
     
     // Broadcast a global refresh event - with debounce option
     eventBus.publish(TOIL_EVENTS.REFRESH_REQUESTED, {
       userId: user.id,
       monthYear,
       timestamp: new Date()
-    }, { debounce: 1000 }); // Use debounce to prevent event storms
-  }, [refreshSummary, user.id, monthYear, lastRefreshTime]);
+    }, { debounce: 5000 }); // Use debounce to prevent event storms
+  }, [debouncedRefresh, user.id, monthYear, lastRefreshTime, currentMonth]);
   
   // Add logging to help debug the TOIL summary
   useEffect(() => {
@@ -109,49 +117,19 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     logger.debug(`MonthlyHours component mounted or month changed, refreshing summary for ${user.id}`);
     
     // Clear cache and refresh summary once on mount/change
-    clearCache();
+    clearCacheForCurrentMonth(user.id, currentMonth);
     refreshSummary();
     
-    // Set up a much less frequent interval to periodically refresh the summary
-    // Increased from 15 seconds to 60 seconds to reduce update frequency
+    // Set up a less frequent refresh interval
     const refreshInterval = setInterval(() => {
       logger.debug('Periodic refresh of TOIL summary');
       refreshSummary();
-    }, 60000); // Refresh every 60 seconds instead of 15
+    }, 120000); // Refresh every 2 minutes instead of 60 seconds
     
     return () => {
       clearInterval(refreshInterval);
     };
   }, [refreshSummary, user.id, currentMonth]);
-
-  // Subscribe to TOIL events with circuit breaker protection
-  useEffect(() => {
-    let eventCount = 0;
-    const resetTime = Date.now();
-    
-    const subscription = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
-      const now = Date.now();
-      // Reset counter after 10 seconds
-      if (now - resetTime > 10000) {
-        eventCount = 0;
-      }
-      
-      // Circuit breaker - only allow 5 events within 10 seconds
-      if (eventCount < 5) {
-        eventCount++;
-        logger.debug(`Received TOIL.UPDATED event (${eventCount}/5), refreshing summary`);
-        refreshSummary();
-      } else {
-        logger.warn('Too many TOIL update events, circuit breaker engaged');
-      }
-    });
-    
-    return () => {
-      if (typeof subscription === 'function') {
-        subscription();
-      }
-    };
-  }, [refreshSummary]);
 
   return (
     <TOILEventProvider>
@@ -180,7 +158,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
               <div>Failed to load TOIL summary: {toilError}</div>
               <button 
                 onClick={() => {
-                  clearCache();
+                  clearCacheForCurrentMonth(user.id, currentMonth);
                   refreshSummary();
                 }} 
                 className="ml-2 px-4 py-1.5 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"

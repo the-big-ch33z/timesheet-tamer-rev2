@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
-import { toilService, clearCache } from '@/utils/time/services/toil';
+import { toilService, clearCacheForCurrentMonth } from '@/utils/time/services/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
 import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
@@ -25,8 +25,11 @@ export interface UseTOILSummaryResult {
   refreshSummary: () => void;
 }
 
-// Use imported debounce period
+// Debounce timestamp tracking
 let lastOperationTime = 0;
+// Event tracking for circuit breaker
+let eventCount = 0;
+let eventCountResetTimer: NodeJS.Timeout | null = null;
 
 export const useTOILSummary = ({
   userId,
@@ -44,6 +47,10 @@ export const useTOILSummary = ({
   // Store last loaded summary for comparison
   const lastSummaryRef = useRef<TOILSummary | null>(null);
 
+  // Track update attempts to implement circuit breaker
+  const updateAttemptsRef = useRef(0);
+  const lastUpdateTimeRef = useRef(0);
+
   const loadSummary = useCallback(() => {
     if (!userId) {
       setError('No user ID provided');
@@ -51,14 +58,27 @@ export const useTOILSummary = ({
       return;
     }
 
+    // Circuit breaker pattern
+    const now = Date.now();
+    if (updateAttemptsRef.current > 10 && now - lastUpdateTimeRef.current < 60000) {
+      logger.warn('Circuit breaker activated - too many update attempts in short period');
+      setIsLoading(false);
+      return;
+    }
+    
+    updateAttemptsRef.current++;
+    lastUpdateTimeRef.current = now;
+
     setIsLoading(true);
     setError(null);
 
     try {
       logger.debug(`Loading summary for ${userId} in ${monthYear}`);
       
-      // Aggressively clear cache before loading
-      clearCache();
+      // Use selective cache clearing instead of aggressive clearing
+      if (refreshCounter % 5 === 0) { // Only clear cache occasionally
+        clearCacheForCurrentMonth(userId, date);
+      }
       
       // Use the toilService directly
       const result = toilService.getTOILSummary(userId, monthYear);
@@ -93,9 +113,16 @@ export const useTOILSummary = ({
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
+        
+        // Reset circuit breaker after successful load
+        if (updateAttemptsRef.current > 10) {
+          setTimeout(() => {
+            updateAttemptsRef.current = 0;
+          }, 60000);
+        }
       }
     }
-  }, [userId, monthYear, refreshCounter]);
+  }, [userId, monthYear, refreshCounter, date]);
 
   const refreshSummary = useCallback(() => {
     const now = Date.now();
@@ -105,38 +132,63 @@ export const useTOILSummary = ({
     }
     lastOperationTime = now;
     
+    // Increment event count and implement circuit breaker
+    eventCount++;
+    
+    // Reset event count after some time
+    if (eventCountResetTimer) clearTimeout(eventCountResetTimer);
+    eventCountResetTimer = setTimeout(() => {
+      eventCount = 0;
+      eventCountResetTimer = null;
+    }, 10000);
+    
+    // Circuit breaker - skip if too many events
+    if (eventCount > 10) {
+      logger.warn(`Too many refresh events (${eventCount}), skipping this one`);
+      return;
+    }
+    
     logger.debug(`Refresh requested for ${userId}`);
-    // Clear cache before refreshing to ensure we get fresh data
-    clearCache();
+    
+    // Selective cache clearing
+    clearCacheForCurrentMonth(userId, date);
     setRefreshCounter(c => c + 1);
-  }, [userId]);
+  }, [userId, date]);
 
   useEffect(() => {
     isMountedRef.current = true;
     loadSummary();
     
-    // Set up a refresh interval to ensure we get updated data
+    // Set up a refresh interval to ensure we get updated data, but less frequently
     const refreshInterval = setInterval(() => {
       if (isMountedRef.current) {
         logger.debug('Periodic refresh');
-        refreshSummary();
+        setRefreshCounter(c => c + 1); // Just increment counter to trigger loadSummary
       }
-    }, 10000); // Refresh every 10 seconds
+    }, 30000); // Refresh every 30 seconds instead of 10
     
     return () => {
       isMountedRef.current = false;
       clearInterval(refreshInterval);
     };
-  }, [loadSummary, refreshSummary]);
+  }, [loadSummary]);
 
   useEffect(() => {
-    logger.debug(`Clearing cache for ${userId}`);
-    try {
-      clearCache();
-    } catch (err) {
-      logger.error(`Error clearing cache:`, err);
+    // Clear any existing reset timer when component unmounts
+    return () => {
+      if (eventCountResetTimer) {
+        clearTimeout(eventCountResetTimer);
+        eventCountResetTimer = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (userId && date) {
+      logger.debug(`Clearing cache for ${userId}`);
+      clearCacheForCurrentMonth(userId, date);
     }
-  }, [userId, monthYear]);
+  }, [userId, monthYear, date]);
 
   useEffect(() => {
     // Create a unified handler using the factory function
@@ -165,8 +217,11 @@ export const useTOILSummary = ({
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     logger.debug(`Added event listener for toil:summary-updated`);
     
-    // Listen via timeEventsService
+    // Listen via timeEventsService but with throttling
     const sub1 = timeEventsService.subscribe('toil-updated', data => {
+      // Skip if circuit breaker is active
+      if (eventCount > 10) return;
+      
       logger.debug(`toil-updated event received:`, data);
       if (data?.userId === userId) {
         logger.debug(`Refreshing based on toil-updated event`);
@@ -174,37 +229,35 @@ export const useTOILSummary = ({
       }
     });
 
-    // Listen via centralized event bus
+    // Added debouncing to these event handlers
     const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
+      // Skip if circuit breaker is active  
+      if (eventCount > 10) return;
+      
       logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
       if (data && typeof data === 'object' && data.userId === userId) {
-        logger.debug(`Refreshing based on TOIL_EVENTS.SUMMARY_UPDATED`);
-        refreshSummary();
+        const now = Date.now();
+        if (now - lastOperationTime > DEBOUNCE_PERIOD) {
+          logger.debug(`Refreshing based on TOIL_EVENTS.SUMMARY_UPDATED`);
+          lastOperationTime = now;
+          setRefreshCounter(c => c + 1);
+        }
       }
     });
 
-    // Also listen for hours-updated events
-    const sub3 = timeEventsService.subscribe('hours-updated', data => {
-      if (data?.userId === userId) {
-        logger.debug(`TOIL summary refresh triggered by hours-updated event`);
-        refreshSummary();
-      }
-    });
-
-    // Special listening for any TOIL-related events
-    const sub4 = eventBus.subscribe(TOIL_EVENTS.UPDATED, () => {
-      logger.debug('General TOIL update detected, refreshing');
-      refreshSummary();
-    });
-
+    // Reset event counters on unmount
     return () => {
       // Clean up all event listeners properly
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
       if (sub1 && typeof sub1.unsubscribe === 'function') sub1.unsubscribe();
       if (typeof sub2 === 'function') sub2();
-      if (sub3 && typeof sub3.unsubscribe === 'function') sub3.unsubscribe();
-      if (typeof sub4 === 'function') sub4();
       logger.debug(`Removed event listeners`);
+      
+      eventCount = 0;
+      if (eventCountResetTimer) {
+        clearTimeout(eventCountResetTimer);
+        eventCountResetTimer = null;
+      }
     };
   }, [userId, monthYear, refreshSummary]);
 

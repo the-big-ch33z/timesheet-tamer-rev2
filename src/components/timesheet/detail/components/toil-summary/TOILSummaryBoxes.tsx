@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, memo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertCircle } from "lucide-react";
 import TOILSummaryBox from "./TOILSummaryBox";
@@ -11,7 +11,7 @@ interface TOILSummaryBoxesProps {
   onError?: (error: string) => void;
 }
 
-const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
+const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = memo(({
   accrued,
   used,
   remaining,
@@ -31,14 +31,6 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
   const safeUsed = isFinite(used) ? used : 0;
   const safeRemaining = isFinite(remaining) ? remaining : 0;
   const isNegativeBalance = safeRemaining < 0;
-
-  console.log('TOILSummaryBoxes rendering with values:', { 
-    safeAccrued, 
-    safeUsed, 
-    safeRemaining, 
-    isNegativeBalance,
-    hasInvalidValues 
-  });
   
   const boxConfigs = [
     {
@@ -128,6 +120,8 @@ const TOILSummaryBoxes: React.FC<TOILSummaryBoxesProps> = ({
       </div>
     </>
   );
-};
+});
+
+TOILSummaryBoxes.displayName = 'TOILSummaryBoxes';
 
 export default TOILSummaryBoxes;
