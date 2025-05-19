@@ -5,6 +5,8 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 import { PendingTOILCalculation } from "../types";
+import { format } from "date-fns";
+import { toilService } from "../service/main";
 
 const logger = createTimeLogger('TOILQueueManager');
 

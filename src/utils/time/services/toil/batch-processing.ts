@@ -56,7 +56,7 @@ export async function performSingleCalculation(
       hours: toilHours,
       monthYear,
       entryId: nonToilEntries[0].id,
-      status: 'active'
+      status: 'active' as 'active' | 'expired' | 'used' // Fix: type assertion for status
     };
     
     const stored = await storeTOILRecord(toilRecord);
