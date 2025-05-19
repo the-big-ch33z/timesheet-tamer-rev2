@@ -8,13 +8,13 @@ import { v4 as uuidv4 } from "uuid";
 import { createTimeLogger } from "@/utils/time/errors";
 import { 
   storeTOILRecord,
-  cleanupDuplicateTOILRecords
+  cleanupDuplicateTOILRecords,
+  filterRecordsByDate
 } from "../storage";
 import { TOILServiceCore } from "./core";
 import { calculateTOILHours } from "../calculation";
 import { dispatchTOILEvent } from "../events";
-import { PendingTOILCalculation } from "../types";
-import { queueTOILCalculation } from "../queue/TOILQueueManager";
+import { loadTOILRecords } from "../storage/core";
 
 const logger = createTimeLogger('TOILService-Calculation');
 
@@ -22,6 +22,9 @@ const logger = createTimeLogger('TOILService-Calculation');
  * TOIL calculation functionality
  */
 export class TOILServiceCalculation extends TOILServiceCore {
+  // Track already processed dates to avoid redundant calculations
+  private processedDates = new Map<string, number>();
+
   /**
    * Calculate and store TOIL for a given day
    */
@@ -39,6 +42,32 @@ export class TOILServiceCalculation extends TOILServiceCore {
         return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
       }
       
+      // Generate a key for this specific calculation
+      const dateKey = format(date, 'yyyy-MM-dd');
+      const calcKey = `${userId}-${dateKey}`;
+      const now = Date.now();
+      
+      // Check if we've recently processed this exact date and user
+      if (this.processedDates.has(calcKey)) {
+        const lastProcess = this.processedDates.get(calcKey)!;
+        if (now - lastProcess < 2000) { // Within 2 seconds
+          logger.debug(`Recently calculated TOIL for ${calcKey}, skipping redundant calculation`);
+          return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
+        }
+      }
+      
+      // Mark this date as processed
+      this.processedDates.set(calcKey, now);
+      
+      // Clean old entries from the processed dates map (keep it under 100 entries)
+      if (this.processedDates.size > 100) {
+        const keysToDelete = [...this.processedDates.keys()]
+          .sort((a, b) => (this.processedDates.get(a) || 0) - (this.processedDates.get(b) || 0))
+          .slice(0, 50);
+          
+        keysToDelete.forEach(key => this.processedDates.delete(key));
+      }
+      
       logger.debug(`calculateAndStoreTOIL called for user ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
       
       // Validate inputs
@@ -52,11 +81,6 @@ export class TOILServiceCalculation extends TOILServiceCore {
         return null;
       }
       
-      if (!workSchedule) {
-        logger.error('Missing workSchedule for TOIL calculation');
-        return null;
-      }
-      
       // Filter out synthetic TOIL entries to prevent circular calculation
       const nonToilEntries = entries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
       
@@ -65,18 +89,21 @@ export class TOILServiceCalculation extends TOILServiceCore {
         return this.getTOILSummary(userId, format(date, 'yyyy-MM'));
       }
       
-      const monthYear = format(date, 'yyyy-MM');
+      // Check if TOIL records already exist for this day
+      const existingRecords = await loadTOILRecords(userId);
+      const existingDayRecords = filterRecordsByDate(existingRecords, date);
       
       // Calculate TOIL hours based on real entries, not synthetic ones
-      // This now uses the corrected calculateTOILHours function that properly handles RDOs
       const toilHours = calculateTOILHours(nonToilEntries, date, workSchedule, holidays);
       
       logger.debug(`TOIL hours calculated: ${toilHours}`);
       
       if (toilHours === 0) {
         logger.debug('No TOIL hours calculated');
-        return this.getTOILSummary(userId, monthYear); // Return existing summary
+        return this.getTOILSummary(userId, format(date, 'yyyy-MM')); // Return existing summary
       }
+      
+      const monthYear = format(date, 'yyyy-MM');
       
       // Create a new TOIL record
       const toilRecord: TOILRecord = {
@@ -91,7 +118,7 @@ export class TOILServiceCalculation extends TOILServiceCore {
       
       logger.debug(`Created TOIL record: ${JSON.stringify(toilRecord)}`);
       
-      // Store the TOIL record using our enhanced function
+      // Store the TOIL record using our enhanced function that handles duplicates
       const stored = await storeTOILRecord(toilRecord);
       
       if (!stored) {
@@ -102,7 +129,8 @@ export class TOILServiceCalculation extends TOILServiceCore {
       logger.debug('TOIL record stored successfully, cleaning up duplicates');
       
       // Run cleanup to remove any duplicate entries
-      await cleanupDuplicateTOILRecords(userId);
+      const removedCount = await cleanupDuplicateTOILRecords(userId);
+      logger.debug(`Cleanup removed ${removedCount} duplicate records`);
       
       // Get updated summary
       const summary = this.getTOILSummary(userId, monthYear);

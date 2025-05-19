@@ -1,92 +1,32 @@
+import { TOILRecord, TOILSummary } from '@/types/toil';
 import { createTimeLogger } from '@/utils/time/errors';
-import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
-import { format } from 'date-fns';
 import { 
   TOIL_RECORDS_KEY, 
-  TOIL_USAGE_KEY, 
+  TOIL_USAGE_KEY,
   TOIL_SUMMARY_CACHE_KEY,
   STORAGE_RETRY_DELAY,
   STORAGE_MAX_RETRIES
 } from './constants';
+import { format } from 'date-fns';
 
-const logger = createTimeLogger('TOILStorageCore');
-
-// ================ Base Storage Operations ================
+const logger = createTimeLogger('TOIL-Storage-Core');
 
 /**
- * Helper to safely parse JSON from storage
+ * Load TOIL records from storage
  */
-export function safelyParseJSON<T>(jsonString: string | null, defaultValue: T): T {
-  if (!jsonString) return defaultValue;
-  
+export function loadTOILRecords(userId?: string): TOILRecord[] {
   try {
-    return JSON.parse(jsonString) as T;
-  } catch (error) {
-    logger.error('Error parsing JSON:', error);
-    return defaultValue;
-  }
-}
-
-/**
- * Helper to perform storage operations with retry logic
- * This prevents race conditions and storage errors
- */
-export async function attemptStorageOperation<T>(
-  operation: () => Promise<T> | T, 
-  retryDelay: number = STORAGE_RETRY_DELAY,
-  maxRetries: number = STORAGE_MAX_RETRIES
-): Promise<T> {
-  let retryCount = 0;
-  
-  while (retryCount < maxRetries) {
-    try {
-      logger.debug(`Attempting storage operation (try ${retryCount + 1}/${maxRetries})`);
-      const result = await operation();
-      logger.debug('Storage operation successful');
-      return result;
-    } catch (error) {
-      retryCount++;
-      logger.error(`Error in storage operation (attempt ${retryCount}/${maxRetries}):`, error);
-      
-      if (retryCount >= maxRetries) {
-        logger.error('Max retries reached for operation');
-        throw error;
-      }
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
-      logger.debug('Retrying operation');
-    }
-  }
-  
-  // This should never be reached due to the throw in the catch block,
-  // but TypeScript requires a return statement
-  throw new Error('Failed to complete storage operation');
-}
-
-// ================ Core Data Loading Operations ================
-
-/**
- * Load all TOIL records from storage
- * @param filterUserId Optional user ID to filter records
- * @returns Array of TOILRecord objects
- */
-export function loadTOILRecords(filterUserId?: string): TOILRecord[] {
-  try {
-    logger.debug(`Loading TOIL records${filterUserId ? ` for user: ${filterUserId}` : ''}`);
-    const records = localStorage.getItem(TOIL_RECORDS_KEY);
+    const recordsJson = localStorage.getItem(TOIL_RECORDS_KEY);
+    if (!recordsJson) return [];
     
-    if (!records) {
-      return [];
+    const records: TOILRecord[] = JSON.parse(recordsJson);
+    
+    // Filter by userId if provided
+    if (userId) {
+      return records.filter(record => record.userId === userId);
     }
     
-    const allRecords = safelyParseJSON<TOILRecord[]>(records, []);
-    
-    if (filterUserId) {
-      return allRecords.filter(record => record.userId === filterUserId);
-    }
-    
-    return allRecords;
+    return records;
   } catch (error) {
     logger.error('Error loading TOIL records:', error);
     return [];
@@ -94,30 +34,58 @@ export function loadTOILRecords(filterUserId?: string): TOILRecord[] {
 }
 
 /**
- * Load all TOIL usage records from storage
- * @param filterUserId Optional user ID to filter records
- * @returns Array of TOILUsage objects
+ * Get TOIL records for a specific date
  */
-export function loadTOILUsage(filterUserId?: string): TOILUsage[] {
+export function getToilRecordsByDate(date: Date, userId?: string): TOILRecord[] {
   try {
-    logger.debug(`Loading TOIL usage${filterUserId ? ` for user: ${filterUserId}` : ''}`);
-    const usage = localStorage.getItem(TOIL_USAGE_KEY);
-    
-    if (!usage) {
-      return [];
-    }
-    
-    const allUsage = safelyParseJSON<TOILUsage[]>(usage, []);
-    
-    if (filterUserId) {
-      return allUsage.filter(record => record.userId === filterUserId);
-    }
-    
-    return allUsage;
+    const records = loadTOILRecords(userId);
+    return filterRecordsByDate(records, date);
   } catch (error) {
-    logger.error('Error loading TOIL usage:', error);
+    logger.error('Error getting TOIL records by date:', error);
     return [];
   }
+}
+
+/**
+ * Filter records by month
+ */
+export function filterRecordsByMonth(records: TOILRecord[], monthYear: string): TOILRecord[] {
+  return records.filter(record => record.monthYear === monthYear);
+}
+
+/**
+ * Helper to attempt storage operations with retry logic
+ */
+export async function attemptStorageOperation<T>(
+  operation: () => T,
+  retryDelay: number = STORAGE_RETRY_DELAY,
+  maxRetries: number = STORAGE_MAX_RETRIES
+): Promise<T> {
+  let attempts = 0;
+  
+  while (attempts < maxRetries) {
+    try {
+      return operation();
+    } catch (error) {
+      attempts++;
+      if (attempts >= maxRetries) {
+        logger.error(`Storage operation failed after ${attempts} attempts:`, error);
+        throw error;
+      }
+      
+      logger.warn(`Storage operation failed, retrying (${attempts}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
+  }
+  
+  throw new Error(`Storage operation failed after ${maxRetries} attempts`);
+}
+
+/**
+ * Helper function to generate a summary cache key
+ */
+export function getSummaryCacheKey(userId: string, monthYear: string): string {
+  return `${TOIL_SUMMARY_CACHE_KEY}-${userId}-${monthYear}`;
 }
 
 /**
@@ -128,91 +96,96 @@ export function filterRecordsByEntryId(records: TOILRecord[], entryId: string): 
 }
 
 /**
- * Helper function to filter records by month
- * @param records Array of records with monthYear property
- * @param monthYear Month to filter by in format 'yyyy-MM'
- * @returns Filtered array of records
+ * Filter records by date
  */
-export function filterRecordsByMonth<T extends { monthYear?: string }>(
-  records: T[], 
-  monthYear: string
-): T[] {
-  return records.filter(record => record.monthYear === monthYear);
-}
-
-/**
- * Helper function to filter records by date
- * @param records Array of records with date property
- * @param date Date to filter by
- * @returns Filtered array of records
- */
-export function filterRecordsByDate<T extends { date: Date | string }>(
-  records: T[], 
-  date: Date
-): T[] {
-  const formattedDate = format(date, 'yyyy-MM-dd');
-  
+export function filterRecordsByDate(records: TOILRecord[], date: Date): TOILRecord[] {
+  const dateString = format(date, 'yyyy-MM-dd');
   return records.filter(record => {
-    const recordDate = record.date instanceof Date 
-      ? format(record.date, 'yyyy-MM-dd')
-      : format(new Date(record.date), 'yyyy-MM-dd');
-    
-    return recordDate === formattedDate;
+    const recordDateString = format(new Date(record.date), 'yyyy-MM-dd');
+    return recordDateString === dateString;
   });
 }
 
-// ================ Cache Management ================
-
 /**
- * Get summary cache key for a user and month
+ * Clean up duplicate TOIL records by consolidating records for the same user and date
+ * This helps prevent TOIL accumulation when navigating between dates
  */
-export function getSummaryCacheKey(userId: string, monthYear: string): string {
-  return `${TOIL_SUMMARY_CACHE_KEY}-${userId}-${monthYear}`;
-}
-
-/**
- * Clear TOIL summary cache
- * @param userId Optional user ID to clear cache for specific user
- * @param monthYear Optional month year to clear cache for specific month
- */
-export const clearSummaryCache = async (userId?: string, monthYear?: string): Promise<boolean> => {
-  return attemptStorageOperation(async () => {
-    logger.debug('Clearing TOIL summary cache');
+export async function cleanupDuplicateTOILRecords(userId: string): Promise<number> {
+  try {
+    const allRecords = await loadTOILRecords();
     
-    // Find all cache keys that start with the summary prefix
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(TOIL_SUMMARY_CACHE_KEY)) {
-        // Filter by userId and monthYear if provided
-        if (userId && !key.includes(userId)) {
-          continue;
-        }
-        
-        if (monthYear && !key.includes(monthYear)) {
-          continue;
-        }
-        
-        keysToRemove.push(key);
+    // Start with the count of all records to calculate how many were removed
+    const startCount = allRecords.length;
+    logger.debug(`Starting TOIL cleanup with ${startCount} total records`);
+    
+    // Group records by user+date
+    const recordsByDateAndUser = new Map<string, TOILRecord[]>();
+    
+    for (const record of allRecords) {
+      // Skip records that aren't for this user if a userId was specified
+      if (userId && record.userId !== userId) continue;
+      
+      const dateKey = format(new Date(record.date), 'yyyy-MM-dd');
+      const mapKey = `${record.userId}-${dateKey}`;
+      
+      if (!recordsByDateAndUser.has(mapKey)) {
+        recordsByDateAndUser.set(mapKey, []);
       }
+      
+      recordsByDateAndUser.get(mapKey)!.push(record);
     }
     
-    // Remove all identified keys
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-      logger.debug(`Removed TOIL cache key: ${key}`);
+    // Create a new array with consolidated records
+    const consolidatedRecords: TOILRecord[] = [];
+    
+    // Add records from other users that we're not processing
+    if (userId) {
+      allRecords
+        .filter(record => record.userId !== userId)
+        .forEach(record => consolidatedRecords.push(record));
+    }
+    
+    // Process each group of duplicate records
+    let duplicatesFound = 0;
+    
+    recordsByDateAndUser.forEach((duplicates, mapKey) => {
+      if (duplicates.length <= 1) {
+        // No duplicates for this date+user, just add the record
+        if (duplicates.length === 1) {
+          consolidatedRecords.push(duplicates[0]);
+        }
+        return;
+      }
+      
+      // Found duplicates, log and consolidate
+      duplicatesFound += duplicates.length - 1;
+      logger.debug(`Found ${duplicates.length} duplicate TOIL records for ${mapKey}`);
+      
+      // Sort by creation time (assuming newer records have higher IDs)
+      duplicates.sort((a, b) => a.id.localeCompare(b.id));
+      
+      // Keep the most recent record
+      const mostRecent = duplicates[duplicates.length - 1];
+      consolidatedRecords.push(mostRecent);
+      
+      logger.debug(`Consolidated ${duplicates.length} records into one with ${mostRecent.hours} hours`);
     });
     
-    logger.debug(`Cleared ${keysToRemove.length} TOIL summary cache entries`);
-    return true;
-  });
-};
-
-/**
- * Clear all TOIL-related caches
- */
-export const clearAllTOILCaches = async (): Promise<boolean> => {
-  await clearSummaryCache();
-  logger.debug('Cleared all TOIL caches');
-  return true;
-};
+    // Only save if we found duplicates
+    if (duplicatesFound > 0) {
+      logger.debug(`Removing ${duplicatesFound} duplicate TOIL records`);
+      
+      await attemptStorageOperation(() => {
+        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(consolidatedRecords));
+        return true;
+      });
+    } else {
+      logger.debug(`No duplicate TOIL records found for cleanup`);
+    }
+    
+    return duplicatesFound;
+  } catch (error) {
+    logger.error('Error cleaning up duplicate TOIL records:', error);
+    return 0;
+  }
+}

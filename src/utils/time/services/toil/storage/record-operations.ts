@@ -8,18 +8,42 @@ import {
   STORAGE_MAX_RETRIES
 } from './constants';
 import { attemptStorageOperation, loadTOILRecords, filterRecordsByEntryId } from './core';
+import { format } from 'date-fns';
 
 const logger = createTimeLogger('TOIL-Storage');
 
 /**
  * Store a TOIL record in local storage
+ * Updated to check for existing records with the same date and userId
  */
 export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
   try {
     const records = await loadTOILRecords();
     
-    // Add the new record
-    records.push(record);
+    // Check for existing records with the same date and userId
+    const dateKey = format(record.date, 'yyyy-MM-dd');
+    const existingRecordIndex = records.findIndex(r => 
+      r.userId === record.userId && 
+      format(new Date(r.date), 'yyyy-MM-dd') === dateKey
+    );
+    
+    if (existingRecordIndex >= 0) {
+      // Update existing record instead of adding a new one
+      logger.debug(`Found existing TOIL record for ${record.userId} on ${dateKey}, updating instead of creating new`);
+      
+      // Only update if the calculated hours are different
+      if (Math.abs(records[existingRecordIndex].hours - record.hours) > 0.01) {
+        records[existingRecordIndex].hours = record.hours;
+        logger.debug(`Updated TOIL hours to ${record.hours} for existing record`);
+      } else {
+        logger.debug(`No change in TOIL hours, skipping update`);
+        return true; // No change needed
+      }
+    } else {
+      // No existing record found, add the new record
+      logger.debug(`No existing TOIL record found for ${record.userId} on ${dateKey}, adding new record`);
+      records.push(record);
+    }
     
     // Save back to storage
     return await attemptStorageOperation(
