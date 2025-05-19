@@ -83,7 +83,7 @@ export class TOILService extends TOILServiceCore {
   public clearCache(): void {
     try {
       logger.debug('Clearing all TOIL caches');
-      clearSummaryCache();
+      clearSummaryCache(); // Pass no parameters to clear all caches
       logger.debug('Cache cleared successfully');
     } catch (error) {
       logger.error('Error clearing cache:', error);

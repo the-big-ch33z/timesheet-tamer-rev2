@@ -1,4 +1,3 @@
-
 import { 
   TOILRecord, TOILSummary, TOILUsage 
 } from "@/types/toil";
@@ -133,3 +132,4 @@ export class TOILServiceCore {
     lastTOILOperationTime = Date.now();
   }
 }
+

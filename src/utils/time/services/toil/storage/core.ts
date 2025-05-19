@@ -2,7 +2,6 @@
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
-import { attemptStorageOperation } from './utils';
 import {
   TOIL_RECORDS_KEY,
   TOIL_USAGE_KEY,
@@ -26,9 +25,36 @@ export function safelyParseJSON<T>(json: string, defaultValue: T): T {
 }
 
 /**
+ * Attempt storage operation with retry logic
+ */
+export const attemptStorageOperation = async <T>(
+  operation: () => T,
+  retryDelay: number = 200,
+  maxRetries: number = 3
+): Promise<T> => {
+  let retryCount = 0;
+  let lastError: any = null;
+
+  while (retryCount <= maxRetries) {
+    try {
+      return operation();
+    } catch (error) {
+      lastError = error;
+      retryCount++;
+      
+      if (retryCount <= maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
+  }
+
+  throw lastError || new Error('Operation failed after retries');
+};
+
+/**
  * Load TOIL records for a user
  */
-export function loadTOILRecords(userId: string): TOILRecord[] {
+export function loadTOILRecords(userId?: string): TOILRecord[] {
   try {
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
     
@@ -37,7 +63,13 @@ export function loadTOILRecords(userId: string): TOILRecord[] {
     }
     
     const allRecords: TOILRecord[] = safelyParseJSON(records, []);
-    return allRecords.filter(record => record.userId === userId);
+    
+    // Filter by userId if provided
+    if (userId) {
+      return allRecords.filter(record => record.userId === userId);
+    }
+    
+    return allRecords;
   } catch (error) {
     logger.error('Error loading TOIL records:', error);
     return [];
@@ -47,7 +79,7 @@ export function loadTOILRecords(userId: string): TOILRecord[] {
 /**
  * Load TOIL usage records for a user
  */
-export function loadTOILUsage(userId: string): TOILUsage[] {
+export function loadTOILUsage(userId?: string): TOILUsage[] {
   try {
     const usage = localStorage.getItem(TOIL_USAGE_KEY);
     
@@ -56,7 +88,13 @@ export function loadTOILUsage(userId: string): TOILUsage[] {
     }
     
     const allUsage: TOILUsage[] = safelyParseJSON(usage, []);
-    return allUsage.filter(item => item.userId === userId);
+    
+    // Filter by userId if provided
+    if (userId) {
+      return allUsage.filter(item => item.userId === userId);
+    }
+    
+    return allUsage;
   } catch (error) {
     logger.error('Error loading TOIL usage:', error);
     return [];
@@ -73,11 +111,24 @@ export function getSummaryCacheKey(userId: string, monthYear: string): string {
 /**
  * Clear TOIL summary cache for a specific user and month
  */
-export function clearSummaryCache(userId: string, monthYear: string): void {
+export function clearSummaryCache(userId?: string, monthYear?: string): void {
   try {
-    const cacheKey = getSummaryCacheKey(userId, monthYear);
-    localStorage.removeItem(cacheKey);
-    logger.debug(`Cleared summary cache for ${userId} in ${monthYear}`);
+    if (userId && monthYear) {
+      // Clear specific cache
+      const cacheKey = getSummaryCacheKey(userId, monthYear);
+      localStorage.removeItem(cacheKey);
+      logger.debug(`Cleared summary cache for ${userId} in ${monthYear}`);
+    } else {
+      // Clear all summary caches
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(TOIL_SUMMARY_PREFIX)) {
+          localStorage.removeItem(key);
+          logger.debug(`Cleared cache key: ${key}`);
+        }
+      }
+      logger.debug('Cleared all summary caches');
+    }
   } catch (error) {
     logger.error('Error clearing summary cache:', error);
   }
@@ -151,7 +202,9 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
 /**
  * Filter TOIL records by date range
  */
-export function filterRecordsByDate(records: TOILRecord[], startDate: Date, endDate: Date): TOILRecord[] {
+export function filterRecordsByDate(records: TOILRecord[], startDate?: Date, endDate?: Date): TOILRecord[] {
+  if (!startDate || !endDate) return records;
+  
   return records.filter(record => {
     const recordDate = new Date(record.date);
     return recordDate >= startDate && recordDate <= endDate;

@@ -1,7 +1,9 @@
+
 import { TOILUsage } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOIL_USAGE_KEY, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
-import { attemptStorageOperation, loadTOILUsage } from "./core";
+import { loadTOILUsage } from "./core";
+import { attemptStorageOperation } from "./utils";
 
 const logger = createTimeLogger('TOIL-Storage-UsageOperations');
 

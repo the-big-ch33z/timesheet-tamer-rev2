@@ -1,11 +1,9 @@
-
 import { TimeEntry, WorkSchedule } from "@/types";
 import { Holiday } from "@/lib/holidays";
 import { TOILSummary } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS } from "@/utils/events/eventTypes";
-import { performSingleCalculation } from "../batch-processing";
 import { PendingTOILCalculation } from "../types";
 
 const logger = createTimeLogger('TOILQueueManager');
@@ -224,3 +222,27 @@ export const processTOILQueue = (): void => {
 
 // Export the specific type needed for backwards compatibility
 export type { PendingTOILCalculation };
+
+// Create the performSingleCalculation function inline since it's missing from the import
+async function performSingleCalculation(
+  entries: TimeEntry[],
+  date: Date,
+  userId: string,
+  workSchedule: WorkSchedule,
+  holidays: Holiday[]
+): Promise<TOILSummary | null> {
+  try {
+    logger.debug(`Performing calculation for ${userId} on ${format(date, 'yyyy-MM-dd')}`);
+    // Call the service directly
+    return await toilService.calculateAndStoreTOIL(
+      entries,
+      date,
+      userId,
+      workSchedule,
+      holidays
+    );
+  } catch (error) {
+    logger.error(`Error in performSingleCalculation: ${error}`);
+    return null;
+  }
+}

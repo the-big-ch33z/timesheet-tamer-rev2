@@ -7,7 +7,8 @@ import {
   STORAGE_RETRY_DELAY,
   STORAGE_MAX_RETRIES
 } from './constants';
-import { attemptStorageOperation, loadTOILRecords, filterRecordsByDate, filterRecordsByEntryId } from './core';
+import { loadTOILRecords, filterRecordsByDate, filterRecordsByEntryId } from './core';
+import { attemptStorageOperation } from './utils';
 import { format } from 'date-fns';
 
 const logger = createTimeLogger('TOIL-Storage');

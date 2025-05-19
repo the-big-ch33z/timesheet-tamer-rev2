@@ -24,7 +24,6 @@ export * from './constants';
 // Re-export core utilities
 export {
   safelyParseJSON,
-  attemptStorageOperation,
   loadTOILRecords,
   loadTOILUsage,
   getSummaryCacheKey,
@@ -34,6 +33,9 @@ export {
   filterRecordsByDate,
   filterRecordsByEntryId
 } from './core';
+
+// Re-export utility functions
+export { attemptStorageOperation } from './utils';
 
 // Re-export cleanup functions
 export {

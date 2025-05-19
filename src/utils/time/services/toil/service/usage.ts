@@ -1,4 +1,3 @@
-
 import { TOILUsage } from "@/types/toil";
 import { TimeEntry } from "@/types";
 import { format } from "date-fns";
@@ -58,7 +57,7 @@ export class TOILServiceUsage extends TOILServiceCore {
       }
       
       // Check if this is a duplicate operation by looking for existing usage
-      const existingUsages = loadTOILUsage().filter(u => u.entryId === entry.id);
+      const existingUsages = loadTOILUsage(entry.userId).filter(u => u.entryId === entry.id);
       
       if (existingUsages.length > 0) {
         logger.debug(`TOIL usage already recorded for entry ${entry.id}, skipping duplicate`);

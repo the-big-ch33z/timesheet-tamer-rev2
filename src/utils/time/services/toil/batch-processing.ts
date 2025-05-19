@@ -1,80 +1,78 @@
 
 import { TimeEntry, WorkSchedule } from "@/types";
-import { createTimeLogger } from "@/utils/time/errors";
 import { Holiday } from "@/lib/holidays";
-import { toilService } from "./service";
 import { TOILSummary } from "@/types/toil";
+import { calculateTOILHours } from "./calculation";
+import { format } from "date-fns";
+import { v4 as uuidv4 } from "uuid";
+import { createTimeLogger } from "@/utils/time/errors";
+import { storeTOILRecord, cleanupDuplicateTOILRecords } from "./storage";
+import { toilService } from "./service/main";
 
 const logger = createTimeLogger('TOIL-Batch-Processing');
 
 /**
- * Process a batch of TOIL calculations for a specific day
+ * Perform a single TOIL calculation for a specific day
+ * 
+ * @param entries Time entries for the day
+ * @param date Date to calculate TOIL for
+ * @param userId User ID
+ * @param workSchedule Work schedule for the user
+ * @param holidays Holidays list
+ * @returns TOIL summary for the month containing the calculated day
  */
-export async function processTOILBatch(
+export async function performSingleCalculation(
   entries: TimeEntry[],
   date: Date,
   userId: string,
-  workSchedule?: WorkSchedule,
-  holidays: Holiday[] = []
+  workSchedule: WorkSchedule,
+  holidays: Holiday[]
 ): Promise<TOILSummary | null> {
   try {
-    logger.debug(`Processing TOIL batch for ${userId} on ${date.toDateString()}`);
+    logger.debug(`Performing single TOIL calculation for ${userId}, date: ${format(date, 'yyyy-MM-dd')}`);
     
-    // Skip if no entries
-    if (!entries || entries.length === 0) {
-      logger.debug(`No entries for TOIL batch - skipping`);
-      return null;
+    // Filter out synthetic TOIL entries
+    const nonToilEntries = entries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
+    
+    if (nonToilEntries.length === 0) {
+      logger.debug('No non-TOIL entries found, skipping calculation');
+      return toilService.getTOILSummary(userId, format(date, 'yyyy-MM'));
     }
     
-    // Filter entries if needed
-    const validEntries = entries.filter(entry => entry && typeof entry.hours === 'number');
+    // Calculate TOIL hours
+    const toilHours = calculateTOILHours(nonToilEntries, date, workSchedule, holidays);
     
-    if (validEntries.length === 0) {
-      logger.debug(`No valid entries for TOIL batch - skipping`);
-      return null;
+    if (toilHours === 0) {
+      logger.debug('No TOIL hours calculated');
+      return toilService.getTOILSummary(userId, format(date, 'yyyy-MM'));
     }
     
-    logger.debug(`Processing ${validEntries.length} entries for TOIL calculation`);
-    
-    // Run calculation
-    return await toilService.calculateAndStoreTOIL(
-      validEntries, 
-      date, 
+    // Create and store TOIL record
+    const monthYear = format(date, 'yyyy-MM');
+    const toilRecord = {
+      id: uuidv4(),
       userId,
-      workSchedule,
-      holidays
-    );
+      date: new Date(date),
+      hours: toilHours,
+      monthYear,
+      entryId: nonToilEntries[0].id,
+      status: 'active'
+    };
+    
+    const stored = await storeTOILRecord(toilRecord);
+    
+    if (!stored) {
+      logger.error('Failed to store TOIL record');
+      return null;
+    }
+    
+    // Clean up duplicate records
+    await cleanupDuplicateTOILRecords(userId);
+    
+    // Return updated summary
+    return toilService.getTOILSummary(userId, monthYear);
   } catch (error) {
-    logger.error('Error in TOIL batch processing:', error);
+    logger.error('Error in performSingleCalculation:', error);
     return null;
   }
-}
-
-/**
- * Queue a batch of TOIL calculations to be processed asynchronously
- */
-export function queueBatchCalculation(
-  entries: TimeEntry[],
-  date: Date,
-  userId: string,
-  workSchedule?: WorkSchedule,
-  holidays: Holiday[] = []
-): Promise<TOILSummary | null> {
-  return new Promise((resolve) => {
-    logger.debug(`Queuing TOIL batch for ${userId}`);
-    
-    // Process immediately for now
-    processTOILBatch(entries, date, userId, workSchedule, holidays)
-      .then(summary => {
-        if (summary) {
-          resolve(summary);
-        } else {
-          resolve(null);
-        }
-      })
-      .catch(error => {
-        logger.error('Error in queued batch calculation:', error);
-        resolve(null);
-      });
-  });
 }
