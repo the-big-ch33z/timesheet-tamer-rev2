@@ -9,9 +9,9 @@ const logger = createTimeLogger('TOIL-Storage-SummaryOperations');
  * Store a TOIL summary in local storage cache
  * 
  * @param summary The TOIL summary to store
- * @returns Promise that resolves to true if successful, false otherwise
+ * @returns Promise that resolves to the stored summary if successful, null otherwise
  */
-export async function storeTOILSummary(summary: TOILSummary): Promise<boolean> {
+export async function storeTOILSummary(summary: TOILSummary): Promise<TOILSummary | null> {
   try {
     const { userId, monthYear } = summary;
     const cacheKey = getSummaryCacheKey(userId, monthYear);
@@ -19,9 +19,9 @@ export async function storeTOILSummary(summary: TOILSummary): Promise<boolean> {
     localStorage.setItem(cacheKey, JSON.stringify(summary));
     
     logger.debug(`TOIL summary successfully stored for ${userId} - ${monthYear}`);
-    return true;
+    return summary;
   } catch (error) {
     logger.error(`Error storing TOIL summary: ${error instanceof Error ? error.message : String(error)}`);
-    return false;
+    return null;
   }
 }

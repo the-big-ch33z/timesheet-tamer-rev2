@@ -1,61 +1,35 @@
 
-// Export key functions and types from all storage sub-modules
+/**
+ * Re-export TOIL storage functionality from individual modules
+ */
 
-// Export constants
-export { 
-  STORAGE_RETRY_DELAY,
-  STORAGE_MAX_RETRIES,
-  TOIL_RECORDS_KEY,
-  TOIL_USAGE_KEY,
-  TOIL_SUMMARY_CACHE_KEY,
-  TOIL_THRESHOLDS_KEY,
-  DEFAULT_THRESHOLDS,
-} from './constants';
-
-// Export core utilities
-export {
-  attemptStorageOperation,
-  safelyParseJSON,
-  loadTOILRecords,
-  loadTOILUsage,
-  filterRecordsByMonth,
-  filterRecordsByDate,
-  clearSummaryCache,
-  clearAllTOILCaches,
-  getSummaryCacheKey
-} from './core';
-
-// Export record management functions - via the record management re-export file
+// Re-export storage operations
 export {
   storeTOILRecord,
-  storeTOILUsage,
-  storeTOILSummary,
   deleteUserTOILRecords,
   deleteTOILRecordById,
-  deleteTOILRecordsByEntryId
+  deleteTOILRecordsByEntryId,
+  storeTOILUsage,
+  storeTOILSummary,
+  hasTOILForDay,
+  TOILDayInfo
 } from './record-management';
 
-// Export individual operations directly for specialized imports
-export * from './record-operations';
-export * from './usage-operations';
-export * from './summary-operations';
+// Re-export constants
+export * from './constants';
 
-// Export query functions
+// Re-export core utilities
 export {
-  getUserTOILRecords,
-  findTOILRecordsByEntryId,
-  deleteTOILRecordByEntryId, // Deprecated but still exported
-  getTOILSummary,
-  hasTOILForDay,
-  hasTOILForMonth
-} from './queries';
+  safelyParseJSON,
+  attemptStorageOperation,
+  loadTOILRecords,
+  loadTOILUsage,
+  getSummaryCacheKey,
+  clearSummaryCache,
+  clearAllTOILCaches
+} from './core';
 
-// Export cleanup functions
+// Re-export cleanup functions
 export {
-  cleanupDuplicateTOILRecords,
-  cleanupDuplicateTOILUsage,
-  clearTOILStorageForMonth,
-  batchCleanupTOILData
+  cleanupDuplicateTOILRecords
 } from './cleanup';
-
-console.log('[TOIL-STORAGE] Storage module index initialized with refactored operations');

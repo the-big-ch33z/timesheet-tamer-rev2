@@ -1,153 +1,66 @@
 
-import { TOILRecord, TOILSummary } from "@/types/toil";
-import { createTimeLogger } from "@/utils/time/errors";
 import { format } from "date-fns";
-import { 
-  loadTOILRecords, 
-  loadTOILUsage, 
-  filterRecordsByMonth,
-  filterRecordsByEntryId,
-  getSummaryCacheKey
-} from "./core";
+import { TOIL_USAGE_KEY, TOIL_RECORDS_KEY } from "./constants";
+import { createTimeLogger } from "@/utils/time/errors";
+import { safelyParseJSON } from "./utils";
+import { TOILRecord, TOILUsage } from "@/types/toil";
 
 const logger = createTimeLogger('TOIL-Storage-Queries');
 
 /**
- * Type representing TOIL information for a specific day
+ * Information about TOIL for a specific day
  */
 export interface TOILDayInfo {
-  date: Date;
-  hours: number;
-  status: 'active' | 'expired' | 'used';
+  hasAccrued: boolean;
+  hasUsed: boolean;
+  toilHours: number;
 }
 
 /**
- * Get all TOIL records for a specific user
+ * Checks if a user has TOIL records or usage for a specific day
+ * 
+ * @param userId - User ID to check
+ * @param date - Date to check
+ * @returns Object with hasAccrued, hasUsed flags and toilHours total
  */
-export function getUserTOILRecords(userId: string): TOILRecord[] {
+export function hasTOILForDay(userId: string, date: Date): TOILDayInfo {
   try {
-    const records = loadTOILRecords(userId);
-    return records;
-  } catch (error) {
-    logger.error(`Error getting TOIL records for user ${userId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Find TOIL records by entry ID
- */
-export function findTOILRecordsByEntryId(entryId: string): TOILRecord[] {
-  try {
-    const allRecords = loadTOILRecords();
-    return filterRecordsByEntryId(allRecords, entryId);
-  } catch (error) {
-    logger.error(`Error finding TOIL records for entry ${entryId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Delete TOIL records by entry ID
- * @deprecated Use deleteTOILRecordsByEntryId instead
- */
-export async function deleteTOILRecordByEntryId(entryId: string): Promise<boolean> {
-  try {
-    logger.warn(`deleteTOILRecordByEntryId is deprecated, use deleteTOILRecordsByEntryId instead`);
-    return true;
-  } catch (error) {
-    logger.error(`Error deleting TOIL record for entry ${entryId}:`, error);
-    return false;
-  }
-}
-
-/**
- * Get TOIL summary for a user and month
- */
-export function getTOILSummary(userId: string, monthYear: string): TOILSummary {
-  try {
-    // Check if we have a cached summary
-    const cacheKey = getSummaryCacheKey(userId, monthYear);
-    const cachedSummary = localStorage.getItem(cacheKey);
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const rawRecords = localStorage.getItem(TOIL_RECORDS_KEY) || '[]';
+    const rawUsage = localStorage.getItem(TOIL_USAGE_KEY) || '[]';
     
-    if (cachedSummary) {
-      try {
-        const summary = JSON.parse(cachedSummary) as TOILSummary;
-        return summary;
-      } catch (error) {
-        logger.error(`Error parsing cached TOIL summary:`, error);
-        // Continue to recalculate if parsing fails
-      }
-    }
+    // Parse records and filter for this user and date
+    const records: TOILRecord[] = safelyParseJSON(rawRecords, []);
+    const usage: TOILUsage[] = safelyParseJSON(rawUsage, []);
     
-    // Calculate summary from records
-    const allRecords = loadTOILRecords(userId);
-    const allUsage = loadTOILUsage(userId);
+    // Check for accruement records
+    const userRecords = records.filter(record => 
+      record.userId === userId && 
+      format(new Date(record.date), 'yyyy-MM-dd') === dateKey
+    );
     
-    // Filter records for this month
-    const monthRecords = filterRecordsByMonth(allRecords, monthYear);
-    const monthUsage = allUsage.filter(usage => usage.monthYear === monthYear);
+    // Check for usage records
+    const userUsage = usage.filter(use => 
+      use.userId === userId && 
+      format(new Date(use.date), 'yyyy-MM-dd') === dateKey
+    );
     
-    // Calculate totals
-    const accrued = monthRecords.reduce((sum, record) => sum + record.hours, 0);
-    const used = monthUsage.reduce((sum, usage) => sum + usage.hours, 0);
-    const remaining = Math.max(0, accrued - used);
+    // Calculate total TOIL hours for this day
+    const totalToilHours = userRecords.reduce((sum, record) => sum + record.hours, 0);
     
-    const summary: TOILSummary = {
-      userId,
-      monthYear,
-      accrued,
-      used,
-      remaining
-    };
-    
-    // Cache the summary
-    localStorage.setItem(cacheKey, JSON.stringify(summary));
-    
-    return summary;
-  } catch (error) {
-    logger.error(`Error getting TOIL summary for ${userId}:`, error);
-    
-    // Return a safe default
     return {
-      userId,
-      monthYear,
-      accrued: 0,
-      used: 0,
-      remaining: 0
+      hasAccrued: userRecords.length > 0,
+      hasUsed: userUsage.length > 0,
+      toilHours: totalToilHours
+    };
+  } catch (error) {
+    logger.error(`Error checking TOIL for day: ${error instanceof Error ? error.message : String(error)}`);
+    return {
+      hasAccrued: false,
+      hasUsed: false,
+      toilHours: 0
     };
   }
 }
 
-/**
- * Check if a user has any TOIL for a specific day
- */
-export function hasTOILForDay(userId: string, date: Date): boolean {
-  try {
-    const dateString = format(date, 'yyyy-MM-dd');
-    const records = loadTOILRecords(userId);
-    
-    return records.some(record => {
-      const recordDate = format(new Date(record.date), 'yyyy-MM-dd');
-      return recordDate === dateString;
-    });
-  } catch (error) {
-    logger.error(`Error checking TOIL for day:`, error);
-    return false;
-  }
-}
-
-/**
- * Check if a user has any TOIL for a specific month
- */
-export function hasTOILForMonth(userId: string, monthYear: string): boolean {
-  try {
-    const records = loadTOILRecords(userId);
-    const monthRecords = filterRecordsByMonth(records, monthYear);
-    
-    return monthRecords.length > 0;
-  } catch (error) {
-    logger.error(`Error checking TOIL for month:`, error);
-    return false;
-  }
-}
+// Export other query functions as needed

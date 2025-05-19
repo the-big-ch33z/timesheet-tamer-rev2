@@ -17,9 +17,13 @@ export {
   storeTOILUsage 
 } from './usage-operations';
 
-// Re-export summary operations (assuming these are implemented elsewhere)
-export const storeTOILSummary = () => {
-  // This is just a placeholder for now
-  return Promise.resolve(true);
-};
+// Re-export summary operations
+export {
+  storeTOILSummary 
+} from './summary-operations';
 
+// Re-export query operations
+export {
+  hasTOILForDay,
+  TOILDayInfo
+} from './queries';
