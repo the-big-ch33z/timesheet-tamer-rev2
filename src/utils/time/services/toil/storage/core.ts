@@ -32,36 +32,35 @@ export function safelyParseJSON<T>(jsonString: string | null, defaultValue: T): 
  */
 export async function attemptStorageOperation<T>(
   operation: () => Promise<T> | T, 
-  operationName: string,
+  retryDelay = 200,
   maxRetries = 3
 ): Promise<T> {
   let retryCount = 0;
-  const retryDelay = 200; // ms
   
   while (retryCount < maxRetries) {
     try {
-      logger.debug(`Attempting storage operation: ${operationName} (try ${retryCount + 1}/${maxRetries})`);
+      logger.debug(`Attempting storage operation (try ${retryCount + 1}/${maxRetries})`);
       const result = await operation();
-      logger.debug(`Storage operation successful: ${operationName}`);
+      logger.debug('Storage operation successful');
       return result;
     } catch (error) {
       retryCount++;
-      logger.error(`Error in storage operation ${operationName} (attempt ${retryCount}/${maxRetries}):`, error);
+      logger.error(`Error in storage operation (attempt ${retryCount}/${maxRetries}):`, error);
       
       if (retryCount >= maxRetries) {
-        logger.error(`Max retries reached for operation: ${operationName}`);
+        logger.error('Max retries reached for operation');
         throw error;
       }
       
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, retryDelay));
-      logger.debug(`Retrying operation: ${operationName}`);
+      logger.debug('Retrying operation');
     }
   }
   
   // This should never be reached due to the throw in the catch block,
   // but TypeScript requires a return statement
-  throw new Error(`Failed to complete operation: ${operationName}`);
+  throw new Error('Failed to complete storage operation');
 }
 
 // ================ Core Data Loading Operations ================
@@ -118,6 +117,19 @@ export function loadTOILUsage(filterUserId?: string): TOILUsage[] {
     logger.error('Error loading TOIL usage:', error);
     return [];
   }
+}
+
+/**
+ * Filter records by entryId
+ * @param records Array of records to filter
+ * @param entryId Entry ID to filter by
+ * @returns Filtered array of records
+ */
+export function filterRecordsByEntryId<T extends { entryId?: string }>(
+  records: T[], 
+  entryId: string
+): T[] {
+  return records.filter(record => record.entryId === entryId);
 }
 
 /**
@@ -198,7 +210,7 @@ export const clearSummaryCache = async (userId?: string, monthYear?: string): Pr
     
     logger.debug(`Cleared ${keysToRemove.length} TOIL summary cache entries`);
     return true;
-  }, 'clearSummaryCache');
+  });
 };
 
 /**

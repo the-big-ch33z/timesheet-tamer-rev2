@@ -5,7 +5,7 @@ import {
   UseTOILCalculationsProps,
   UseTOILCalculationsResult
 } from './types';
-import { useToilEntryChecker } from './useToilEntryChecker';
+import { useToilEntryChecker } from './useTOILEntryChecker';
 import { useToilState } from './useToilState';
 import { useToilCalculator } from './useToilCalculator';
 import { useToilCacheClearer } from './useToilCacheClearer';

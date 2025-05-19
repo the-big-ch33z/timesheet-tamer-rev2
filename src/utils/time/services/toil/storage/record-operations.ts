@@ -23,7 +23,10 @@ export async function storeTOILRecord(record: TOILRecord): Promise<boolean> {
     
     // Save back to storage
     return await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records)),
+      () => {
+        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(records));
+        return true;
+      },
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
     );
@@ -45,7 +48,10 @@ export async function deleteUserTOILRecords(userId: string): Promise<number> {
     // Save back to storage if records were actually removed
     if (deletedCount > 0) {
       await attemptStorageOperation(
-        () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
+        () => {
+          localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+          return true;
+        },
         STORAGE_RETRY_DELAY,
         STORAGE_MAX_RETRIES
       );
@@ -76,7 +82,10 @@ export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
     
     // Save back to storage
     await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
+      () => {
+        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+        return true;
+      },
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
     );
@@ -110,7 +119,10 @@ export async function deleteTOILRecordsByEntryId(entryId: string): Promise<numbe
     
     // Save back to storage
     await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords)),
+      () => {
+        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
+        return true;
+      },
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
     );
