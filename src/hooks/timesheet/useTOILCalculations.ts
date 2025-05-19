@@ -53,7 +53,8 @@ export const useTOILCalculations = ({
         name: workSchedule.name,
         id: workSchedule.id,
         isDefault: workSchedule.isDefault,
-        weekPattern: workSchedule.weekPattern
+        weeks: Object.keys(workSchedule.weeks).length > 0 ? 'available' : 'empty',
+        rdoDays: Object.keys(workSchedule.rdoDays).length > 0 ? 'available' : 'empty'
       });
     } else {
       logger.warn(`No work schedule provided for user ${userId} - TOIL calculation may be incorrect`);
