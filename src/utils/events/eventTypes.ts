@@ -17,7 +17,8 @@ export const TOIL_EVENTS = {
   REFRESH_REQUESTED: 'toil:refresh-requested', // Explicit refresh requested
   ERROR: 'toil:error', // Error in TOIL processing
   CALCULATED: 'toil:calculated', // TOIL calculation completed
-  CALENDAR_REFRESH: 'toil:calendar-refresh' // New event to trigger calendar refresh
+  CALENDAR_REFRESH: 'toil:calendar-refresh', // Event to trigger calendar refresh
+  DAY_DATA_UPDATED: 'toil:day-data-updated' // Event for when a specific day's TOIL data is updated
 };
 
 // Time entry related events
@@ -28,6 +29,14 @@ export const TIME_ENTRY_EVENTS = {
   BATCH_UPDATED: 'time-entry:batch-updated',
   LOAD_COMPLETED: 'time-entry:load-completed',
   LOADED: 'time-entry:loaded' // Added for compatibility
+};
+
+// Calendar related events
+export const CALENDAR_EVENTS = {
+  MONTH_CHANGED: 'calendar:month-changed',
+  DAY_SELECTED: 'calendar:day-selected',
+  REFRESH_REQUESTED: 'calendar:refresh-requested',
+  DATA_UPDATED: 'calendar:data-updated'
 };
 
 // Work hours related events
@@ -75,6 +84,7 @@ export const SYSTEM_EVENTS = {
 export const ALL_EVENTS = {
   ...TOIL_EVENTS,
   ...TIME_ENTRY_EVENTS,
+  ...CALENDAR_EVENTS,
   ...WORK_HOURS_EVENTS,
   ...USER_EVENTS,
   ...APP_EVENTS,

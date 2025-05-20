@@ -1,5 +1,5 @@
 
-import React, { useMemo, memo, useState, useEffect } from "react";
+import React, { useMemo, memo, useState, useEffect, useCallback } from "react";
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -49,30 +49,79 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   // Add state for refreshing when TOIL events come in
   const [toilRefreshCounter, setToilRefreshCounter] = useState(0);
   
+  // Add a callback function to handle TOIL events consistently
+  const handleTOILUpdate = useCallback((data: any) => {
+    if (!data) return;
+    
+    const shouldRefresh = 
+      // Default case: matches user ID
+      (data.userId === userId) ||
+      // Special cases for different event formats
+      (data.detail?.userId === userId) ||
+      // Consider refresh flags in events
+      (data.requiresRefresh === true);
+    
+    if (shouldRefresh) {
+      logger.debug(`[CalendarGrid] Received TOIL event, refreshing (Source: ${data.source || 'unknown'})`);
+      setToilRefreshCounter(prev => prev + 1);
+    }
+  }, [userId, logger]);
+  
   // Listen for TOIL events that should trigger a calendar refresh
   useEffect(() => {
-    // Subscribe to TOIL events that should cause a calendar refresh
-    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: any) => {
-      if (data && data.userId === userId && data.requiresRefresh) {
-        logger.debug(`[CalendarGrid] Received TOIL calculation event, refreshing: ${JSON.stringify(data)}`);
-        setToilRefreshCounter(prev => prev + 1);
-      }
-    });
-    
-    // Also listen for summary updates
-    const unsubscribeSummary = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
-      if (data && data.userId === userId) {
-        logger.debug(`[CalendarGrid] Received TOIL summary update, refreshing`);
-        setToilRefreshCounter(prev => prev + 1);
-      }
-    });
-    
-    // Cleanup subscriptions
-    return () => {
-      unsubscribe();
-      unsubscribeSummary();
+    // Create a debug logger especially for events
+    const eventLogger = (name: string) => (data: any) => {
+      logger.debug(`[CalendarGrid:Events] Received ${name} event:`, 
+        data?.userId === userId ? 'matches-user' : 'other-user');
     };
-  }, [userId, logger]);
+    
+    // Array of event subscriptions to manage together
+    const subscriptions = [
+      // Primary calculation events
+      eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data) => {
+        eventLogger('CALCULATED')(data);
+        handleTOILUpdate(data);
+      }),
+      
+      // Summary update events
+      eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data) => {
+        eventLogger('SUMMARY_UPDATED')(data);
+        handleTOILUpdate(data);
+      }),
+      
+      // General update events
+      eventBus.subscribe(TOIL_EVENTS.UPDATED, (data) => {
+        eventLogger('UPDATED')(data);
+        handleTOILUpdate(data);
+      }),
+      
+      // Direct calendar refresh events (highest priority)
+      eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data) => {
+        eventLogger('CALENDAR_REFRESH')(data);
+        // Always refresh for this direct event type
+        logger.debug(`[CalendarGrid] Received direct calendar refresh event from ${data?.source || 'unknown'}`);
+        setToilRefreshCounter(prev => prev + 1);
+      })
+    ];
+    
+    // Also listen for DOM events for backward compatibility
+    const domEventHandler = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleTOILUpdate(customEvent.detail || {});
+    };
+    
+    window.addEventListener('toil:calculated', domEventHandler);
+    window.addEventListener('toil:summary-updated', domEventHandler);
+    window.addEventListener('toil:updated', domEventHandler);
+    
+    // Cleanup all subscriptions
+    return () => {
+      subscriptions.forEach(unsubscribe => unsubscribe());
+      window.removeEventListener('toil:calculated', domEventHandler);
+      window.removeEventListener('toil:summary-updated', domEventHandler);
+      window.removeEventListener('toil:updated', domEventHandler);
+    };
+  }, [userId, logger, handleTOILUpdate]);
   
   // Memoize holidays to prevent recalculation
   const holidays = useMemo(() => getHolidays(), []);
@@ -97,7 +146,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   // Memoize heavy day data calculations - now includes toilRefreshCounter as dependency
   const daysData = useMemo(() => {
     if (DEBUG_CALENDAR) logger.debug("Pre-calculating calendar days data");
-    console.log("[CalendarGrid] Pre-calculating all day data");
+    console.log("[CalendarGrid] Pre-calculating all day data (Refresh #" + toilRefreshCounter + ")");
     const monthStart = startOfMonth(currentMonth);
     const calculatedData = [];
     
@@ -207,7 +256,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
     DEBUG_CALENDAR,
     logger,
     userId,
-    toilRefreshCounter // Add this dependency to recalculate when TOIL updates occur
+    toilRefreshCounter // This dependency ensures recalculation when TOIL updates occur
   ]);
 
   return (

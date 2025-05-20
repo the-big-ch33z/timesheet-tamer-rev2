@@ -10,6 +10,8 @@ import CalendarGrid from "./calendar/CalendarGrid";
 import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors";
+import { eventBus } from "@/utils/events/EventBus";
+import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 
 const logger = createTimeLogger('TimesheetCalendar');
 
@@ -34,6 +36,21 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = memo(({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { toast } = useToast();
   
+  // Track when TOIL data is refreshed
+  const [lastToilUpdate, setLastToilUpdate] = useState<Date | null>(null);
+  
+  // Listen for TOIL updates to track them
+  useEffect(() => {
+    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data) => {
+      if (data && data.userId === userId) {
+        logger.debug(`[TimesheetCalendar] Tracking TOIL calendar refresh: ${new Date().toISOString()}`);
+        setLastToilUpdate(new Date());
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [userId]);
+  
   // Log when workSchedule changes
   useEffect(() => {
     if (workSchedule) {
@@ -54,7 +71,14 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = memo(({
         description: "Your timesheet changes were saved before navigation",
       });
     }
-  }, [onPrevMonth, toast]);
+    
+    // Publish an event that we're changing months
+    eventBus.publish('calendar:month-changed', {
+      direction: 'prev',
+      newMonth: onPrevMonth,
+      userId
+    });
+  }, [onPrevMonth, toast, userId]);
   
   const handleNextMonth = useCallback(() => {
     logger.debug("[TimesheetCalendar] Moving to next month, saving pending changes");
@@ -67,7 +91,14 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = memo(({
         description: "Your timesheet changes were saved before navigation",
       });
     }
-  }, [onNextMonth, toast]);
+    
+    // Publish an event that we're changing months
+    eventBus.publish('calendar:month-changed', {
+      direction: 'next',
+      newMonth: onNextMonth,
+      userId
+    });
+  }, [onNextMonth, toast, userId]);
 
   const handleDayClick = useCallback((day: Date) => {
     logger.debug("[TimesheetCalendar] Day clicked:", format(day, "yyyy-MM-dd"));
@@ -78,7 +109,14 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = memo(({
     
     setSelectedDate(day);
     onDayClick(day);
-  }, [selectedDate, onDayClick]);
+    
+    // Publish a day selection event with minimal debounce
+    eventBus.publish('calendar:day-selected', {
+      day: day.toISOString(),
+      userId,
+      timestamp: Date.now()
+    }, { debounce: 50 });
+  }, [selectedDate, onDayClick, userId]);
 
   return (
     <Card className="shadow-sm">

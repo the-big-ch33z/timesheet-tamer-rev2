@@ -11,6 +11,8 @@ import TimeEntryController from "../entry-control/TimeEntryController";
 import WorkHoursActions from "./components/WorkHoursActions";
 import { format } from 'date-fns';
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
+import { eventBus } from "@/utils/events/EventBus";
+import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -75,6 +77,22 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     }
   });
 
+  // Add function to explicitly notify the calendar to refresh when TOIL is calculated
+  const notifyCalendarRefresh = useCallback(() => {
+    logger.debug(`[WorkHoursSection] Notifying calendar to refresh TOIL data for ${format(date, 'yyyy-MM-dd')}`);
+    
+    // Use the dedicated calendar refresh event with minimal throttle/debounce
+    eventBus.publish(TOIL_EVENTS.CALENDAR_REFRESH, {
+      userId,
+      date: date.toISOString(),
+      timestamp: Date.now(),
+      source: 'WorkHoursSection'
+    }, { 
+      debounce: 100, // Reduced debounce period for critical UI updates
+      throttle: 150  // Add minimal throttle to prevent excessive renders
+    });
+  }, [userId, date]);
+
   useEffect(() => {
     if (effectiveWorkSchedule) {
       logger.debug(`[WorkHoursSection] Using work schedule: ${effectiveWorkSchedule.name || 'unnamed'}`);
@@ -87,6 +105,23 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
                       localStorage.getItem('timesheet-dev-mode') === 'true';
     setShowDebugPanel(isDevMode);
   }, [effectiveWorkSchedule]);
+
+  // Enhanced TOIL calculation function that also notifies the calendar
+  const enhancedTriggerTOILCalculation = useCallback(async () => {
+    logger.debug(`[WorkHoursSection] Enhanced TOIL calculation triggered for ${format(date, 'yyyy-MM-dd')}`);
+    try {
+      const result = await triggerTOILCalculation();
+      if (result) {
+        // Explicitly notify the calendar to refresh after calculation
+        notifyCalendarRefresh();
+        logger.debug(`[WorkHoursSection] TOIL calculation completed and calendar notified`);
+      }
+      return result;
+    } catch (error) {
+      logger.error(`[WorkHoursSection] Error during TOIL calculation:`, error);
+      throw error;
+    }
+  }, [triggerTOILCalculation, notifyCalendarRefresh, date]);
 
   // Handle entry creation
   const handleCreateEntry = useCallback((startTime: string, endTime: string, hours: number) => {
@@ -102,12 +137,12 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         date: date.toISOString()
       });
       
-      // Trigger calculation after a short delay
+      // Trigger calculation after a short delay and notify calendar
       setTimeout(() => {
-        triggerTOILCalculation();
+        enhancedTriggerTOILCalculation();
       }, 200);
     }
-  }, [onCreateEntry, userId, date, triggerTOILCalculation]);
+  }, [onCreateEntry, userId, date, enhancedTriggerTOILCalculation]);
 
   const handleAddEntry = useCallback(() => {
     setShowEntryForm(true);
@@ -119,7 +154,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         <DebugPanel 
           userId={userId} 
           date={date}
-          onCalculateTOIL={triggerTOILCalculation}
+          onCalculateTOIL={enhancedTriggerTOILCalculation}
           isCalculating={isCalculating}
         />
       )}
