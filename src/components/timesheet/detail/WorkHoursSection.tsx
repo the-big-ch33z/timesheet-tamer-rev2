@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -90,7 +89,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     holidays
   });
   
-  // Fix: Create a wrapper function that conforms to the expected type
+  // Enhanced wrapper function for TOIL calculations to broadcast updates
   const calculateToilWrapper = useCallback(async (): Promise<void> => {
     try {
       // Add circuit breaker for calculations
@@ -100,8 +99,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         return undefined;
       }
       
-      // Prevent calculations more frequently than every 3 seconds
-      if (now - lastCalculationTime.current < 3000) {
+      // Reduce debounce period to make updates appear faster
+      if (now - lastCalculationTime.current < 1000) {
         logger.debug('Skipping TOIL calculation due to rate limiting');
         return undefined;
       }
@@ -116,12 +115,22 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       if (summary) {
         logger.debug(`Broadcasting TOIL summary update after day calculation`);
         
-        // Use the event bus with debounce to prevent excessive event firing
+        // Use the event bus with minimal debounce to ensure faster UI updates
         eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
           ...summary,
           timestamp: new Date(),
           monthYear: format(date, 'yyyy-MM')
-        }, { debounce: 1000 });  // Add 1 second debounce
+        }, { debounce: 10 });  // Reduced debounce from 1000 to 10ms
+        
+        // Add an immediate calendar refresh event
+        eventBus.publish(TOIL_EVENTS.CALCULATED, {
+          userId,
+          date: date,
+          status: 'completed',
+          summary: summary,
+          requiresRefresh: true,
+          timestamp: new Date()
+        }, { debounce: 0 });  // No debounce for calendar updates
       }
       
       // Release the lock
@@ -136,7 +145,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       // Still return undefined even in case of error
       return undefined;
     }
-  }, [calculateToilForDay, date]);
+  }, [calculateToilForDay, date, userId]);
 
   useEffect(() => {
     if (effectiveWorkSchedule) {
@@ -179,12 +188,12 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
         date: date.toISOString()
       });
       
-      // Use a longer timeout and only trigger calculation once
+      // Use a shorter timeout and only trigger calculation once
       const triggerTime = Date.now();
-      if (triggerTime - lastCalculationTime.current > 5000) {
+      if (triggerTime - lastCalculationTime.current > 1000) {
         setTimeout(() => {
           triggerTOILCalculation();
-        }, 1000);
+        }, 200); // Reduced delay for faster feedback
       }
     }
   }, [onCreateEntry, userId, date, triggerTOILCalculation, lastCalculationTime]);

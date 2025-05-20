@@ -63,8 +63,18 @@ export const dispatchTOILEvent = (summary: TOILSummary) => {
       // Continue with event dispatch but log error
     }
     
-    // Dispatch through the centralized event bus
-    eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary);
+    // Dispatch through the centralized event bus with minimal debounce
+    eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary, { debounce: 10 });
+    
+    // Also dispatch a calendar refresh event to ensure immediate UI updates
+    // Use almost no debounce to ensure it happens right away
+    eventBus.publish(TOIL_EVENTS.CALCULATED, {
+      userId: summary.userId,
+      date: new Date(),
+      status: 'completed',
+      summary: summary,
+      requiresRefresh: true
+    }, { debounce: 10 });
     
     // Dispatch old-style DOM event for backward compatibility
     const event = new CustomEvent('toil:summary-updated', { 

@@ -1,4 +1,5 @@
-import React, { useMemo, memo } from "react";
+
+import React, { useMemo, memo, useState, useEffect } from "react";
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -20,6 +21,8 @@ import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 import { getShiftedRDOsForMonth } from "@/utils/time/rdoDisplay";
 import { hasTOILForDay, TOILDayInfo } from "@/utils/time/services/toil/storage";
+import { eventBus } from "@/utils/events/EventBus";
+import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 
 interface CalendarGridProps {
   currentMonth: Date;
@@ -43,6 +46,34 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   const { getDayEntries } = useTimeEntryContext();
   const { getDayState, getStartAndEndTimeForDay } = useCalendarHelpers(workSchedule);
   
+  // Add state for refreshing when TOIL events come in
+  const [toilRefreshCounter, setToilRefreshCounter] = useState(0);
+  
+  // Listen for TOIL events that should trigger a calendar refresh
+  useEffect(() => {
+    // Subscribe to TOIL events that should cause a calendar refresh
+    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: any) => {
+      if (data && data.userId === userId && data.requiresRefresh) {
+        logger.debug(`[CalendarGrid] Received TOIL calculation event, refreshing: ${JSON.stringify(data)}`);
+        setToilRefreshCounter(prev => prev + 1);
+      }
+    });
+    
+    // Also listen for summary updates
+    const unsubscribeSummary = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
+      if (data && data.userId === userId) {
+        logger.debug(`[CalendarGrid] Received TOIL summary update, refreshing`);
+        setToilRefreshCounter(prev => prev + 1);
+      }
+    });
+    
+    // Cleanup subscriptions
+    return () => {
+      unsubscribe();
+      unsubscribeSummary();
+    };
+  }, [userId, logger]);
+  
   // Memoize holidays to prevent recalculation
   const holidays = useMemo(() => getHolidays(), []);
 
@@ -63,7 +94,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
     return getShiftedRDOsForMonth(days, workSchedule, holidays);
   }, [days, workSchedule, holidays]);
 
-  // Memoize heavy day data calculations
+  // Memoize heavy day data calculations - now includes toilRefreshCounter as dependency
   const daysData = useMemo(() => {
     if (DEBUG_CALENDAR) logger.debug("Pre-calculating calendar days data");
     console.log("[CalendarGrid] Pre-calculating all day data");
@@ -175,7 +206,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
     shiftedRDOMap,
     DEBUG_CALENDAR,
     logger,
-    userId
+    userId,
+    toilRefreshCounter // Add this dependency to recalculate when TOIL updates occur
   ]);
 
   return (

@@ -25,6 +25,9 @@ export interface UseTOILSummaryResult {
   refreshSummary: () => void;
 }
 
+// Reduce debounce period for more responsive updates
+const REDUCED_DEBOUNCE_PERIOD = 100; // ms
+
 // Debounce timestamp tracking
 let lastOperationTime = 0;
 // Event tracking for circuit breaker
@@ -58,9 +61,9 @@ export const useTOILSummary = ({
       return;
     }
 
-    // Circuit breaker pattern
+    // More permissive circuit breaker 
     const now = Date.now();
-    if (updateAttemptsRef.current > 10 && now - lastUpdateTimeRef.current < 60000) {
+    if (updateAttemptsRef.current > 20 && now - lastUpdateTimeRef.current < 30000) {
       logger.warn('Circuit breaker activated - too many update attempts in short period');
       setIsLoading(false);
       return;
@@ -75,10 +78,8 @@ export const useTOILSummary = ({
     try {
       logger.debug(`Loading summary for ${userId} in ${monthYear}`);
       
-      // Use selective cache clearing instead of aggressive clearing
-      if (refreshCounter % 5 === 0) { // Only clear cache occasionally
-        clearCacheForCurrentMonth(userId, date);
-      }
+      // Use more aggressive cache clearing for better reactivity
+      clearCacheForCurrentMonth(userId, date);
       
       // Use the toilService directly
       const result = toilService.getTOILSummary(userId, monthYear);
@@ -104,6 +105,14 @@ export const useTOILSummary = ({
         
         if (hasChanged) {
           logger.debug(`Summary changed: ${JSON.stringify(result)}`);
+          
+          // If summary changed, dispatch an event to update the calendar
+          eventBus.publish(TOIL_EVENTS.CALCULATED, {
+            userId: userId,
+            date: date,
+            status: 'completed',
+            requiresRefresh: true
+          }, { debounce: 0 });
         }
       }
     } catch (err) {
@@ -115,18 +124,18 @@ export const useTOILSummary = ({
         setIsLoading(false);
         
         // Reset circuit breaker after successful load
-        if (updateAttemptsRef.current > 10) {
+        if (updateAttemptsRef.current > 20) {
           setTimeout(() => {
             updateAttemptsRef.current = 0;
-          }, 60000);
+          }, 30000);
         }
       }
     }
-  }, [userId, monthYear, refreshCounter, date]);
+  }, [userId, monthYear, date]);
 
   const refreshSummary = useCallback(() => {
     const now = Date.now();
-    if (now - lastOperationTime < DEBOUNCE_PERIOD) {
+    if (now - lastOperationTime < REDUCED_DEBOUNCE_PERIOD) {
       logger.debug('Skipping duplicate refresh due to debounce');
       return;
     }
@@ -142,15 +151,15 @@ export const useTOILSummary = ({
       eventCountResetTimer = null;
     }, 10000);
     
-    // Circuit breaker - skip if too many events
-    if (eventCount > 10) {
+    // More permissive circuit breaker - allow more events
+    if (eventCount > 20) {
       logger.warn(`Too many refresh events (${eventCount}), skipping this one`);
       return;
     }
     
     logger.debug(`Refresh requested for ${userId}`);
     
-    // Selective cache clearing
+    // Aggressive cache clearing for immediate feedback
     clearCacheForCurrentMonth(userId, date);
     setRefreshCounter(c => c + 1);
   }, [userId, date]);
@@ -159,13 +168,13 @@ export const useTOILSummary = ({
     isMountedRef.current = true;
     loadSummary();
     
-    // Set up a refresh interval to ensure we get updated data, but less frequently
+    // Set up a refresh interval to ensure we get updated data, more frequently
     const refreshInterval = setInterval(() => {
       if (isMountedRef.current) {
         logger.debug('Periodic refresh');
         setRefreshCounter(c => c + 1); // Just increment counter to trigger loadSummary
       }
-    }, 30000); // Refresh every 30 seconds instead of 10
+    }, 10000); // Refresh every 10 seconds for more responsive updates
     
     return () => {
       isMountedRef.current = false;
@@ -202,6 +211,14 @@ export const useTOILSummary = ({
             setSummary(data);
             lastSummaryRef.current = data;
             setIsLoading(false);
+            
+            // Trigger calendar refresh when summary is updated
+            eventBus.publish(TOIL_EVENTS.CALCULATED, {
+              userId: userId,
+              date: date,
+              status: 'completed',
+              requiresRefresh: true
+            }, { debounce: 0 });
           }
         },
         onRefresh: refreshSummary,
@@ -217,10 +234,10 @@ export const useTOILSummary = ({
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     logger.debug(`Added event listener for toil:summary-updated`);
     
-    // Listen via timeEventsService but with throttling
+    // Listen via timeEventsService but with less throttling
     const sub1 = timeEventsService.subscribe('toil-updated', data => {
       // Skip if circuit breaker is active
-      if (eventCount > 10) return;
+      if (eventCount > 20) return;
       
       logger.debug(`toil-updated event received:`, data);
       if (data?.userId === userId) {
@@ -229,16 +246,31 @@ export const useTOILSummary = ({
       }
     });
 
-    // Added debouncing to these event handlers
+    // Added minimal debouncing to these event handlers
     const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       // Skip if circuit breaker is active  
-      if (eventCount > 10) return;
+      if (eventCount > 20) return;
       
       logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
       if (data && typeof data === 'object' && data.userId === userId) {
         const now = Date.now();
-        if (now - lastOperationTime > DEBOUNCE_PERIOD) {
+        if (now - lastOperationTime > REDUCED_DEBOUNCE_PERIOD) {
           logger.debug(`Refreshing based on TOIL_EVENTS.SUMMARY_UPDATED`);
+          lastOperationTime = now;
+          setRefreshCounter(c => c + 1);
+        }
+      }
+    });
+
+    // Special handler for the CALCULATED event
+    const sub3 = eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: any) => {
+      if (eventCount > 20) return;
+      
+      logger.debug(`TOIL_EVENTS.CALCULATED received:`, data);
+      if (data && data.userId === userId && data.requiresRefresh) {
+        const now = Date.now();
+        if (now - lastOperationTime > REDUCED_DEBOUNCE_PERIOD) {
+          logger.debug(`Refreshing based on TOIL_EVENTS.CALCULATED`);
           lastOperationTime = now;
           setRefreshCounter(c => c + 1);
         }
@@ -251,6 +283,7 @@ export const useTOILSummary = ({
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
       if (sub1 && typeof sub1.unsubscribe === 'function') sub1.unsubscribe();
       if (typeof sub2 === 'function') sub2();
+      if (typeof sub3 === 'function') sub3();
       logger.debug(`Removed event listeners`);
       
       eventCount = 0;
@@ -259,7 +292,7 @@ export const useTOILSummary = ({
         eventCountResetTimer = null;
       }
     };
-  }, [userId, monthYear, refreshSummary]);
+  }, [userId, monthYear, refreshSummary, date]);
 
   return {
     summary,

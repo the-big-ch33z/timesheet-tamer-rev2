@@ -16,7 +16,8 @@ export const TOIL_EVENTS = {
   RECORD_DELETED: 'toil:record-deleted', // TOIL record deleted
   REFRESH_REQUESTED: 'toil:refresh-requested', // Explicit refresh requested
   ERROR: 'toil:error', // Error in TOIL processing
-  CALCULATED: 'toil:calculated' // TOIL calculation completed
+  CALCULATED: 'toil:calculated', // TOIL calculation completed
+  CALENDAR_REFRESH: 'toil:calendar-refresh' // New event to trigger calendar refresh
 };
 
 // Time entry related events

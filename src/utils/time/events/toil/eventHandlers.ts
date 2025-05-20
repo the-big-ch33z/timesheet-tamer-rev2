@@ -1,3 +1,4 @@
+
 import { TOILSummary } from "@/types/toil";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS } from "@/utils/events/eventTypes";
@@ -13,6 +14,13 @@ const logger = createTimeLogger('TOILEventHandlers');
 export const dispatchTOILSummaryEvent = (summary: TOILSummary) => {
   // Use the central event bus directly
   eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary);
+  // Also publish a calendar refresh event to ensure calendar updates immediately
+  eventBus.publish(TOIL_EVENTS.CALCULATED, {
+    userId: summary.userId,
+    date: new Date(),
+    status: 'completed',
+    requiresRefresh: true
+  });
   logger.debug('TOIL summary update dispatched:', summary);
   return true;
 };
