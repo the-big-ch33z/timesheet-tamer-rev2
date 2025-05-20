@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
@@ -50,6 +49,13 @@ export const attemptStorageOperation = async <T>(
 
   throw lastError || new Error('Operation failed after retries');
 };
+
+// Export constants for storage operations
+export const STORAGE_RETRY_DELAY = 200;
+export const STORAGE_MAX_RETRIES = 3;
+
+// Keep track of TOILDayInfo cache for immediate clearing
+const toilDayInfoCache = new Map<string, any>();
 
 /**
  * Load TOIL records for a user
@@ -129,6 +135,9 @@ export function clearSummaryCache(userId?: string, monthYear?: string): void {
       }
       logger.debug('Cleared all summary caches');
     }
+    
+    // Also clear the in-memory cache
+    toilDayInfoCache.clear();
   } catch (error) {
     logger.error('Error clearing summary cache:', error);
   }
@@ -151,6 +160,9 @@ export function clearAllTOILCaches(): void {
     // Remove all TOIL cache keys
     keys.forEach(key => localStorage.removeItem(key));
     
+    // Clear the in-memory cache
+    toilDayInfoCache.clear();
+    
     logger.debug(`Cleared ${keys.length} TOIL cache entries`);
   } catch (error) {
     logger.error('Error clearing all TOIL caches:', error);
@@ -158,18 +170,38 @@ export function clearAllTOILCaches(): void {
 }
 
 /**
- * Get TOIL summary for a specific month
+ * Get TOIL summary for a specific month with improved caching
  */
 export function getTOILSummary(userId: string, monthYear: string): TOILSummary | null {
   try {
     const cacheKey = getSummaryCacheKey(userId, monthYear);
     const cached = localStorage.getItem(cacheKey);
     
+    // Aggressively check for cache validity
     if (cached) {
-      return safelyParseJSON(cached, null);
+      const parsedSummary = safelyParseJSON(cached, null);
+      
+      // Validate the summary cache data
+      if (parsedSummary && 
+          typeof parsedSummary.accrued === 'number' && 
+          typeof parsedSummary.used === 'number' && 
+          typeof parsedSummary.remaining === 'number') {
+        
+        if (!isNaN(parsedSummary.accrued) && 
+            !isNaN(parsedSummary.used) && 
+            !isNaN(parsedSummary.remaining)) {
+          logger.debug(`Using cached TOIL summary for ${userId} in ${monthYear}`);
+          return parsedSummary;
+        } else {
+          logger.warn('Invalid cached summary data (NaN values). Recalculating...');
+        }
+      } else {
+        logger.warn('Invalid cached summary structure. Recalculating...');
+      }
     }
     
-    // If no cached summary, calculate from records
+    // If cache is invalid or doesn't exist, calculate from records
+    logger.debug(`No valid cache found for ${userId} in ${monthYear}. Calculating...`);
     const records = loadTOILRecords(userId);
     const usage = loadTOILUsage(userId);
     
@@ -189,8 +221,13 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
       remaining: accrued - used
     };
     
-    // Cache the result
-    localStorage.setItem(cacheKey, JSON.stringify(summary));
+    // Cache the result with proper validation
+    if (!isNaN(summary.accrued) && !isNaN(summary.used) && !isNaN(summary.remaining)) {
+      localStorage.setItem(cacheKey, JSON.stringify(summary));
+      logger.debug(`Cached new TOIL summary for ${userId} in ${monthYear}: A=${accrued}, U=${used}, R=${accrued-used}`);
+    } else {
+      logger.error(`Calculated invalid TOIL summary (NaN values): A=${accrued}, U=${used}, R=${accrued-used}`);
+    }
     
     return summary;
   } catch (error) {
@@ -217,3 +254,51 @@ export function filterRecordsByDate(records: TOILRecord[], startDate?: Date, end
 export function filterRecordsByEntryId(records: TOILRecord[], entryId: string): TOILRecord[] {
   return records.filter(record => record.entryId === entryId);
 }
+
+/**
+ * Function to clear the TOILDayInfo cache when a TOIL calculation happens
+ */
+export const clearTOILDayInfoCache = (userId?: string, date?: Date) => {
+  if (userId && date) {
+    // Clear specific user+date entry
+    const dateKey = date.toISOString().split('T')[0];
+    const cacheKey = `toil-day-info-${userId}-${dateKey}`;
+    toilDayInfoCache.delete(cacheKey);
+    logger.debug(`Cleared specific TOIL day info cache for ${userId} on ${dateKey}`);
+  } else if (userId) {
+    // Clear all entries for this user
+    const keysToDelete: string[] = [];
+    toilDayInfoCache.forEach((_, key) => {
+      if (key.startsWith(`toil-day-info-${userId}`)) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach(key => toilDayInfoCache.delete(key));
+    logger.debug(`Cleared all TOIL day info caches for user ${userId}`);
+  } else {
+    // Clear all cache
+    toilDayInfoCache.clear();
+    logger.debug('Cleared all TOIL day info caches');
+  }
+};
+
+/**
+ * Get cached TOILDayInfo with automatic clearing
+ */
+export const getCachedTOILDayInfo = (userId: string, date: Date, finder: () => any): any => {
+  const dateKey = date.toISOString().split('T')[0];
+  const cacheKey = `toil-day-info-${userId}-${dateKey}`;
+  
+  if (toilDayInfoCache.has(cacheKey)) {
+    logger.debug(`Using cached TOIL day info for ${userId} on ${dateKey}`);
+    return toilDayInfoCache.get(cacheKey);
+  }
+  
+  logger.debug(`No cached TOIL day info for ${userId} on ${dateKey}, calculating...`);
+  const result = finder();
+  toilDayInfoCache.set(cacheKey, result);
+  return result;
+};
+
+// Export toilDayInfoCache
+export { toilDayInfoCache };

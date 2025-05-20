@@ -63,13 +63,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshAttempts, setRefreshAttempts] = useState(0);
   
-  // Debounce the refresh function to prevent excessive calls
+  // Debounce the refresh function to prevent excessive calls - REDUCED from 3000ms to 500ms
   const debouncedRefresh = useDebounce(() => {
     logger.debug('Requesting refresh of TOIL summary (debounced)');
     refreshSummary();
     setLastUpdated(new Date());
     setRefreshAttempts(prev => prev + 1);
-  }, 3000);
+  }, 500);
   
   // Report errors to parent component
   useEffect(() => {
