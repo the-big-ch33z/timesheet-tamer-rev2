@@ -14,7 +14,7 @@ jest.mock('@/utils/time/formatting', () => ({
 // Mock the unified TOIL hook
 jest.mock('@/hooks/timesheet/toil/useUnifiedTOIL', () => ({
   useUnifiedTOIL: jest.fn(({ options = {} }) => {
-    // Extract the test-specific mock data from the TOILSummaryCard props
+    // Extract the test-specific mock data from options
     const testProps = options.testProps || {};
     
     return {
@@ -45,9 +45,7 @@ describe('TOILSummaryCard', () => {
         userId="test-user-1" 
         date={new Date('2025-05-15')}
         monthName="May 2025"
-        options={{
-          testProps: { summary: null, loading: true }
-        }}
+        testProps={{ summary: null, loading: true }}
       />
     );
     
@@ -69,9 +67,7 @@ describe('TOILSummaryCard', () => {
         userId="test-user-1" 
         date={new Date('2025-05-15')}
         monthName="May 2025"
-        options={{
-          testProps: { summary: emptySummary, loading: false }
-        }}
+        testProps={{ summary: emptySummary, loading: false }}
       />
     );
     
@@ -85,9 +81,7 @@ describe('TOILSummaryCard', () => {
         userId="test-user-1" 
         date={new Date('2025-05-15')}
         monthName="May 2025"
-        options={{
-          testProps: { summary: mockSummary, loading: false }
-        }}
+        testProps={{ summary: mockSummary, loading: false }}
       />
     );
     
@@ -114,9 +108,7 @@ describe('TOILSummaryCard', () => {
         userId="test-user-1" 
         date={new Date('2025-05-15')}
         monthName="May 2025"
-        options={{
-          testProps: { summary: negativeSummary, loading: false }
-        }}
+        testProps={{ summary: negativeSummary, loading: false }}
       />
     );
     
@@ -142,9 +134,7 @@ describe('TOILSummaryCard', () => {
         date={new Date('2025-05-15')}
         monthName="May 2025" 
         onError={onError}
-        options={{
-          testProps: { summary: invalidSummary, loading: false }
-        }}
+        testProps={{ summary: invalidSummary, loading: false }}
       />
     );
     
@@ -162,9 +152,7 @@ describe('TOILSummaryCard', () => {
         userId="test-user-1" 
         date={new Date('2025-05-15')}
         monthName="May 2025" 
-        options={{
-          testProps: { summary: { invalid: true } as any, loading: false }
-        }}
+        testProps={{ summary: { invalid: true } as any, loading: false }}
       />
     );
     

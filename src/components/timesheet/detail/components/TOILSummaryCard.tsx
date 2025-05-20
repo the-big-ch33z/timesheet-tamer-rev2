@@ -12,7 +12,7 @@ import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
 
-interface TOILSummaryCardProps {
+export interface TOILSummaryCardProps {
   userId: string;
   date: Date;
   monthName?: string;
@@ -21,6 +21,11 @@ interface TOILSummaryCardProps {
   showRollover?: boolean;
   rolloverHours?: number;
   useSimpleView?: boolean;
+  // For testing purposes only
+  testProps?: {
+    summary: any;
+    loading: boolean;
+  };
 }
 
 // Main TOILSummaryCard component with improved error handling
@@ -32,7 +37,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   onError,
   showRollover = false,
   rolloverHours = 0,
-  useSimpleView = false
+  useSimpleView = false,
+  testProps
 }) => {
   // Use our new unified TOIL hook
   const {
@@ -44,7 +50,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     userId,
     date,
     options: {
-      monthOnly: true // Use month-only mode
+      monthOnly: true, // Use month-only mode
+      testProps // Pass test props for testing purposes
     }
   });
 

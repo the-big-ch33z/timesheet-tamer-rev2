@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
 import { TOILSummary } from '@/types/toil';
@@ -23,6 +22,10 @@ export interface UseUnifiedTOILProps {
     monthOnly?: boolean;
     autoRefresh?: boolean;
     refreshInterval?: number;
+    testProps?: {
+      summary: TOILSummary | null;
+      loading: boolean;
+    };
   };
 }
 
@@ -64,12 +67,18 @@ export function useUnifiedTOIL({
   const { 
     monthOnly = false,
     autoRefresh = true,
-    refreshInterval = 30000 // 30 seconds
+    refreshInterval = 30000, // 30 seconds
+    testProps
   } = options;
 
+  // Use test props if in test mode
+  const isTestMode = !!testProps;
+
   // State from useTOILSummary
-  const [toilSummary, setToilSummary] = useState<TOILSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [toilSummary, setToilSummary] = useState<TOILSummary | null>(
+    isTestMode ? testProps.summary : null
+  );
+  const [isLoading, setIsLoading] = useState(isTestMode ? testProps.loading : true);
   const [error, setError] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
@@ -86,6 +95,20 @@ export function useUnifiedTOIL({
 
   // Cache holidays to avoid recalculating
   const holidays = useMemo(() => getHolidays(), []);
+
+  // When in test mode, skip the actual hook logic and just return test values
+  if (isTestMode) {
+    return {
+      toilSummary: testProps.summary,
+      isLoading: testProps.loading,
+      error: null,
+      isCalculating: false,
+      calculateToilForDay: async () => testProps.summary || null,
+      triggerTOILCalculation: async () => testProps.summary || null,
+      isToilEntry: () => false,
+      refreshSummary: () => {}
+    };
+  }
 
   // Log work schedule information when it changes
   useEffect(() => {
