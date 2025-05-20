@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, memo } from "react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,14 +15,7 @@ import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 
 const logger = createTimeLogger('TimesheetCalendar');
 
-// Define type for TOIL event data
-interface TOILEventData {
-  userId?: string;
-  date?: string;
-  timestamp?: number;
-  source?: string;
-  requiresRefresh?: boolean;
-}
+// Remove the duplicate TOILEventData interface that was defined here
 
 interface TimesheetCalendarProps {
   currentMonth: Date;

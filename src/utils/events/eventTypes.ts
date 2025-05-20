@@ -20,6 +20,8 @@ export interface TOILEventData {
   status?: 'starting' | 'completed' | 'error';
   summary?: any;
   error?: string;
+  // Add the monthYear field that was missing
+  monthYear?: string;
 }
 
 // TOIL related events

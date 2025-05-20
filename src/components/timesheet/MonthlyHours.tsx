@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
@@ -89,7 +90,13 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   // Subscribe to TOIL events to update based on changes
   useEffect(() => {
     const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: TOILEventData) => {
-      if (data && data.userId === user.id && data.monthYear === monthYear) {
+      // Check for the monthYear property in the TOILEventData
+      // For backward compatibility, we'll also check month+year, month, or just userId match
+      const dataMatchesMonth = 
+        (data && data.userId === user.id && data.monthYear === monthYear) || 
+        (data && data.userId === user.id && data.date?.startsWith(monthYear));
+      
+      if (dataMatchesMonth) {
         logger.debug('Received TOIL_EVENTS.SUMMARY_UPDATED in MonthlyHours:', data);
         refreshSummary();
         setRefreshCount(prev => prev + 1);

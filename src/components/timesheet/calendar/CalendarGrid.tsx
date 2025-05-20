@@ -1,3 +1,4 @@
+
 import React, { useMemo, memo, useState, useEffect, useCallback } from "react";
 import { 
   startOfMonth, 
@@ -23,17 +24,7 @@ import { hasTOILForDay, TOILDayInfo } from "@/utils/time/services/toil/storage";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 
-// Define type for TOIL event data
-interface TOILEventData {
-  userId?: string;
-  date?: string;
-  timestamp?: number;
-  source?: string;
-  requiresRefresh?: boolean;
-  detail?: {
-    userId?: string;
-  };
-}
+// Remove the duplicate TOILEventData interface
 
 interface CalendarGridProps {
   currentMonth: Date;
