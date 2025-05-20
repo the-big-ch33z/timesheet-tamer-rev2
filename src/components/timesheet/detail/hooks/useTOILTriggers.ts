@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { toilService } from '@/utils/time/services/toil';
 import { createTimeLogger } from '@/utils/time/errors';
+import { unifiedTOILEventService } from '@/utils/time/services/toil/unifiedEventService';
 
 const logger = createTimeLogger('useTOILTriggers');
 
@@ -29,15 +29,8 @@ export const useTOILTriggers = ({
     if (entries.length !== entriesCount) {
       logger.debug(`[useTOILTriggers] Entries count changed from ${entriesCount} to ${entries.length}`);
       setEntriesCount(entries.length);
-
-      // Publish event about hours change
-      timeEventsService.publish('hours-updated', {
-        entriesCount: entries.length,
-        date: date.toISOString(),
-        userId
-      });
     }
-  }, [entries.length, entriesCount, date, userId]);
+  }, [entries.length, entriesCount]);
 
   // Manual TOIL calculation trigger
   useEffect(() => {
@@ -54,17 +47,19 @@ export const useTOILTriggers = ({
       ).then(summary => {
         logger.debug('[useTOILTriggers] Manual TOIL calculation complete:', summary);
         
-        // Dispatch both event types for maximum compatibility
-        timeEventsService.publish('toil-updated', {
-          userId,
-          date: date.toISOString(),
-          summary
-        });
+        // Use the unified service to dispatch events
+        if (summary) {
+          unifiedTOILEventService.dispatchTOILSummaryEvent(summary);
+        }
+      }).catch(error => {
+        logger.error('[useTOILTriggers] Error in manual TOIL calculation:', error);
         
-        // Also dispatch through the DOM event system
-        window.dispatchEvent(new CustomEvent('toil:summary-updated', { 
-          detail: summary
-        }));
+        // Use unified service to report error
+        unifiedTOILEventService.dispatchTOILErrorEvent(
+          'Error in manual TOIL calculation',
+          error,
+          userId
+        );
       });
     }
   }, [manualCalculationTrigger, entries, date, userId, workSchedule, holidays]);

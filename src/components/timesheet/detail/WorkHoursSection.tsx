@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -11,11 +12,11 @@ import { DebugPanel, WorkHoursContent } from "./work-hours-section";
 import { useTOILTriggers } from "@/hooks/timesheet/useTOILTriggers";
 import WorkHoursInterface from "./work-hours/WorkHoursInterface";
 import TimeEntryController from "../entry-control/TimeEntryController";
-import { TOILSummary } from "@/types/toil";
 import WorkHoursActions from "./components/WorkHoursActions";
 import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { format } from 'date-fns';
+import { unifiedTOILEventService } from "@/utils/time/services/toil/unifiedEventService";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -115,22 +116,8 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       if (summary) {
         logger.debug(`Broadcasting TOIL summary update after day calculation`);
         
-        // Use the event bus with minimal debounce to ensure faster UI updates
-        eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
-          ...summary,
-          timestamp: new Date(),
-          monthYear: format(date, 'yyyy-MM')
-        }, { debounce: 10 });  // Reduced debounce from 1000 to 10ms
-        
-        // Add an immediate calendar refresh event
-        eventBus.publish(TOIL_EVENTS.CALCULATED, {
-          userId,
-          date: date,
-          status: 'completed',
-          summary: summary,
-          requiresRefresh: true,
-          timestamp: new Date()
-        }, { debounce: 0 });  // No debounce for calendar updates
+        // Use the unified service to dispatch the TOIL summary event
+        unifiedTOILEventService.dispatchTOILSummaryEvent(summary);
       }
       
       // Release the lock
@@ -142,6 +129,14 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       logger.error('Error in TOIL calculation wrapper:', error);
       // Release the lock even on error
       calculationInProgress.current = false;
+      
+      // Use unified service to dispatch error
+      unifiedTOILEventService.dispatchTOILErrorEvent(
+        'Error calculating TOIL',
+        error,
+        userId
+      );
+      
       // Still return undefined even in case of error
       return undefined;
     }

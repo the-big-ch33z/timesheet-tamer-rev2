@@ -3,12 +3,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
 import { toilService, clearCacheForCurrentMonth } from '@/utils/time/services/toil';
-import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
-import { DEBOUNCE_PERIOD } from '@/utils/time/services/toil/storage/constants';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
-import { createTOILUpdateHandler } from '@/utils/time/events/toilEventService';
+import { unifiedTOILEventService } from '@/utils/time/services/toil/unifiedEventService';
 
 const logger = createTimeLogger('useTOILSummary');
 
@@ -200,8 +198,8 @@ export const useTOILSummary = ({
   }, [userId, monthYear, date]);
 
   useEffect(() => {
-    // Create a unified handler using the factory function
-    const handleTOILUpdate = createTOILUpdateHandler(
+    // Create a unified handler using the factory function from the unified service
+    const handleTOILUpdate = unifiedTOILEventService.createTOILUpdateHandler(
       userId,
       monthYear,
       {
@@ -234,21 +232,9 @@ export const useTOILSummary = ({
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     logger.debug(`Added event listener for toil:summary-updated`);
     
-    // Listen via timeEventsService but with less throttling
-    const sub1 = timeEventsService.subscribe('toil-updated', data => {
+    // Subscribe to EventBus events
+    const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       // Skip if circuit breaker is active
-      if (eventCount > 20) return;
-      
-      logger.debug(`toil-updated event received:`, data);
-      if (data?.userId === userId) {
-        logger.debug(`Refreshing based on toil-updated event`);
-        refreshSummary();
-      }
-    });
-
-    // Added minimal debouncing to these event handlers
-    const sub2 = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
-      // Skip if circuit breaker is active  
       if (eventCount > 20) return;
       
       logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
@@ -281,8 +267,7 @@ export const useTOILSummary = ({
     return () => {
       // Clean up all event listeners properly
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
-      if (sub1 && typeof sub1.unsubscribe === 'function') sub1.unsubscribe();
-      if (typeof sub2 === 'function') sub2();
+      if (typeof subscription === 'function') subscription();
       if (typeof sub3 === 'function') sub3();
       logger.debug(`Removed event listeners`);
       
@@ -293,6 +278,10 @@ export const useTOILSummary = ({
       }
     };
   }, [userId, monthYear, refreshSummary, date]);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary, refreshCounter]);
 
   return {
     summary,

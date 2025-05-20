@@ -13,6 +13,7 @@ import { clearCacheForCurrentMonth } from "@/utils/time/services/toil";
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
 import { useDebounce } from "@/hooks/useDebounce";
+import { unifiedTOILEventService } from "@/utils/time/services/toil/unifiedEventService";
 
 // Create a logger for this component
 const logger = createTimeLogger('MonthlyHours');
@@ -73,7 +74,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     clearCacheForCurrentMonth(user.id, currentMonth);
     debouncedRefresh();
     
-    // Broadcast a global refresh event - with debounce option
+    // Broadcast a global refresh event using the unified service
     eventBus.publish(TOIL_EVENTS.REFRESH_REQUESTED, {
       userId: user.id,
       monthYear,
@@ -94,6 +95,13 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
       logger.error(`Error loading TOIL summary for ${monthName}:`, toilError);
       setErrorMessage(toilError);
       
+      // Use the unified service to dispatch the error
+      unifiedTOILEventService.dispatchTOILErrorEvent(
+        `Error loading TOIL summary: ${toilError}`,
+        { monthYear },
+        user.id
+      );
+      
       toast({
         title: "TOIL Data Error",
         description: `Could not load your TOIL data: ${toilError}`,
@@ -110,7 +118,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     } else {
       setRolloverHours(0);
     }
-  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast]);
+  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast, monthYear]);
   
   // Force a refresh when the component mounts or month changes, but with circuit breaker
   useEffect(() => {
@@ -126,10 +134,41 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
       refreshSummary();
     }, 120000); // Refresh every 2 minutes instead of 60 seconds
     
+    // Subscribe to TOIL calculation events using the unified service's handler
+    const toilUpdateHandler = unifiedTOILEventService.createTOILUpdateHandler(
+      user.id,
+      monthYear,
+      {
+        onValidUpdate: (summary) => {
+          logger.debug('Received valid TOIL update in MonthlyHours:', summary);
+          // We don't need to set the summary directly as useTOILSummary will handle it
+          // Just trigger a refresh to ensure we get the latest data
+          refreshSummary();
+        },
+        onRefresh: () => {
+          logger.debug('TOIL update requested refresh in MonthlyHours');
+          refreshSummary();
+        }
+      }
+    );
+    
+    // Add event listener for DOM events (backward compatibility)
+    window.addEventListener('toil:summary-updated', toilUpdateHandler as EventListener);
+    
+    // Subscribe to EventBus events
+    const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
+      if (data && data.userId === user.id && data.monthYear === monthYear) {
+        logger.debug('Received TOIL_EVENTS.SUMMARY_UPDATED in MonthlyHours:', data);
+        refreshSummary();
+      }
+    });
+    
     return () => {
       clearInterval(refreshInterval);
+      window.removeEventListener('toil:summary-updated', toilUpdateHandler as EventListener);
+      if (typeof subscription === 'function') subscription();
     };
-  }, [refreshSummary, user.id, currentMonth]);
+  }, [refreshSummary, user.id, currentMonth, monthYear]);
 
   return (
     <TOILEventProvider>

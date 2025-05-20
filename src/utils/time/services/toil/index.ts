@@ -9,6 +9,7 @@ import { clearSummaryCache } from './storage';
 import { createTimeLogger } from '@/utils/time/errors';
 import { format } from 'date-fns';
 import { initializeTOILEntryEventHandlers } from './entryEventHandler';
+import { unifiedTOILEventService } from './unifiedEventService';
 
 const logger = createTimeLogger('TOIL-Service');
 
@@ -34,6 +35,7 @@ export * from './events';
 export * from './service/main';
 export * from './service/core';
 export * from './entryEventHandler';  // Export the new event handler
+export * from './unifiedEventService';  // Export the unified event service
 
 // Re-export the toilService singleton instance directly
 export { toilService };
@@ -94,9 +96,13 @@ export function getDebugInfo() {
     serviceInitialized: toilService.isInitialized(),
     queueLength: toilService.getQueueLength(),
     isQueueProcessing: toilService.isQueueProcessing(),
-    lastCacheClear: new Date(lastCacheClearTime).toISOString()
+    lastCacheClear: new Date(lastCacheClearTime).toISOString(),
+    unifiedEventServiceInitialized: !!unifiedTOILEventService
   };
 }
 
+// Export unified service directly for easier access
+export { unifiedTOILEventService };
+
 // Module initialization marker
-logger.debug('TOIL service module initialized with entry event handlers');
+logger.debug('TOIL service module initialized with unified event handling');

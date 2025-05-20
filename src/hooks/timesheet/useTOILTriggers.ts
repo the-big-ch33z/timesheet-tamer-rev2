@@ -5,6 +5,7 @@ import { createTimeLogger } from '@/utils/time/errors';
 import { useTOILCalculations } from './useTOILCalculations';
 import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { unifiedTOILEventService } from '@/utils/time/services/toil/unifiedEventService';
 
 const logger = createTimeLogger('useTOILTriggers');
 
@@ -49,7 +50,12 @@ export const useTOILTriggers = ({
       
       const result = await calculateToilForDay();
       
-      // Notify that calculation is complete
+      // Notify that calculation is complete using the unified service
+      if (result) {
+        unifiedTOILEventService.dispatchTOILSummaryEvent(result);
+      }
+      
+      // Also publish the calculation completed event
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
         date,
