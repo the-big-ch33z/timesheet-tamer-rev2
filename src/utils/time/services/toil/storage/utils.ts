@@ -1,3 +1,4 @@
+
 /**
  * @deprecated This file is kept for backward compatibility.
  * Import utilities from './core.ts' instead.
@@ -82,5 +83,6 @@ export const getCachedTOILDayInfo = (userId: string, date: Date, finder: () => a
   return result;
 };
 
-// Export new functions
-export { clearTOILDayInfoCache, toilDayInfoCache, getCachedTOILDayInfo };
+// Export toilDayInfoCache but remove duplicate exports of functions
+export { toilDayInfoCache };
+
