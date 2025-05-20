@@ -7,6 +7,21 @@
 // Type definition for event types
 export type EventType = keyof typeof ALL_EVENTS;
 
+// Define common TOIL event data interface for consistent typing
+export interface TOILEventData {
+  userId?: string;
+  date?: string;
+  timestamp?: number;
+  source?: string;
+  requiresRefresh?: boolean;
+  detail?: {
+    userId?: string;
+  };
+  status?: 'starting' | 'completed' | 'error';
+  summary?: any;
+  error?: string;
+}
+
 // TOIL related events
 export const TOIL_EVENTS = {
   UPDATED: 'toil:updated', // General TOIL data changed

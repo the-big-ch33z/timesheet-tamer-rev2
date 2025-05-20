@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User, WorkSchedule } from "@/types";
@@ -8,7 +7,7 @@ import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
 import { useToast } from "@/hooks/use-toast";
 import { TOILEventProvider } from "@/utils/time/events/toil";
-import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { TOIL_EVENTS, TOILEventData } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 
@@ -89,7 +88,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   
   // Subscribe to TOIL events to update based on changes
   useEffect(() => {
-    const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
+    const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: TOILEventData) => {
       if (data && data.userId === user.id && data.monthYear === monthYear) {
         logger.debug('Received TOIL_EVENTS.SUMMARY_UPDATED in MonthlyHours:', data);
         refreshSummary();

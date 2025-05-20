@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, memo } from "react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import { triggerGlobalSave } from "@/contexts/timesheet/TimesheetContext";
 import { useToast } from "@/hooks/use-toast";
 import { createTimeLogger } from "@/utils/time/errors";
 import { eventBus } from "@/utils/events/EventBus";
-import { TOIL_EVENTS } from "@/utils/events/eventTypes";
+import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 
 const logger = createTimeLogger('TimesheetCalendar');
 

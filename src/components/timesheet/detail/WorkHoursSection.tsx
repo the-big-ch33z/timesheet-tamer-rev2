@@ -12,7 +12,7 @@ import WorkHoursActions from "./components/WorkHoursActions";
 import { format } from 'date-fns';
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 import { eventBus } from "@/utils/events/EventBus";
-import { TOIL_EVENTS } from "@/utils/events/eventTypes";
+import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -87,7 +87,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       date: date.toISOString(),
       timestamp: Date.now(),
       source: 'WorkHoursSection'
-    }, { 
+    } as TOILEventData, { 
       debounce: 100, // Reduced debounce period for critical UI updates
       throttle: 150  // Add minimal throttle to prevent excessive renders
     });

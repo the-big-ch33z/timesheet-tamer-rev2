@@ -1,4 +1,3 @@
-
 import React, { useMemo, memo, useState, useEffect, useCallback } from "react";
 import { 
   startOfMonth, 
@@ -22,7 +21,7 @@ import { calculateCompletion } from "@/utils/timesheet/completionUtils";
 import { getShiftedRDOsForMonth } from "@/utils/time/rdoDisplay";
 import { hasTOILForDay, TOILDayInfo } from "@/utils/time/services/toil/storage";
 import { eventBus } from "@/utils/events/EventBus";
-import { TOIL_EVENTS } from "@/utils/events/eventTypes";
+import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 
 // Define type for TOIL event data
 interface TOILEventData {
@@ -90,19 +89,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
     // Array of event subscriptions to manage together
     const subscriptions = [
       // Primary calculation events
-      eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data) => {
+      eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: TOILEventData) => {
         eventLogger('CALCULATED')(data);
         handleTOILUpdate(data);
       }),
       
       // Summary update events
-      eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data) => {
+      eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: TOILEventData) => {
         eventLogger('SUMMARY_UPDATED')(data);
         handleTOILUpdate(data);
       }),
       
       // General update events
-      eventBus.subscribe(TOIL_EVENTS.UPDATED, (data) => {
+      eventBus.subscribe(TOIL_EVENTS.UPDATED, (data: TOILEventData) => {
         eventLogger('UPDATED')(data);
         handleTOILUpdate(data);
       }),

@@ -8,7 +8,7 @@ import { toilService, clearCacheForCurrentMonth } from '@/utils/time/services/to
 import { getHolidays } from '@/lib/holidays';
 import { unifiedTOILEventService } from '@/utils/time/services/toil/unifiedEventService';
 import { eventBus } from '@/utils/events/EventBus';
-import { TOIL_EVENTS } from '@/utils/events/eventTypes';
+import { TOIL_EVENTS, TOILEventData } from '@/utils/events/eventTypes';
 import { TOIL_JOB_NUMBER } from '@/utils/time/services/toil';
 
 // Create a logger for this hook
@@ -337,10 +337,11 @@ export function useUnifiedTOIL({
       // Notify that calculation is starting
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
-        date,
+        date: date.toISOString(),
         status: 'starting',
-        timestamp: new Date()
-      });
+        timestamp: new Date().getTime(),
+        source: 'useUnifiedTOIL'
+      } as TOILEventData);
       
       const result = await calculateToilForDay();
       
@@ -352,11 +353,12 @@ export function useUnifiedTOIL({
       // Also publish the calculation completed event
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
-        date,
+        date: date.toISOString(),
         status: 'completed',
         summary: result,
-        timestamp: new Date()
-      });
+        timestamp: new Date().getTime(),
+        source: 'useUnifiedTOIL'
+      } as TOILEventData);
       
       logger.debug('Manual TOIL calculation complete');
       return result;
@@ -366,11 +368,12 @@ export function useUnifiedTOIL({
       // Notify about error
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
-        date,
+        date: date.toISOString(),
         status: 'error',
         error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date()
-      });
+        timestamp: new Date().getTime(),
+        source: 'useUnifiedTOIL'
+      } as TOILEventData);
       
       throw error;
     }
