@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
 import { toilService, TOIL_JOB_NUMBER } from '@/utils/time/services/toil';
@@ -22,6 +21,9 @@ export interface UseTOILCalculationsResult {
   isCalculating: boolean;
 }
 
+/**
+ * @deprecated Use useUnifiedTOIL from '@/hooks/timesheet/toil/useUnifiedTOIL' instead
+ */
 export const useTOILCalculations = ({
   userId,
   date,
@@ -29,6 +31,8 @@ export const useTOILCalculations = ({
   workSchedule
 }: UseTOILCalculationsProps): UseTOILCalculationsResult => {
   const logger = useLogger('TOILCalculations');
+  logger.debug('useTOILCalculations is deprecated. Use useUnifiedTOIL instead');
+  
   const [toilSummary, setToilSummary] = useState<TOILSummary | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   

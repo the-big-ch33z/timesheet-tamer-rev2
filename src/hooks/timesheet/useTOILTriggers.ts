@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { TimeEntry, WorkSchedule } from '@/types';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -17,6 +16,9 @@ interface UseTOILTriggersProps {
   holidays: any[];
 }
 
+/**
+ * @deprecated Use useUnifiedTOIL from '@/hooks/timesheet/toil/useUnifiedTOIL' instead
+ */
 export const useTOILTriggers = ({
   userId,
   date,
@@ -24,6 +26,8 @@ export const useTOILTriggers = ({
   workSchedule,
   holidays
 }: UseTOILTriggersProps) => {
+  logger.debug('useTOILTriggers is deprecated. Use useUnifiedTOIL instead');
+  
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Use TOIL calculation tools

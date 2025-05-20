@@ -1,46 +1,55 @@
 
 import React, { memo, useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { TOILSummary } from "@/types/toil";
 import { Clock, Bug } from "lucide-react";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILErrorState } from "./toil-summary";
 import { useTOILEventHandling } from "../hooks/useTOILEventHandling";
 import TOILCardContent from "./toil-summary/TOILCardContent";
-import { toilService } from "@/utils/time/services/toil";
-import { eventBus } from '@/utils/events/EventBus';
-import { TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { useDebounce } from "@/hooks/useDebounce";
+import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
 
 interface TOILSummaryCardProps {
-  summary: TOILSummary | null;
-  loading?: boolean;
+  userId: string;
+  date: Date;
   monthName?: string;
   className?: string;
   onError?: (error: string) => void;
   showRollover?: boolean;
   rolloverHours?: number;
   useSimpleView?: boolean;
-  onRefreshRequest?: () => void;
 }
 
 // Main TOILSummaryCard component with improved error handling
 const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
-  summary,
-  loading = false,
+  userId,
+  date,
   monthName,
   className,
   onError,
   showRollover = false,
   rolloverHours = 0,
-  useSimpleView = false,
-  onRefreshRequest
+  useSimpleView = false
 }) => {
+  // Use our new unified TOIL hook
+  const {
+    toilSummary: summary,
+    isLoading: loading,
+    error,
+    refreshSummary
+  } = useUnifiedTOIL({
+    userId,
+    date,
+    options: {
+      monthOnly: true // Use month-only mode
+    }
+  });
+
   // Use our custom hook for event handling
-  const { handleRefresh } = useTOILEventHandling(onRefreshRequest);
+  const { handleRefresh } = useTOILEventHandling(refreshSummary);
   
   // Add debug mode state
   const [debugMode, setDebugMode] = useState(false);
@@ -49,44 +58,20 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   
   // Debounce the refresh function to prevent excessive calls
   const debouncedRefresh = useDebounce(() => {
-    if (onRefreshRequest) {
-      logger.debug('Requesting refresh of TOIL summary (debounced)');
-      onRefreshRequest();
-      setLastUpdated(new Date());
-      setRefreshAttempts(prev => prev + 1);
-    }
+    logger.debug('Requesting refresh of TOIL summary (debounced)');
+    refreshSummary();
+    setLastUpdated(new Date());
+    setRefreshAttempts(prev => prev + 1);
   }, 3000);
   
-  // Set up a less frequent refresh interval
+  // Report errors to parent component
   useEffect(() => {
-    logger.debug('TOILSummaryCard mounted');
-    
-    // Set up a refresh interval with much less frequency (30 seconds instead of 5)
-    const refreshInterval = setInterval(() => {
-      if (onRefreshRequest && refreshAttempts < 5) { // Limit automatic refreshes
-        logger.debug('Auto-refreshing TOIL summary (periodic)');
-        onRefreshRequest();
-        setLastUpdated(new Date());
-        setRefreshAttempts(prev => prev + 1);
-      }
-    }, 30000); // Refresh every 30 seconds instead of 5
-    
-    return () => {
-      logger.debug('TOILSummaryCard unmounting, clearing interval');
-      clearInterval(refreshInterval);
-    };
-  }, [onRefreshRequest, refreshAttempts]);
+    if (error && onError) {
+      onError(error);
+    }
+  }, [error, onError]);
   
-  // Reset refresh attempts counter after 2 minutes
-  useEffect(() => {
-    const resetAttemptsTimer = setTimeout(() => {
-      setRefreshAttempts(0);
-    }, 120000);
-    
-    return () => clearTimeout(resetAttemptsTimer);
-  }, [refreshAttempts]);
-  
-  // Log when summary changes, but don't broadcast unnecessarily
+  // Log when summary changes
   useEffect(() => {
     if (summary) {
       logger.debug('TOILSummaryCard received summary update:', summary);
@@ -150,11 +135,11 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
           {debugMode && (
             <div className="mt-4 p-2 border border-amber-200 bg-amber-50 rounded text-xs font-mono">
               <div>Last update: {lastUpdated.toLocaleTimeString()}</div>
-              <div>Cache valid: {toilService.isInitialized() ? "Yes" : "No"}</div>
+              <div>Refresh attempts: {refreshAttempts}/5</div>
               <div>
                 Summary: {summary ? `A:${summary.accrued} U:${summary.used} R:${summary.remaining}` : "None"}
               </div>
-              <div>Refresh attempts: {refreshAttempts}/5</div>
+              {error && <div className="text-red-500">Error: {error}</div>}
             </div>
           )}
         </CardContent>

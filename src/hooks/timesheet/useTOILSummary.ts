@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
@@ -32,11 +31,16 @@ let lastOperationTime = 0;
 let eventCount = 0;
 let eventCountResetTimer: NodeJS.Timeout | null = null;
 
+/**
+ * @deprecated Use useUnifiedTOIL from '@/hooks/timesheet/toil/useUnifiedTOIL' instead
+ */
 export const useTOILSummary = ({
   userId,
   date,
   monthOnly = true
 }: UseTOILSummaryProps): UseTOILSummaryResult => {
+  logger.debug('useTOILSummary is deprecated. Use useUnifiedTOIL instead');
+
   const [summary, setSummary] = useState<TOILSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
