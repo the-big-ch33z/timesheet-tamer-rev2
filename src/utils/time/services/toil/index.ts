@@ -27,15 +27,22 @@ try {
   logger.error('Failed to initialize TOIL service:', e);
 }
 
-// Re-export everything from the TOIL modules
+// Re-export everything from the TOIL modules EXCEPT for the conflicting functions
 export * from './calculation';
 export * from './queue';
 export * from './storage';
-export * from './events';
+// Don't re-export from './events' since those functions are now in unifiedEventService
 export * from './service/main';
 export * from './service/core';
 export * from './entryEventHandler';  // Export the new event handler
-export * from './unifiedEventService';  // Export the unified event service
+
+// Re-export the unified event service and its functions - this replaces './events' exports
+export {
+  unifiedTOILEventService,
+  createTOILUpdateHandler,
+  dispatchTOILEvent,
+  dispatchTOILSummaryEvent
+} from './unifiedEventService';
 
 // Re-export the toilService singleton instance directly
 export { toilService };
@@ -100,9 +107,6 @@ export function getDebugInfo() {
     unifiedEventServiceInitialized: !!unifiedTOILEventService
   };
 }
-
-// Export unified service directly for easier access
-export { unifiedTOILEventService };
 
 // Module initialization marker
 logger.debug('TOIL service module initialized with unified event handling');
