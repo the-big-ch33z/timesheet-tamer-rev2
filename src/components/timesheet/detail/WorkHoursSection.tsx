@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";

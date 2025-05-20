@@ -1,3 +1,4 @@
+
 import { TOILSummary } from "@/types/toil";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS } from "@/utils/events/eventTypes";
@@ -54,7 +55,7 @@ class UnifiedTOILEventService {
       if (typeof summary.accrued !== 'number' || 
           typeof summary.used !== 'number' || 
           typeof summary.remaining !== 'number') {
-        logger.warning('TOIL summary contains non-numeric values:', {
+        logger.warn('TOIL summary contains non-numeric values:', {
           accrued: summary.accrued,
           used: summary.used,
           remaining: summary.remaining
@@ -244,6 +245,11 @@ class UnifiedTOILEventService {
 
 // Export a singleton instance
 export const unifiedTOILEventService = new UnifiedTOILEventService();
+
+// Export individual functions for easier importing
+export const createTOILUpdateHandler = unifiedTOILEventService.createTOILUpdateHandler;
+export const dispatchTOILEvent = unifiedTOILEventService.dispatchTOILEvent;
+export const dispatchTOILSummaryEvent = unifiedTOILEventService.dispatchTOILSummaryEvent;
 
 // Initialize the service when this module is imported
 logger.debug('Unified TOIL Event Service initialized');
