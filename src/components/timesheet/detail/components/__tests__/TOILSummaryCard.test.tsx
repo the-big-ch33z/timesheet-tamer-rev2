@@ -11,12 +11,22 @@ jest.mock('@/utils/time/formatting', () => ({
   formatDisplayHours: (hours: number) => `${hours > 0 ? '+' : ''}${hours}h`
 }));
 
-// Mock the hooks
-jest.mock('@/utils/time/events/toilEventService', () => ({
-  useTOILEvents: () => ({
-    subscribe: jest.fn().mockReturnValue(jest.fn()),
-    dispatchTOILEvent: jest.fn(),
-    lastEvent: null
+// Mock the unified TOIL hook
+jest.mock('@/hooks/timesheet/toil/useUnifiedTOIL', () => ({
+  useUnifiedTOIL: jest.fn(({ options = {} }) => {
+    // Extract the test-specific mock data from the TOILSummaryCard props
+    const testProps = options.testProps || {};
+    
+    return {
+      toilSummary: testProps.summary || null,
+      isLoading: testProps.loading !== undefined ? testProps.loading : false,
+      error: null,
+      isCalculating: false,
+      calculateToilForDay: jest.fn().mockResolvedValue({}),
+      triggerTOILCalculation: jest.fn().mockResolvedValue({}),
+      isToilEntry: jest.fn(),
+      refreshSummary: jest.fn()
+    };
   })
 }));
 
@@ -30,7 +40,16 @@ describe('TOILSummaryCard', () => {
   };
 
   it('renders loading state correctly', () => {
-    render(<TOILSummaryCard summary={null} loading={true} monthName="May 2025" />);
+    render(
+      <TOILSummaryCard 
+        userId="test-user-1" 
+        date={new Date('2025-05-15')}
+        monthName="May 2025"
+        options={{
+          testProps: { summary: null, loading: true }
+        }}
+      />
+    );
     
     // Should show loading indicators
     expect(screen.getAllByTestId('loading-indicator')).toHaveLength(3);
@@ -45,14 +64,32 @@ describe('TOILSummaryCard', () => {
       remaining: 0
     };
     
-    render(<TOILSummaryCard summary={emptySummary} loading={false} monthName="May 2025" />);
+    render(
+      <TOILSummaryCard 
+        userId="test-user-1" 
+        date={new Date('2025-05-15')}
+        monthName="May 2025"
+        options={{
+          testProps: { summary: emptySummary, loading: false }
+        }}
+      />
+    );
     
     // Should show "No TOIL activity" text
     expect(screen.getByText('No TOIL activity for this month.')).toBeInTheDocument();
   });
   
   it('renders valid TOIL summary correctly', () => {
-    render(<TOILSummaryCard summary={mockSummary} loading={false} monthName="May 2025" />);
+    render(
+      <TOILSummaryCard 
+        userId="test-user-1" 
+        date={new Date('2025-05-15')}
+        monthName="May 2025"
+        options={{
+          testProps: { summary: mockSummary, loading: false }
+        }}
+      />
+    );
     
     // Check for correct values
     expect(screen.getByText('Earned')).toBeInTheDocument();
@@ -72,7 +109,16 @@ describe('TOILSummaryCard', () => {
       remaining: -6
     };
     
-    render(<TOILSummaryCard summary={negativeSummary} loading={false} monthName="May 2025" />);
+    render(
+      <TOILSummaryCard 
+        userId="test-user-1" 
+        date={new Date('2025-05-15')}
+        monthName="May 2025"
+        options={{
+          testProps: { summary: negativeSummary, loading: false }
+        }}
+      />
+    );
     
     // Check for negative balance warning
     expect(screen.getByText('Negative TOIL balance')).toBeInTheDocument();
@@ -90,12 +136,17 @@ describe('TOILSummaryCard', () => {
     
     const onError = jest.fn();
     
-    render(<TOILSummaryCard 
-      summary={invalidSummary} 
-      loading={false} 
-      monthName="May 2025" 
-      onError={onError}
-    />);
+    render(
+      <TOILSummaryCard 
+        userId="test-user-1" 
+        date={new Date('2025-05-15')}
+        monthName="May 2025" 
+        onError={onError}
+        options={{
+          testProps: { summary: invalidSummary, loading: false }
+        }}
+      />
+    );
     
     // Should show error warning
     expect(screen.getByText(/Some TOIL values couldn't be calculated properly/i)).toBeInTheDocument();
@@ -106,12 +157,16 @@ describe('TOILSummaryCard', () => {
     // Force an error by providing invalid props
     jest.spyOn(console, 'error').mockImplementation(() => {});
     
-    render(<TOILSummaryCard 
-      // @ts-ignore - intentional invalid prop to trigger error
-      summary={{ invalid: true }} 
-      loading={false} 
-      monthName="May 2025" 
-    />);
+    render(
+      <TOILSummaryCard 
+        userId="test-user-1" 
+        date={new Date('2025-05-15')}
+        monthName="May 2025" 
+        options={{
+          testProps: { summary: { invalid: true } as any, loading: false }
+        }}
+      />
+    );
     
     expect(screen.getByText('Error displaying TOIL summary')).toBeInTheDocument();
   });
