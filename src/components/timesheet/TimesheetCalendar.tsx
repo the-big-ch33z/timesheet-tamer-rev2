@@ -15,6 +15,15 @@ import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 
 const logger = createTimeLogger('TimesheetCalendar');
 
+// Define type for TOIL event data
+interface TOILEventData {
+  userId?: string;
+  date?: string;
+  timestamp?: number;
+  source?: string;
+  requiresRefresh?: boolean;
+}
+
 interface TimesheetCalendarProps {
   currentMonth: Date;
   onPrevMonth: () => void;
@@ -41,7 +50,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = memo(({
   
   // Listen for TOIL updates to track them
   useEffect(() => {
-    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data) => {
+    const unsubscribe = eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data: TOILEventData) => {
       if (data && data.userId === userId) {
         logger.debug(`[TimesheetCalendar] Tracking TOIL calendar refresh: ${new Date().toISOString()}`);
         setLastToilUpdate(new Date());

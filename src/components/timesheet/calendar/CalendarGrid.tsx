@@ -24,6 +24,18 @@ import { hasTOILForDay, TOILDayInfo } from "@/utils/time/services/toil/storage";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS } from "@/utils/events/eventTypes";
 
+// Define type for TOIL event data
+interface TOILEventData {
+  userId?: string;
+  date?: string;
+  timestamp?: number;
+  source?: string;
+  requiresRefresh?: boolean;
+  detail?: {
+    userId?: string;
+  };
+}
+
 interface CalendarGridProps {
   currentMonth: Date;
   selectedDate: Date | null;
@@ -50,7 +62,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   const [toilRefreshCounter, setToilRefreshCounter] = useState(0);
   
   // Add a callback function to handle TOIL events consistently
-  const handleTOILUpdate = useCallback((data: any) => {
+  const handleTOILUpdate = useCallback((data: TOILEventData) => {
     if (!data) return;
     
     const shouldRefresh = 
@@ -70,7 +82,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   // Listen for TOIL events that should trigger a calendar refresh
   useEffect(() => {
     // Create a debug logger especially for events
-    const eventLogger = (name: string) => (data: any) => {
+    const eventLogger = (name: string) => (data: TOILEventData) => {
       logger.debug(`[CalendarGrid:Events] Received ${name} event:`, 
         data?.userId === userId ? 'matches-user' : 'other-user');
     };
@@ -96,7 +108,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       }),
       
       // Direct calendar refresh events (highest priority)
-      eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data) => {
+      eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data: TOILEventData) => {
         eventLogger('CALENDAR_REFRESH')(data);
         // Always refresh for this direct event type
         logger.debug(`[CalendarGrid] Received direct calendar refresh event from ${data?.source || 'unknown'}`);
