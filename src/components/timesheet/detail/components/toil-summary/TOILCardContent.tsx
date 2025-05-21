@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILSummary as TOILSummaryType } from "@/types/toil";
 import TOILSummary from "@/components/toil/TOILSummary";
+import TOILSummaryBoxes from "./TOILSummaryBoxes";
 
 // Create logger
 const logger = createTimeLogger('TOILCardContent');
@@ -60,7 +61,19 @@ const TOILCardContent: React.FC<TOILCardContentProps> = ({
   }
 
   try {
-    // Use the shared TOIL summary component
+    // Use TOILSummaryBoxes for detailed view, and shared TOILSummary component for simple view
+    if (!useSimpleView && summary) {
+      return (
+        <TOILSummaryBoxes
+          accrued={summary.accrued}
+          used={summary.used}
+          remaining={summary.remaining}
+          onError={onError}
+        />
+      );
+    }
+    
+    // Use the shared TOIL summary component for simple view
     return (
       <TOILSummary 
         summary={summary}
