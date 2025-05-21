@@ -1,13 +1,15 @@
 
 import React, { memo, useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Clock, Bug } from "lucide-react";
+import { Clock, Bug, RefreshCw } from "lucide-react";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILErrorState } from "./toil-summary";
 import { useTOILEventHandling } from "../hooks/useTOILEventHandling";
 import TOILCardContent from "./toil-summary/TOILCardContent";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
+import { eventBus } from "@/utils/events/EventBus";
+import { TIME_ENTRY_EVENTS } from "@/utils/events/eventTypes";
 
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
@@ -58,6 +60,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     date,
     options: {
       monthOnly: true, // Use month-only mode
+      refreshInterval: 60000, // Reduced refresh interval
       testProps: enhancedTestProps // Only pass test props if properly enabled
     }
   });
@@ -69,14 +72,17 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [debugMode, setDebugMode] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshAttempts, setRefreshAttempts] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Debounce the refresh function to prevent excessive calls - REDUCED to 500ms
+  // Debounce the refresh function to prevent excessive calls - REDUCED to 100ms
   const debouncedRefresh = useDebounce(() => {
     logger.debug('Requesting refresh of TOIL summary (debounced)');
+    setIsRefreshing(true);
     refreshSummary();
     setLastUpdated(new Date());
     setRefreshAttempts(prev => prev + 1);
-  }, 500);
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, 100);
   
   // Report errors to parent component
   useEffect(() => {
@@ -90,8 +96,28 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     if (summary) {
       logger.debug('TOILSummaryCard received summary update:', summary);
       setLastUpdated(new Date());
+      setIsRefreshing(false);
     }
   }, [summary]);
+  
+  // Add listener for time entry events - now more responsive to deletion and creation
+  useEffect(() => {
+    const handleEntryEvent = () => {
+      logger.debug('Time entry event received, refreshing TOIL summary');
+      debouncedRefresh();
+    };
+    
+    // Listen to all entry-related events
+    const sub1 = eventBus.subscribe(TIME_ENTRY_EVENTS.DELETED, handleEntryEvent);
+    const sub2 = eventBus.subscribe(TIME_ENTRY_EVENTS.CREATED, handleEntryEvent);
+    const sub3 = eventBus.subscribe(TIME_ENTRY_EVENTS.UPDATED, handleEntryEvent);
+    
+    return () => {
+      if (typeof sub1 === 'function') sub1();
+      if (typeof sub2 === 'function') sub2();
+      if (typeof sub3 === 'function') sub3();
+    };
+  }, [debouncedRefresh]);
   
   // Debug mode toggle (Ctrl+Alt+D)
   useEffect(() => {
@@ -130,6 +156,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
           <CardTitle className="text-xl font-semibold text-blue-700 tracking-tight flex items-center gap-2 mb-2">
             <Clock className="w-6 h-6 text-blue-400" />
             TOIL Summary {monthName}
+            
+            {/* Manual refresh button */}
+            <RefreshCw 
+              size={16} 
+              className={`ml-auto cursor-pointer text-blue-400 hover:text-blue-600 transition-colors
+                ${isRefreshing ? 'animate-spin' : ''}`}
+              onClick={handleManualRefresh}
+              aria-label="Refresh TOIL data"
+            />
             
             {/* Debug indicator */}
             {debugMode && (
@@ -174,7 +209,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       onError(`Error rendering TOIL summary: ${String(err)}`);
     }
     
-    return <TOILErrorState error={err instanceof Error ? err : String(err)} />;
+    return <TOILErrorState error={err instanceof Error ? err : String(err)} onRetry={refreshSummary} />;
   }
 });
 

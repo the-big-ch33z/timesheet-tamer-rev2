@@ -4,6 +4,7 @@ import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { createTimeLogger } from "@/utils/time/errors";
+import { format } from "date-fns";
 
 const logger = createTimeLogger('UnifiedTOILEventService');
 
@@ -19,6 +20,41 @@ export interface TOILUpdateHandlerCallbacks {
   /** Called to log information (for debugging) */
   onLog?: (message: string, data?: any) => void;
 }
+
+/**
+ * Helper to ensure all required properties are present in TOIL event data
+ */
+const ensureStandardTOILEventData = (data: any): TOILEventData => {
+  const now = new Date();
+  const standardData: TOILEventData = {
+    userId: data?.userId || '',
+    timestamp: data?.timestamp || Date.now(),
+    requiresRefresh: data?.requiresRefresh !== false, // Default to true
+    source: data?.source || 'unifiedTOILEventService'
+  };
+  
+  // Add date if missing
+  if (!data?.date) {
+    standardData.date = format(now, 'yyyy-MM-dd');
+  } else {
+    standardData.date = data.date;
+  }
+  
+  // Add monthYear if missing (very important for event targeting)
+  if (!data?.monthYear) {
+    standardData.monthYear = format(now, 'yyyy-MM');
+    
+    // Try to extract monthYear from date if possible
+    if (typeof data?.date === 'string' && data.date.length >= 7) {
+      standardData.monthYear = data.date.substring(0, 7);
+    }
+  } else {
+    standardData.monthYear = data.monthYear;
+  }
+  
+  // Copy any other properties from original data
+  return { ...data, ...standardData };
+};
 
 /**
  * Unified Service for TOIL event handling
@@ -60,14 +96,14 @@ class UnifiedTOILEventService {
       }
       
       // Create a unified event payload with all required fields
-      const eventData: TOILEventData = {
+      const eventData: TOILEventData = ensureStandardTOILEventData({
         userId: summary.userId,
         monthYear: summary.monthYear,
         timestamp: Date.now(),
         summary: summary,
         requiresRefresh: true,
         date: summary.monthYear + '-01' // Ensure date is also present
-      };
+      });
       
       // 1. Dispatch through the centralized event bus with minimal debounce
       eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
@@ -143,6 +179,9 @@ class UnifiedTOILEventService {
           data = {};
         }
         
+        // Ensure data has standard properties
+        data = ensureStandardTOILEventData(data);
+        
         // Log if callback provided
         if (onLog) {
           onLog(`TOIL update event received:`, data);
@@ -157,7 +196,10 @@ class UnifiedTOILEventService {
                                data.monthYear === monthYear ||
                                (data.date && data.date.startsWith(monthYear));
         
-        if (isRelevantUser && isRelevantMonth) {
+        // Also consider requiresRefresh flag
+        const forceRefresh = !!data?.requiresRefresh;
+        
+        if (isRelevantUser && (isRelevantMonth || forceRefresh)) {
           if (onLog) {
             onLog(`Valid update for user ${userId} and month ${monthYear || 'any'}`);
           } else {
@@ -185,9 +227,9 @@ class UnifiedTOILEventService {
           // Otherwise trigger a refresh
           else if (onRefresh) {
             if (onLog) {
-              onLog(`No accrued data, refreshing summary`);
+              onLog(`No accrued data or force refresh requested, refreshing summary`);
             } else {
-              logger.debug(`No accrued data, refreshing summary`);
+              logger.debug(`No accrued data or force refresh requested, refreshing summary`);
             }
             
             onRefresh();
@@ -268,6 +310,9 @@ export const unifiedTOILEventService = new UnifiedTOILEventService();
 export const createTOILUpdateHandler = unifiedTOILEventService.createTOILUpdateHandler;
 export const dispatchTOILEvent = unifiedTOILEventService.dispatchTOILEvent;
 export const dispatchTOILSummaryEvent = unifiedTOILEventService.dispatchTOILSummaryEvent;
+
+// Export the helper function for use in other modules
+export const ensureStandardTOILEventData = ensureStandardTOILEventData;
 
 // Initialize the service when this module is imported
 logger.debug('Unified TOIL Event Service initialized');

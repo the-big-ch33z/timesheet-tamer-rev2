@@ -6,8 +6,28 @@ import { v4 as uuidv4 } from "uuid";
 import { ensureDate } from "@/utils/time/validation";
 import { unifiedTimeEntryService } from "@/utils/time/services";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
+import { eventBus } from "@/utils/events/EventBus";
+import { TOIL_EVENTS } from "@/utils/events/eventTypes";
+import { format } from "date-fns";
 
 const logger = createTimeLogger('useEntryOperations');
+
+/**
+ * Utility to create standard event payload for TOIL-related operations
+ */
+const createTOILEventPayload = (userId?: string, entryId?: string) => {
+  const now = new Date();
+  return {
+    userId,
+    entryId,
+    timestamp: Date.now(),
+    date: format(now, 'yyyy-MM-dd'),
+    monthYear: format(now, 'yyyy-MM'),
+    requiresRefresh: true,
+    source: 'entry-operations',
+    status: 'completed'
+  };
+};
 
 /**
  * Hook that provides operations for manipulating time entries
@@ -48,6 +68,15 @@ export const useEntryOperations = (
       return newEntries;
     });
     
+    // If this is a TOIL entry (jobNumber === 'TOIL'), trigger a TOIL calculation
+    if (entryData.jobNumber === 'TOIL') {
+      logger.debug("[TimeEntryProvider] TOIL entry added, triggering TOIL calculation");
+      eventBus.publish(TOIL_EVENTS.CALCULATED, 
+        createTOILEventPayload(entryData.userId, newEntry.id), 
+        { debounce: 50 }
+      );
+    }
+    
     toast({
       title: "Entry added",
       description: `Added ${entryData.hours} hours to your timesheet`,
@@ -73,6 +102,9 @@ export const useEntryOperations = (
       updates.date = validDate;
     }
     
+    let userId: string | undefined;
+    let isTOILEntry = false;
+    
     setEntries(prev => {
       const entryIndex = prev.findIndex(entry => entry.id === entryId);
       
@@ -81,12 +113,29 @@ export const useEntryOperations = (
         return prev;
       }
       
+      // Store the user ID for event dispatch
+      userId = prev[entryIndex].userId || updates.userId;
+      
+      // Check if this is a TOIL entry or being updated to be one
+      isTOILEntry = 
+        prev[entryIndex].jobNumber === 'TOIL' || 
+        updates.jobNumber === 'TOIL';
+      
       const updatedEntries = [...prev];
       updatedEntries[entryIndex] = { ...updatedEntries[entryIndex], ...updates };
       
       logger.debug("[TimeEntryProvider] Entry updated successfully");
       return updatedEntries;
     });
+    
+    // If this is a TOIL entry, trigger a TOIL calculation
+    if (isTOILEntry) {
+      logger.debug("[TimeEntryProvider] TOIL entry updated, triggering TOIL calculation");
+      eventBus.publish(TOIL_EVENTS.CALCULATED, 
+        createTOILEventPayload(userId, entryId), 
+        { debounce: 50 }
+      );
+    }
     
     toast({
       title: "Entry updated",
@@ -99,7 +148,18 @@ export const useEntryOperations = (
     logger.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
     
     try {
-      // First, track the deletion in the service which now waits for TOIL cleanup
+      // First, find the entry to get its user ID and check if it's a TOIL entry
+      let userId: string | undefined;
+      let isTOILEntry = false;
+      
+      const entryToDelete = entries.find(entry => entry.id === entryId);
+      if (entryToDelete) {
+        userId = entryToDelete.userId;
+        isTOILEntry = entryToDelete.jobNumber === 'TOIL';
+        logger.debug(`[TimeEntryProvider] Found entry to delete: userId=${userId}, isTOIL=${isTOILEntry}`);
+      }
+      
+      // Track the deletion in the service which now waits for TOIL cleanup
       const serviceDeleted = await unifiedTimeEntryService.deleteEntry(entryId);
       
       if (!serviceDeleted) {
@@ -111,8 +171,7 @@ export const useEntryOperations = (
       let success = false;
       
       setEntries(prev => {
-        const entryToDelete = prev.find(entry => entry.id === entryId);
-        if (!entryToDelete) {
+        if (!prev.some(entry => entry.id === entryId)) {
           logger.warn("[TimeEntryProvider] Entry not found for deletion in UI state:", entryId);
           return prev;
         }
@@ -123,6 +182,15 @@ export const useEntryOperations = (
         logger.debug("[TimeEntryProvider] Entry deleted from UI state, remaining entries:", filteredEntries.length);
         return filteredEntries;
       });
+      
+      // If this was a TOIL entry, explicitly trigger a TOIL calculation event
+      if (isTOILEntry) {
+        logger.debug("[TimeEntryProvider] TOIL entry deleted, triggering TOIL calculation");
+        eventBus.publish(TOIL_EVENTS.CALCULATED, 
+          createTOILEventPayload(userId, entryId), 
+          { debounce: 50 }
+        );
+      }
       
       if (success) {
         toast({
@@ -140,7 +208,7 @@ export const useEntryOperations = (
       });
       return false;
     }
-  }, [setEntries, toast]);
+  }, [entries, setEntries, toast]);
 
   // Create a new entry with validation
   const createEntry = useCallback((entryData: Omit<TimeEntry, "id">): string | null => {
