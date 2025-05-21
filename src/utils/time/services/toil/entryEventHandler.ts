@@ -1,7 +1,7 @@
 
 import { createTimeLogger } from '@/utils/time/errors';
 import { toilService } from './service/main';
-import { deleteTOILRecordsByEntryId } from './storage';
+import { deleteTOILRecordsByEntryId, deleteTOILUsageByEntryId } from './storage';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { eventBus } from '@/utils/events/EventBus';
 import { TIME_ENTRY_EVENTS, TOIL_EVENTS } from '@/utils/events/eventTypes';
@@ -53,37 +53,43 @@ function handleEntryDeleted(event: any) {
     
     logger.debug(`Entry deletion detected for entryId: ${entryId}, cleaning up TOIL records`);
     
-    // Delete associated TOIL records
-    deleteTOILRecordsByEntryId(entryId)
-      .then(deletedCount => {
-        logger.info(`Successfully deleted ${deletedCount} TOIL records for entry ${entryId}`);
+    // Use Promise.all to delete both accrual and usage records in parallel
+    Promise.all([
+      // 1. Delete accrual records (TOIL earned)
+      deleteTOILRecordsByEntryId(entryId),
+      // 2. Delete usage records (TOIL spent)
+      deleteTOILUsageByEntryId(entryId)
+    ])
+    .then(([deletedAccrualCount, deletedUsageCount]) => {
+      const totalDeleted = deletedAccrualCount + deletedUsageCount;
+      logger.info(`Successfully deleted ${totalDeleted} TOIL records for entry ${entryId} (${deletedAccrualCount} accrual, ${deletedUsageCount} usage)`);
+      
+      // Clear caches to ensure data consistency
+      toilService.clearCache();
+      
+      // Only dispatch TOIL update events if we actually deleted something
+      if (totalDeleted > 0) {
+        // Create standardized event data
+        const eventData = createStandardTOILEventData(entryId, userId);
         
-        // Clear caches to ensure data consistency
-        toilService.clearCache();
+        // Dispatch an explicit TOIL calculation event to trigger immediate UI updates
+        eventBus.publish(TOIL_EVENTS.CALCULATED, eventData, { debounce: 50 });
         
-        // Only dispatch TOIL update events if we actually deleted something
-        if (deletedCount > 0) {
-          // Create standardized event data
-          const eventData = createStandardTOILEventData(entryId, userId);
-          
-          // Dispatch an explicit TOIL calculation event to trigger immediate UI updates
-          eventBus.publish(TOIL_EVENTS.CALCULATED, eventData, { debounce: 50 });
-          
-          // Also publish a summary updated event for backward compatibility
-          eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, eventData, { debounce: 50 });
-          
-          // Dispatch a DOM event for older components
-          if (typeof window !== 'undefined') {
-            const domEvent = new CustomEvent('toil:summary-updated', { detail: eventData });
-            window.dispatchEvent(domEvent);
-          }
-          
-          logger.debug('TOIL update events dispatched after record deletion');
+        // Also publish a summary updated event for backward compatibility
+        eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, eventData, { debounce: 50 });
+        
+        // Dispatch a DOM event for older components
+        if (typeof window !== 'undefined') {
+          const domEvent = new CustomEvent('toil:summary-updated', { detail: eventData });
+          window.dispatchEvent(domEvent);
         }
-      })
-      .catch(error => {
-        logger.error(`Failed to delete TOIL records for entry ${entryId}`, error);
-      });
+        
+        logger.debug('TOIL update events dispatched after record deletion');
+      }
+    })
+    .catch(error => {
+      logger.error(`Failed to delete TOIL records for entry ${entryId}`, error);
+    });
   } catch (error) {
     logger.error('Error handling entry deleted event', error);
   }

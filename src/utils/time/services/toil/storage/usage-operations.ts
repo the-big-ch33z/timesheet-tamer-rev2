@@ -1,4 +1,3 @@
-
 import { TOILUsage } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOIL_USAGE_KEY, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
@@ -109,6 +108,47 @@ export async function cleanupDuplicateTOILUsage(userId: string): Promise<number>
     return removed;
   } catch (error) {
     logger.error(`Error cleaning up duplicate TOIL usage: ${error instanceof Error ? error.message : String(error)}`);
+    return 0;
+  }
+}
+
+/**
+ * Delete TOIL usage records associated with a specific entry ID
+ * 
+ * @param entryId - The ID of the entry whose usage records should be deleted
+ * @returns Promise that resolves to the number of records deleted
+ */
+export async function deleteTOILUsageByEntryId(entryId: string): Promise<number> {
+  try {
+    if (!entryId) {
+      logger.warn('Cannot delete TOIL usage records: No entryId provided');
+      return 0;
+    }
+    
+    // Get all existing usage records
+    const allUsage = loadTOILUsage();
+    const originalCount = allUsage.length;
+    
+    // Filter out records with the matching entry ID
+    const remainingUsage = allUsage.filter(usage => usage.entryId !== entryId);
+    const deletedCount = originalCount - remainingUsage.length;
+    
+    if (deletedCount > 0) {
+      // Save the filtered usage records back to storage
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(remainingUsage)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      
+      logger.debug(`Deleted ${deletedCount} TOIL usage records for entry ID: ${entryId}`);
+    } else {
+      logger.debug(`No TOIL usage records found for entry ID: ${entryId}`);
+    }
+    
+    return deletedCount;
+  } catch (error) {
+    logger.error(`Error deleting TOIL usage records for entry ${entryId}: ${error instanceof Error ? error.message : String(error)}`);
     return 0;
   }
 }

@@ -15,7 +15,8 @@ export {
 // Re-export usage operations
 export {
   storeTOILUsage,
-  cleanupDuplicateTOILUsage
+  cleanupDuplicateTOILUsage,
+  deleteTOILUsageByEntryId
 } from './usage-operations';
 
 // Re-export summary operations

@@ -9,6 +9,7 @@ export {
   deleteUserTOILRecords,
   deleteTOILRecordById,
   deleteTOILRecordsByEntryId,
+  deleteTOILUsageByEntryId,
   storeTOILUsage,
   storeTOILSummary,
   hasTOILForDay,
