@@ -24,7 +24,7 @@ export interface TOILUpdateHandlerCallbacks {
 /**
  * Helper to ensure all required properties are present in TOIL event data
  */
-const ensureStandardTOILEventData = (data: any): TOILEventData => {
+export const ensureStandardTOILEventData = (data: any): TOILEventData => {
   const now = new Date();
   const standardData: TOILEventData = {
     userId: data?.userId || '',
@@ -311,8 +311,8 @@ export const createTOILUpdateHandler = unifiedTOILEventService.createTOILUpdateH
 export const dispatchTOILEvent = unifiedTOILEventService.dispatchTOILEvent;
 export const dispatchTOILSummaryEvent = unifiedTOILEventService.dispatchTOILSummaryEvent;
 
-// Export the helper function for use in other modules
-export const ensureStandardTOILEventData = ensureStandardTOILEventData;
+// No need to export ensureStandardTOILEventData again here, as it's already exported at the top of the file
+// Removing this line fixes the redeclaration error
 
 // Initialize the service when this module is imported
 logger.debug('Unified TOIL Event Service initialized');
