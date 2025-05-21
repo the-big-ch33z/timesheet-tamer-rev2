@@ -21,10 +21,11 @@ export interface TOILSummaryCardProps {
   showRollover?: boolean;
   rolloverHours?: number;
   useSimpleView?: boolean;
-  // For testing purposes only
+  // For testing purposes only - significantly enhanced
   testProps?: {
     summary: any;
     loading: boolean;
+    testModeEnabled?: boolean;
   };
 }
 
@@ -40,7 +41,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   useSimpleView = false,
   testProps
 }) => {
-  // Use our new unified TOIL hook
+  // Only use test props if testModeEnabled is true
+  const enhancedTestProps = testProps && testProps.testModeEnabled ? {
+    ...testProps,
+    testModeEnabled: true
+  } : undefined;
+  
+  // Use our unified TOIL hook with improved test mode handling
   const {
     toilSummary: summary,
     isLoading: loading,
@@ -51,7 +58,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     date,
     options: {
       monthOnly: true, // Use month-only mode
-      testProps // Pass test props for testing purposes
+      testProps: enhancedTestProps // Only pass test props if properly enabled
     }
   });
 
@@ -63,7 +70,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshAttempts, setRefreshAttempts] = useState(0);
   
-  // Debounce the refresh function to prevent excessive calls - REDUCED from 3000ms to 500ms
+  // Debounce the refresh function to prevent excessive calls - REDUCED to 500ms
   const debouncedRefresh = useDebounce(() => {
     logger.debug('Requesting refresh of TOIL summary (debounced)');
     refreshSummary();
@@ -78,7 +85,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
   }, [error, onError]);
   
-  // Log when summary changes
+  // Log when summary changes and update last updated timestamp
   useEffect(() => {
     if (summary) {
       logger.debug('TOILSummaryCard received summary update:', summary);
@@ -86,7 +93,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
   }, [summary]);
   
-  // Special debug mode toggle with key combo (Ctrl+Alt+D)
+  // Debug mode toggle (Ctrl+Alt+D)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.altKey && e.key === 'd') {
@@ -104,6 +111,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     logger.debug('Manual refresh requested');
     debouncedRefresh();
   }, [debouncedRefresh]);
+  
+  // Ensure we refresh on mount
+  useEffect(() => {
+    logger.debug('TOILSummaryCard mounted, requesting initial refresh');
+    // Immediate refresh on mount
+    refreshSummary();
+  }, [refreshSummary]);
   
   try {
     return (
@@ -143,8 +157,9 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <div className="mt-4 p-2 border border-amber-200 bg-amber-50 rounded text-xs font-mono">
               <div>Last update: {lastUpdated.toLocaleTimeString()}</div>
               <div>Refresh attempts: {refreshAttempts}/5</div>
+              <div>Loading state: {loading ? 'Loading' : 'Ready'}</div>
               <div>
-                Summary: {summary ? `A:${summary.accrued} U:${summary.used} R:${summary.remaining}` : "None"}
+                Summary: {summary ? `A:${summary.accrued.toFixed(1)} U:${summary.used.toFixed(1)} R:${summary.remaining.toFixed(1)}` : "None"}
               </div>
               {error && <div className="text-red-500">Error: {error}</div>}
             </div>

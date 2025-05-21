@@ -20,7 +20,7 @@ export interface TOILEventData {
   status?: 'starting' | 'completed' | 'error';
   summary?: any;
   error?: string;
-  // Add the monthYear field that was missing
+  // Added monthYear for proper event targeting
   monthYear?: string;
 }
 

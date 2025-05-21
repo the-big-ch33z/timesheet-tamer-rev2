@@ -1,84 +1,88 @@
 
-import React from "react";
-import { TOILSummary } from "@/types/toil";
-import TOILLoadingState from "./TOILLoadingState";
-import TOILNegativeBalanceWarning from "./TOILNegativeBalanceWarning";
-import TOILProgressBar from "./TOILProgressBar";
-import TOILSummaryBoxes from "./TOILSummaryBoxes";
-import TOILRolloverDisplay from "./TOILRolloverDisplay";
-import UnifiedTOILSummary from "@/components/toil/TOILSummary";
+import React, { memo } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { createTimeLogger } from "@/utils/time/errors";
+import { TOILSummary as TOILSummaryType } from "@/types/toil";
+import TOILSummary from "@/components/toil/TOILSummary";
+
+// Create logger
+const logger = createTimeLogger('TOILCardContent');
 
 interface TOILCardContentProps {
-  summary: TOILSummary | null;
+  summary: TOILSummaryType | null;
   loading: boolean;
-  useSimpleView: boolean;
-  showRollover: boolean;
-  rolloverHours: number;
+  showRollover?: boolean;
+  rolloverHours?: number;
+  useSimpleView?: boolean;
   onError?: (error: string) => void;
 }
 
+/**
+ * Separated card content component to handle loading states and rendering
+ */
 const TOILCardContent: React.FC<TOILCardContentProps> = ({
   summary,
   loading,
-  useSimpleView,
-  showRollover,
-  rolloverHours,
+  showRollover = false,
+  rolloverHours = 0,
+  useSimpleView = false,
   onError
 }) => {
-  if (loading) {
-    return <TOILLoadingState />;
-  }
-  
-  // Safely extract values with defaults of zero
-  const accrued = summary?.accrued ?? 0;
-  const used = summary?.used ?? 0;
-  const remaining = summary?.remaining ?? 0;
-  
-  // Additional validation
-  if (summary && (isNaN(accrued) || isNaN(used) || isNaN(remaining))) {
-    if (onError) {
-      onError('TOIL data contains invalid numeric values');
+  // Log state changes
+  React.useEffect(() => {
+    logger.debug(`TOILCardContent state: loading=${loading}, hasSummary=${!!summary}`);
+    if (summary) {
+      logger.debug(`TOIL Summary: accrued=${summary.accrued}, used=${summary.used}, remaining=${summary.remaining}`);
     }
-  }
+  }, [summary, loading]);
 
-  const isNegativeBalance = remaining < 0;
-  
-  if (useSimpleView) {
+  // If loading, show skeletons
+  if (loading && !summary) {
     return (
-      <>
-        <UnifiedTOILSummary 
-          summary={summary} 
-          showRollover={showRollover} 
-          rolloverHours={rolloverHours}
-          variant="simple"
-        />
-      </>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="flex justify-between mb-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-10" />
+          </div>
+          <div className="flex justify-between mb-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-10" />
+          </div>
+          <Skeleton className="h-2 w-full" />
+          <div className="flex justify-between mt-3">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <>
-      <TOILSummaryBoxes 
-        accrued={accrued} 
-        used={used} 
-        remaining={remaining} 
-        onError={onError}
+  try {
+    // Use the shared TOIL summary component
+    return (
+      <TOILSummary 
+        summary={summary}
+        showRollover={showRollover}
+        rolloverHours={rolloverHours}
+        variant={useSimpleView ? "simple" : "detailed"}
       />
-      
-      {isNegativeBalance && <TOILNegativeBalanceWarning />}
-      
-      <TOILProgressBar 
-        remaining={remaining} 
-        accrued={accrued} 
-        isNegativeBalance={isNegativeBalance} 
-      />
-      
-      <TOILRolloverDisplay 
-        showRollover={showRollover} 
-        rolloverHours={rolloverHours} 
-      />
-    </>
-  );
+    );
+  } catch (error) {
+    logger.error('Error rendering TOILCardContent:', error);
+    if (onError) {
+      onError(`Error rendering TOIL summary: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // Fallback to error display
+    return (
+      <div className="text-center p-4 text-red-500">
+        <p>Could not display TOIL summary</p>
+        <p className="text-xs mt-2">{error instanceof Error ? error.message : String(error)}</p>
+      </div>
+    );
+  }
 };
 
-export default TOILCardContent;
+export default memo(TOILCardContent);

@@ -1,7 +1,7 @@
 
 import { TOILSummary } from "@/types/toil";
 import { eventBus } from "@/utils/events/EventBus";
-import { TOIL_EVENTS } from "@/utils/events/eventTypes";
+import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { createTimeLogger } from "@/utils/time/errors";
 
@@ -22,16 +22,11 @@ export interface TOILUpdateHandlerCallbacks {
 
 /**
  * Unified Service for TOIL event handling
- * Combines functionality from multiple existing services:
- * - src/utils/time/events/toil/eventHandlers.ts
- * - src/utils/time/services/toil/events.ts
  */
 class UnifiedTOILEventService {
   /**
    * Helper function to dispatch TOIL summary update events
    * Integrates with all event systems for backward compatibility
-   * @param summary The TOIL summary to dispatch
-   * @returns {boolean} Whether the event was successfully dispatched
    */
   public dispatchTOILSummaryEvent = (summary: TOILSummary): boolean => {
     try {
@@ -46,9 +41,10 @@ class UnifiedTOILEventService {
         return false;
       }
       
+      // Ensure monthYear is always present (very important!)
       if (!summary.monthYear) {
-        logger.error('TOIL summary missing monthYear');
-        return false;
+        logger.warn('TOIL summary missing monthYear, adding it from date or user ID');
+        summary.monthYear = new Date().toISOString().substring(0, 7); // YYYY-MM format
       }
       
       // Validate numeric fields
@@ -63,22 +59,35 @@ class UnifiedTOILEventService {
         // Continue despite warning
       }
       
+      // Create a unified event payload with all required fields
+      const eventData: TOILEventData = {
+        userId: summary.userId,
+        monthYear: summary.monthYear,
+        timestamp: Date.now(),
+        summary: summary,
+        requiresRefresh: true,
+        date: summary.monthYear + '-01' // Ensure date is also present
+      };
+      
       // 1. Dispatch through the centralized event bus with minimal debounce
-      eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, summary, { debounce: 10 });
+      eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
+        ...summary,
+        ...eventData
+      }, { debounce: 10 });
       
       // 2. Also dispatch a calendar refresh event to ensure immediate UI updates
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
-        userId: summary.userId,
-        date: new Date(),
-        status: 'completed',
-        summary: summary,
-        requiresRefresh: true
+        ...eventData,
+        status: 'completed'
       }, { debounce: 10 });
       
       // 3. Dispatch old-style DOM event for backward compatibility
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('toil:summary-updated', { 
-          detail: summary 
+          detail: {
+            ...summary,
+            ...eventData
+          }
         });
         window.dispatchEvent(event);
       }
@@ -87,10 +96,18 @@ class UnifiedTOILEventService {
       timeEventsService.publish('toil-updated', {
         userId: summary.userId,
         monthYear: summary.monthYear,
-        summary
+        summary,
+        timestamp: Date.now()
       });
       
-      logger.debug('TOIL summary update events dispatched:', summary);
+      logger.debug('TOIL summary update events dispatched:', {
+        userId: summary.userId, 
+        monthYear: summary.monthYear,
+        accrued: summary.accrued,
+        used: summary.used,
+        remaining: summary.remaining
+      });
+      
       return true;
     } catch (error) {
       logger.error('Error dispatching TOIL event:', error);
@@ -106,11 +123,6 @@ class UnifiedTOILEventService {
   /**
    * Factory function that creates a standardized TOIL update event handler
    * This unifies the event handling logic across different components
-   * 
-   * @param userId The user ID to filter events for
-   * @param monthYear Optional month/year to filter events for
-   * @param callbacks Object containing callback functions
-   * @returns A handler function for TOIL update events
    */
   public createTOILUpdateHandler = (
     userId: string,
@@ -124,7 +136,12 @@ class UnifiedTOILEventService {
       try {
         // Type guard and conversion
         const customEvent = event as CustomEvent;
-        const data = customEvent.detail;
+        let data = customEvent.detail;
+        
+        // Enhanced data normalization to handle different event formats
+        if (!data) {
+          data = {};
+        }
         
         // Log if callback provided
         if (onLog) {
@@ -133,25 +150,28 @@ class UnifiedTOILEventService {
           logger.debug(`TOIL update event received:`, data);
         }
         
-        // Check if this event is relevant for this component
-        const isRelevantUser = data?.userId === userId;
-        const isRelevantMonth = !monthYear || !data.monthYear || data.monthYear === monthYear;
+        // Enhanced relevance check with better fallback behavior
+        const isRelevantUser = !userId || data?.userId === userId;
+        const isRelevantMonth = !monthYear || 
+                               !data.monthYear || 
+                               data.monthYear === monthYear ||
+                               (data.date && data.date.startsWith(monthYear));
         
         if (isRelevantUser && isRelevantMonth) {
           if (onLog) {
-            onLog(`Valid update for current user ${userId} and month ${monthYear || 'any'}`);
+            onLog(`Valid update for user ${userId} and month ${monthYear || 'any'}`);
           } else {
-            logger.debug(`Valid update for current user ${userId} and month ${monthYear || 'any'}`);
+            logger.debug(`Valid update for user ${userId} and month ${monthYear || 'any'}`);
           }
           
           // If we have accrued data, we can update directly
           if (typeof data.accrued === 'number' && onValidUpdate) {
             const summary: TOILSummary = {
-              userId,
-              monthYear: data.monthYear || monthYear || '',
+              userId: data.userId || userId,
+              monthYear: data.monthYear || monthYear || new Date().toISOString().substring(0, 7),
               accrued: data.accrued,
-              used: data.used,
-              remaining: data.remaining
+              used: data.used || 0,
+              remaining: data.remaining || (data.accrued - (data.used || 0))
             };
             
             onValidUpdate(summary);
@@ -172,6 +192,8 @@ class UnifiedTOILEventService {
             
             onRefresh();
           }
+        } else if (onLog) {
+          onLog(`Ignoring event - not relevant for this component (user: ${isRelevantUser}, month: ${isRelevantMonth})`);
         }
       } catch (error) {
         logger.error(`Error handling TOIL update event:`, error);
@@ -211,29 +233,25 @@ class UnifiedTOILEventService {
     try {
       logger.error(`TOIL Error: ${errorMessage}`, data);
       
-      // Dispatch through EventBus
-      eventBus.publish(TOIL_EVENTS.ERROR, { 
+      // Create unified error event data
+      const errorData = { 
         message: errorMessage, 
         data, 
         userId,
-        timestamp: new Date()
-      });
+        timestamp: Date.now()
+      };
+      
+      // Dispatch through EventBus
+      eventBus.publish(TOIL_EVENTS.ERROR, errorData);
       
       // Dispatch through DOM event for backward compatibility
       if (typeof window !== 'undefined') {
-        const event = new CustomEvent('toil:error', { 
-          detail: { message: errorMessage, data, userId } 
-        });
+        const event = new CustomEvent('toil:error', { detail: errorData });
         window.dispatchEvent(event);
       }
       
       // Also dispatch through the timeEventsService for backward compatibility
-      timeEventsService.publish('toil-error' as any, {
-        message: errorMessage,
-        data,
-        userId,
-        timestamp: new Date()
-      });
+      timeEventsService.publish('toil-error' as any, errorData);
       
       return true;
     } catch (error) {
