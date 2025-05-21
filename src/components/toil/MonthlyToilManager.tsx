@@ -64,7 +64,7 @@ const MonthlyToilManager: React.FC = () => {
       return;
     }
     
-    // Fix: More permissive month processability check for April
+    // More permissive month processability check
     const isProcessable = isMonthProcessable(selectedMonth) && summary.remaining > 0;
 
     // Check if this month has already been processed
@@ -207,6 +207,8 @@ const MonthlyToilManager: React.FC = () => {
             <TOILSummaryComponent 
               summary={summary} 
               showRollover={!!processingState && processingState.status === ToilProcessingStatus.COMPLETED}
+              rolloverHours={processingState?.status === ToilProcessingStatus.COMPLETED ? 
+                toilService.getToilProcessingRecordForMonth(userId, selectedMonth)?.rolloverHours || 0 : 0}
             />
           )}
           

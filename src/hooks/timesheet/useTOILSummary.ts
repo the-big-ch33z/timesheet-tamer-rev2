@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
@@ -22,8 +23,8 @@ export interface UseTOILSummaryResult {
   refreshSummary: () => void;
 }
 
-// Reduce debounce period for more responsive updates
-const REDUCED_DEBOUNCE_PERIOD = 100; // ms
+// Further reduced debounce period for more responsive updates
+const REDUCED_DEBOUNCE_PERIOD = 50; // ms
 
 // Debounce timestamp tracking
 let lastOperationTime = 0;
@@ -39,7 +40,7 @@ export const useTOILSummary = ({
   date,
   monthOnly = true
 }: UseTOILSummaryProps): UseTOILSummaryResult => {
-  logger.debug('useTOILSummary is deprecated. Use useUnifiedTOIL instead');
+  logger.debug('useTOILSummary running with params:', { userId, date, monthOnly });
 
   const [summary, setSummary] = useState<TOILSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,9 +64,9 @@ export const useTOILSummary = ({
       return;
     }
 
-    // More permissive circuit breaker 
+    // Even more permissive circuit breaker 
     const now = Date.now();
-    if (updateAttemptsRef.current > 20 && now - lastUpdateTimeRef.current < 30000) {
+    if (updateAttemptsRef.current > 30 && now - lastUpdateTimeRef.current < 15000) {
       logger.warn('Circuit breaker activated - too many update attempts in short period');
       setIsLoading(false);
       return;
@@ -80,7 +81,7 @@ export const useTOILSummary = ({
     try {
       logger.debug(`Loading summary for ${userId} in ${monthYear}`);
       
-      // Use more aggressive cache clearing for better reactivity
+      // More aggressive cache clearing for better reactivity
       clearCacheForCurrentMonth(userId, date);
       
       // Use the toilService directly
@@ -115,6 +116,12 @@ export const useTOILSummary = ({
             status: 'completed',
             requiresRefresh: true
           }, { debounce: 0 });
+          
+          // Also dispatch a DOM event for broader compatibility
+          const summaryUpdatedEvent = new CustomEvent('toil:summary-updated', { 
+            detail: { summary: result, source: 'useTOILSummary' } 
+          });
+          window.dispatchEvent(summaryUpdatedEvent);
         }
       }
     } catch (err) {
@@ -126,10 +133,10 @@ export const useTOILSummary = ({
         setIsLoading(false);
         
         // Reset circuit breaker after successful load
-        if (updateAttemptsRef.current > 20) {
+        if (updateAttemptsRef.current > 30) {
           setTimeout(() => {
             updateAttemptsRef.current = 0;
-          }, 30000);
+          }, 15000);
         }
       }
     }
@@ -154,12 +161,12 @@ export const useTOILSummary = ({
     }, 10000);
     
     // More permissive circuit breaker - allow more events
-    if (eventCount > 20) {
+    if (eventCount > 30) {
       logger.warn(`Too many refresh events (${eventCount}), skipping this one`);
       return;
     }
     
-    logger.debug(`Refresh requested for ${userId}`);
+    logger.debug(`Manual refresh requested for ${userId}`);
     
     // Aggressive cache clearing for immediate feedback
     clearCacheForCurrentMonth(userId, date);
@@ -176,7 +183,7 @@ export const useTOILSummary = ({
         logger.debug('Periodic refresh');
         setRefreshCounter(c => c + 1); // Just increment counter to trigger loadSummary
       }
-    }, 10000); // Refresh every 10 seconds for more responsive updates
+    }, 5000); // Refresh every 5 seconds for more responsive updates
     
     return () => {
       isMountedRef.current = false;
@@ -234,12 +241,15 @@ export const useTOILSummary = ({
 
     // Listen for DOM events
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
-    logger.debug(`Added event listener for toil:summary-updated`);
+    window.addEventListener('toil-month-state-updated', () => refreshSummary());
+    window.addEventListener('toil-month-end-submitted', () => refreshSummary());
+    
+    logger.debug(`Added event listeners for TOIL updates`);
     
     // Subscribe to EventBus events
     const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       // Skip if circuit breaker is active
-      if (eventCount > 20) return;
+      if (eventCount > 30) return;
       
       logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
       if (data && typeof data === 'object' && data.userId === userId) {
@@ -254,7 +264,7 @@ export const useTOILSummary = ({
 
     // Special handler for the CALCULATED event
     const sub3 = eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: any) => {
-      if (eventCount > 20) return;
+      if (eventCount > 30) return;
       
       logger.debug(`TOIL_EVENTS.CALCULATED received:`, data);
       if (data && data.userId === userId && data.requiresRefresh) {
@@ -271,6 +281,9 @@ export const useTOILSummary = ({
     return () => {
       // Clean up all event listeners properly
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
+      window.removeEventListener('toil-month-state-updated', () => refreshSummary());
+      window.removeEventListener('toil-month-end-submitted', () => refreshSummary());
+      
       if (typeof subscription === 'function') subscription();
       if (typeof sub3 === 'function') sub3();
       logger.debug(`Removed event listeners`);

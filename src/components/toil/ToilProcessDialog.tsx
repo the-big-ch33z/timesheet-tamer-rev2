@@ -11,6 +11,10 @@ import { ToilProcessingFormData } from "@/types/monthEndToil";
 import { TOILSummary } from "@/types/toil";
 import { useAuth } from "@/contexts/auth";
 import { format } from "date-fns";
+import { createTimeLogger } from "@/utils/time/errors";
+
+// Create a logger for this component
+const logger = createTimeLogger('ToilProcessDialog');
 
 interface ToilProcessDialogProps {
   open: boolean;
@@ -43,10 +47,32 @@ const ToilProcessDialog: React.FC<ToilProcessDialogProps> = ({
   // Format month for display
   const monthDisplay = format(new Date(month + "-01"), "MMMM yyyy");
   
+  // Log current values
+  React.useEffect(() => {
+    logger.debug('ToilProcessDialog initialized with values:', {
+      userId,
+      month,
+      toilSummary,
+      employmentType,
+      threshold,
+      rolloverHours,
+      surplusHours
+    });
+  }, [userId, month, toilSummary, employmentType, threshold, rolloverHours, surplusHours]);
+  
   const handleSubmit = async () => {
     setIsSubmitting(true);
     
     try {
+      logger.debug('Submitting TOIL processing with data:', {
+        userId,
+        month,
+        totalHours: toilSummary.remaining,
+        rolloverHours,
+        surplusHours,
+        surplusAction
+      });
+      
       const formData: ToilProcessingFormData = {
         userId,
         month,
@@ -58,6 +84,14 @@ const ToilProcessDialog: React.FC<ToilProcessDialogProps> = ({
       
       const result = toilService.submitToilProcessing(formData);
       
+      logger.debug('TOIL processing submission result:', result);
+      
+      // Manually trigger a DOM event for immediate UI update
+      const submittedEvent = new CustomEvent('toil-month-end-submitted', { 
+        detail: { record: result } 
+      });
+      window.dispatchEvent(submittedEvent);
+      
       toast({
         title: "TOIL Processing Submitted",
         description: "Your TOIL processing request has been submitted for approval.",
@@ -65,7 +99,7 @@ const ToilProcessDialog: React.FC<ToilProcessDialogProps> = ({
       
       onClose();
     } catch (error) {
-      console.error("Error submitting TOIL processing:", error);
+      logger.error("Error submitting TOIL processing:", error);
       toast({
         title: "Error",
         description: "Failed to submit TOIL processing request. Please try again.",

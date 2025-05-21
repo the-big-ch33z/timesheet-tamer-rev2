@@ -20,14 +20,14 @@ const TimesheetTabs = () => {
       <TabsList className="mb-4">
         <TabsTrigger value="timesheet">Calendar View</TabsTrigger>
         <TabsTrigger value="recent">Recent Entries</TabsTrigger>
-        <TabsTrigger value="month-end-toil">TOIL Management</TabsTrigger>
+        <TabsTrigger value="toil-management">TOIL Management</TabsTrigger>
       </TabsList>
 
       {/* Content for timesheet and recent entries tabs */}
       <TabContent />
       
       {/* Month-End TOIL Tab Content */}
-      <TabsContent value="month-end-toil">
+      <TabsContent value="toil-management">
         <MonthlyToilManager />
       </TabsContent>
     </Tabs>
