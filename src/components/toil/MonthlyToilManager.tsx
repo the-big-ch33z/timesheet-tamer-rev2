@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { format, subMonths } from "date-fns";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
-import { useTOILSummary } from "@/hooks/timesheet/useTOILSummary";
+import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 import ToilProcessDialog from "./ToilProcessDialog";
 import { TOILSummary as TOILSummaryComponent } from "@/components/toil/TOILSummary";
 import { toilService } from "@/utils/time/services/toil";
@@ -34,8 +33,8 @@ const MonthlyToilManager: React.FC = () => {
     logger.debug(`Initial month selected: ${selectedMonth}, previous month is ${format(previousMonth, "yyyy-MM")}`);
   }, []);
   
-  // Get TOIL summary for selected month
-  const { summary, isLoading, error, refreshSummary } = useTOILSummary({
+  // Use unified TOIL hook instead of the deprecated useTOILSummary
+  const { summary, isLoading, error, refreshSummary } = useUnifiedTOIL({
     userId,
     date: new Date(selectedMonth + "-01"),
     monthOnly: true
