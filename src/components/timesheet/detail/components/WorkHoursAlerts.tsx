@@ -9,6 +9,22 @@ interface WorkHoursAlertsProps {
   interactive: boolean;
   date: Date;
   isComplete: boolean;
+  isOverScheduled?: boolean;  // Added missing prop
+  effectiveHours: number;
+  scheduledHours: number;
+  breakConfig: {
+    lunch: boolean;
+    smoko: boolean;
+  };
+  displayBreakConfig: {
+    lunch: boolean;
+    smoko: boolean;
+  };
+  actionStates: {
+    lunch: boolean;
+    smoko: boolean;
+  };
+  onToggleAction: (action: string) => void;
 }
 
 const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
@@ -17,7 +33,14 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   hoursVariance,
   interactive,
   date,
-  isComplete
+  isComplete,
+  isOverScheduled,
+  effectiveHours,
+  scheduledHours,
+  breakConfig,
+  displayBreakConfig,
+  actionStates,
+  onToggleAction
 }) => {
   // Only show alerts on interactive displays and when there are entries
   if (!interactive || !hasEntries) return null;

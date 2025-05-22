@@ -89,6 +89,12 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
     });
   }, [resetWorkHours, date, userId, toast]);
 
+  // Create a wrapper for handleToggleAction that adapts the signature
+  const handleToggleActionWrapper = useCallback((action: string) => {
+    // Pass the scheduledHours as the second parameter
+    handleToggleAction(action, scheduledHours);
+  }, [handleToggleAction, scheduledHours]);
+
   return (
     <div className="space-y-4">
       <WorkHoursContent
@@ -108,7 +114,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         isOverScheduled={isOverScheduled}
         isCalculating={false}
         handleTimeChange={handleTimeChange}
-        handleToggleAction={handleToggleAction}
+        handleToggleAction={handleToggleActionWrapper}
       />
     </div>
   );

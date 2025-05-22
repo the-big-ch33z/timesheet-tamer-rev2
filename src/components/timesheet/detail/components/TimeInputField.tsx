@@ -15,7 +15,9 @@ export interface TimeInputFieldProps {
   onChange: (type: 'start' | 'end', value: string) => void;
   testId?: string;
   placeholder?: string;
-  disabled?: boolean; // Added disabled prop
+  disabled?: boolean;
+  className?: string; // Added className prop
+  "aria-label"?: string; // Added aria-label prop
 }
 
 export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
@@ -26,7 +28,9 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   onChange,
   testId,
   placeholder,
-  disabled = false // Default to false
+  disabled = false,
+  className,
+  "aria-label": ariaLabel
 }) => {
   // Remove default values - display empty string if no value is provided
   const displayValue = value || "";
@@ -37,7 +41,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   }, [type, onChange]);
   
   return (
-    <div>
+    <div className={className}>
       <div className="text-sm text-amber-700 mb-1 mx-[9px]">{label}</div>
       <div className={cn(
         "border rounded-md p-2",
@@ -52,6 +56,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
             className="bg-transparent border-none shadow-none p-0 h-auto"
             placeholder={placeholder || `Enter ${label.toLowerCase()}`}
             data-testid={testId}
+            aria-label={ariaLabel}
           />
         ) : (
           <div className="flex items-center">
