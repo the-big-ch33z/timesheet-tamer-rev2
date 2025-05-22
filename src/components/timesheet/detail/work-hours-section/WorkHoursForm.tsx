@@ -22,7 +22,6 @@ const WorkHoursForm: React.FC<WorkHoursFormProps> = ({
           Start Time
         </label>
         <TimeInputField
-          id="startTime"
           value={startTime}
           onChange={(value) => onTimeChange('start', value)}
           disabled={!interactive}
@@ -40,7 +39,6 @@ const WorkHoursForm: React.FC<WorkHoursFormProps> = ({
           End Time
         </label>
         <TimeInputField
-          id="endTime"
           value={endTime}
           onChange={(value) => onTimeChange('end', value)}
           disabled={!interactive}
