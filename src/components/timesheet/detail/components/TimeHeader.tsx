@@ -28,6 +28,15 @@ const TimeHeader: React.FC<TimeHeaderProps> = ({
   onTimeChange,
   interactive
 }) => {
+  // Default values for missing props
+  const emptyBreakConfig = { lunch: false, smoko: false };
+  const emptyActionStates = { lunch: false, smoko: false };
+  
+  // Dummy onToggleAction function as it's not used in this context
+  const handleToggleAction = (action: string) => {
+    console.log(`Toggle action ${action} not implemented in TimeHeader`);
+  };
+
   return (
     <div className="mb-6">
       <TimeHeaderSection
@@ -48,6 +57,13 @@ const TimeHeader: React.FC<TimeHeaderProps> = ({
         interactive={interactive}
         date={date}
         isComplete={false}
+        effectiveHours={totalHours}
+        scheduledHours={calculatedHours}
+        breakConfig={emptyBreakConfig}
+        displayBreakConfig={emptyBreakConfig}
+        actionStates={emptyActionStates}
+        onToggleAction={handleToggleAction}
+        isOverScheduled={false}
       />
     </div>
   );

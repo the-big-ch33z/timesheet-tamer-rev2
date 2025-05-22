@@ -95,6 +95,8 @@ const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
         displayBreakConfig={displayBreakConfig}
         actionStates={actionStates}
         onToggleAction={handleToggleAction}
+        interactive={interactive}
+        date={date}
       />
     </div>
   );
