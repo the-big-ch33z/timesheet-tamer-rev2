@@ -7,7 +7,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 
 const logger = createTimeLogger('TimeInputField');
 
-interface TimeInputFieldProps {
+export interface TimeInputFieldProps {
   label: string;
   value: string;
   type?: 'start' | 'end';
@@ -15,6 +15,7 @@ interface TimeInputFieldProps {
   onChange: (type: 'start' | 'end', value: string) => void;
   testId?: string;
   placeholder?: string;
+  disabled?: boolean; // Added disabled prop
 }
 
 export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
@@ -24,7 +25,8 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
   interactive,
   onChange,
   testId,
-  placeholder
+  placeholder,
+  disabled = false // Default to false
 }) => {
   // Remove default values - display empty string if no value is provided
   const displayValue = value || "";
@@ -46,7 +48,7 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
             id={`time-input-${type}`}
             value={displayValue}
             onChange={handleChange}
-            disabled={!interactive}
+            disabled={disabled || !interactive}
             className="bg-transparent border-none shadow-none p-0 h-auto"
             placeholder={placeholder || `Enter ${label.toLowerCase()}`}
             data-testid={testId}
@@ -65,3 +67,5 @@ export const TimeInputField: React.FC<TimeInputFieldProps> = memo(({
 });
 
 TimeInputField.displayName = "TimeInputField";
+
+export default TimeInputField;

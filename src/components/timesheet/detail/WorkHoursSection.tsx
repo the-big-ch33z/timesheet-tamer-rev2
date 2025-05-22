@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
 import { createTimeLogger } from "@/utils/time/errors";
@@ -24,6 +24,15 @@ interface WorkHoursSectionProps {
   onCreateEntry?: (startTime: string, endTime: string, hours: number) => void;
 }
 
+/**
+ * WorkHoursSection Component
+ * 
+ * Main container component for work hours functionality including:
+ * - Work hours display and editing
+ * - TOIL integration
+ * - Debug panel (in dev mode)
+ * - Time entry creation
+ */
 const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   date,
   userId,
@@ -31,8 +40,19 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   interactive = true,
   onCreateEntry
 }) => {
+  // Context hooks
   const { getDayEntries } = useTimeEntryContext();
   const userContext = useUserTimesheetContext();
+  
+  // Component state
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  
+  // Get day entries
+  const dayEntries = getDayEntries(date);
+  
+  // Use the schedule from props first, then fall back to the context
+  const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
   
   // Log the schedule assignment for debugging
   useEffect(() => {
@@ -42,26 +62,20 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       date: format(date, 'yyyy-MM-dd'),
       userId
     });
-  }, [workSchedule, userContext.workSchedule, date, userId]);
-
-  // Use the schedule from props first, then fall back to the context
-  const effectiveWorkSchedule = workSchedule || userContext.workSchedule;
-  
-  // If we still don't have a schedule, log a warning
-  useEffect(() => {
+    
+    // If we still don't have a schedule, log a warning
     if (!effectiveWorkSchedule) {
       logger.warn(`No work schedule available for user ${userId} - TOIL calculations may be incorrect`);
     } else {
       logger.debug(`Using effective work schedule: ${effectiveWorkSchedule.name || 'unnamed'} (${effectiveWorkSchedule.id})`);
     }
-  }, [effectiveWorkSchedule, userId]);
+    
+    // Check for developer mode by looking for URL param or localStorage flag
+    const isDevMode = window.location.search.includes('devMode=true') || 
+                      localStorage.getItem('timesheet-dev-mode') === 'true';
+    setShowDebugPanel(isDevMode);
+  }, [effectiveWorkSchedule, userContext.workSchedule, workSchedule, userId, date]);
 
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-  const [showEntryForm, setShowEntryForm] = useState(false);
-  
-  // Get day entries
-  const dayEntries = getDayEntries(date);
-  
   // Use our new unified TOIL hook
   const {
     calculateToilForDay,
@@ -92,19 +106,6 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
       throttle: 150  // Add minimal throttle to prevent excessive renders
     });
   }, [userId, date]);
-
-  useEffect(() => {
-    if (effectiveWorkSchedule) {
-      logger.debug(`[WorkHoursSection] Using work schedule: ${effectiveWorkSchedule.name || 'unnamed'}`);
-    } else {
-      logger.debug(`[WorkHoursSection] No work schedule available`);
-    }
-    
-    // Check for developer mode by looking for URL param or localStorage flag
-    const isDevMode = window.location.search.includes('devMode=true') || 
-                      localStorage.getItem('timesheet-dev-mode') === 'true';
-    setShowDebugPanel(isDevMode);
-  }, [effectiveWorkSchedule]);
 
   // Enhanced TOIL calculation function that also notifies the calendar
   const enhancedTriggerTOILCalculation = useCallback(async () => {
@@ -144,6 +145,7 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
     }
   }, [onCreateEntry, userId, date, enhancedTriggerTOILCalculation]);
 
+  // Handle add entry action
   const handleAddEntry = useCallback(() => {
     setShowEntryForm(true);
   }, []);

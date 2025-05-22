@@ -14,14 +14,22 @@ const DEFAULT_REFERENCE_DATE = new Date(2023, 0, 2); // January 2, 2023 (Monday)
 // Holiday cache for quick lookups
 const holidayDateCache = new Map<string, boolean>();
 
-// Helper function to get weekday from date
+/**
+ * Gets weekday name from date 
+ * @param date Date to get weekday from
+ * @returns Weekday name (lowercase)
+ */
 export const getWeekDay = (date: Date): WeekDay => {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   return days[date.getDay()] as WeekDay;
 };
 
-// Helper function to determine fortnight week (1 or 2)
-// Uses reference date for more accurate week calculation
+/**
+ * Determines which week of the fortnight a date falls into
+ * @param date Date to check
+ * @param referenceDate Reference date for calculation
+ * @returns Week number (1 or 2)
+ */
 export const getFortnightWeek = (date: Date, referenceDate: Date = DEFAULT_REFERENCE_DATE): 1 | 2 => {
   // Calculate weeks difference between the reference date and current date
   const weeksDiff = differenceInWeeks(date, referenceDate);
@@ -33,6 +41,8 @@ export const getFortnightWeek = (date: Date, referenceDate: Date = DEFAULT_REFER
 
 /**
  * Gets the number of workdays (Monday-Friday) in the given month
+ * @param date Date in the target month
+ * @returns Number of workdays
  */
 export function getWorkdaysInMonth(date: Date): number {
   const year = date.getFullYear();
@@ -166,6 +176,10 @@ export const isNonWorkingDay = (date: Date, workSchedule?: WorkSchedule, holiday
 
 /**
  * Calculate hours for a work day accounting for breaks (lunch and smoko)
+ * @param startTime Start time (HH:MM format)
+ * @param endTime End time (HH:MM format)
+ * @param breaks Break configuration
+ * @returns Total hours for the day
  */
 export const calculateDayHoursWithBreaks = (
   startTime: string,
@@ -194,6 +208,10 @@ export const calculateDayHoursWithBreaks = (
 
 /**
  * Calculate hours for a work day accounting for lunch only
+ * @param startTime Start time (HH:MM format)
+ * @param endTime End time (HH:MM format)
+ * @param breaks Break configuration
+ * @returns Total hours for the day
  */
 export const calculateDayHours = (startTime: string, endTime: string, breaks?: { lunch?: boolean; smoko?: boolean }): number => {
   return calculateDayHoursWithBreaks(startTime, endTime, breaks);

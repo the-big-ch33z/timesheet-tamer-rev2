@@ -81,13 +81,13 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [totalEnteredHours, scheduledHours]);
 
   // Handle reset button click
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     resetWorkHours(date, userId);
     toast({
       title: "Work Hours Reset",
       description: "Work hours have been reset to default."
     });
-  };
+  }, [resetWorkHours, date, userId, toast]);
 
   return (
     <div className="space-y-4">

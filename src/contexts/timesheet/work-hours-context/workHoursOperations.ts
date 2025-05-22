@@ -4,10 +4,17 @@ import { WorkHoursData } from '../types';
 import { WorkSchedule } from '@/types';
 import { createTimeLogger } from '@/utils/time/errors';
 import { getDayScheduleInfo } from '@/utils/time/scheduleUtils';
-import { useWorkSchedule } from '@/contexts/work-schedule';
 
 const logger = createTimeLogger('WorkHoursOperations');
 
+/**
+ * Creates work hours operations with the provided schedules
+ * 
+ * @param defaultSchedule Default work schedule to use as fallback
+ * @param schedules Available work schedules
+ * @param getUserSchedule Function to get user's assigned schedule ID
+ * @returns Work hours operations object
+ */
 export const createWorkHoursOperations = (
   defaultSchedule: WorkSchedule,
   schedules: WorkSchedule[],
@@ -16,6 +23,13 @@ export const createWorkHoursOperations = (
   // Store the last time we refreshed schedule data
   let lastScheduleRefreshTime = Date.now();
 
+  /**
+   * Gets default hours from schedule for a specific date and user
+   * 
+   * @param date The date to get hours for
+   * @param userId The user ID
+   * @returns Object containing startTime and endTime
+   */
   const getDefaultHoursFromSchedule = (date: Date, userId: string): { startTime: string; endTime: string } => {
     try {
       // Always get the latest schedule ID for the user - this is crucial for synchronization
@@ -42,8 +56,10 @@ export const createWorkHoursOperations = (
       // Update last refresh time
       lastScheduleRefreshTime = Date.now();
       
+      // Get day schedule information from the selected schedule
       const daySchedule = getDayScheduleInfo(date, selectedSchedule);
       
+      // Extract hours if available
       if (daySchedule && daySchedule.isWorkingDay && daySchedule.hours) {
         logger.debug(`Derived hours for ${userId} on ${format(date, 'yyyy-MM-dd')} from schedule: ${daySchedule.hours.startTime}-${daySchedule.hours.endTime}`);
         return {
@@ -60,6 +76,10 @@ export const createWorkHoursOperations = (
     }
   };
 
+  /**
+   * Gets the timestamp of the last schedule refresh
+   * @returns Timestamp of last refresh
+   */
   const getLastRefreshTime = () => lastScheduleRefreshTime;
 
   return { 
