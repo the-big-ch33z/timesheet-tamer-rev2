@@ -3,6 +3,7 @@ import React from 'react';
 import { useTimesheetData } from '@/hooks/timesheet/useTimesheetData';
 import { useWorkHours } from '@/hooks/timesheet/useWorkHours'; // Using the unified hook
 import WorkHoursInterface from './work-hours/WorkHoursInterface';
+import TimeEntryController from '../entry-control/TimeEntryController'; // Import the TimeEntryController
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
 
@@ -35,12 +36,21 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   }); // Fix: Pass as one options object instead of separate arguments
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <WorkHoursInterface
+    <div className="space-y-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+        <WorkHoursInterface
+          date={date}
+          userId={userId}
+          entries={entries}
+          workSchedule={workSchedule}
+          interactive={interactive}
+        />
+      </div>
+      
+      {/* Add TimeEntryController back to restore the Timesheet Entries section */}
+      <TimeEntryController
         date={date}
         userId={userId}
-        entries={entries}
-        workSchedule={workSchedule}
         interactive={interactive}
       />
     </div>
@@ -48,3 +58,4 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 };
 
 export default WorkHoursSection;
+
