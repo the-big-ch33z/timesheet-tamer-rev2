@@ -1,3 +1,4 @@
+
 import { useMemo, useCallback } from "react";
 import { WorkSchedule } from "@/types";
 import { isWeekend, isToday } from "date-fns";
@@ -124,9 +125,8 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
       const isRDO = checkIsRDO(day);
       const shiftInfo = isRDO ? getRDOShiftInfo(day) : { isShifted: false };
       
-      // Create result and ensure fortnightWeek is always 1 or 2
-      const fortnightWeekValue = getFortnightWeek(day);
-      const result: DayStateResult = {
+      // Create result
+      const result = {
         isToday: isToday(day),
         isSelected: selectedDay ? day.toDateString() === selectedDay.toDateString() : false,
         isCurrentMonth: day.getMonth() === monthStart.getMonth(),
@@ -135,7 +135,7 @@ export const useCalendarHelpers = (workSchedule?: WorkSchedule) => {
         isRDO,
         isShiftedRDO: shiftInfo.isShifted,
         weekday: getWeekDay(day),
-        fortnightWeek: fortnightWeekValue === 1 ? 1 : 2 as 1 | 2,
+        fortnightWeek: getFortnightWeek(day),
         originalRdoDate: shiftInfo.isShifted ? shiftInfo.originalDate : undefined,
         shiftReason: shiftInfo.reason || null
       };
