@@ -44,11 +44,12 @@ export const createWorkHoursOperations = (
       
       const daySchedule = getDayScheduleInfo(date, selectedSchedule);
       
-      if (daySchedule && daySchedule.isWorkingDay && daySchedule.hours) {
-        logger.debug(`Derived hours for ${userId} on ${format(date, 'yyyy-MM-dd')} from schedule: ${daySchedule.hours.startTime}-${daySchedule.hours.endTime}`);
+      if (daySchedule && daySchedule.isWorkDay && daySchedule.dayConfig) {
+        const dayConfig = daySchedule.dayConfig;
+        logger.debug(`Derived hours for ${userId} on ${format(date, 'yyyy-MM-dd')} from schedule: ${dayConfig.startTime}-${dayConfig.endTime}`);
         return {
-          startTime: daySchedule.hours.startTime || '',
-          endTime: daySchedule.hours.endTime || ''
+          startTime: dayConfig.startTime || '',
+          endTime: dayConfig.endTime || ''
         };
       }
       

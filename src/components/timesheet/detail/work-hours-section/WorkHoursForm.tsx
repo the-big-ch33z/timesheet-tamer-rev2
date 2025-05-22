@@ -1,6 +1,6 @@
 
 import React from 'react';
-import TimeInputField from '../components/TimeInputField';
+import { TimeInputField } from '../components/TimeInputField';
 
 interface WorkHoursFormProps {
   startTime: string;
@@ -29,6 +29,10 @@ const WorkHoursForm: React.FC<WorkHoursFormProps> = ({
           placeholder="09:00"
           aria-label="Start time"
           className="w-full"
+          label="Start Time"
+          type="start"
+          interactive={interactive}
+          testId="start-time-input"
         />
       </div>
       <div>
@@ -43,6 +47,10 @@ const WorkHoursForm: React.FC<WorkHoursFormProps> = ({
           placeholder="17:00" 
           aria-label="End time"
           className="w-full"
+          label="End Time"
+          type="end"
+          interactive={interactive}
+          testId="end-time-input"
         />
       </div>
     </div>
