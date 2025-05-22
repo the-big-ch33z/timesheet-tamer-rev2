@@ -29,7 +29,10 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
   logger.debug(`Rendering WorkHoursSection for ${format(date, 'yyyy-MM-dd')}`);
 
   // Use the unified timesheet data hook
-  const { entries } = useTimesheetData(userId, date); // Fixed by passing parameters separately
+  const { entries } = useTimesheetData({
+    userId,
+    date
+  }); // Fix: Pass as one options object instead of separate arguments
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
