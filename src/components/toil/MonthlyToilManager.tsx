@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { format, subMonths } from "date-fns";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,10 +34,9 @@ const MonthlyToilManager: React.FC = () => {
   }, []);
   
   // Use unified TOIL hook instead of the deprecated useTOILSummary
-  const { data: summary, isLoading, error, refreshSummary } = useUnifiedTOIL({
+  const { toilSummary: summary, isLoading, error, refreshSummary } = useUnifiedTOIL({
     userId,
     date: new Date(selectedMonth + "-01")
-    // Removed the monthOnly property as it doesn't exist in the type
   });
   
   // Log TOIL summary changes

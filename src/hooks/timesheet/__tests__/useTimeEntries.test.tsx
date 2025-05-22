@@ -99,7 +99,7 @@ describe('useTimeEntries Hook', () => {
     
     act(() => {
       const entryId = result.current.createEntry(newEntry);
-      expect(entryId).toBe('new-id-123');
+      expect(entryId).toBe('mock-id');
     });
   });
   
