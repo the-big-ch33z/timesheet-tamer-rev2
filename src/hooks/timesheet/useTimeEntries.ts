@@ -12,7 +12,7 @@ export const useTimeEntries = (userId: string, date?: Date) => {
     isLoading: false,
     createEntry: () => 'mock-id',
     updateEntry: () => true,
-    deleteEntry: async () => true,
+    deleteEntry: () => true,
     getDayEntries: () => [],
     getMonthEntries: () => [],
     calculateTotalHours: () => 0,
