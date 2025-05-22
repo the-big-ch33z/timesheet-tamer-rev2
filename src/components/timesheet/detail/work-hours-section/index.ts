@@ -1,4 +1,16 @@
 
-export { default as DebugPanel } from './DebugPanel';
-export { default as WorkHoursContent } from './WorkHoursContent';
-export { default as TOILSummaryCard } from '../components/TOILSummaryCard';
+import WorkHoursContent from './WorkHoursContent';
+import DebugPanel from './DebugPanel';
+import WorkHoursDisplay from './WorkHoursDisplay';
+import WorkHoursForm from './WorkHoursForm';
+
+export type { 
+  WorkHoursContentProps 
+} from './WorkHoursContent';
+
+export {
+  WorkHoursContent,
+  DebugPanel,
+  WorkHoursDisplay,
+  WorkHoursForm
+};

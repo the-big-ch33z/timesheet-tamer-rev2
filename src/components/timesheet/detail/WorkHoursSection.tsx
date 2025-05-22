@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { WorkSchedule } from "@/types";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context";
@@ -12,7 +11,8 @@ import WorkHoursActions from "./components/WorkHoursActions";
 import { format } from 'date-fns';
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 import { eventBus } from "@/utils/events/EventBus";
-import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
+import { TOIL_EVENTS, WORK_HOURS_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
+import { useLeaveActions } from "@/hooks/timesheet/leave/useLeaveActions";
 
 const logger = createTimeLogger('WorkHoursSection');
 
@@ -33,6 +33,22 @@ const WorkHoursSection: React.FC<WorkHoursSectionProps> = ({
 }) => {
   const { getDayEntries } = useTimeEntryContext();
   const userContext = useUserTimesheetContext();
+  
+  // Use the new leave actions hook
+  const { handleLeaveToggle } = useLeaveActions({ userId });
+  
+  // Register the leave event handler
+  useEffect(() => {
+    // Subscribe to leave toggle events
+    const unsubscribe = timeEventsService.subscribe(
+      WORK_HOURS_EVENTS.ACTION_TOGGLED,
+      handleLeaveToggle
+    );
+    
+    return () => {
+      unsubscribe.unsubscribe();
+    };
+  }, [handleLeaveToggle]);
   
   // Log the schedule assignment for debugging
   useEffect(() => {

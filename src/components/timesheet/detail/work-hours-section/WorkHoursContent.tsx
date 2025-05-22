@@ -1,13 +1,13 @@
 
-import React from "react";
-import WorkHoursHeader from "../components/WorkHoursHeader";
-import WorkHoursDisplay from "../components/WorkHoursDisplay";
-import WorkHoursAlerts from "../components/WorkHoursAlerts";
-import WorkHoursActionButtons from "../components/WorkHoursActionButtons";
-import { WorkHoursStatus } from "../components/WorkHoursStatus";
-import { BreakConfig } from '@/contexts/timesheet/types';
+import React from 'react';
+import { format } from 'date-fns';
+import WorkHoursDisplay from './WorkHoursDisplay';
+import WorkHoursForm from './WorkHoursForm';
+import WorkHoursActionButtons from '../components/WorkHoursActionButtons';
+import { cn } from '@/lib/utils';
 
-interface WorkHoursContentProps {
+export interface WorkHoursContentProps {
+  date: Date;
   startTime: string;
   endTime: string;
   effectiveTotalHours: number;
@@ -17,17 +17,30 @@ interface WorkHoursContentProps {
   isActuallyComplete: boolean;
   hoursVariance: number;
   isUndertime: boolean;
-  breakConfig: BreakConfig;
-  displayBreakConfig: BreakConfig;
-  actionStates: Record<string, boolean>;
+  breakConfig: {
+    lunch: boolean;
+    smoko: boolean;
+  };
+  displayBreakConfig: {
+    lunch: boolean;
+    smoko: boolean;
+  };
+  actionStates: {
+    leave: boolean;
+    sick: boolean;
+    toil: boolean;
+    lunch: boolean;
+    smoko: boolean;
+  };
   isOverScheduled: boolean;
   isCalculating: boolean;
-  date: Date;
   handleTimeChange: (type: 'start' | 'end', value: string) => void;
   handleToggleAction: (type: string, scheduledHours: number) => void;
+  isLeaveDay?: boolean; // New prop to indicate leave day
 }
 
 const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
+  date,
   startTime,
   endTime,
   effectiveTotalHours,
@@ -42,84 +55,76 @@ const WorkHoursContent: React.FC<WorkHoursContentProps> = ({
   actionStates,
   isOverScheduled,
   isCalculating,
-  date,
   handleTimeChange,
-  handleToggleAction
+  handleToggleAction,
+  isLeaveDay = false // Default to false
 }) => {
-  const leaveActive = actionStates.leave || actionStates.sick;
-  const toilActive = actionStates.toil;
+  // Format date for display
+  const formattedDate = format(date, 'EEEE, d MMMM yyyy');
   
-  const highlightBg = actionStates.sick
-    ? "bg-[#fff6f6]"
-    : actionStates.leave
-      ? "bg-[#f5faff]"
-      : actionStates.toil
-        ? "bg-purple-50"
-        : "bg-white";
+  // Determine if the day has special styling based on leave/sick states
+  const hasLeaveStyle = actionStates.leave || isLeaveDay;
+  const hasSickStyle = actionStates.sick;
+  const hasToilStyle = actionStates.toil;
+  
+  // Special day style classes
+  const specialDayClasses = cn(
+    hasLeaveStyle && "bg-sky-50 border-sky-200",
+    hasSickStyle && "bg-red-50 border-red-200",
+    hasToilStyle && "bg-purple-50 border-purple-200"
+  );
+  
+  // Determine status text based on leave/sick/TOIL states
+  const statusText = hasLeaveStyle ? "Annual Leave" 
+                  : hasSickStyle ? "Sick Leave"
+                  : hasToilStyle ? "TOIL"
+                  : "";
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-4">
-        <WorkHoursHeader hasEntries={hasEntries || leaveActive} />
-        <WorkHoursActionButtons 
-          value={actionStates} 
-          onToggle={(type) => handleToggleAction(type, calculatedTimeHours)} 
-        />
-      </div>
-      <div className="flex space-x-4 items-start">
-        <div className="flex-1">
-          <div className={`rounded-lg border border-gray-200 ${
-            actionStates.sick ? "bg-[#fff6f6]" :
-            actionStates.leave ? "bg-[#f5faff]" :
-            actionStates.toil ? "bg-purple-50" : "bg-white"
-          }`}>
-            <WorkHoursDisplay
-              startTime={startTime}
-              endTime={endTime}
-              totalHours={effectiveTotalHours}
-              calculatedHours={calculatedTimeHours}
-              hasEntries={hasEntries}
-              interactive={interactive && !leaveActive && !toilActive}
-              onTimeChange={handleTimeChange}
-              isComplete={isActuallyComplete}
-              hoursVariance={hoursVariance}
-              isUndertime={isUndertime}
-              breaksIncluded={displayBreakConfig}
-              overrideStates={{
-                lunch: actionStates.lunch,
-              }}
-            />
-          </div>
-          <WorkHoursAlerts
-            hasEntries={hasEntries}
-            isUndertime={isUndertime}
-            hoursVariance={hoursVariance}
-            interactive={interactive}
-            date={date}
-            isComplete={isActuallyComplete}
-          />
-          {isCalculating && (
-            <div className="mt-2 text-xs text-blue-500 text-center animate-pulse flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Calculating time accruals...
-            </div>
-          )}
+    <div className={cn(
+      "border rounded-md p-4 transition-colors",
+      specialDayClasses || "border-gray-200 bg-white"
+    )}>
+      <h3 className="text-lg font-medium mb-3">{formattedDate}</h3>
+      
+      {/* Action buttons */}
+      <WorkHoursActionButtons
+        value={actionStates}
+        onToggle={(type) => handleToggleAction(type, calculatedTimeHours)}
+      />
+      
+      {/* Show status text when on leave/sick/TOIL */}
+      {statusText && (
+        <div className="text-center font-medium my-2 text-gray-700">
+          {statusText}
         </div>
-        <WorkHoursStatus
-          effectiveTotalHours={effectiveTotalHours}
-          scheduledHours={calculatedTimeHours}
-          isOverScheduled={isOverScheduled}
-          isActuallyComplete={isActuallyComplete}
-          isUndertime={isUndertime}
-          isDaySick={actionStates.sick}
-          isDayLeave={actionStates.leave}
-          isDayToil={actionStates.toil}
+      )}
+      
+      {/* Time entry form */}
+      {(!hasLeaveStyle && !hasSickStyle && !hasToilStyle) && (
+        <WorkHoursForm
+          startTime={startTime}
+          endTime={endTime}
+          interactive={interactive}
+          onTimeChange={handleTimeChange}
         />
-      </div>
-    </>
+      )}
+      
+      {/* Hours display */}
+      <WorkHoursDisplay
+        calculatedHours={calculatedTimeHours}
+        totalHours={effectiveTotalHours}
+        isComplete={isActuallyComplete}
+        isUndertime={isUndertime && !hasLeaveStyle && !hasSickStyle && !hasToilStyle} // Don't show undertime warning for leave days
+        hoursVariance={hoursVariance}
+        isOverScheduled={isOverScheduled}
+        hasEntries={hasEntries}
+        isCalculating={isCalculating}
+        lunchBreak={displayBreakConfig.lunch}
+        smokoBreak={displayBreakConfig.smoko}
+        hasLeaveEntry={hasLeaveStyle}  // Pass leave state to display
+      />
+    </div>
   );
 };
 
