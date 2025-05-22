@@ -1,17 +1,19 @@
+
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminLayout from '@/components/layouts/AdminLayout';
-import TeamManagement from '@/components/admin/teams/TeamManagement'; // Using the new path
-import UserManagement from '@/components/admin/users/UserManagement'; // Using the new path
+import TeamManagement from '@/components/admin/teams/TeamManagement'; // Updated import path
+import UserManagement from '@/components/admin/users/UserManagement'; // Updated import path
 import RolesAndPermissions from '@/components/admin/RolesAndPermissions';
 import WorkScheduleManager from '@/components/admin/WorkScheduleManager';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/contexts/auth'; // Using the correct import
+import { useAuth } from '@/contexts/auth'; // Updated import path
 
 const AdminPage: React.FC = () => {
   const { currentUser } = useAuth();
 
-  if (!currentUser || !currentUser.isAdmin) {
+  // Fix the isAdmin property check
+  if (!currentUser || !currentUser.role || currentUser.role !== 'admin') {
     return (
       <AdminLayout>
         <Card>

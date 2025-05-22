@@ -1,8 +1,8 @@
 
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UserManagement from "@/components/admin/UserManagement";
-import TeamManagement from "@/components/admin/TeamManagement";
+import UserManagement from "@/components/admin/users/UserManagement"; // Updated import path
+import TeamManagement from "@/components/admin/teams/TeamManagement"; // Updated import path
 import ProjectManagement from "@/components/admin/ProjectManagement";
 import HolidayManagement from "@/components/admin/HolidayManagement";
 import SystemSettings from "@/components/admin/SystemSettings";
