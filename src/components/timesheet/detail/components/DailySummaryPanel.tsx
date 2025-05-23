@@ -36,43 +36,46 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 h-full">
-      <h3 className="text-lg font-medium mb-4">Daily Summary</h3>
-      <p className="text-sm text-gray-500 mb-4">{format(date, 'EEEE, MMMM d, yyyy')}</p>
+    <div className="bg-white rounded-lg h-full">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-base font-medium">Daily Summary</h3>
+        <p className="text-xs text-gray-500">{format(date, 'EEEE, MMM d')}</p>
+      </div>
       
-      <div className="flex items-center">
-        <div className="flex-1 space-y-6">
-          <div className="space-y-1">
-            <h4 className="text-sm font-medium text-gray-700">Hours Progress</h4>
-            <p className="text-lg font-semibold">
-              {roundedSubmitted} <span className="text-gray-400">/</span> {roundedRequired} hours submitted
+      <div className="flex items-center space-x-4">
+        {/* Left content - Hours information */}
+        <div className="flex-1 space-y-2">
+          <div>
+            <h4 className="text-xs font-medium text-gray-700 mb-0.5">Hours Progress</h4>
+            <p className="text-base font-semibold">
+              {roundedSubmitted} <span className="text-gray-400">/</span> {roundedRequired} hours
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               {remainingHours > 0 
                 ? `${remainingHours} hours remaining` 
                 : "All hours submitted"}
             </p>
           </div>
+        </div>
+        
+        {/* Right content - Progress bar and completion */}
+        <div className="flex flex-col items-center space-y-1">
+          <VerticalProgressBar 
+            value={progressPercentage} 
+            height={50}
+            width={12}
+            barColor={getProgressColor()}
+          />
           
-          <div className="space-y-1">
-            <h4 className="text-sm font-medium text-gray-700">Completion</h4>
-            <p className="text-lg font-semibold">
+          <div className="text-center">
+            <p className="text-xs font-medium text-gray-700">Completion</p>
+            <p className="text-base font-semibold flex items-center">
               {Math.round(progressPercentage)}%
               {progressPercentage >= 100 && (
-                <span className="ml-2 text-green-500 text-sm">✓ Complete</span>
+                <span className="ml-1 text-green-500 text-xs">✓</span>
               )}
             </p>
           </div>
-        </div>
-        
-        <div className="ml-4 flex items-center justify-center">
-          <VerticalProgressBar 
-            value={progressPercentage} 
-            height={120}
-            width={16}
-            barColor={getProgressColor()}
-            className="mx-auto"
-          />
         </div>
       </div>
     </div>

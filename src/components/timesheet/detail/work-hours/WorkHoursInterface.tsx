@@ -97,8 +97,8 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [handleToggleAction, scheduledHours]);
 
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="p-4">
         <WorkHoursContent
           date={date}
           startTime={startTime}
@@ -120,7 +120,7 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
         />
       </div>
       
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
+      <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
         <DailySummaryPanel
           requiredHours={calculatedHours}
           submittedHours={totalEnteredHours}
