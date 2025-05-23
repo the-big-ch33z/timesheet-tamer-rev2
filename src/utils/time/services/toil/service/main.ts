@@ -6,6 +6,7 @@ import { TOILServiceProcessing } from "./processing";
 import { TOILServiceSettings } from "./settings";
 import { toilQueueManager } from "../queue/TOILQueueManager";
 import { clearSummaryCache } from "../storage";
+import { format } from 'date-fns';
 
 const logger = createTimeLogger('TOILService');
 
@@ -30,6 +31,19 @@ export class TOILService extends TOILServiceCore {
     this.settingsService = new TOILServiceSettings(calculationQueueEnabled);
     
     logger.debug('TOILService core components initialized');
+  }
+  
+  /**
+   * Get TOIL summary for a user for a specific month
+   */
+  public async getTOILSummary(userId: string, monthYear: string) {
+    try {
+      const summary = await this.getStoredSummary(userId, monthYear);
+      return summary;
+    } catch (error) {
+      logger.error(`Error getting TOIL summary for ${userId}, ${monthYear}:`, error);
+      return null;
+    }
   }
   
   /**

@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { User, TimeEntry, WorkSchedule } from "@/types";
 import { calculateMonthlyTargetHours } from "@/utils/time/calculations/hoursCalculations";
@@ -5,6 +6,10 @@ import { useUserMetrics } from "@/contexts/user-metrics";
 import { useLogger } from "@/hooks/useLogger";
 import { calculateFortnightHoursFromSchedule } from '@/utils/time/scheduleUtils';
 
+/**
+ * Hook to calculate monthly hours and completion percentage.
+ * Can also be used as a non-hook function by directly passing all parameters.
+ */
 export const useMonthlyHoursCalculation = (
   entries: TimeEntry[],
   currentMonth: Date,
@@ -21,7 +26,7 @@ export const useMonthlyHoursCalculation = (
 
   // Calculate total hours from passed entries for the current month
   const hours = useMemo(() => {
-    if (!user?.id) return 0;
+    if (!entries?.length) return 0;
     
     // Filter entries for the current month only
     const monthEntries = entries.filter(entry => {
@@ -34,7 +39,7 @@ export const useMonthlyHoursCalculation = (
     
     // Sum up the hours
     return monthEntries.reduce((total, entry) => total + (entry.hours || 0), 0);
-  }, [entries, currentMonth, user, logger]);
+  }, [entries, currentMonth, logger]);
 
   // Calculate fortnight hours and target hours
   const { fortnightHours, targetHours } = useMemo(() => {

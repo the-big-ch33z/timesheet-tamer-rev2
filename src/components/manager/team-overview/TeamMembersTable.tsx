@@ -3,12 +3,6 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { 
-  Card, 
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-import { 
   Table,
   TableBody,
   TableCell,
@@ -19,19 +13,27 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
+import { Loader2 } from "lucide-react";
+import { TeamMemberMetrics } from '@/hooks/useTeamMemberMetrics';
 
 interface TeamMembersTableProps {
   teamMembers: User[];
   onMemberSelect?: (user: User) => void;
   setUserToArchive: React.Dispatch<React.SetStateAction<string | null>>;
   setUserToRestore: React.Dispatch<React.SetStateAction<string | null>>;
+  metrics?: Record<string, TeamMemberMetrics>;
+  showMetrics?: boolean;
+  selectedMonth?: Date;
 }
 
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ 
   teamMembers, 
   onMemberSelect,
   setUserToArchive,
-  setUserToRestore 
+  setUserToRestore,
+  metrics = {},
+  showMetrics = true,
+  selectedMonth
 }) => {
   const { toast } = useToast();
   
@@ -52,22 +54,32 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Team Members</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {teamMembers.map(member => (
+    <div className="mt-4">
+      {selectedMonth && showMetrics && (
+        <div className="mb-2 text-sm text-muted-foreground">
+          Showing metrics for: <span className="font-medium">{selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+        </div>
+      )}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Employee</TableHead>
+            <TableHead>Role</TableHead>
+            {showMetrics && (
+              <>
+                <TableHead className="text-right">TOIL Balance</TableHead>
+                <TableHead className="text-right">Required Hours</TableHead>
+                <TableHead className="text-right">Actual Hours</TableHead>
+              </>
+            )}
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {teamMembers.map(member => {
+            const memberMetrics = metrics[member.id];
+            return (
               <TableRow key={member.id}>
                 <TableCell className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
@@ -89,6 +101,37 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>{member.role}</TableCell>
+                
+                {showMetrics && (
+                  <>
+                    <TableCell className="text-right">
+                      {memberMetrics?.loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                      ) : (
+                        <span className={memberMetrics?.toilBalance < 0 ? "text-red-500" : ""}>
+                          {memberMetrics?.toilBalance.toFixed(1)}h
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {memberMetrics?.loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                      ) : (
+                        `${memberMetrics?.requiredHours.toFixed(1)}h`
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {memberMetrics?.loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                      ) : (
+                        <span className={memberMetrics?.actualHours < memberMetrics?.requiredHours ? "text-amber-600" : "text-green-600"}>
+                          {memberMetrics?.actualHours.toFixed(1)}h
+                        </span>
+                      )}
+                    </TableCell>
+                  </>
+                )}
+                
                 <TableCell>
                   <Badge 
                     variant={
@@ -120,11 +163,11 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   )}
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 

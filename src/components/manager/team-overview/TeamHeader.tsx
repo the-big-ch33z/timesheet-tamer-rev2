@@ -1,10 +1,12 @@
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Filter, RefreshCw, UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Team } from "@/types";
+import { CalendarIcon, RefreshCcw, UserPlus } from "lucide-react";
+import { format, addMonths, subMonths } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 interface TeamHeaderProps {
   teams: Team[];
@@ -13,6 +15,8 @@ interface TeamHeaderProps {
   teamMembersCount: number;
   onAddMemberClick: () => void;
   onRefreshData: () => void;
+  selectedMonth: Date;
+  setSelectedMonth: (date: Date) => void;
 }
 
 export const TeamHeader: React.FC<TeamHeaderProps> = ({
@@ -21,22 +25,34 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({
   setSelectedTeamId,
   teamMembersCount,
   onAddMemberClick,
-  onRefreshData
+  onRefreshData,
+  selectedMonth,
+  setSelectedMonth
 }) => {
-  // Handle refresh button click
-  const handleRefresh = () => {
-    if (onRefreshData) {
-      onRefreshData();
-    }
+  const handlePreviousMonth = () => {
+    setSelectedMonth(subMonths(selectedMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(addMonths(selectedMonth, 1));
   };
 
   return (
-    <div className="flex justify-between items-center mb-6">
-      <div className="flex items-center gap-4">
-        <h2 className="text-2xl font-bold">Team Overview</h2>
-        {teams.length > 0 && (
-          <Select value={selectedTeamId || ""} onValueChange={setSelectedTeamId}>
-            <SelectTrigger className="w-[250px]">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-6 pb-4 border-b">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-bold tracking-tight">Team Overview</h2>
+        <p className="text-muted-foreground">
+          Select a team to view its members ({teamMembersCount} {teamMembersCount === 1 ? 'member' : 'members'})
+        </p>
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+        <div className="flex gap-2 items-center">
+          <Select
+            value={selectedTeamId || ""}
+            onValueChange={setSelectedTeamId}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Select a team" />
             </SelectTrigger>
             <SelectContent>
@@ -47,41 +63,54 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({
               ))}
             </SelectContent>
           </Select>
-        )}
-        {teamMembersCount > 0 && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-800">
-            {teamMembersCount} members
-          </Badge>
-        )}
-      </div>
-      
-      <div className="flex gap-2">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span>2025-04</span>
-          </Button>
           
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-1" />
-            Filters
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={onRefreshData}
+            title="Refresh data"
+          >
+            <RefreshCcw className="h-4 w-4" />
           </Button>
         </div>
         
-        <Button size="sm" className="gap-1" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-        
-        <Button 
-          variant="default" 
-          size="sm" 
-          className="gap-1"
-          onClick={onAddMemberClick}
-        >
-          <UserPlus className="h-4 w-4" />
-          Add Team Member
-        </Button>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
+              ←
+            </Button>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex gap-1 min-w-[140px] justify-between">
+                  {format(selectedMonth, "MMMM yyyy")}
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedMonth}
+                  onSelect={(date) => date && setSelectedMonth(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Button variant="outline" size="sm" onClick={handleNextMonth}>
+              →
+            </Button>
+          </div>
+          
+          <Button 
+            onClick={onAddMemberClick} 
+            size="sm"
+            disabled={!selectedTeamId}
+          >
+            <UserPlus className="h-4 w-4 mr-1" />
+            Add Member
+          </Button>
+        </div>
       </div>
     </div>
   );

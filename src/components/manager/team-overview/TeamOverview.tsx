@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Team, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { TeamHeader } from "./TeamHeader";
@@ -7,6 +7,7 @@ import TeamMembersTable from "./TeamMembersTable";
 import { TeamPlaceholder } from "./TeamPlaceholder";
 import { AddTeamMemberDialog } from "../AddTeamMemberDialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { useTeamMemberMetrics } from "@/hooks/useTeamMemberMetrics";
 
 interface TeamOverviewProps {
   teams: Team[];
@@ -33,9 +34,13 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
   onArchiveUser,
   onRestoreUser,
 }) => {
-  const [isAddMemberOpen, setIsAddMemberOpen] = React.useState(false);
-  const [userToArchive, setUserToArchive] = React.useState<string | null>(null);
-  const [userToRestore, setUserToRestore] = React.useState<string | null>(null);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [userToArchive, setUserToArchive] = useState<string | null>(null);
+  const [userToRestore, setUserToRestore] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  
+  // Get metrics for team members
+  const { metrics } = useTeamMemberMetrics(teamMembers, selectedMonth);
   
   // Get user by ID from team members
   const getUserById = (userId: string) => {
@@ -53,6 +58,8 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
             teamMembersCount={teamMembers.length}
             onAddMemberClick={() => setIsAddMemberOpen(true)}
             onRefreshData={onRefreshData}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
           />
           
           <div className="mb-6 p-4 border rounded-lg bg-slate-50">
@@ -73,6 +80,9 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
             onMemberSelect={onEditUser}
             setUserToArchive={setUserToArchive}
             setUserToRestore={setUserToRestore}
+            metrics={metrics}
+            showMetrics={true}
+            selectedMonth={selectedMonth}
           />
         </>
       ) : (
