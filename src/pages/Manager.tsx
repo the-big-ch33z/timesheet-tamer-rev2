@@ -9,6 +9,7 @@ import ManagerHeader from "@/components/manager/ManagerHeader";
 import { useManagerState } from "@/components/manager/hooks/useManagerState";
 import { useUserActions } from "@/components/manager/hooks/useUserActions";
 import TeamOverview from "@/components/manager/team-overview";
+import { TimeEntryProvider } from "@/contexts/timesheet/entries-context";
 
 const Manager = () => {
   const { users, teams, getUserById } = useAuth();
@@ -94,18 +95,20 @@ const Manager = () => {
 
         {/* Use TabsContent for rendering specific content based on tab selection */}
         <TabsContent value="team-overview">
-          <TeamOverview 
-            teams={filteredTeams}
-            selectedTeamId={selectedTeamId}
-            setSelectedTeamId={setSelectedTeamId}
-            selectedTeam={selectedTeam}
-            manager={manager}
-            teamMembers={teamMembers}
-            onRefreshData={managerState.refreshTeamMembers}
-            onEditUser={onEditUser}
-            onArchiveUser={userActions.handleArchiveUser}
-            onRestoreUser={userActions.handleRestoreUser}
-          />
+          <TimeEntryProvider>
+            <TeamOverview 
+              teams={filteredTeams}
+              selectedTeamId={selectedTeamId}
+              setSelectedTeamId={setSelectedTeamId}
+              selectedTeam={selectedTeam}
+              manager={manager}
+              teamMembers={teamMembers}
+              onRefreshData={managerState.refreshTeamMembers}
+              onEditUser={onEditUser}
+              onArchiveUser={userActions.handleArchiveUser}
+              onRestoreUser={userActions.handleRestoreUser}
+            />
+          </TimeEntryProvider>
         </TabsContent>
       </Tabs>
       

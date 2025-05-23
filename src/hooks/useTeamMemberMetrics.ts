@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User, TimeEntry } from '@/types';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEntryContext';
@@ -21,7 +22,8 @@ export function useTeamMemberMetrics(
   selectedMonth: Date = new Date()
 ) {
   const [metrics, setMetrics] = useState<Record<string, TeamMemberMetrics>>({});
-  const { getMonthEntries } = useTimeEntryContext();
+  const timeEntryContext = useTimeEntryContext();
+  const getMonthEntries = timeEntryContext?.getMonthEntries;
   
   useEffect(() => {
     async function fetchMetricsForMembers() {
@@ -45,7 +47,12 @@ export function useTeamMemberMetrics(
       for (const member of teamMembers) {
         try {
           // Get entries for this user for the selected month
-          const entries = getMonthEntries(selectedMonth, member.id);
+          let entries: TimeEntry[] = [];
+          if (getMonthEntries) {
+            entries = getMonthEntries(selectedMonth, member.id);
+          } else {
+            logger.warn(`getMonthEntries not available, using empty entries for ${member.id}`);
+          }
           
           // Calculate monthly hours
           const { targetHours, hours } = useMonthlyHoursCalculation(entries, selectedMonth, member);
