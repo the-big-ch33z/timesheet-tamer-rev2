@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILServiceCore } from "./core";
 import { TOILServiceCalculation } from "./calculation";
@@ -42,7 +41,7 @@ export class TOILService extends TOILServiceCore {
   public getTOILSummary(userId: string, monthYear: string): TOILSummary | null {
     try {
       // Call the parent class's synchronous method that returns TOILSummary directly
-      const summary = this.getStoredSummary(userId, monthYear);
+      const summary = super.getTOILSummary(userId, monthYear);
       return summary;
     } catch (error) {
       logger.error(`Error getting TOIL summary for ${userId}, ${monthYear}:`, error);
