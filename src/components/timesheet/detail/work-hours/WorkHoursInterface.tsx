@@ -5,6 +5,7 @@ import { useWorkHours } from '@/hooks/timesheet/useWorkHours';
 import { useToast } from '@/hooks/use-toast';
 import { createTimeLogger } from '@/utils/time/errors';
 import { WorkHoursContent } from '../work-hours-section';
+import DailySummaryPanel from '../components/DailySummaryPanel';
 
 const logger = createTimeLogger('WorkHoursInterface');
 
@@ -96,26 +97,36 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   }, [handleToggleAction, scheduledHours]);
 
   return (
-    <div className="space-y-4">
-      <WorkHoursContent
-        date={date}
-        startTime={startTime}
-        endTime={endTime}
-        effectiveTotalHours={totalEnteredHours}
-        calculatedTimeHours={calculatedHours}
-        hasEntries={hasEntries}
-        interactive={interactive}
-        isActuallyComplete={isComplete}
-        hoursVariance={hoursVariance}
-        isUndertime={isUndertime}
-        breakConfig={breakConfig}
-        displayBreakConfig={displayBreakConfig}
-        actionStates={actionStates}
-        isOverScheduled={isOverScheduled}
-        isCalculating={false}
-        handleTimeChange={handleTimeChange}
-        handleToggleAction={handleToggleActionWrapper}
-      />
+    <div className="flex flex-col space-y-4">
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <WorkHoursContent
+          date={date}
+          startTime={startTime}
+          endTime={endTime}
+          effectiveTotalHours={totalEnteredHours}
+          calculatedTimeHours={calculatedHours}
+          hasEntries={hasEntries}
+          interactive={interactive}
+          isActuallyComplete={isComplete}
+          hoursVariance={hoursVariance}
+          isUndertime={isUndertime}
+          breakConfig={breakConfig}
+          displayBreakConfig={displayBreakConfig}
+          actionStates={actionStates}
+          isOverScheduled={isOverScheduled}
+          isCalculating={false}
+          handleTimeChange={handleTimeChange}
+          handleToggleAction={handleToggleActionWrapper}
+        />
+      </div>
+      
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <DailySummaryPanel
+          requiredHours={calculatedHours}
+          submittedHours={totalEnteredHours}
+          date={date}
+        />
+      </div>
     </div>
   );
 };
