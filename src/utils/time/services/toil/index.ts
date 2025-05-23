@@ -4,7 +4,7 @@
  * Re-exports everything from the TOIL service
  */
 
-import { TOILService, toilService } from './service/main';
+import { toilService, initializeTOILService } from './service/factory';
 import { clearSummaryCache } from './storage';
 import { createTimeLogger } from '@/utils/time/errors';
 import { format } from 'date-fns';
@@ -15,7 +15,7 @@ const logger = createTimeLogger('TOIL-Service');
 
 // Initialize TOIL service when imported
 try {
-  toilService.initialize();
+  initializeTOILService();
   logger.debug('TOIL service initialized on import');
   
   // Initialize TOIL entry event handlers
@@ -31,7 +31,6 @@ try {
 export * from './calculation';
 export * from './queue';
 export * from './storage';
-// Don't re-export from './events' since those functions are now in unifiedEventService
 export * from './service/main';
 export * from './service/core';
 export * from './entryEventHandler';  // Export the new event handler

@@ -1,11 +1,12 @@
+
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILServiceCore } from "./core";
 import { TOILServiceCalculation } from "./calculation";
 import { TOILServiceUsage } from "./usage";
 import { TOILServiceProcessing } from "./processing";
 import { TOILServiceSettings } from "./settings";
-import { toilQueueManager } from "../queue/TOILQueueManager";
-import { clearSummaryCache } from "../storage";
+import { TOILServiceInitializer } from "./initializer";
+import { TOILServiceQueueManagement } from "./queue-management";
 import { format } from 'date-fns';
 import { TOILSummary } from "@/types/toil";
 
@@ -19,8 +20,8 @@ export class TOILService extends TOILServiceCore {
   private usageService: TOILServiceUsage;
   private processingService: TOILServiceProcessing;
   private settingsService: TOILServiceSettings;
-  private initialized: boolean = false;
-  private initializationError: Error | null = null;
+  private initializer: TOILServiceInitializer;
+  private queueManager: TOILServiceQueueManagement;
   
   constructor(calculationQueueEnabled: boolean = true) {
     super(calculationQueueEnabled);
@@ -30,6 +31,8 @@ export class TOILService extends TOILServiceCore {
     this.usageService = new TOILServiceUsage(calculationQueueEnabled);
     this.processingService = new TOILServiceProcessing(calculationQueueEnabled);
     this.settingsService = new TOILServiceSettings(calculationQueueEnabled);
+    this.initializer = new TOILServiceInitializer();
+    this.queueManager = new TOILServiceQueueManagement();
     
     logger.debug('TOILService core components initialized');
   }
@@ -49,62 +52,21 @@ export class TOILService extends TOILServiceCore {
     }
   }
   
-  /**
-   * Initialize the service and dependent components
-   * This should be called once the app is ready
-   */
+  // ======= Initialization and caching =======
   public initialize(): void {
-    if (this.initialized) {
-      logger.debug('TOILService already initialized');
-      return;
-    }
-    
-    try {
-      logger.debug('Initializing TOILService and dependent components');
-      
-      // Clear any stored cache on initialization
-      this.clearCache();
-      
-      // Initialize the queue manager now that all dependencies are ready
-      toilQueueManager.initialize();
-      
-      this.initialized = true;
-      this.initializationError = null;
-      logger.debug('TOILService fully initialized');
-    } catch (error) {
-      logger.error('Error initializing TOILService:', error);
-      this.initializationError = error instanceof Error 
-        ? error 
-        : new Error('Failed to initialize TOIL service: ' + String(error));
-      throw this.initializationError;
-    }
+    this.initializer.initialize();
   }
   
-  /**
-   * Check if the service is fully initialized
-   */
   public isInitialized(): boolean {
-    return this.initialized;
+    return this.initializer.isInitialized();
   }
   
-  /**
-   * Get the error that occurred during initialization, if any
-   */
   public getInitializationError(): Error | null {
-    return this.initializationError;
+    return this.initializer.getInitializationError();
   }
   
-  /**
-   * Clear all caches
-   */
   public clearCache(): void {
-    try {
-      logger.debug('Clearing all TOIL caches');
-      clearSummaryCache(); // Pass no parameters to clear all caches
-      logger.debug('Cache cleared successfully');
-    } catch (error) {
-      logger.error('Error clearing cache:', error);
-    }
+    this.initializer.clearCache();
   }
   
   // ======= Delegation methods for calculation service =======
@@ -185,20 +147,17 @@ export class TOILService extends TOILServiceCore {
   
   // ======= Queue management helpers =======
   public getQueueLength(): number {
-    return toilQueueManager.getQueueLength();
+    return this.queueManager.getQueueLength();
   }
   
   public isQueueProcessing(): boolean {
-    return toilQueueManager.isQueueProcessing();
+    return this.queueManager.isQueueProcessing();
   }
   
   public clearQueue(): void {
-    toilQueueManager.clearQueue();
+    this.queueManager.clearQueue();
   }
 }
 
 // Export a singleton instance of the TOILService
 export const toilService = new TOILService();
-
-// Don't automatically start processing the queue here anymore
-// Instead, we'll initialize in the correct order elsewhere
