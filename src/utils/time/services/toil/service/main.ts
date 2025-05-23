@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILServiceCore } from "./core";
 import { TOILServiceCalculation } from "./calculation";
@@ -7,6 +8,7 @@ import { TOILServiceSettings } from "./settings";
 import { toilQueueManager } from "../queue/TOILQueueManager";
 import { clearSummaryCache } from "../storage";
 import { format } from 'date-fns';
+import { TOILSummary } from "@/types/toil";
 
 const logger = createTimeLogger('TOILService');
 
@@ -35,10 +37,12 @@ export class TOILService extends TOILServiceCore {
   
   /**
    * Get TOIL summary for a user for a specific month
+   * This is now a synchronous method that returns a TOILSummary object directly
    */
-  public async getTOILSummary(userId: string, monthYear: string) {
+  public getTOILSummary(userId: string, monthYear: string): TOILSummary | null {
     try {
-      const summary = await this.getStoredSummary(userId, monthYear);
+      // Call the parent class's synchronous method that returns TOILSummary directly
+      const summary = this.getStoredSummary(userId, monthYear);
       return summary;
     } catch (error) {
       logger.error(`Error getting TOIL summary for ${userId}, ${monthYear}:`, error);

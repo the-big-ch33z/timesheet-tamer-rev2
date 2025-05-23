@@ -50,11 +50,11 @@ export function useTeamMemberMetrics(
           // Calculate monthly hours
           const { targetHours, hours } = useMonthlyHoursCalculation(entries, selectedMonth, member);
           
-          // Get TOIL balance
+          // Get TOIL balance - now handled synchronously
           const monthYear = format(selectedMonth, 'yyyy-MM');
           let toilBalance = 0;
           try {
-            const toilSummary = await toilService.getTOILSummary(member.id, monthYear);
+            const toilSummary = toilService.getTOILSummary(member.id, monthYear);
             toilBalance = toilSummary?.remaining || 0;
           } catch (error) {
             logger.error(`Failed to get TOIL balance for user ${member.id}`, error);
