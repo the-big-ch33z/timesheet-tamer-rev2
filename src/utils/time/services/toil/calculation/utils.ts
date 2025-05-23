@@ -1,62 +1,63 @@
 
 import { TimeEntry, WorkSchedule } from "@/types";
-import { isValidTOILHours } from "@/utils/time/validation/toilValidation";
+import { format as dateFnsFormat } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
-import { isHoliday } from "../holiday-utils";
+import { isValidTOILHours } from "@/utils/time/validation/toilValidation";
 import { 
   calculateDayHoursWithBreaks,
-  getFortnightWeek,
   getWeekDay,
+  getFortnightWeek,
   isRDODay
 } from "@/utils/time/scheduleUtils";
-import { format as dateFnsFormat } from "date-fns";
+import { isHoliday } from "../holiday-utils";
 
-const logger = createTimeLogger('TOILUtils');
+const logger = createTimeLogger('TOILCalculation-Utils');
 
 /**
- * Filter time entries for a specific date
+ * Format date to string in yyyy-MM-dd format
  */
-export function filterEntriesForDate(entries: TimeEntry[], date: Date): TimeEntry[] {
-  const dateString = dateFnsFormat(date, 'yyyy-MM-dd');
+export const format = (date: Date, formatStr: string): string => {
+  return dateFnsFormat(date, formatStr);
+};
+
+/**
+ * Filter entries for a specific date
+ */
+export const filterEntriesForDate = (entries: TimeEntry[], date: Date): TimeEntry[] => {
+  const dateString = format(date, 'yyyy-MM-dd');
   return entries.filter(entry => {
     const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-    return dateFnsFormat(entryDate, 'yyyy-MM-dd') === dateString;
+    return format(entryDate, 'yyyy-MM-dd') === dateString;
   });
-}
+};
 
 /**
  * Filter out synthetic TOIL entries to prevent circular calculation
  */
-export function filterOutSyntheticTOIL(entries: TimeEntry[]): TimeEntry[] {
+export const filterOutSyntheticTOIL = (entries: TimeEntry[]): TimeEntry[] => {
   return entries.filter(entry => !(entry.jobNumber === "TOIL" && entry.synthetic === true));
-}
+};
 
 /**
- * Check if the given date is a special day (holiday, weekend, or RDO)
+ * Check if a date is a special day (holiday, weekend, or RDO)
  */
-export function isSpecialDay(date: Date, workSchedule: WorkSchedule): {
-  isHolidayDay: boolean;
-  isWeekend: boolean;
-  isRDO: boolean;
-} {
+export const isSpecialDay = (date: Date, workSchedule: WorkSchedule) => {
   const isHolidayDay = isHoliday(date);
   const isWeekend = date.getDay() === 0 || date.getDay() === 6; // 0 = Sunday, 6 = Saturday
   const isRDO = isRDODay(date, workSchedule);
   
   return { isHolidayDay, isWeekend, isRDO };
-}
+};
 
 /**
- * Calculate scheduled hours for a given day based on work schedule
+ * Get scheduled hours for a specific day from work schedule
  */
-export function getScheduledHours(
-  date: Date, 
-  workSchedule: WorkSchedule
-): number {
+export const getScheduledHours = (date: Date, workSchedule: WorkSchedule): number => {
   try {
     const weekday = getWeekDay(date);
     const fortnightWeek = getFortnightWeek(date);
     
+    // Calculate scheduled hours based on work schedule
     const dayConfig = workSchedule.weeks[fortnightWeek]?.[weekday];
     
     if (dayConfig && dayConfig.startTime && dayConfig.endTime) {
@@ -70,32 +71,27 @@ export function getScheduledHours(
       );
     }
     
-    return 0; // No hours scheduled
+    return 7.6; // Default full-day hours if no schedule found
   } catch (error) {
     logger.error('Error calculating scheduled hours:', error);
-    return 7.6; // Default full-day hours
+    return 7.6; // Default hours on error
   }
-}
+};
 
 /**
- * Format date for logging and display
+ * Calculate total hours from entries
  */
-export function format(date: Date, formatStr: string): string {
-  // Use date-fns format directly to ensure consistency
-  return dateFnsFormat(date, formatStr);
-}
-
-/**
- * Calculate total hours worked from entries
- */
-export function calculateTotalHours(entries: TimeEntry[]): number {
+export const calculateTotalHours = (entries: TimeEntry[]): number => {
   return entries.reduce((sum, entry) => sum + entry.hours, 0);
-}
+};
 
 /**
  * Round hours to nearest quarter hour and validate
  */
-export function roundAndValidateHours(hours: number): number {
+export const roundAndValidateHours = (hours: number): number => {
+  // Round to nearest quarter hour
   const roundedHours = Math.round(hours * 4) / 4;
+  
+  // Don't return insignificant TOIL amounts (less than 0.01)
   return isValidTOILHours(roundedHours) && roundedHours > 0.01 ? roundedHours : 0;
-}
+};
