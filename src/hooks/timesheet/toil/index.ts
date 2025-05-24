@@ -10,7 +10,6 @@
 
 export * from './types';
 export * from './useTOILEntryChecker';
-export * from './useToilState';
 export * from './useToilCalculator';
 export * from './useToilCacheClearer';
 export * from './useToilRefresher';
@@ -18,7 +17,7 @@ export * from './useWorkScheduleLogger';
 export * from './useTOILCalculations';
 export * from './useUnifiedTOIL';
 
-// Export new modular hooks
+// Export new modular hooks (these are the preferred ones to use)
 export * from './hooks/useToilState';
 export * from './hooks/useToilCache';
 export * from './hooks/useToilEvents';
@@ -34,3 +33,9 @@ export * from './utils/toilEventUtils';
  */
 import { useTOILCalculations } from './useTOILCalculations';
 export { useTOILCalculations };
+
+/**
+ * @deprecated Use the new modular hooks from ./hooks/useToilState instead
+ */
+import { useToilState as deprecatedUseToilState } from './useToilState';
+export { deprecatedUseToilState };
