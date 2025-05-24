@@ -18,6 +18,16 @@ export * from './useWorkScheduleLogger';
 export * from './useTOILCalculations';
 export * from './useUnifiedTOIL';
 
+// Export new modular hooks
+export * from './hooks/useToilState';
+export * from './hooks/useToilCache';
+export * from './hooks/useToilEvents';
+export * from './hooks/useToilCalculation';
+
+// Export utilities
+export * from './utils/toilCalculationUtils';
+export * from './utils/toilEventUtils';
+
 /**
  * @deprecated Use useUnifiedTOIL instead, which provides a simplified and unified API
  * for all TOIL-related operations.
