@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
@@ -108,19 +107,11 @@ export class DeleteOperations {
         logger.debug(`Starting enhanced TOIL cleanup for entry ${entryId}`);
         
         if (userId) {
-          // Get work schedule from options or try to load from context
+          // Get work schedule from options - no fallback to context import
           let workSchedule = options?.workSchedule;
           
           if (!workSchedule) {
-            // Try to get work schedule from user context or default
-            console.log(`[TOIL-DEBUG] ⚠️ No work schedule provided, attempting to load default`);
-            try {
-              // Import user context to get work schedule
-              const { useUserContext } = await import('@/contexts/user/UserContext');
-              // This is a fallback - ideally work schedule should be passed in options
-            } catch (error) {
-              console.log(`[TOIL-DEBUG] ⚠️ Could not load work schedule from context:`, error);
-            }
+            console.log(`[TOIL-DEBUG] ⚠️ No work schedule provided for deletion, TOIL regeneration may be skipped`);
           }
           
           // Prepare comprehensive regeneration options

@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useCallback, useState } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
 import { TOILSummary } from '@/types/toil';
@@ -171,6 +172,9 @@ export function useUnifiedTOIL({
     isTestMode
   });
 
+  // Get circuit breaker status first
+  const circuitBreakerStatus = useMemo(() => toilCircuitBreaker.getStatus(), []);
+
   // Wrap calculation functions with circuit breaker
   const calculateToilForDay = useMemo(() => async (): Promise<TOILSummary | null> => {
     if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
@@ -304,7 +308,7 @@ export function useUnifiedTOIL({
     try {
       // If no TOIL data exists and we have entries, trigger regeneration
       const currentState = debugToilDataState(userId);
-      if (!currentState.hasRecords && !currentState.hasUsage && monthEntries.length > 0 && workSchedule) {
+      if (!currentState.hasRecords && !currentState.hasUsage && entries.length > 0 && workSchedule) {
         console.log(`[TOIL-DEBUG] 🔄 No TOIL data found but entries exist, triggering regeneration with bypass`);
         setIsRegenerating(true);
         
@@ -313,7 +317,7 @@ export function useUnifiedTOIL({
           const { toilService } = await import('@/utils/time/services/toil/service/factory');
           if (toilService && workSchedule) {
             await toilService.calculateAndStoreTOIL(
-              monthEntries,
+              entries,
               date,
               userId,
               workSchedule,
@@ -335,7 +339,7 @@ export function useUnifiedTOIL({
       toilCircuitBreaker.disableBypassMode();
       setTimeout(() => setIsRefreshing(false), 2000);
     }
-  }, [refreshSummary, circuitBreakerStatus.globallyDisabled, userId, monthEntries, workSchedule, date, monthYear]);
+  }, [refreshSummary, circuitBreakerStatus.globallyDisabled, userId, entries, workSchedule, date, monthYear]);
 
   useEffect(() => {
     if (!userId || !date || !autoRefresh || !entriesKey) return;
@@ -379,9 +383,6 @@ export function useUnifiedTOIL({
     console.log(`[TOIL-DEBUG] ▶️ TOIL calculations resumed by user`);
     logger.info('TOIL calculations resumed by user');
   }, []);
-
-  // Get circuit breaker status
-  const circuitBreakerStatus = useMemo(() => toilCircuitBreaker.getStatus(), []);
 
   // Log summary changes
   useEffect(() => {
