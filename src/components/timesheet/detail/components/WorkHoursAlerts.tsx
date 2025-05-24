@@ -9,7 +9,7 @@ interface WorkHoursAlertsProps {
   interactive: boolean;
   date: Date;
   isComplete: boolean;
-  isOverScheduled?: boolean;
+  isOverScheduled?: boolean;  // Added missing prop
   effectiveHours: number;
   scheduledHours: number;
   breakConfig: {
@@ -51,19 +51,19 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   // Show undertime alert for past days
   if (isUndertime && isPast && !isComplete) {
     return (
-      <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 flex items-center text-sm">
-        <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+      <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-100 text-amber-700 flex items-center text-xs">
+        <AlertTriangle className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
         <span>This day appears to have {Math.abs(hoursVariance).toFixed(2)} hours under your scheduled hours.</span>
       </div>
     );
   }
 
-  // Enhanced completion alert for complete days
+  // Show completion alert for complete days
   if (isComplete) {
     return (
-      <div className="mt-3 p-4 rounded-lg bg-green-50 border border-green-300 text-green-800 flex items-center text-sm shadow-sm">
-        <Check className="h-5 w-5 mr-3 flex-shrink-0 text-green-600" />
-        <span className="font-medium">This day has been completed with all scheduled hours accounted for.</span>
+      <div className="mt-2 p-2 rounded-md bg-green-50 border border-green-100 text-green-700 flex items-center text-xs">
+        <Check className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+        <span>This day has been completed with all scheduled hours accounted for.</span>
       </div>
     );
   }
@@ -71,8 +71,8 @@ const WorkHoursAlerts: React.FC<WorkHoursAlertsProps> = ({
   // Show reminder for today
   if (isToday && !isComplete) {
     return (
-      <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 flex items-center text-sm">
-        <Info className="h-4 w-4 mr-2 flex-shrink-0" />
+      <div className="mt-2 p-2 rounded-md bg-blue-50 border border-blue-100 text-blue-700 flex items-center text-xs">
+        <Info className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
         <span>Don't forget to enter all your work hours for today.</span>
       </div>
     );

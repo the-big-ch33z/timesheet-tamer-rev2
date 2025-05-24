@@ -1,17 +1,13 @@
-
 import React from 'react';
 import { VerticalProgressBar } from '@/components/ui/VerticalProgressBar';
 import { format } from 'date-fns';
 import { createTimeLogger } from '@/utils/time/errors';
-
 const logger = createTimeLogger('DailySummaryPanel');
-
 interface DailySummaryPanelProps {
   requiredHours: number;
   submittedHours: number;
   date: Date;
 }
-
 const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
   requiredHours,
   submittedHours,
@@ -32,11 +28,10 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
     if (progressPercentage >= 50) return 'bg-amber-500';
     return 'bg-red-500';
   };
-
-  return (
-    <div className="bg-white rounded-lg h-full">
+  return <div className="bg-white rounded-lg h-full">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-base font-medium py-[12px] px-[99px]">Daily Summary</h3>
+        
       </div>
       
       <div className="flex items-center space-x-4">
@@ -53,29 +48,19 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
           </div>
         </div>
         
-        {/* Right content - Enhanced Progress bar and completion */}
-        <div className="flex flex-col items-center space-y-2 px-0 py-0 my-[35px]">
-          <VerticalProgressBar 
-            value={progressPercentage} 
-            height={60} 
-            width={16} 
-            barColor={getProgressColor()} 
-            bgColor="bg-gray-100"
-          />
+        {/* Right content - Progress bar and completion */}
+        <div className="flex flex-col items-center space-y-1 px-0 py-0 my-[35px]">
+          <VerticalProgressBar value={progressPercentage} height={50} width={12} barColor={getProgressColor()} />
           
           <div className="text-center">
             <p className="text-xs font-medium text-gray-700">Completion</p>
-            <p className="text-lg font-bold flex items-center justify-center">
+            <p className="text-base font-semibold flex items-center px-[27px]">
               {Math.round(progressPercentage)}%
-              {progressPercentage >= 100 && (
-                <span className="ml-1 text-green-500 text-sm font-semibold">✓</span>
-              )}
+              {progressPercentage >= 100 && <span className="ml-1 text-green-500 text-xs">✓</span>}
             </p>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default DailySummaryPanel;
