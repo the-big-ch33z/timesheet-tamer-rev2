@@ -10,7 +10,6 @@ import {
   cleanupDuplicateTOILRecords,
   cleanupDuplicateTOILUsage
 } from '@/utils/time/services/toil';
-import { deleteAllToilData } from '@/utils/time/services/toil/unifiedDeletion';
 import { TOILRecord, TOILSummary, TOILUsage } from '@/types/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -43,15 +42,6 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
   const [refreshCount, setRefreshCount] = useState(0);
   const [status, setStatus] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  // Auto-delete TOIL data from localStorage on mount
-  useEffect(() => {
-    const runDeletion = async () => {
-      const result = await deleteAllToilData(userId);
-      console.log('[TOILDebugPanel] Auto TOIL deletion result:', result);
-    };
-    runDeletion();
-  }, [userId]);
-
   
   const monthYear = format(date, 'yyyy-MM');
   
