@@ -4,7 +4,7 @@
  * Re-exports everything from the TOIL service
  */
 
-import { toilService, initializeTOILService } from './service/factory';
+import { toilService, initializeTOILService, isToilServiceInitialized } from './service/factory';
 import { clearSummaryCache } from './storage';
 import { createTimeLogger } from '@/utils/time/errors';
 import { format } from 'date-fns';
@@ -13,29 +13,32 @@ import { unifiedTOILEventService } from './unifiedEventService';
 
 const logger = createTimeLogger('TOIL-Service');
 
-// Initialize TOIL service when imported
+// Initialize TOIL service when imported (with error recovery)
 try {
-  initializeTOILService();
-  logger.debug('TOIL service initialized on import');
-  
-  // Initialize TOIL entry event handlers
-  if (typeof window !== 'undefined') {
-    initializeTOILEntryEventHandlers();
-    logger.debug('TOIL entry event handlers initialized');
+  if (!isToilServiceInitialized()) {
+    initializeTOILService();
+    logger.debug('TOIL service initialized on import');
+    
+    // Initialize TOIL entry event handlers only in browser environment
+    if (typeof window !== 'undefined') {
+      initializeTOILEntryEventHandlers();
+      logger.debug('TOIL entry event handlers initialized');
+    }
   }
 } catch (e) {
   logger.error('Failed to initialize TOIL service:', e);
+  // Don't throw here to prevent breaking the entire module
 }
 
-// Re-export everything from the TOIL modules EXCEPT for the conflicting functions
+// Re-export everything from the TOIL modules
 export * from './calculation';
 export * from './queue';
 export * from './storage';
 export * from './service/main';
 export * from './service/core';
-export * from './entryEventHandler';  // Export the new event handler
+export * from './entryEventHandler';
 
-// Re-export the unified event service and its functions - this replaces './events' exports
+// Re-export the unified event service and its functions
 export {
   unifiedTOILEventService,
   createTOILUpdateHandler,
@@ -44,21 +47,20 @@ export {
 } from './unifiedEventService';
 
 // Re-export the toilService singleton instance directly
-export { toilService };
+export { toilService, isToilServiceInitialized, resetToilService } from './service/factory';
 
 // Track the last time we cleared the cache to prevent excessive clearing
 let lastCacheClearTime = 0;
-const CACHE_CLEAR_THROTTLE = 30000; // Increased to 30 seconds to be less aggressive
+const CACHE_CLEAR_THROTTLE = 30000; // 30 seconds
 
 /**
- * More selective cache clearing function
- * Only clears when absolutely necessary and with proper throttling
+ * More selective cache clearing function with validation
  */
 export function clearCache(userId?: string, monthYear?: string) {
   try {
     const now = Date.now();
     
-    // Throttle cache clearing operations more aggressively
+    // Throttle cache clearing operations
     if (now - lastCacheClearTime < CACHE_CLEAR_THROTTLE) {
       logger.debug('Cache clearing throttled - ignoring request (too frequent)');
       return false;
@@ -77,7 +79,9 @@ export function clearCache(userId?: string, monthYear?: string) {
     }
     
     // Also invalidate any in-memory caches
-    toilService.clearCache();
+    if (isToilServiceInitialized()) {
+      toilService.clearCache();
+    }
     
     logger.debug('TOIL caches cleared selectively');
     return true;
@@ -89,7 +93,6 @@ export function clearCache(userId?: string, monthYear?: string) {
 
 /**
  * Clear cache only for a specific time period
- * Used for more targeted cache invalidation
  */
 export function clearCacheForCurrentMonth(userId: string, date: Date) {
   const monthYear = format(date, 'yyyy-MM');
@@ -101,6 +104,11 @@ export function clearCacheForCurrentMonth(userId: string, date: Date) {
  */
 export function validateAndClearCache(userId: string, monthYear: string) {
   try {
+    if (!isToilServiceInitialized()) {
+      logger.debug('TOIL service not initialized, skipping cache validation');
+      return false;
+    }
+    
     // Check if we have valid cached data first
     const summary = toilService.getTOILSummary(userId, monthYear);
     
@@ -121,9 +129,9 @@ export function validateAndClearCache(userId: string, monthYear: string) {
 // Add debug utilities
 export function getDebugInfo() {
   return {
-    serviceInitialized: toilService.isInitialized(),
-    queueLength: toilService.getQueueLength(),
-    isQueueProcessing: toilService.isQueueProcessing(),
+    serviceInitialized: isToilServiceInitialized(),
+    queueLength: isToilServiceInitialized() ? toilService.getQueueLength() : 0,
+    isQueueProcessing: isToilServiceInitialized() ? toilService.isQueueProcessing() : false,
     lastCacheClear: new Date(lastCacheClearTime).toISOString(),
     unifiedEventServiceInitialized: !!unifiedTOILEventService,
     cacheThrottleMs: CACHE_CLEAR_THROTTLE
@@ -131,4 +139,4 @@ export function getDebugInfo() {
 }
 
 // Module initialization marker
-logger.debug('TOIL service module initialized with selective cache management');
+logger.debug('TOIL service module initialized with error recovery and selective cache management');
