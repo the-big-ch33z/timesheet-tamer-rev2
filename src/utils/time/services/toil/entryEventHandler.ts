@@ -7,7 +7,8 @@ import {
   loadTOILRecords,
   loadTOILUsage,
   addToDeletedTOILRecords,
-  addToDeletedTOILUsage
+  addToDeletedTOILUsage,
+  checkAndFixStorageConsistency
 } from './storage';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { eventBus } from '@/utils/events/EventBus';
@@ -43,7 +44,7 @@ function createStandardTOILEventData(entryId?: string, userId?: string) {
 }
 
 /**
- * Handler for entry deletion events - cleans up associated TOIL records and tracks deletions
+ * Handler for entry deletion events - now implements two-phase deletion with physical removal
  */
 function handleEntryDeleted(event: any) {
   try {
@@ -58,13 +59,13 @@ function handleEntryDeleted(event: any) {
       return;
     }
     
-    logger.debug(`Entry deletion detected for entryId: ${entryId}, cleaning up TOIL records with deletion tracking`);
+    logger.debug(`Entry deletion detected for entryId: ${entryId}, implementing two-phase TOIL deletion`);
     
     // Find all TOIL records and usage for this entry before deletion
     const affectedRecords = loadTOILRecords().filter(record => record.entryId === entryId);
     const affectedUsage = loadTOILUsage().filter(usage => usage.entryId === entryId);
     
-    // Track all affected records as deleted before removing them
+    // Phase 1: Track deletions (mark as deleted)
     const trackDeletions = async () => {
       const recordTrackingPromises = affectedRecords.map(record => 
         addToDeletedTOILRecords(record.id)
@@ -74,21 +75,33 @@ function handleEntryDeleted(event: any) {
       );
       
       await Promise.all([...recordTrackingPromises, ...usageTrackingPromises]);
-      logger.debug(`Tracked ${affectedRecords.length} records and ${affectedUsage.length} usage items as deleted`);
+      logger.debug(`Phase 1 complete: Tracked ${affectedRecords.length} records and ${affectedUsage.length} usage items as deleted`);
     };
     
-    // Execute tracking and deletion in sequence
+    // Phase 2: Physical deletion from storage
+    const physicalDeletion = async () => {
+      const [deletedAccrualCount, deletedUsageCount] = await Promise.all([
+        deleteTOILRecordsByEntryId(entryId),
+        deleteTOILUsageByEntryId(entryId)
+      ]);
+      
+      logger.debug(`Phase 2 complete: Physically deleted ${deletedAccrualCount} records and ${deletedUsageCount} usage items`);
+      return { deletedAccrualCount, deletedUsageCount };
+    };
+    
+    // Execute two-phase deletion and cleanup
     trackDeletions()
-      .then(() => {
-        // Now delete the actual records
-        return Promise.all([
-          deleteTOILRecordsByEntryId(entryId),
-          deleteTOILUsageByEntryId(entryId)
-        ]);
-      })
-      .then(([deletedAccrualCount, deletedUsageCount]) => {
+      .then(() => physicalDeletion())
+      .then(async ({ deletedAccrualCount, deletedUsageCount }) => {
         const totalDeleted = deletedAccrualCount + deletedUsageCount;
-        logger.info(`Successfully deleted and tracked ${totalDeleted} TOIL records for entry ${entryId} (${deletedAccrualCount} accrual, ${deletedUsageCount} usage)`);
+        
+        // Phase 3: Check and fix any storage inconsistencies
+        const consistencyCheck = await checkAndFixStorageConsistency();
+        if (consistencyCheck.recordsFixed > 0 || consistencyCheck.usageFixed > 0) {
+          logger.debug(`Consistency check fixed ${consistencyCheck.recordsFixed} records and ${consistencyCheck.usageFixed} usage items`);
+        }
+        
+        logger.info(`Successfully completed two-phase deletion for entry ${entryId}: ${totalDeleted} total items deleted`);
         
         // Clear caches to ensure data consistency
         toilService.clearCache();
@@ -110,11 +123,11 @@ function handleEntryDeleted(event: any) {
             window.dispatchEvent(domEvent);
           }
           
-          logger.debug('TOIL update events dispatched after record deletion and tracking');
+          logger.debug('TOIL update events dispatched after two-phase deletion');
         }
       })
       .catch(error => {
-        logger.error(`Failed to delete and track TOIL records for entry ${entryId}`, error);
+        logger.error(`Failed to complete two-phase deletion for entry ${entryId}`, error);
       });
   } catch (error) {
     logger.error('Error handling entry deleted event', error);
@@ -150,9 +163,6 @@ export function initializeTOILEntryEventHandlers(): () => void {
   return cleanupTOILEntryEventHandlers;
 }
 
-/**
- * Removes all event listeners to prevent memory leaks
- */
 export function cleanupTOILEntryEventHandlers(): void {
   logger.debug(`Cleaning up ${cleanupFunctions.length} TOIL entry event handlers`);
   

@@ -1,7 +1,8 @@
+
 import { TOILUsage } from "@/types/toil";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOIL_USAGE_KEY, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
-import { loadTOILUsage } from "./core";
+import { loadTOILUsage, loadRawTOILUsage } from "./core";
 import { attemptStorageOperation } from "./utils";
 
 const logger = createTimeLogger('TOIL-Storage-UsageOperations');
@@ -114,6 +115,7 @@ export async function cleanupDuplicateTOILUsage(userId: string): Promise<number>
 
 /**
  * Delete TOIL usage records associated with a specific entry ID
+ * Now uses raw loading to ensure physical deletion from storage
  * 
  * @param entryId - The ID of the entry whose usage records should be deleted
  * @returns Promise that resolves to the number of records deleted
@@ -125,23 +127,26 @@ export async function deleteTOILUsageByEntryId(entryId: string): Promise<number>
       return 0;
     }
     
-    // Get all existing usage records
-    const allUsage = loadTOILUsage();
+    // Use raw loading to get actual storage contents, not filtered data
+    const allUsage = loadRawTOILUsage();
     const originalCount = allUsage.length;
     
-    // Filter out records with the matching entry ID
+    // Find usage records with matching entry ID
+    const usageToDelete = allUsage.filter(usage => usage.entryId === entryId);
+    
+    // Filter out records with the matching entry ID for physical removal
     const remainingUsage = allUsage.filter(usage => usage.entryId !== entryId);
-    const deletedCount = originalCount - remainingUsage.length;
+    const deletedCount = usageToDelete.length;
     
     if (deletedCount > 0) {
-      // Save the filtered usage records back to storage
+      // Save the physically updated usage records back to storage
       await attemptStorageOperation(
         () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(remainingUsage)),
         STORAGE_RETRY_DELAY,
         STORAGE_MAX_RETRIES
       );
       
-      logger.debug(`Deleted ${deletedCount} TOIL usage records for entry ID: ${entryId}`);
+      logger.debug(`Physically deleted ${deletedCount} TOIL usage records for entry ID: ${entryId}`);
     } else {
       logger.debug(`No TOIL usage records found for entry ID: ${entryId}`);
     }

@@ -7,7 +7,7 @@ import {
   STORAGE_RETRY_DELAY,
   STORAGE_MAX_RETRIES
 } from './constants';
-import { loadTOILRecords, filterRecordsByDate, filterRecordsByEntryId } from './core';
+import { loadTOILRecords, filterRecordsByDate, filterRecordsByEntryId, loadRawTOILRecords } from './core';
 import { attemptStorageOperation } from './utils';
 import { format } from 'date-fns';
 
@@ -124,24 +124,25 @@ export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
 
 /**
  * Delete all TOIL records associated with a specific time entry
- * This is important for cleanup when a time entry is deleted
+ * Now uses raw loading to ensure physical deletion from storage
  */
 export async function deleteTOILRecordsByEntryId(entryId: string): Promise<number> {
   try {
-    const allRecords = loadTOILRecords();
+    // Use raw loading to get actual storage contents, not filtered data
+    const allRecords = loadRawTOILRecords();
     
     // Find records with matching entry ID
-    const recordsToDelete = filterRecordsByEntryId(allRecords, entryId);
+    const recordsToDelete = allRecords.filter(record => record.entryId === entryId);
     
     if (recordsToDelete.length === 0) {
       logger.debug(`No TOIL records found for entry ID ${entryId}`);
       return 0;
     }
     
-    // Filter out the records with this entry ID
+    // Filter out the records with this entry ID for physical removal
     const filteredRecords = allRecords.filter(record => record.entryId !== entryId);
     
-    // Save back to storage
+    // Save the physically updated records back to storage
     await attemptStorageOperation(
       () => {
         localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
@@ -150,8 +151,8 @@ export async function deleteTOILRecordsByEntryId(entryId: string): Promise<numbe
       STORAGE_MAX_RETRIES
     );
     
-    const deletedCount = allRecords.length - filteredRecords.length;
-    logger.debug(`Deleted ${deletedCount} TOIL records for entry ID ${entryId}`);
+    const deletedCount = recordsToDelete.length;
+    logger.debug(`Physically deleted ${deletedCount} TOIL records for entry ID ${entryId}`);
     
     return deletedCount;
   } catch (error) {

@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
@@ -60,9 +59,10 @@ export const STORAGE_MAX_RETRIES = 3;
 const toilDayInfoCache = new Map<string, any>();
 
 /**
- * Load TOIL records for a user (now respects deletion tracking)
+ * Load raw TOIL records directly from storage without deletion filtering
+ * This bypasses the deletion tracking system for physical storage operations
  */
-export function loadTOILRecords(userId?: string): TOILRecord[] {
+export function loadRawTOILRecords(): TOILRecord[] {
   try {
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
     
@@ -71,6 +71,39 @@ export function loadTOILRecords(userId?: string): TOILRecord[] {
     }
     
     const allRecords: TOILRecord[] = safelyParseJSON(records, []);
+    return allRecords;
+  } catch (error) {
+    logger.error('Error loading raw TOIL records:', error);
+    return [];
+  }
+}
+
+/**
+ * Load raw TOIL usage directly from storage without deletion filtering
+ * This bypasses the deletion tracking system for physical storage operations
+ */
+export function loadRawTOILUsage(): TOILUsage[] {
+  try {
+    const usage = localStorage.getItem(TOIL_USAGE_KEY);
+    
+    if (!usage) {
+      return [];
+    }
+    
+    const allUsage: TOILUsage[] = safelyParseJSON(usage, []);
+    return allUsage;
+  } catch (error) {
+    logger.error('Error loading raw TOIL usage:', error);
+    return [];
+  }
+}
+
+/**
+ * Load TOIL records for a user (now respects deletion tracking)
+ */
+export function loadTOILRecords(userId?: string): TOILRecord[] {
+  try {
+    const allRecords = loadRawTOILRecords();
     const deletedRecordIds = loadDeletedTOILRecords();
     
     // Filter out deleted records
@@ -93,13 +126,7 @@ export function loadTOILRecords(userId?: string): TOILRecord[] {
  */
 export function loadTOILUsage(userId?: string): TOILUsage[] {
   try {
-    const usage = localStorage.getItem(TOIL_USAGE_KEY);
-    
-    if (!usage) {
-      return [];
-    }
-    
-    const allUsage: TOILUsage[] = safelyParseJSON(usage, []);
+    const allUsage = loadRawTOILUsage();
     const deletedUsageIds = loadDeletedTOILUsage();
     
     // Filter out deleted usage
@@ -114,6 +141,64 @@ export function loadTOILUsage(userId?: string): TOILUsage[] {
   } catch (error) {
     logger.error('Error loading TOIL usage:', error);
     return [];
+  }
+}
+
+/**
+ * Check and fix storage consistency between deletion tracking and actual storage
+ * This function detects and repairs cases where records are marked as deleted but still exist in storage
+ */
+export async function checkAndFixStorageConsistency(): Promise<{ recordsFixed: number; usageFixed: number }> {
+  try {
+    logger.debug('Checking TOIL storage consistency...');
+    
+    const rawRecords = loadRawTOILRecords();
+    const rawUsage = loadRawTOILUsage();
+    const deletedRecordIds = loadDeletedTOILRecords();
+    const deletedUsageIds = loadDeletedTOILUsage();
+    
+    // Find records that are marked as deleted but still exist in storage
+    const inconsistentRecords = rawRecords.filter(record => deletedRecordIds.includes(record.id));
+    const inconsistentUsage = rawUsage.filter(usage => deletedUsageIds.includes(usage.id));
+    
+    let recordsFixed = 0;
+    let usageFixed = 0;
+    
+    // Physically remove inconsistent records
+    if (inconsistentRecords.length > 0) {
+      const cleanedRecords = rawRecords.filter(record => !deletedRecordIds.includes(record.id));
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(cleanedRecords)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      recordsFixed = inconsistentRecords.length;
+      logger.debug(`Fixed ${recordsFixed} inconsistent TOIL records`);
+    }
+    
+    // Physically remove inconsistent usage
+    if (inconsistentUsage.length > 0) {
+      const cleanedUsage = rawUsage.filter(usage => !deletedUsageIds.includes(usage.id));
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(cleanedUsage)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      usageFixed = inconsistentUsage.length;
+      logger.debug(`Fixed ${usageFixed} inconsistent TOIL usage records`);
+    }
+    
+    if (recordsFixed > 0 || usageFixed > 0) {
+      logger.info(`Storage consistency check completed: fixed ${recordsFixed} records and ${usageFixed} usage items`);
+      clearAllTOILCaches();
+    } else {
+      logger.debug('Storage consistency check: no issues found');
+    }
+    
+    return { recordsFixed, usageFixed };
+  } catch (error) {
+    logger.error('Error during storage consistency check:', error);
+    return { recordsFixed: 0, usageFixed: 0 };
   }
 }
 

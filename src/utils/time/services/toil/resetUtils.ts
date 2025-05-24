@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from '@/utils/time/errors';
 import { 
   TOIL_RECORDS_KEY, 
@@ -6,7 +5,10 @@ import {
   clearAllTOILCaches,
   clearAllTOILDeletionTracking,
   DELETED_TOIL_RECORDS_KEY,
-  DELETED_TOIL_USAGE_KEY
+  DELETED_TOIL_USAGE_KEY,
+  loadRawTOILRecords,
+  loadRawTOILUsage,
+  checkAndFixStorageConsistency
 } from './storage';
 import { attemptStorageOperation, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from './storage/core';
 
@@ -86,6 +88,91 @@ async function resetAllTOILData(): Promise<void> {
   clearAllTOILCaches();
   
   logger.debug('Reset all TOIL data globally');
+}
+
+/**
+ * Manually clean up storage inconsistencies
+ * This function can be called to fix cases where deletion tracking and storage are out of sync
+ */
+export async function manualStorageCleanup(): Promise<{ 
+  success: boolean; 
+  recordsFixed: number; 
+  usageFixed: number; 
+  errors: string[] 
+}> {
+  const errors: string[] = [];
+  
+  try {
+    logger.debug('Starting manual TOIL storage cleanup...');
+    
+    // Run storage consistency check
+    const consistencyResult = await checkAndFixStorageConsistency();
+    
+    // Clear all caches to ensure fresh data
+    clearAllTOILCaches();
+    
+    logger.info(`Manual storage cleanup completed: fixed ${consistencyResult.recordsFixed} records and ${consistencyResult.usageFixed} usage items`);
+    
+    return {
+      success: true,
+      recordsFixed: consistencyResult.recordsFixed,
+      usageFixed: consistencyResult.usageFixed,
+      errors
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    errors.push(errorMsg);
+    logger.error('Error during manual storage cleanup:', error);
+    
+    return {
+      success: false,
+      recordsFixed: 0,
+      usageFixed: 0,
+      errors
+    };
+  }
+}
+
+/**
+ * Get storage diagnostic information for debugging
+ */
+export function getStorageDiagnostics(): {
+  rawRecordsCount: number;
+  rawUsageCount: number;
+  deletedRecordsCount: number;
+  deletedUsageCount: number;
+  inconsistentRecords: number;
+  inconsistentUsage: number;
+} {
+  try {
+    const rawRecords = loadRawTOILRecords();
+    const rawUsage = loadRawTOILUsage();
+    const deletedRecordIds = JSON.parse(localStorage.getItem(DELETED_TOIL_RECORDS_KEY) || '[]');
+    const deletedUsageIds = JSON.parse(localStorage.getItem(DELETED_TOIL_USAGE_KEY) || '[]');
+    
+    // Count inconsistencies
+    const inconsistentRecords = rawRecords.filter(record => deletedRecordIds.includes(record.id)).length;
+    const inconsistentUsage = rawUsage.filter(usage => deletedUsageIds.includes(usage.id)).length;
+    
+    return {
+      rawRecordsCount: rawRecords.length,
+      rawUsageCount: rawUsage.length,
+      deletedRecordsCount: deletedRecordIds.length,
+      deletedUsageCount: deletedUsageIds.length,
+      inconsistentRecords,
+      inconsistentUsage
+    };
+  } catch (error) {
+    logger.error('Error getting storage diagnostics:', error);
+    return {
+      rawRecordsCount: 0,
+      rawUsageCount: 0,
+      deletedRecordsCount: 0,
+      deletedUsageCount: 0,
+      inconsistentRecords: 0,
+      inconsistentUsage: 0
+    };
+  }
 }
 
 /**

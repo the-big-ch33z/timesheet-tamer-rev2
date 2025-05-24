@@ -40,12 +40,15 @@ export {
   safelyParseJSON,
   loadTOILRecords,
   loadTOILUsage,
+  loadRawTOILRecords,
+  loadRawTOILUsage,
   getSummaryCacheKey,
   clearSummaryCache,
   clearAllTOILCaches,
   getTOILSummary,
   filterRecordsByDate,
-  filterRecordsByEntryId
+  filterRecordsByEntryId,
+  checkAndFixStorageConsistency
 } from './core';
 
 // Re-export utility functions
