@@ -13,8 +13,8 @@ import { toilCircuitBreaker } from '@/utils/time/services/toil/circuitBreaker';
 // Create a logger for this hook
 const logger = createTimeLogger('useUnifiedTOIL');
 
-// OPTIMIZED: Increased refresh intervals to reduce cascading
-const DEFAULT_REFRESH_INTERVAL = 5000; // 5 seconds
+// OPTIMIZED: Much more conservative refresh intervals
+const DEFAULT_REFRESH_INTERVAL = 30000; // 30 seconds
 
 export interface UseUnifiedTOILProps {
   userId: string;
@@ -56,7 +56,7 @@ export interface UseUnifiedTOILResult {
 
 /**
  * Unified TOIL hook that provides comprehensive TOIL functionality
- * REFACTORED: Now uses circuit breaker to prevent cascading calculations
+ * REFACTORED: Simplified to prevent cascading calculations
  */
 export function useUnifiedTOIL({
   userId,
@@ -65,7 +65,7 @@ export function useUnifiedTOIL({
   workSchedule,
   options = {}
 }: UseUnifiedTOILProps): UseUnifiedTOILResult {
-  // Default options with increased intervals
+  // Default options with much more conservative intervals
   const { 
     monthOnly = false,
     autoRefresh = true,
@@ -188,7 +188,7 @@ export function useUnifiedTOIL({
     }
   }, [userId, monthYear, originalTriggerTOILCalculation, toilSummary]);
 
-  // Use the events hook with reduced frequency
+  // Use the events hook with much more conservative frequency
   useToilEvents({
     userId,
     monthYear,
@@ -198,20 +198,20 @@ export function useUnifiedTOIL({
     isTestMode
   });
 
-  // Initialize TOIL summary
+  // Initialize TOIL summary only once
   useEffect(() => {
     if (!userId || !date) return;
     loadSummary();
   }, [userId, date, loadSummary]);
 
-  // IMPROVED: More conservative calculation when entries change
+  // SIMPLIFIED: Only calculate when entries actually change content, not on every render
   // Create a stable reference for the entries array to detect actual changes
   const entriesKey = useMemo(() => {
     return entries.map(e => `${e.id}-${e.hours}-${e.date}`).join('|');
   }, [entries]);
 
   useEffect(() => {
-    if (!userId || !date || !autoRefresh) return;
+    if (!userId || !date || !autoRefresh || !entriesKey) return;
     
     // Check circuit breaker before proceeding
     if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
@@ -219,20 +219,22 @@ export function useUnifiedTOIL({
       return;
     }
     
-    logger.debug(`Entries changed (${entries.length} entries), scheduling TOIL calculation with increased delay`);
-    
-    // INCREASED timeout for more conservative updates
-    const timeoutId = setTimeout(() => {
-      if (toilCircuitBreaker.canCalculate(userId, monthYear)) {
-        logger.debug('Calculating TOIL due to entries change');
-        calculateToilForDay();
-      } else {
-        logger.debug('Circuit breaker prevented scheduled calculation');
-      }
-    }, 1000); // Increased from 50ms to 1000ms for better stability
-    
-    return () => clearTimeout(timeoutId);
-  }, [userId, date, entriesKey, calculateToilForDay, autoRefresh, monthYear]); // Use entriesKey instead of entries
+    // CONSERVATIVE: Only recalculate if we have actual entries and much longer delay
+    if (entries.length > 0) {
+      logger.debug(`Entries content changed (${entries.length} entries), scheduling conservative TOIL calculation`);
+      
+      const timeoutId = setTimeout(() => {
+        if (toilCircuitBreaker.canCalculate(userId, monthYear)) {
+          logger.debug('Calculating TOIL due to entries change (conservative)');
+          calculateToilForDay();
+        } else {
+          logger.debug('Circuit breaker prevented scheduled calculation');
+        }
+      }, 5000); // Much longer delay: 5 seconds
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [userId, date, entriesKey, calculateToilForDay, autoRefresh, monthYear, entries.length]);
 
   // Circuit breaker control functions
   const stopCalculations = useMemo(() => () => {

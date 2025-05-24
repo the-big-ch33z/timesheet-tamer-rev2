@@ -6,10 +6,7 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { TOILErrorState } from "./toil-summary";
 import { useTOILEventHandling } from "../hooks/useTOILEventHandling";
 import TOILCardContent from "./toil-summary/TOILCardContent";
-import { useDebounce } from "@/hooks/useDebounce";
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
-import { eventBus } from "@/utils/events/EventBus";
-import { TIME_ENTRY_EVENTS } from "@/utils/events/eventTypes";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { Button } from "@/components/ui/button";
 
@@ -45,14 +42,11 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   workSchedule,
   testProps
 }) => {
-  // Access TimeEntryContext to get the actual entries and watch for changes
+  // Access TimeEntryContext to get the actual entries
   const timeEntryContext = useTimeEntryContext();
   
   // Get month entries for the user - this will update when entries change
   const monthEntries = timeEntryContext.getMonthEntries(date, userId);
-  
-  // Track entries array reference to detect changes
-  const [entriesVersion, setEntriesVersion] = useState(0);
   
   logger.debug(`TOILSummaryCard: Found ${monthEntries.length} entries for ${userId} in month ${date.toISOString()}`);
   
@@ -62,7 +56,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     testModeEnabled: true
   } : undefined;
   
-  // Use our unified TOIL hook with circuit breaker and increased refresh interval
+  // Use our unified TOIL hook with conservative refresh settings
   const {
     toilSummary: summary,
     isLoading: loading,
@@ -78,56 +72,33 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     workSchedule, // Pass the work schedule
     options: {
       monthOnly: true,
-      refreshInterval: 10000, // Increased to 10 seconds
+      refreshInterval: 30000, // Conservative 30 second interval
       testProps: enhancedTestProps
     }
   });
 
-  // Use our custom hook for event handling with increased debounce
+  // Use our custom hook for event handling with much longer debounce
   const { handleRefresh } = useTOILEventHandling(refreshSummary);
   
   // Add debug mode state
   const [debugMode, setDebugMode] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [refreshAttempts, setRefreshAttempts] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Force refresh of entries and TOIL calculation with circuit breaker check
-  const forceRefresh = useCallback(() => {
+  // Simple manual refresh without forcing aggressive updates
+  const handleManualRefresh = useCallback(() => {
     if (circuitBreakerStatus.globallyDisabled) {
-      logger.debug('Force refresh blocked by circuit breaker');
+      logger.debug('Manual refresh blocked by circuit breaker');
       return;
     }
     
-    logger.debug('Forcing refresh of TOIL summary and entries');
+    logger.debug('Manual refresh requested');
     setIsRefreshing(true);
-    
-    // Increment entries version to trigger recalculation
-    setEntriesVersion(prev => prev + 1);
-    
-    // Refresh the summary
     refreshSummary();
     setLastUpdated(new Date());
-    setRefreshAttempts(prev => prev + 1);
     
-    setTimeout(() => setIsRefreshing(false), 1000); // Increased timeout
+    setTimeout(() => setIsRefreshing(false), 2000);
   }, [refreshSummary, circuitBreakerStatus.globallyDisabled]);
-  
-  // Debounce the refresh function with longer delay
-  const debouncedRefresh = useDebounce(() => {
-    logger.debug('Requesting refresh of TOIL summary (debounced)');
-    forceRefresh();
-  }, 2000); // Increased from 100ms to 2000ms
-  
-  // Watch for changes in the entries array length or content with conservative approach
-  useEffect(() => {
-    logger.debug(`Entries changed: ${monthEntries.length} entries, considering TOIL recalculation`);
-    
-    // Only trigger if we have a meaningful change and circuit breaker allows it
-    if (monthEntries.length >= 0 && !circuitBreakerStatus.globallyDisabled) {
-      debouncedRefresh();
-    }
-  }, [monthEntries.length, debouncedRefresh, circuitBreakerStatus.globallyDisabled]);
   
   // Report errors to parent component
   useEffect(() => {
@@ -145,43 +116,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
   }, [summary]);
   
-  // Add listener for time entry events with MUCH longer debounce
-  useEffect(() => {
-    const handleEntryEvent = (eventData: any) => {
-      if (circuitBreakerStatus.globallyDisabled) {
-        logger.debug('Entry event ignored due to circuit breaker');
-        return;
-      }
-      
-      logger.debug('Time entry event received, considering TOIL refresh:', eventData);
-      
-      // Check if this event is relevant to our user and month
-      const isRelevant = eventData?.userId === userId || 
-                        eventData?.payload?.userId === userId ||
-                        !eventData?.userId; // If no userId specified, assume it's relevant
-      
-      if (isRelevant) {
-        logger.debug('Event is relevant, scheduling refresh with longer delay');
-        // Use much longer timeout to prevent cascading
-        setTimeout(() => {
-          if (!circuitBreakerStatus.globallyDisabled) {
-            forceRefresh();
-          }
-        }, 3000); // 3 second delay
-      }
-    };
-    
-    const sub1 = eventBus.subscribe(TIME_ENTRY_EVENTS.DELETED, handleEntryEvent);
-    const sub2 = eventBus.subscribe(TIME_ENTRY_EVENTS.CREATED, handleEntryEvent);
-    const sub3 = eventBus.subscribe(TIME_ENTRY_EVENTS.UPDATED, handleEntryEvent);
-    
-    return () => {
-      if (typeof sub1 === 'function') sub1();
-      if (typeof sub2 === 'function') sub2();
-      if (typeof sub3 === 'function') sub3();
-    };
-  }, [userId, forceRefresh, circuitBreakerStatus.globallyDisabled]);
-  
   // Debug mode toggle (Ctrl+Alt+D)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -195,18 +129,14 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [debugMode]);
   
-  // Manual refresh handling
-  const handleManualRefresh = useCallback(() => {
-    logger.debug('Manual refresh requested');
-    forceRefresh();
-  }, [forceRefresh]);
-  
-  // Refresh on mount with delay
+  // Initial refresh on mount with delay to prevent cascading
   useEffect(() => {
     logger.debug('TOILSummaryCard mounted, requesting initial refresh with delay');
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       refreshSummary();
-    }, 1000); // Delay initial refresh to prevent cascading
+    }, 2000); // 2 second delay to prevent mount cascades
+    
+    return () => clearTimeout(timeoutId);
   }, [refreshSummary]);
   
   try {
@@ -275,10 +205,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
           {debugMode && (
             <div className="mt-4 p-2 border border-amber-200 bg-amber-50 rounded text-xs font-mono">
               <div>Last update: {lastUpdated.toLocaleTimeString()}</div>
-              <div>Refresh attempts: {refreshAttempts}/10</div>
               <div>Loading state: {loading ? 'Loading' : 'Ready'}</div>
               <div>Entries count: {monthEntries.length}</div>
-              <div>Entries version: {entriesVersion}</div>
               <div>Work schedule: {workSchedule ? workSchedule.name : 'None'}</div>
               <div>Circuit breaker: {circuitBreakerStatus.globallyDisabled ? 'DISABLED' : 'Active'}</div>
               <div>Calculations in progress: {circuitBreakerStatus.calculationsInProgress}</div>

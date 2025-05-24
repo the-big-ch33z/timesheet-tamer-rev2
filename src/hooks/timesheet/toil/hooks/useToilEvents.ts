@@ -19,7 +19,7 @@ export interface UseToilEventsProps {
 }
 
 /**
- * Hook for managing TOIL event subscriptions with much longer debouncing to prevent cascades
+ * Hook for managing TOIL event subscriptions with very conservative debouncing
  */
 export function useToilEvents({
   userId,
@@ -29,16 +29,17 @@ export function useToilEvents({
   refreshSummary,
   isTestMode = false
 }: UseToilEventsProps): void {
-  // Create a heavily debounced refresh function to prevent cascading
-  const debouncedRefresh = useCallback(() => {
+  // Create a very conservative refresh function to prevent cascading
+  const conservativeRefresh = useCallback(() => {
     const timeoutId = setTimeout(() => {
+      logger.debug('Conservative TOIL refresh triggered');
       refreshSummary();
-    }, 2000); // Increased from 300ms to 2000ms for much better stability
+    }, 10000); // Very long 10 second delay
     
     return () => clearTimeout(timeoutId);
   }, [refreshSummary]);
 
-  // Set up event listeners with reduced frequency
+  // Set up minimal event listeners to prevent cascades
   useEffect(() => {
     if (isTestMode) return;
 
@@ -51,7 +52,7 @@ export function useToilEvents({
           setToilSummary(data);
           setIsLoading(false);
         },
-        onRefresh: debouncedRefresh,
+        onRefresh: conservativeRefresh,
         onLog: (message, data) => {
           logger.debug(message, data);
         }
@@ -60,23 +61,20 @@ export function useToilEvents({
 
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     
-    // Subscribe ONLY to the most essential events to reduce cascade potential
+    // Subscribe ONLY to summary updates to reduce event volume
     const summarySubscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       if (isRelevantToilEvent(data, userId, monthYear)) {
         logger.debug(`Matched TOIL summary update for ${userId} in ${monthYear}`);
         // Only refresh if this is a genuine update, not a cascading event
-        if (!data.source?.includes('cascade')) {
-          debouncedRefresh();
+        if (!data.source?.includes('cascade') && !data.source?.includes('event')) {
+          conservativeRefresh();
         }
       }
     });
-
-    // Remove calculated subscription to reduce event volume - summary updates are sufficient
-    // The original CALCULATED subscription was causing too many cascade events
 
     return () => {
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
       if (typeof summarySubscription === 'function') summarySubscription();
     };
-  }, [userId, monthYear, debouncedRefresh, setToilSummary, setIsLoading, isTestMode]);
+  }, [userId, monthYear, conservativeRefresh, setToilSummary, setIsLoading, isTestMode]);
 }
