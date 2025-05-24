@@ -28,7 +28,7 @@ const WorkHoursForm: React.FC<WorkHoursFormProps> = ({
   logger.debug('Rendering WorkHoursForm', { startTime, endTime, interactive });
   
   return (
-    <div className="grid grid-cols-2 gap-4 mb-4">
+    <div className="space-y-4 mb-4">
       <TimeInputField
         label="Start Time"
         value={startTime}

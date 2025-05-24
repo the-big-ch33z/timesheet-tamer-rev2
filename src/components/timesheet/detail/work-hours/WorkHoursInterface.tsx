@@ -99,33 +99,39 @@ const WorkHoursInterface: React.FC<WorkHoursInterfaceProps> = ({
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="p-4">
-        <WorkHoursContent
-          date={date}
-          startTime={startTime}
-          endTime={endTime}
-          effectiveTotalHours={totalEnteredHours}
-          calculatedTimeHours={calculatedHours}
-          hasEntries={hasEntries}
-          interactive={interactive}
-          isActuallyComplete={isComplete}
-          hoursVariance={hoursVariance}
-          isUndertime={isUndertime}
-          breakConfig={breakConfig}
-          displayBreakConfig={displayBreakConfig}
-          actionStates={actionStates}
-          isOverScheduled={isOverScheduled}
-          isCalculating={false}
-          handleTimeChange={handleTimeChange}
-          handleToggleAction={handleToggleActionWrapper}
-        />
-      </div>
-      
-      <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
-        <DailySummaryPanel
-          requiredHours={calculatedHours}
-          submittedHours={totalEnteredHours}
-          date={date}
-        />
+        <div className="flex gap-6">
+          {/* Left side - Work Hours Content with stacked time inputs */}
+          <div className="flex-1">
+            <WorkHoursContent
+              date={date}
+              startTime={startTime}
+              endTime={endTime}
+              effectiveTotalHours={totalEnteredHours}
+              calculatedTimeHours={calculatedHours}
+              hasEntries={hasEntries}
+              interactive={interactive}
+              isActuallyComplete={isComplete}
+              hoursVariance={hoursVariance}
+              isUndertime={isUndertime}
+              breakConfig={breakConfig}
+              displayBreakConfig={displayBreakConfig}
+              actionStates={actionStates}
+              isOverScheduled={isOverScheduled}
+              isCalculating={false}
+              handleTimeChange={handleTimeChange}
+              handleToggleAction={handleToggleActionWrapper}
+            />
+          </div>
+          
+          {/* Right side - Daily Summary Panel */}
+          <div className="w-80 flex-shrink-0">
+            <DailySummaryPanel
+              requiredHours={calculatedHours}
+              submittedHours={totalEnteredHours}
+              date={date}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
