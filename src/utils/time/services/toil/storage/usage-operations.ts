@@ -69,11 +69,10 @@ export async function cleanupDuplicateTOILUsage(userId: string): Promise<number>
       const key = `${usage.date.toString()}-${usage.entryId}`;
       
       if (seenDates.has(key)) {
-        // Keep the one with the most recent timestamp or ID if timestamps are equal
+        // Keep the most recent one based on ID (assuming newer IDs are higher)
         const existing = seenDates.get(key)!;
         
-        if (usage.timestamp > existing.timestamp || 
-            (usage.timestamp === existing.timestamp && usage.id > existing.id)) {
+        if (usage.id > existing.id) {
           duplicates.push(existing);
           seenDates.set(key, usage);
         } else {
