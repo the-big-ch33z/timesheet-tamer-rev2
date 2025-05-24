@@ -84,6 +84,7 @@ export default defineConfig(({ mode }) => ({
       "class-variance-authority",
       "recharts",
       "lodash",
+      "react-smooth", // Add react-smooth to optimization
     ],
     exclude: [], // Ensure React is not excluded
     esbuildOptions: {
@@ -105,12 +106,16 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/react-dom\//, 
         /node_modules\/react-is\//, 
         /node_modules\/lodash\//,
-        /node_modules\/recharts\//
-      ], // Force proper handling of React and lodash packages
+        /node_modules\/recharts\//,
+        /node_modules\/react-smooth\//,
+        /node_modules\/prop-types\//
+      ], // Force proper handling of React, lodash, and prop-types packages
       requireReturnsDefault: "auto",
+      defaultIsModuleExports: true, // Handle prop-types default export
     },
     sourcemap: mode !== "production",
     rollupOptions: {
+      external: [],
       output: {
         manualChunks: (id) => {
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-is")) {
