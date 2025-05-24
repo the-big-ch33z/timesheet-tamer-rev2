@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary
 } from "@/types/toil";
@@ -9,7 +10,8 @@ import { createTimeLogger } from "@/utils/time/errors";
 import { 
   storeTOILRecord,
   cleanupDuplicateTOILRecords,
-  filterRecordsByDate
+  filterRecordsByDate,
+  storeTOILSummary
 } from "../storage";
 import { TOILServiceCore } from "./core";
 import { calculateTOILHours } from "../calculation";
@@ -138,6 +140,16 @@ export class TOILServiceCalculation extends TOILServiceCore {
       
       logger.debug(`Updated TOIL summary: ${JSON.stringify(summary)}`);
       
+      // Store the aggregated summary to localStorage
+      if (summary) {
+        try {
+          storeTOILSummary(summary);
+          logger.debug(`Stored TOIL summary to localStorage for ${userId} in ${monthYear}`);
+        } catch (error) {
+          logger.error(`Error storing TOIL summary: ${error}`);
+        }
+      }
+      
       // Dispatch TOIL update event
       dispatchTOILEvent(summary);
       
@@ -247,6 +259,16 @@ export class TOILServiceCalculation extends TOILServiceCore {
       
       // Get updated summary - this is not a Promise, so no need for await
       const summary = this.getTOILSummary(userId, monthYear);
+      
+      // Store the aggregated summary to localStorage
+      if (summary) {
+        try {
+          storeTOILSummary(summary);
+          logger.debug(`Stored TOIL summary to localStorage for ${userId} in ${monthYear}`);
+        } catch (error) {
+          logger.error(`Error storing TOIL summary: ${error}`);
+        }
+      }
       
       // Dispatch TOIL update event
       dispatchTOILEvent(summary);
