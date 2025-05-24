@@ -209,7 +209,13 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
     
     const remaining = accrued - used;
     
-    const summary: TOILSummary = { accrued, used, remaining };
+    const summary: TOILSummary = { 
+      userId, 
+      monthYear, 
+      accrued, 
+      used, 
+      remaining 
+    };
     
     try {
       localStorage.setItem(cacheKey, JSON.stringify(summary));
