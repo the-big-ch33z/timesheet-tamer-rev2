@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { 
+  deleteTOILRecordsByEntryId 
+} from '@/utils/time/services/toil/storage/record-operations';
+import { deleteTOILUsageByEntryId } from '@/utils/time/services/toil/storage/usage-operations';
+import { 
   toilService, 
   loadTOILRecords, 
   loadTOILUsage,
@@ -228,7 +232,34 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     return format(date instanceof Date ? date : new Date(date), 'yyyy-MM-dd HH:mm');
   }, []);
   
-  return (
+  
+  // Handle deletion of all TOIL by entry ID (entry-based removal strategy)
+  const handleDeleteAllTOILByEntry = useCallback(async () => {
+    setStatus({ message: 'Deleting TOIL via entry IDs...', type: 'info' });
+    setIsProcessing(true);
+
+    try {
+      const entryIds = Array.from(new Set([
+        ...toilRecords.map(r => r.entryId).filter(Boolean),
+        ...toilUsage.map(u => u.entryId).filter(Boolean)
+      ]));
+
+      for (const entryId of entryIds) {
+        await deleteTOILRecordsByEntryId(entryId);
+        await deleteTOILUsageByEntryId(entryId);
+        console.log(`[TOILDebugPanel] Deleted TOIL for entryId: ${entryId}`);
+      }
+
+      setStatus({ message: `Deleted TOIL for ${entryIds.length} entries`, type: 'success' });
+      setRefreshCount(prev => prev + 1);
+    } catch (error) {
+      console.error('[TOILDebugPanel] TOIL entry-based deletion error:', error);
+      setStatus({ message: 'Error deleting TOIL by entry', type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [toilRecords, toilUsage]);
+return (
     <Card className="w-full bg-slate-50 border border-slate-200">
       <CardHeader className="p-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center justify-between">
@@ -445,6 +476,16 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
               <RefreshCw className="h-3 w-3" />
               Refresh
             </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleDeleteAllTOILByEntry}
+              disabled={isProcessing}
+              className="flex gap-1 items-center"
+            >
+              Delete TOIL by Entry ID
+            </Button>
+
             <Button 
               variant="outline" 
               size="sm"
