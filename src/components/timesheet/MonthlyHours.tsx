@@ -11,6 +11,7 @@ import { TOILEventProvider } from "@/utils/time/events/toil";
 import { TOIL_EVENTS, TOILEventData } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 
 const logger = createTimeLogger('MonthlyHours');
 
@@ -25,7 +26,11 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   currentMonth,
   workSchedule
 }) => {
-  // Use our unified TOIL hook for fallback data
+  // Access TimeEntryContext to get monthly entries
+  const timeEntryContext = useTimeEntryContext();
+  const monthEntries = timeEntryContext.getMonthEntries(currentMonth, user.id);
+  
+  // Use our unified TOIL hook with entries and work schedule
   const {
     toilSummary,
     isLoading: toilLoading,
@@ -34,6 +39,8 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   } = useUnifiedTOIL({
     userId: user.id,
     date: currentMonth,
+    entries: monthEntries, // Pass the actual entries
+    workSchedule, // Pass the work schedule for calculations
     options: {
       monthOnly: true,
       refreshInterval: 120000
@@ -48,20 +55,23 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   const monthName = useMemo(() => format(currentMonth, 'MMMM yyyy'), [currentMonth]);
   const monthYear = useMemo(() => format(currentMonth, 'yyyy-MM'), [currentMonth]);
   
-  // Handle TOIL errors from the card component
-  const handleTOILError = useCallback((error: string) => {
-    logger.error(`TOIL error from summary card: ${error}`);
-    setErrorMessage(error);
-  }, []);
-  
+  // Enhanced logging for debugging
   useEffect(() => {
     logger.debug(`MonthlyHours component for ${monthName}:`, {
       userId: user.id,
+      entriesCount: monthEntries.length,
       toilSummary,
       toilLoading,
       toilError,
       workSchedule: workSchedule?.name || 'None'
     });
+    
+    // Log entries for debugging
+    if (monthEntries.length > 0) {
+      logger.debug(`Found ${monthEntries.length} entries for month:`, 
+        monthEntries.map(e => `${format(new Date(e.date), 'yyyy-MM-dd')}: ${e.hours}h`)
+      );
+    }
     
     if (toilError) {
       logger.error(`Error loading TOIL summary for ${monthName}:`, toilError);
@@ -81,7 +91,13 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     } else {
       setRolloverHours(0);
     }
-  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast, workSchedule]);
+  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast, workSchedule, monthEntries]);
+  
+  // Handle TOIL errors from the card component
+  const handleTOILError = useCallback((error: string) => {
+    logger.error(`TOIL error from summary card: ${error}`);
+    setErrorMessage(error);
+  }, []);
   
   // Subscribe to TOIL events to update based on changes
   useEffect(() => {
@@ -122,7 +138,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
           </Card>
         </div>
         
-        {/* TOIL Summary card with work schedule passed */}
+        {/* TOIL Summary card with entries and work schedule */}
         <div className="w-full max-w-full">
           {toilError && !toilSummary ? (
             <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg flex flex-col gap-2">
@@ -140,7 +156,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
               userId={user.id}
               date={currentMonth}
               monthName={monthName}
-              workSchedule={workSchedule}
+              workSchedule={workSchedule} // Pass work schedule
               onError={handleTOILError}
               showRollover={rolloverHours > 0}
               rolloverHours={rolloverHours}
