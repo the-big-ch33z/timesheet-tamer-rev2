@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { TOILRecord, TOILUsage, TOILSummary } from '@/types/toil';
@@ -8,6 +9,7 @@ import {
   TOIL_SUMMARY_PREFIX
 } from './constants';
 import { createTimeLogger } from "@/utils/time/errors";
+import { loadDeletedTOILRecords, loadDeletedTOILUsage } from './deletion-tracking';
 
 const logger = createTimeLogger('TOIL-Storage-Core');
 
@@ -58,7 +60,7 @@ export const STORAGE_MAX_RETRIES = 3;
 const toilDayInfoCache = new Map<string, any>();
 
 /**
- * Load TOIL records for a user
+ * Load TOIL records for a user (now respects deletion tracking)
  */
 export function loadTOILRecords(userId?: string): TOILRecord[] {
   try {
@@ -69,13 +71,17 @@ export function loadTOILRecords(userId?: string): TOILRecord[] {
     }
     
     const allRecords: TOILRecord[] = safelyParseJSON(records, []);
+    const deletedRecordIds = loadDeletedTOILRecords();
+    
+    // Filter out deleted records
+    let filteredRecords = allRecords.filter(record => !deletedRecordIds.includes(record.id));
     
     // Filter by userId if provided
     if (userId) {
-      return allRecords.filter(record => record.userId === userId);
+      filteredRecords = filteredRecords.filter(record => record.userId === userId);
     }
     
-    return allRecords;
+    return filteredRecords;
   } catch (error) {
     logger.error('Error loading TOIL records:', error);
     return [];
@@ -83,7 +89,7 @@ export function loadTOILRecords(userId?: string): TOILRecord[] {
 }
 
 /**
- * Load TOIL usage records for a user
+ * Load TOIL usage records for a user (now respects deletion tracking)
  */
 export function loadTOILUsage(userId?: string): TOILUsage[] {
   try {
@@ -94,13 +100,17 @@ export function loadTOILUsage(userId?: string): TOILUsage[] {
     }
     
     const allUsage: TOILUsage[] = safelyParseJSON(usage, []);
+    const deletedUsageIds = loadDeletedTOILUsage();
+    
+    // Filter out deleted usage
+    let filteredUsage = allUsage.filter(item => !deletedUsageIds.includes(item.id));
     
     // Filter by userId if provided
     if (userId) {
-      return allUsage.filter(item => item.userId === userId);
+      filteredUsage = filteredUsage.filter(item => item.userId === userId);
     }
     
-    return allUsage;
+    return filteredUsage;
   } catch (error) {
     logger.error('Error loading TOIL usage:', error);
     return [];
@@ -200,10 +210,10 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
       }
     }
     
-    // If cache is invalid or doesn't exist, calculate from records
+    // If cache is invalid or doesn't exist, calculate from records (now uses filtered data)
     logger.debug(`No valid cache found for ${userId} in ${monthYear}. Calculating...`);
-    const records = loadTOILRecords(userId);
-    const usage = loadTOILUsage(userId);
+    const records = loadTOILRecords(userId); // This now filters out deleted records
+    const usage = loadTOILUsage(userId); // This now filters out deleted usage
     
     const accrued = records
       .filter(record => record.monthYear === monthYear)

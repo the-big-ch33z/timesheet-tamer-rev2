@@ -16,6 +16,19 @@ export {
   cleanupDuplicateTOILUsage
 } from './record-management';
 
+// Re-export deletion tracking
+export {
+  loadDeletedTOILRecords,
+  loadDeletedTOILUsage,
+  addToDeletedTOILRecords,
+  addToDeletedTOILUsage,
+  isTOILRecordDeleted,
+  isTOILUsageDeleted,
+  clearAllTOILDeletionTracking,
+  DELETED_TOIL_RECORDS_KEY,
+  DELETED_TOIL_USAGE_KEY
+} from './deletion-tracking';
+
 // Re-export type definitions 
 export type { TOILDayInfo } from './queries';
 

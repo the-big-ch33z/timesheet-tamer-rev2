@@ -29,3 +29,16 @@ export type { TOILDayInfo } from './queries';
 export {
   hasTOILForDay
 } from './queries';
+
+// Re-export deletion tracking operations
+export {
+  loadDeletedTOILRecords,
+  loadDeletedTOILUsage,
+  addToDeletedTOILRecords,
+  addToDeletedTOILUsage,
+  isTOILRecordDeleted,
+  isTOILUsageDeleted,
+  clearAllTOILDeletionTracking,
+  DELETED_TOIL_RECORDS_KEY,
+  DELETED_TOIL_USAGE_KEY
+} from './deletion-tracking';
