@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
@@ -7,6 +6,7 @@ import { eventBus } from '@/utils/events/EventBus';
 import { TIME_ENTRY_EVENTS, TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { format } from 'date-fns';
 import { loadEntriesFromStorage, saveEntriesToStorage, addToDeletedEntries } from "../storage-operations";
+import { deleteTOILRecordsByEntryId, deleteTOILUsageByEntryId } from "@/utils/time/services/toil/storage";
 
 const logger = createTimeLogger('DeleteOperations');
 
@@ -48,7 +48,7 @@ export class DeleteOperations {
 
   /**
    * Delete a time entry by its ID
-   * This will handle properly removing from storage and emitting events
+   * This will handle properly removing from storage, cleaning up TOIL records, and emitting events
    */
   public async deleteEntryById(entryId: string, userId?: string): Promise<boolean> {
     logger.debug(`Deleting entry with ID: ${entryId}`);
@@ -90,7 +90,26 @@ export class DeleteOperations {
         // Continue execution as the main deletion succeeded
       }
       
-      // Dispatch events for TOIL cleanup and UI updates
+      // DIRECT TOIL CLEANUP - Execute synchronously to ensure TOIL records are removed
+      try {
+        logger.debug(`Starting direct TOIL cleanup for entry ${entryId}`);
+        
+        // Delete TOIL records associated with this entry
+        const deletedRecordsCount = await deleteTOILRecordsByEntryId(entryId);
+        logger.debug(`Deleted ${deletedRecordsCount} TOIL records for entry ${entryId}`);
+        
+        // Delete TOIL usage records associated with this entry
+        const deletedUsageCount = await deleteTOILUsageByEntryId(entryId);
+        logger.debug(`Deleted ${deletedUsageCount} TOIL usage records for entry ${entryId}`);
+        
+        console.log(`[DeleteOperations] Direct TOIL cleanup completed: ${deletedRecordsCount} records, ${deletedUsageCount} usage items deleted for entry ${entryId}`);
+      } catch (toilError) {
+        logger.error(`Error during direct TOIL cleanup for entry ${entryId}:`, toilError);
+        console.error(`[DeleteOperations] TOIL cleanup failed for entry ${entryId}:`, toilError);
+        // Don't fail the entire operation if TOIL cleanup fails
+      }
+      
+      // Dispatch events for UI updates (keeping these for other systems that might depend on them)
       const now = new Date();
       const eventData = createStandardEventData(entryId, userId);
       
