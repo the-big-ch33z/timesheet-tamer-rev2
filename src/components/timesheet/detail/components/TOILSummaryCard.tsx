@@ -24,7 +24,7 @@ export interface TOILSummaryCardProps {
   showRollover?: boolean;
   rolloverHours?: number;
   useSimpleView?: boolean;
-  workSchedule?: any; // Add work schedule prop
+  workSchedule?: any;
   testProps?: {
     summary: any;
     loading: boolean;
@@ -44,11 +44,14 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   workSchedule,
   testProps
 }) => {
-  // Access TimeEntryContext to get the actual entries
+  // Access TimeEntryContext to get the actual entries and watch for changes
   const timeEntryContext = useTimeEntryContext();
   
-  // Get month entries for the user
+  // Get month entries for the user - this will update when entries change
   const monthEntries = timeEntryContext.getMonthEntries(date, userId);
+  
+  // Track entries array reference to detect changes
+  const [entriesVersion, setEntriesVersion] = useState(0);
   
   logger.debug(`TOILSummaryCard: Found ${monthEntries.length} entries for ${userId} in month ${date.toISOString()}`);
   
@@ -85,15 +88,35 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [refreshAttempts, setRefreshAttempts] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Debounce the refresh function
-  const debouncedRefresh = useDebounce(() => {
-    logger.debug('Requesting refresh of TOIL summary (debounced)');
+  // Force refresh of entries and TOIL calculation
+  const forceRefresh = useCallback(() => {
+    logger.debug('Forcing refresh of TOIL summary and entries');
     setIsRefreshing(true);
+    
+    // Increment entries version to trigger recalculation
+    setEntriesVersion(prev => prev + 1);
+    
+    // Refresh the summary
     refreshSummary();
     setLastUpdated(new Date());
     setRefreshAttempts(prev => prev + 1);
+    
     setTimeout(() => setIsRefreshing(false), 500);
+  }, [refreshSummary]);
+  
+  // Debounce the refresh function
+  const debouncedRefresh = useDebounce(() => {
+    logger.debug('Requesting refresh of TOIL summary (debounced)');
+    forceRefresh();
   }, 100);
+  
+  // Watch for changes in the entries array length or content
+  useEffect(() => {
+    logger.debug(`Entries changed: ${monthEntries.length} entries, triggering TOIL recalculation`);
+    if (monthEntries.length >= 0) { // Even if 0 entries, we should recalculate
+      debouncedRefresh();
+    }
+  }, [monthEntries.length, debouncedRefresh]);
   
   // Report errors to parent component
   useEffect(() => {
@@ -111,11 +134,20 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
   }, [summary]);
   
-  // Add listener for time entry events
+  // Add listener for time entry events with immediate refresh
   useEffect(() => {
-    const handleEntryEvent = () => {
-      logger.debug('Time entry event received, refreshing TOIL summary');
-      debouncedRefresh();
+    const handleEntryEvent = (eventData: any) => {
+      logger.debug('Time entry event received, forcing immediate TOIL refresh:', eventData);
+      
+      // Check if this event is relevant to our user and month
+      const isRelevant = eventData?.userId === userId || 
+                        eventData?.payload?.userId === userId ||
+                        !eventData?.userId; // If no userId specified, assume it's relevant
+      
+      if (isRelevant) {
+        logger.debug('Event is relevant, forcing refresh');
+        forceRefresh();
+      }
     };
     
     const sub1 = eventBus.subscribe(TIME_ENTRY_EVENTS.DELETED, handleEntryEvent);
@@ -127,7 +159,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       if (typeof sub2 === 'function') sub2();
       if (typeof sub3 === 'function') sub3();
     };
-  }, [debouncedRefresh]);
+  }, [userId, forceRefresh]);
   
   // Debug mode toggle (Ctrl+Alt+D)
   useEffect(() => {
@@ -145,8 +177,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   // Manual refresh handling
   const handleManualRefresh = useCallback(() => {
     logger.debug('Manual refresh requested');
-    debouncedRefresh();
-  }, [debouncedRefresh]);
+    forceRefresh();
+  }, [forceRefresh]);
   
   // Refresh on mount
   useEffect(() => {
@@ -200,6 +232,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
               <div>Refresh attempts: {refreshAttempts}/5</div>
               <div>Loading state: {loading ? 'Loading' : 'Ready'}</div>
               <div>Entries count: {monthEntries.length}</div>
+              <div>Entries version: {entriesVersion}</div>
               <div>Work schedule: {workSchedule ? workSchedule.name : 'None'}</div>
               <div>
                 Summary: {summary ? `A:${summary.accrued.toFixed(1)} U:${summary.used.toFixed(1)} R:${summary.remaining.toFixed(1)}` : "None"}

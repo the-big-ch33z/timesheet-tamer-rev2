@@ -164,19 +164,25 @@ export function useUnifiedTOIL({
     loadSummary();
   }, [userId, date, loadSummary]);
 
-  // Debounced calculation when entries change
+  // IMPROVED: More responsive calculation when entries change
+  // Create a stable reference for the entries array to detect actual changes
+  const entriesKey = useMemo(() => {
+    return entries.map(e => `${e.id}-${e.hours}-${e.date}`).join('|');
+  }, [entries]);
+
   useEffect(() => {
-    if (!userId || !date || !autoRefresh || entries.length === 0) return;
+    if (!userId || !date || !autoRefresh) return;
     
-    logger.debug(`Entries changed (${entries.length} entries), debouncing TOIL calculation`);
+    logger.debug(`Entries changed (${entries.length} entries), triggering immediate TOIL calculation`);
     
+    // Use a shorter timeout for more responsive updates
     const timeoutId = setTimeout(() => {
-      logger.debug('Debounce time elapsed, calculating TOIL');
+      logger.debug('Calculating TOIL due to entries change');
       calculateToilForDay();
-    }, 200); // 200ms for responsive calculations
+    }, 50); // Reduced from 200ms to 50ms for faster response
     
     return () => clearTimeout(timeoutId);
-  }, [userId, date, entries, calculateToilForDay, autoRefresh]);
+  }, [userId, date, entriesKey, calculateToilForDay, autoRefresh]); // Use entriesKey instead of entries
 
   return {
     toilSummary,
