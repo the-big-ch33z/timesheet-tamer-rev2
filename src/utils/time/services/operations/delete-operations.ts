@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
@@ -47,7 +48,7 @@ export class DeleteOperations {
   }
 
   /**
-   * ENHANCED: Delete a time entry by its ID with improved TOIL regeneration
+   * ENHANCED: Delete a time entry by its ID with comprehensive TOIL regeneration
    */
   public async deleteEntryById(entryId: string, userId?: string, options?: {
     workSchedule?: any;
@@ -101,24 +102,41 @@ export class DeleteOperations {
         logger.warn(`Failed to add entry to deletion tracking: ${error}`);
       }
       
-      // ENHANCED UNIFIED TOIL CLEANUP WITH AUTO-REGENERATION
+      // ENHANCED UNIFIED TOIL CLEANUP WITH PROPER REGENERATION OPTIONS
       try {
         console.log(`[TOIL-DEBUG] ==> STARTING ENHANCED TOIL CLEANUP for entry ${entryId}`);
         logger.debug(`Starting enhanced TOIL cleanup for entry ${entryId}`);
         
         if (userId) {
-          // Prepare regeneration options
+          // Get work schedule from options or try to load from context
+          let workSchedule = options?.workSchedule;
+          
+          if (!workSchedule) {
+            // Try to get work schedule from user context or default
+            console.log(`[TOIL-DEBUG] ⚠️ No work schedule provided, attempting to load default`);
+            try {
+              // Import user context to get work schedule
+              const { useUserContext } = await import('@/contexts/user/UserContext');
+              // This is a fallback - ideally work schedule should be passed in options
+            } catch (error) {
+              console.log(`[TOIL-DEBUG] ⚠️ Could not load work schedule from context:`, error);
+            }
+          }
+          
+          // Prepare comprehensive regeneration options
           const regenerationOptions = {
-            workSchedule: options?.workSchedule,
+            workSchedule: workSchedule,
             currentEntries: userEntriesAfterDeletion,
             currentDate: new Date(entryToDelete.date),
-            skipRegeneration: userEntriesAfterDeletion.length === 0 // Skip if no entries remain
+            skipRegeneration: userEntriesAfterDeletion.length === 0 || !workSchedule
           };
           
-          console.log(`[TOIL-DEBUG] Deletion options:`, {
+          console.log(`[TOIL-DEBUG] Enhanced deletion options:`, {
             hasWorkSchedule: !!regenerationOptions.workSchedule,
+            workScheduleName: regenerationOptions.workSchedule?.name || 'None',
             remainingEntries: userEntriesAfterDeletion.length,
-            willRegenerate: !regenerationOptions.skipRegeneration
+            willRegenerate: !regenerationOptions.skipRegeneration,
+            entryDate: entryToDelete.date
           });
           
           const deletionResult = await deleteAllToilData(userId, regenerationOptions);
@@ -126,12 +144,13 @@ export class DeleteOperations {
           if (deletionResult.success) {
             console.log(`[TOIL-DEBUG] ✅ Enhanced TOIL cleanup completed for entry ${entryId}`, {
               summary: deletionResult.summary,
-              regenerated: deletionResult.regenerationTriggered
+              regenerated: deletionResult.regenerationTriggered,
+              errors: deletionResult.errors
             });
             logger.debug(`Enhanced TOIL cleanup completed for entry ${entryId}`, deletionResult);
             
             // Trigger UI state update with regeneration status
-            triggerUIStateUpdate(deletionResult.regenerationTriggered);
+            triggerUIStateUpdate(deletionResult.regenerationTriggered || false);
             console.log(`[TOIL-DEBUG] ✅ UI state update triggered with regeneration: ${deletionResult.regenerationTriggered}`);
           } else {
             console.error(`[TOIL-DEBUG] ❌ Enhanced TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);

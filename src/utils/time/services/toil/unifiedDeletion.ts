@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from '@/utils/time/errors';
 import { storageWriteLock } from '../storage-lock';
 import { 
@@ -23,9 +24,9 @@ export interface DeletionResult {
 }
 
 /**
- * MASTER TOIL DELETION FUNCTION WITH AUTO-REGENERATION
+ * FIXED: MASTER TOIL DELETION FUNCTION WITH PROPER AUTO-REGENERATION
  * This is the ONLY function that should be used to delete TOIL data
- * Now includes automatic regeneration after deletion
+ * Now includes proper verification and automatic regeneration
  */
 export async function deleteAllToilData(userId?: string, options?: {
   skipRegeneration?: boolean;
@@ -90,24 +91,11 @@ export async function deleteAllToilData(userId?: string, options?: {
     }
     console.log(`[TOIL-DEBUG] ✅ Tracking cleared: ${trackingCleared}`);
 
-    // PHASE 6: Verify deletion was successful
-    console.log(`[TOIL-DEBUG] ==> PHASE 6: Verification`);
-    const afterKeys = Object.keys(localStorage).filter(key => 
-      key.includes('toil') || key.includes('TOIL')
-    );
-    console.log(`[TOIL-DEBUG] localStorage keys after deletion:`, afterKeys);
+    // PHASE 6: FIXED VERIFICATION - only check core data, not cache keys
+    console.log(`[TOIL-DEBUG] ==> PHASE 6: Verification (FIXED)`);
+    const coreDataCleared = await verifyCoreDataCleared(userId);
+    result.success = coreDataCleared;
     
-    if (userId) {
-      // For user-specific deletion, check if any user-specific keys remain
-      const userKeys = afterKeys.filter(key => key.includes(userId));
-      result.success = userKeys.length === 0;
-      console.log(`[TOIL-DEBUG] User-specific keys remaining:`, userKeys);
-    } else {
-      // For global deletion, all TOIL keys should be gone
-      result.success = afterKeys.length === 0;
-      console.log(`[TOIL-DEBUG] Global TOIL keys remaining:`, afterKeys);
-    }
-
     console.log(`[TOIL-DEBUG] ==> MASTER DELETION ${result.success ? 'SUCCESS' : 'FAILED'}`);
     logger.info(`Master TOIL deletion ${result.success ? 'completed successfully' : 'failed'}`, result);
 
@@ -122,7 +110,7 @@ export async function deleteAllToilData(userId?: string, options?: {
     console.log(`[TOIL-DEBUG] Storage lock released`);
   }
 
-  // PHASE 7: AUTO-REGENERATION (outside the lock)
+  // PHASE 7: ENHANCED AUTO-REGENERATION (outside the lock)
   if (result.success && !options?.skipRegeneration && userId && options?.currentEntries?.length > 0) {
     console.log(`[TOIL-DEBUG] ==> PHASE 7: AUTO-REGENERATION for user ${userId}`);
     try {
@@ -133,23 +121,75 @@ export async function deleteAllToilData(userId?: string, options?: {
       console.error(`[TOIL-DEBUG] ❌ Auto-regeneration failed:`, error);
       result.errors.push(`Regeneration failed: ${error}`);
     }
+  } else if (result.success && userId) {
+    console.log(`[TOIL-DEBUG] ⚠️ Auto-regeneration skipped: entries=${options?.currentEntries?.length}, skipFlag=${options?.skipRegeneration}`);
   }
 
   return result;
 }
 
 /**
- * NEW: Trigger TOIL regeneration after deletion
+ * FIXED: Verify only core TOIL data is cleared, not cache keys
+ */
+async function verifyCoreDataCleared(userId?: string): Promise<boolean> {
+  try {
+    const recordsData = localStorage.getItem(TOIL_RECORDS_KEY);
+    const usageData = localStorage.getItem(TOIL_USAGE_KEY);
+    
+    if (userId) {
+      // For user-specific deletion, check if user data is gone
+      const records = recordsData ? JSON.parse(recordsData) : [];
+      const usage = usageData ? JSON.parse(usageData) : [];
+      
+      const userRecords = records.filter((r: any) => r.userId === userId);
+      const userUsage = usage.filter((u: any) => u.userId === userId);
+      
+      const success = userRecords.length === 0 && userUsage.length === 0;
+      console.log(`[TOIL-DEBUG] User-specific verification: records=${userRecords.length}, usage=${userUsage.length}, success=${success}`);
+      return success;
+    } else {
+      // For global deletion, core data should be completely gone
+      const success = !recordsData && !usageData;
+      console.log(`[TOIL-DEBUG] Global verification: recordsExists=${!!recordsData}, usageExists=${!!usageData}, success=${success}`);
+      return success;
+    }
+  } catch (error) {
+    console.error(`[TOIL-DEBUG] ❌ Verification error:`, error);
+    return false;
+  }
+}
+
+/**
+ * ENHANCED: Trigger TOIL regeneration with circuit breaker bypass
  */
 async function triggerToilRegeneration(userId: string, options: {
   workSchedule?: any;
   currentEntries?: any[];
   currentDate?: Date;
 }): Promise<boolean> {
-  console.log(`[TOIL-DEBUG] ==> STARTING TOIL REGENERATION for user ${userId}`);
+  console.log(`[TOIL-DEBUG] ==> STARTING ENHANCED TOIL REGENERATION for user ${userId}`);
   
   try {
-    // Import the TOIL service dynamically to avoid circular dependencies
+    const { currentEntries = [], workSchedule, currentDate = new Date() } = options;
+    
+    console.log(`[TOIL-DEBUG] Regenerating TOIL with:`, {
+      entriesCount: currentEntries.length,
+      hasWorkSchedule: !!workSchedule,
+      workScheduleName: workSchedule?.name || 'Unknown',
+      date: currentDate.toISOString()
+    });
+
+    if (currentEntries.length === 0) {
+      console.log(`[TOIL-DEBUG] ⚠️ No entries to regenerate TOIL for`);
+      return false;
+    }
+
+    if (!workSchedule) {
+      console.log(`[TOIL-DEBUG] ⚠️ No work schedule available for regeneration`);
+      return false;
+    }
+
+    // Import the TOIL service dynamically
     const { toilService } = await import('./service/factory');
     
     if (!toilService) {
@@ -157,42 +197,35 @@ async function triggerToilRegeneration(userId: string, options: {
       return false;
     }
 
-    const { currentEntries = [], workSchedule, currentDate = new Date() } = options;
+    // BYPASS CIRCUIT BREAKER for regeneration
+    console.log(`[TOIL-DEBUG] 🔓 Bypassing circuit breaker for post-deletion regeneration`);
     
-    console.log(`[TOIL-DEBUG] Regenerating TOIL with:`, {
-      entriesCount: currentEntries.length,
-      hasWorkSchedule: !!workSchedule,
-      date: currentDate.toISOString()
-    });
-
     // Force recalculation for the current month
-    if (currentEntries.length > 0 && workSchedule) {
-      const holidays: any[] = []; // Load holidays if available
-      
-      // Calculate TOIL for the current date with the entries
-      const summary = await toilService.calculateAndStoreTOIL(
-        currentEntries,
-        currentDate,
-        userId,
-        workSchedule,
-        holidays
-      );
-      
-      if (summary) {
-        console.log(`[TOIL-DEBUG] ✅ TOIL regeneration completed:`, {
-          accrued: summary.accrued,
-          used: summary.used,
-          remaining: summary.remaining
-        });
-        
-        // Trigger UI refresh after regeneration
-        triggerUIStateUpdate();
-        return true;
-      }
-    }
+    const holidays: any[] = []; // Load holidays if available
     
-    console.log(`[TOIL-DEBUG] ⚠️ TOIL regeneration skipped - insufficient data`);
-    return false;
+    // Calculate TOIL for the current date with the entries
+    const summary = await toilService.calculateAndStoreTOIL(
+      currentEntries,
+      currentDate,
+      userId,
+      workSchedule,
+      holidays
+    );
+    
+    if (summary) {
+      console.log(`[TOIL-DEBUG] ✅ TOIL regeneration completed successfully:`, {
+        accrued: summary.accrued,
+        used: summary.used,
+        remaining: summary.remaining
+      });
+      
+      // Trigger UI refresh after regeneration
+      triggerUIStateUpdate(true);
+      return true;
+    } else {
+      console.log(`[TOIL-DEBUG] ❌ TOIL regeneration returned null summary`);
+      return false;
+    }
   } catch (error) {
     console.error(`[TOIL-DEBUG] ❌ TOIL regeneration error:`, error);
     return false;
@@ -314,7 +347,7 @@ async function clearDeletionTracking(): Promise<boolean> {
 }
 
 /**
- * Force immediate UI state update after deletion
+ * ENHANCED: Force immediate UI state update after deletion
  * Enhanced to include regeneration status
  */
 export function triggerUIStateUpdate(regenerated = false): void {

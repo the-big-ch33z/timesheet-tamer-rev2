@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback, useState } from 'react';
 import { WorkSchedule, TimeEntry } from '@/types';
 import { TOILSummary } from '@/types/toil';
 import { format } from 'date-fns';
@@ -9,6 +8,7 @@ import { useToilCache } from './hooks/useToilCache';
 import { useToilEvents } from './hooks/useToilEvents';
 import { useToilCalculation } from './hooks/useToilCalculation';
 import { toilCircuitBreaker } from '@/utils/time/services/toil/circuitBreaker';
+import { debugToilDataState } from '@/utils/time/services/toil/unifiedDeletion';
 
 // Create a logger for this hook
 const logger = createTimeLogger('useUnifiedTOIL');
@@ -56,7 +56,7 @@ export interface UseUnifiedTOILResult {
 
 /**
  * Unified TOIL hook that provides comprehensive TOIL functionality
- * REFACTORED: Simplified to prevent cascading calculations
+ * ENHANCED: Now supports circuit breaker bypass for critical operations
  */
 export function useUnifiedTOIL({
   userId,
@@ -232,6 +232,110 @@ export function useUnifiedTOIL({
     console.log(`[TOIL-DEBUG] Entries key for ${userId}: ${key} (${entries.length} entries)`);
     return key;
   }, [entries, userId]);
+
+  // Add debug mode state
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // ENHANCED: Listen for unified deletion events with regeneration bypass
+  useEffect(() => {
+    const handleToilDataDeleted = (event: CustomEvent) => {
+      console.log(`[TOIL-DEBUG] ✅ TOILSummaryCard received toilDataDeleted event for ${userId}`, event.detail);
+      logger.debug('Received toilDataDeleted event, refreshing summary');
+      
+      const { regenerated } = event.detail || {};
+      
+      if (regenerated) {
+        console.log(`[TOIL-DEBUG] ✅ TOIL data was regenerated, triggering immediate refresh`);
+        setIsRegenerating(false);
+        // Immediate refresh since data was regenerated
+        setTimeout(() => {
+          refreshSummary();
+          setLastUpdated(new Date());
+        }, 50);
+      } else {
+        console.log(`[TOIL-DEBUG] ⚠️ TOIL data was deleted but not regenerated, enabling bypass for manual refresh`);
+        setIsRegenerating(true);
+        
+        // ENABLE BYPASS MODE for manual regeneration
+        toilCircuitBreaker.enableBypassMode();
+        
+        // Longer delay for potential manual regeneration
+        setTimeout(() => {
+          refreshSummary();
+          setLastUpdated(new Date());
+          setIsRegenerating(false);
+          
+          // DISABLE BYPASS MODE after regeneration
+          toilCircuitBreaker.disableBypassMode();
+        }, 2000);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('toilDataDeleted', handleToilDataDeleted as EventListener);
+      console.log(`[TOIL-DEBUG] ✅ TOILSummaryCard listening for deletion events for ${userId}`);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('toilDataDeleted', handleToilDataDeleted as EventListener);
+        console.log(`[TOIL-DEBUG] TOILSummaryCard stopped listening for deletion events for ${userId}`);
+      }
+    };
+  }, [refreshSummary, userId]);
+  
+  // ENHANCED: Manual refresh with regeneration capability and bypass mode
+  const handleManualRefresh = useCallback(async () => {
+    if (circuitBreakerStatus.globallyDisabled && !toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      console.log(`[TOIL-DEBUG] ⚠️ Manual refresh blocked by circuit breaker for ${userId}`);
+      logger.debug('Manual refresh blocked by circuit breaker');
+      return;
+    }
+    
+    console.log(`[TOIL-DEBUG] ==> MANUAL REFRESH requested for ${userId}`);
+    logger.debug('Manual refresh requested');
+    setIsRefreshing(true);
+    
+    // Enable bypass mode for manual operations
+    toilCircuitBreaker.enableBypassMode();
+    
+    try {
+      // If no TOIL data exists and we have entries, trigger regeneration
+      const currentState = debugToilDataState(userId);
+      if (!currentState.hasRecords && !currentState.hasUsage && monthEntries.length > 0 && workSchedule) {
+        console.log(`[TOIL-DEBUG] 🔄 No TOIL data found but entries exist, triggering regeneration with bypass`);
+        setIsRegenerating(true);
+        
+        try {
+          // Import and use the TOIL service to regenerate
+          const { toilService } = await import('@/utils/time/services/toil/service/factory');
+          if (toilService && workSchedule) {
+            await toilService.calculateAndStoreTOIL(
+              monthEntries,
+              date,
+              userId,
+              workSchedule,
+              [] // holidays
+            );
+            console.log(`[TOIL-DEBUG] ✅ Manual regeneration completed with bypass`);
+          }
+        } catch (error) {
+          console.error(`[TOIL-DEBUG] ❌ Manual regeneration failed:`, error);
+        } finally {
+          setIsRegenerating(false);
+        }
+      }
+      
+      refreshSummary();
+      setLastUpdated(new Date());
+    } finally {
+      // Always disable bypass mode after manual operation
+      toilCircuitBreaker.disableBypassMode();
+      setTimeout(() => setIsRefreshing(false), 2000);
+    }
+  }, [refreshSummary, circuitBreakerStatus.globallyDisabled, userId, monthEntries, workSchedule, date, monthYear]);
 
   useEffect(() => {
     if (!userId || !date || !autoRefresh || !entriesKey) return;

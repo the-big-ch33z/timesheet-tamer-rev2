@@ -1,156 +1,187 @@
 
 import { createTimeLogger } from '@/utils/time/errors';
 
-const logger = createTimeLogger('TOILCircuitBreaker');
+const logger = createTimeLogger('TOIL-CircuitBreaker');
 
-interface CalculationAttempt {
-  timestamp: number;
-  userId: string;
-  monthYear: string;
+export interface CircuitBreakerStatus {
+  globallyDisabled: boolean;
+  calculationsInProgress: number;
+  lastCalculationTime: number;
+  consecutiveFailures: number;
 }
 
+/**
+ * ENHANCED: Circuit breaker for TOIL calculations with bypass mode
+ * Now supports bypassing for critical operations like post-deletion regeneration
+ */
 class TOILCircuitBreaker {
-  private static instance: TOILCircuitBreaker;
-  private recentAttempts: CalculationAttempt[] = [];
-  private calculationsInProgress = new Set<string>();
-  private isGloballyDisabled = false;
-  private readonly MIN_CALCULATION_INTERVAL = 2000; // 2 seconds
-  private readonly MAX_ATTEMPTS_PER_MINUTE = 10;
-  private readonly CLEANUP_INTERVAL = 60000; // 1 minute
+  private globallyDisabled = false;
+  private calculationsInProgress = new Map<string, number>();
+  private lastCalculationTime = new Map<string, number>();
+  private consecutiveFailures = new Map<string, number>();
+  private bypassMode = false; // NEW: Bypass mode for critical operations
 
-  constructor() {
-    // Clean up old attempts periodically
-    setInterval(() => this.cleanupOldAttempts(), this.CLEANUP_INTERVAL);
-  }
+  private readonly MAX_CONCURRENT = 3;
+  private readonly MIN_INTERVAL = 1000; // 1 second
+  private readonly MAX_FAILURES = 5;
 
-  static getInstance(): TOILCircuitBreaker {
-    if (!TOILCircuitBreaker.instance) {
-      TOILCircuitBreaker.instance = new TOILCircuitBreaker();
-    }
-    return TOILCircuitBreaker.instance;
+  /**
+   * NEW: Enable bypass mode for critical operations
+   */
+  public enableBypassMode(): void {
+    console.log(`[TOIL-DEBUG] 🔓 Circuit breaker bypass mode ENABLED`);
+    this.bypassMode = true;
+    logger.debug('Circuit breaker bypass mode enabled');
   }
 
   /**
-   * Check if a calculation should proceed
+   * NEW: Disable bypass mode
    */
-  canCalculate(userId: string, monthYear: string): boolean {
-    if (this.isGloballyDisabled) {
-      logger.debug('TOIL calculations globally disabled');
+  public disableBypassMode(): void {
+    console.log(`[TOIL-DEBUG] 🔒 Circuit breaker bypass mode DISABLED`);
+    this.bypassMode = false;
+    logger.debug('Circuit breaker bypass mode disabled');
+  }
+
+  /**
+   * ENHANCED: Check if calculation can proceed (with bypass support)
+   */
+  public canCalculate(userId: string, contextKey: string = 'default'): boolean {
+    // BYPASS: Allow calculations in bypass mode
+    if (this.bypassMode) {
+      console.log(`[TOIL-DEBUG] ✅ Circuit breaker bypassed for ${userId}-${contextKey}`);
+      return true;
+    }
+
+    if (this.globallyDisabled) {
+      console.log(`[TOIL-DEBUG] ❌ Circuit breaker globally disabled for ${userId}-${contextKey}`);
+      logger.debug(`Circuit breaker globally disabled, blocking calculation for ${userId}-${contextKey}`);
       return false;
     }
 
-    const key = `${userId}-${monthYear}`;
-    
-    // Check if calculation is already in progress
-    if (this.calculationsInProgress.has(key)) {
-      logger.debug(`TOIL calculation already in progress for ${key}`);
+    const key = `${userId}-${contextKey}`;
+    const inProgress = this.calculationsInProgress.get(key) || 0;
+    const lastTime = this.lastCalculationTime.get(key) || 0;
+    const failures = this.consecutiveFailures.get(key) || 0;
+
+    // Check concurrent calculations
+    if (inProgress >= this.MAX_CONCURRENT) {
+      console.log(`[TOIL-DEBUG] ❌ Too many concurrent calculations for ${key}: ${inProgress}`);
+      logger.debug(`Too many concurrent calculations for ${key}: ${inProgress}`);
       return false;
     }
 
+    // Check minimum interval
     const now = Date.now();
-    
-    // Check recent attempts for this specific user/month
-    const recentForUser = this.recentAttempts.filter(
-      attempt => attempt.userId === userId && 
-                 attempt.monthYear === monthYear &&
-                 now - attempt.timestamp < this.MIN_CALCULATION_INTERVAL
-    );
-
-    if (recentForUser.length > 0) {
-      logger.debug(`Too soon for another TOIL calculation for ${key}, last was ${now - recentForUser[0].timestamp}ms ago`);
+    if (now - lastTime < this.MIN_INTERVAL) {
+      console.log(`[TOIL-DEBUG] ❌ Too frequent calculations for ${key}: ${now - lastTime}ms`);
+      logger.debug(`Too frequent calculations for ${key}: ${now - lastTime}ms`);
       return false;
     }
 
-    // Check if too many attempts in the last minute
-    const recentAttemptsCount = this.recentAttempts.filter(
-      attempt => now - attempt.timestamp < 60000
-    ).length;
-
-    if (recentAttemptsCount >= this.MAX_ATTEMPTS_PER_MINUTE) {
-      logger.warn(`Too many TOIL calculation attempts (${recentAttemptsCount}), blocking for rate limiting`);
+    // Check consecutive failures
+    if (failures >= this.MAX_FAILURES) {
+      console.log(`[TOIL-DEBUG] ❌ Too many consecutive failures for ${key}: ${failures}`);
+      logger.debug(`Too many consecutive failures for ${key}: ${failures}`);
       return false;
     }
 
+    console.log(`[TOIL-DEBUG] ✅ Circuit breaker allows calculation for ${key}`);
     return true;
   }
 
   /**
-   * Register that a calculation is starting
+   * Start a calculation
    */
-  startCalculation(userId: string, monthYear: string): void {
-    const key = `${userId}-${monthYear}`;
-    this.calculationsInProgress.add(key);
-    this.recentAttempts.push({
-      timestamp: Date.now(),
-      userId,
-      monthYear
-    });
+  public startCalculation(userId: string, contextKey: string = 'default'): void {
+    const key = `${userId}-${contextKey}`;
+    const current = this.calculationsInProgress.get(key) || 0;
+    this.calculationsInProgress.set(key, current + 1);
+    this.lastCalculationTime.set(key, Date.now());
     
-    logger.debug(`Started TOIL calculation for ${key}, ${this.calculationsInProgress.size} calculations in progress`);
+    console.log(`[TOIL-DEBUG] 🔄 Started calculation for ${key}, in progress: ${current + 1}`);
+    logger.debug(`Started calculation for ${key}, in progress: ${current + 1}`);
   }
 
   /**
-   * Register that a calculation has finished
+   * Finish a calculation (success)
    */
-  finishCalculation(userId: string, monthYear: string): void {
-    const key = `${userId}-${monthYear}`;
-    this.calculationsInProgress.delete(key);
-    logger.debug(`Finished TOIL calculation for ${key}, ${this.calculationsInProgress.size} calculations remaining`);
+  public finishCalculation(userId: string, contextKey: string = 'default'): void {
+    const key = `${userId}-${contextKey}`;
+    const current = this.calculationsInProgress.get(key) || 0;
+    this.calculationsInProgress.set(key, Math.max(0, current - 1));
+    
+    // Reset failures on success
+    this.consecutiveFailures.set(key, 0);
+    
+    console.log(`[TOIL-DEBUG] ✅ Finished calculation for ${key}, in progress: ${Math.max(0, current - 1)}`);
+    logger.debug(`Finished calculation for ${key}, in progress: ${Math.max(0, current - 1)}`);
   }
 
   /**
-   * Stop all TOIL calculations
+   * Record a calculation failure
    */
-  stopAllCalculations(): void {
-    this.isGloballyDisabled = true;
+  public recordFailure(userId: string, contextKey: string = 'default'): void {
+    const key = `${userId}-${contextKey}`;
+    const current = this.calculationsInProgress.get(key) || 0;
+    this.calculationsInProgress.set(key, Math.max(0, current - 1));
+    
+    // Increment failures
+    const failures = this.consecutiveFailures.get(key) || 0;
+    this.consecutiveFailures.set(key, failures + 1);
+    
+    console.log(`[TOIL-DEBUG] ❌ Recorded failure for ${key}, failures: ${failures + 1}`);
+    logger.debug(`Recorded failure for ${key}, failures: ${failures + 1}`);
+  }
+
+  /**
+   * Stop all calculations globally
+   */
+  public stopAllCalculations(): void {
+    this.globallyDisabled = true;
+    console.log(`[TOIL-DEBUG] ⏹️ All TOIL calculations stopped globally`);
+    logger.info('All TOIL calculations stopped globally');
+  }
+
+  /**
+   * Resume calculations globally
+   */
+  public resumeCalculations(): void {
+    this.globallyDisabled = false;
     this.calculationsInProgress.clear();
-    logger.warn('All TOIL calculations have been stopped');
-  }
-
-  /**
-   * Resume TOIL calculations
-   */
-  resumeCalculations(): void {
-    this.isGloballyDisabled = false;
-    logger.info('TOIL calculations have been resumed');
+    this.consecutiveFailures.clear();
+    console.log(`[TOIL-DEBUG] ▶️ TOIL calculations resumed globally`);
+    logger.info('TOIL calculations resumed globally');
   }
 
   /**
    * Get current status
    */
-  getStatus() {
+  public getStatus(): CircuitBreakerStatus {
+    const totalInProgress = Array.from(this.calculationsInProgress.values())
+      .reduce((sum, count) => sum + count, 0);
+    
     return {
-      globallyDisabled: this.isGloballyDisabled,
-      calculationsInProgress: this.calculationsInProgress.size,
-      recentAttempts: this.recentAttempts.length,
-      inProgressKeys: Array.from(this.calculationsInProgress)
+      globallyDisabled: this.globallyDisabled,
+      calculationsInProgress: totalInProgress,
+      lastCalculationTime: Math.max(...Array.from(this.lastCalculationTime.values()), 0),
+      consecutiveFailures: Math.max(...Array.from(this.consecutiveFailures.values()), 0)
     };
   }
 
   /**
-   * Clean up old attempts
+   * Reset circuit breaker state
    */
-  private cleanupOldAttempts(): void {
-    const now = Date.now();
-    const before = this.recentAttempts.length;
-    this.recentAttempts = this.recentAttempts.filter(
-      attempt => now - attempt.timestamp < 300000 // Keep last 5 minutes
-    );
-    
-    if (this.recentAttempts.length !== before) {
-      logger.debug(`Cleaned up ${before - this.recentAttempts.length} old calculation attempts`);
-    }
-  }
-
-  /**
-   * Force clear all state (for debugging)
-   */
-  reset(): void {
+  public reset(): void {
+    this.globallyDisabled = false;
+    this.bypassMode = false;
     this.calculationsInProgress.clear();
-    this.recentAttempts = [];
-    this.isGloballyDisabled = false;
+    this.lastCalculationTime.clear();
+    this.consecutiveFailures.clear();
+    console.log(`[TOIL-DEBUG] 🔄 Circuit breaker reset`);
     logger.info('Circuit breaker reset');
   }
 }
 
-export const toilCircuitBreaker = TOILCircuitBreaker.getInstance();
+// Export singleton instance
+export const toilCircuitBreaker = new TOILCircuitBreaker();
