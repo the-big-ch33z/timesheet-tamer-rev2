@@ -3,7 +3,7 @@ import { User, UserRole } from '@/types';
 import { auditService } from '@/services/auditService';
 import { syncService } from '@/services/syncService';
 import { AuthStateType } from '../AuthProvider';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 export const createUserCreationOperations = (state: AuthStateType, toast: ReturnType<typeof useToast>) => {
   const addUser = async (email: string, name: string, role: UserRole = 'team-member'): Promise<User> => {
@@ -26,6 +26,7 @@ export const createUserCreationOperations = (state: AuthStateType, toast: Return
         name,
         role,
         organizationId: state.currentUser.organizationId,
+        workScheduleId: 'default', // FIX: Always assign default work schedule
         createdAt: new Date().toISOString(),
         status: 'active'
       };
@@ -85,6 +86,7 @@ export const createUserCreationOperations = (state: AuthStateType, toast: Return
           role: 'team-member',
           organizationId: team.organizationId,
           teamIds: [teamId],
+          workScheduleId: 'default', // FIX: Always assign default work schedule
           createdAt: new Date().toISOString(),
           status: 'active'
         };
@@ -100,9 +102,11 @@ export const createUserCreationOperations = (state: AuthStateType, toast: Return
         
         await syncService.recordSync('users', 'success', 1);
       } else {
+        // FIX: Ensure existing user has work schedule when added to team
         teamMember = {
           ...teamMember,
-          teamIds: [...(teamMember.teamIds || []), teamId]
+          teamIds: [...(teamMember.teamIds || []), teamId],
+          workScheduleId: teamMember.workScheduleId || 'default'
         };
         
         state.setUsers(prevUsers => 

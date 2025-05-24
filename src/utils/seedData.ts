@@ -40,7 +40,7 @@ export const createSeedData = (createDemoData = false) => {
       createdAt: new Date().toISOString()
     };
     
-    // Create default admin user
+    // Create default admin user WITH work schedule assigned
     const defaultUser: User = {
       id: userId,
       name: 'Admin User',
@@ -49,6 +49,7 @@ export const createSeedData = (createDemoData = false) => {
       organizationId: orgId,
       teamIds: [teamId],
       status: 'active',
+      workScheduleId: 'default', // FIX: Ensure default work schedule is assigned
       createdAt: new Date().toISOString()
     };
     
@@ -65,7 +66,7 @@ export const createSeedData = (createDemoData = false) => {
     }]));
     
     seedDataCreated = true;
-    console.log('Seed data created successfully');
+    console.log('Seed data created successfully with work schedule assignments');
     return true;
   }
   return false;
@@ -111,6 +112,41 @@ export const migrateUserSchedulesFormat = () => {
   }
 };
 
+// NEW: Migration to ensure all existing users have work schedule assignments
+export const migrateUsersWorkSchedules = () => {
+  try {
+    const usersJson = localStorage.getItem('users');
+    if (!usersJson) return;
+
+    const users = JSON.parse(usersJson);
+    let needsMigration = false;
+
+    const migratedUsers = users.map((user: User) => {
+      if (!user.workScheduleId) {
+        console.log(`Migrating user ${user.name} (${user.id}) to have default work schedule`);
+        needsMigration = true;
+        return {
+          ...user,
+          workScheduleId: 'default'
+        };
+      }
+      return user;
+    });
+
+    if (needsMigration) {
+      localStorage.setItem('users', JSON.stringify(migratedUsers));
+      console.log(`Migrated ${users.length} users to have work schedule assignments`);
+      
+      // Trigger event to notify other components
+      window.dispatchEvent(new CustomEvent('users-migrated', { 
+        detail: { type: 'work-schedule-assignment' }
+      }));
+    }
+  } catch (error) {
+    console.error('Error migrating users work schedules:', error);
+  }
+};
+
 // This function will run data validation and fix any issues found
 export const validateStorageFormat = () => {
   try {
@@ -118,6 +154,9 @@ export const validateStorageFormat = () => {
     
     // Run the user schedules migration
     migrateUserSchedulesFormat();
+    
+    // NEW: Run the users work schedule migration
+    migrateUsersWorkSchedules();
     
     // Verify work schedule assignments format
     const workSchedulesJson = localStorage.getItem('timesheet-app-schedules');
@@ -171,9 +210,14 @@ export const logUserScheduleAssociations = () => {
     
     // Log each user and their associated schedule
     users.forEach((user: any) => {
-      const scheduleId = userSchedules[user.id] || user.workScheduleId || 'default';
+      const scheduleId = user.workScheduleId || userSchedules[user.id] || 'MISSING';
       const scheduleName = scheduleMap[scheduleId] || 'Default schedule';
       console.log(`User: ${user.name} (${user.id}) → Schedule: ${scheduleName} (${scheduleId})`);
+      
+      // Flag users without schedules
+      if (!user.workScheduleId) {
+        console.warn(`⚠️  User ${user.name} is missing workScheduleId!`);
+      }
     });
     
     console.groupEnd();

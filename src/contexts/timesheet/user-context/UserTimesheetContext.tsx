@@ -39,24 +39,53 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
     setViewedUser(currentUser);
   }, [currentUser]);
   
-  // Fetch the work schedule whenever viewedUser changes
+  // FIXED: Fetch the work schedule whenever viewedUser changes - ALWAYS provide a schedule
   useEffect(() => {
     if (viewedUser) {
       try {
         logger.debug(`Fetching work schedule for user: ${viewedUser.id}`);
+        
+        // FIX: getUserSchedule now ALWAYS returns a schedule (never null)
         const schedule = getUserSchedule(viewedUser.id);
         
-        if (schedule) {
-          logger.debug(`Found work schedule for user: ${schedule.name || 'unnamed'}`);
-          setWorkSchedule(schedule);
-        } else {
-          logger.debug(`No work schedule found for user ${viewedUser.id}, using default`);
-          // The getUserSchedule already returns default schedule if no custom one is assigned
-          setWorkSchedule(null);
+        logger.debug(`Work schedule retrieved for user: ${schedule.name || 'unnamed'} (${schedule.id})`);
+        setWorkSchedule(schedule);
+        
+        // Add validation logging
+        if (!viewedUser.workScheduleId) {
+          logger.warn(`User ${viewedUser.name} (${viewedUser.id}) does not have workScheduleId set! Using default schedule.`);
         }
+        
       } catch (error) {
         logger.error(`Error fetching work schedule for user ${viewedUser?.id}:`, error);
-        setWorkSchedule(null);
+        // Even on error, try to provide default schedule instead of null
+        setWorkSchedule({
+          id: 'default',
+          name: 'Default Schedule',
+          userId: 'system',
+          weeks: {
+            1: {
+              monday: { startTime: '', endTime: '' },
+              tuesday: { startTime: '', endTime: '' },
+              wednesday: { startTime: '', endTime: '' },
+              thursday: { startTime: '', endTime: '' },
+              friday: { startTime: '', endTime: '' },
+              saturday: null,
+              sunday: null
+            },
+            2: {
+              monday: { startTime: '', endTime: '' },
+              tuesday: { startTime: '', endTime: '' },
+              wednesday: { startTime: '', endTime: '' },
+              thursday: { startTime: '', endTime: '' },
+              friday: { startTime: '', endTime: '' },
+              saturday: null,
+              sunday: null
+            }
+          },
+          rdoDays: { 1: [], 2: [] },
+          isDefault: true
+        });
       }
     } else {
       setWorkSchedule(null);
@@ -70,7 +99,7 @@ export const UserTimesheetProvider: React.FC<{ children: React.ReactNode }> = ({
         isViewingOtherUser: false, 
         canViewTimesheet: !!viewedUser, 
         canEditTimesheet: !!viewedUser,
-        workSchedule
+        workSchedule // This will now NEVER be null when viewedUser exists
       }}
     >
       {children}

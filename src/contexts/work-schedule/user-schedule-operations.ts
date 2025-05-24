@@ -1,6 +1,6 @@
 
 import { WorkSchedule, User } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { WorkScheduleState } from './internal-types';
 
 interface UserScheduleProps {
@@ -84,7 +84,7 @@ export const createUserScheduleOperations = ({
     }
   };
 
-  // Get the schedule for a user - with caching
+  // FIXED: Get the schedule for a user - ALWAYS return a schedule (never null)
   const getUserSchedule = (userId: string): WorkSchedule => {
     // Check cache first
     const cachedEntry = scheduleCache.get(userId);
