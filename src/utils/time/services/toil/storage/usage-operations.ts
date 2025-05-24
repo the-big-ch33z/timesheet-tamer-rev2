@@ -1,159 +1,162 @@
+import { TOILUsage } from '@/types/toil';
+import { createTimeLogger } from '@/utils/time/errors';
+import { 
+  TOIL_USAGE_KEY,
+  STORAGE_RETRY_DELAY,
+  STORAGE_MAX_RETRIES
+} from './constants';
+import { attemptStorageOperation, loadRawTOILUsage } from './core';
+import { addToDeletedTOILUsage } from './deletion-tracking';
+import { deleteAllToilData } from '../unifiedDeletion';
 
-import { TOILUsage } from "@/types/toil";
-import { createTimeLogger } from "@/utils/time/errors";
-import { TOIL_USAGE_KEY, STORAGE_RETRY_DELAY, STORAGE_MAX_RETRIES } from "./constants";
-import { loadTOILUsage, loadRawTOILUsage } from "./core";
-import { attemptStorageOperation } from "./utils";
-
-const logger = createTimeLogger('TOIL-Storage-UsageOperations');
+const logger = createTimeLogger('TOIL-UsageOperations');
 
 /**
- * Store a TOIL usage record in local storage
- * 
- * @param usage - The TOIL usage record to store
- * @returns Promise that resolves to true if successful, false otherwise
+ * Store a TOIL usage record
  */
 export async function storeTOILUsage(usage: TOILUsage): Promise<boolean> {
   try {
-    const usages = loadTOILUsage();
+    logger.debug(`Storing TOIL usage: ${usage.id}`);
     
-    // Remove any existing usages with the same ID (update case)
-    const filteredUsages = usages.filter(u => u.id !== usage.id);
+    // Load existing usage
+    const existingUsage = loadRawTOILUsage();
     
-    // Add the new/updated usage
-    filteredUsages.push(usage);
+    // Check if this usage already exists
+    const existingIndex = existingUsage.findIndex(u => u.id === usage.id);
     
-    // Store the updated usages array
+    if (existingIndex >= 0) {
+      // Update existing usage
+      existingUsage[existingIndex] = usage;
+    } else {
+      // Add new usage
+      existingUsage.push(usage);
+    }
+    
+    // Save back to storage
     await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(filteredUsages)),
+      () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(existingUsage)),
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
     );
     
-    logger.debug(`TOIL usage successfully stored: ${usage.id}`);
+    logger.debug(`TOIL usage stored successfully: ${usage.id}`);
     return true;
   } catch (error) {
-    logger.error(`Error storing TOIL usage: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Error storing TOIL usage ${usage.id}:`, error);
     return false;
   }
 }
 
 /**
  * Clean up duplicate TOIL usage records
- * 
- * @param userId User ID to clean up records for
- * @returns Number of records removed
  */
 export async function cleanupDuplicateTOILUsage(userId: string): Promise<number> {
   try {
-    const allUsage = loadTOILUsage();
-    const originalCount = allUsage.length;
+    logger.debug(`Cleaning up duplicate TOIL usage for user ${userId}`);
     
-    if (originalCount === 0) {
-      logger.debug('No TOIL usage records found, nothing to clean up');
+    // Load all usage
+    const allUsage = loadRawTOILUsage();
+    
+    // Filter for this user
+    const userUsage = allUsage.filter(usage => usage.userId === userId);
+    
+    // Track seen dates to identify duplicates
+    const seenDates = new Map<string, TOILUsage>();
+    const duplicates: TOILUsage[] = [];
+    
+    // Find duplicates (same date and entryId)
+    userUsage.forEach(usage => {
+      const key = `${usage.date.toString()}-${usage.entryId}`;
+      
+      if (seenDates.has(key)) {
+        // Keep the one with the most recent timestamp or ID if timestamps are equal
+        const existing = seenDates.get(key)!;
+        
+        if (usage.timestamp > existing.timestamp || 
+            (usage.timestamp === existing.timestamp && usage.id > existing.id)) {
+          duplicates.push(existing);
+          seenDates.set(key, usage);
+        } else {
+          duplicates.push(usage);
+        }
+      } else {
+        seenDates.set(key, usage);
+      }
+    });
+    
+    if (duplicates.length === 0) {
+      logger.debug(`No duplicate TOIL usage found for user ${userId}`);
       return 0;
     }
     
-    // Group records by entry ID (unique identifier from the time entry)
-    const usageByEntryId = new Map<string, TOILUsage[]>();
+    logger.debug(`Found ${duplicates.length} duplicate TOIL usage records for user ${userId}`);
     
-    for (const usage of allUsage) {
-      if (usage.userId !== userId) continue; // Only process records for specified user
-      
-      if (!usage.entryId) {
-        logger.warn(`TOIL usage record ${usage.id} has no entry ID, skipping`);
-        continue;
-      }
-      
-      const group = usageByEntryId.get(usage.entryId) || [];
-      group.push(usage);
-      usageByEntryId.set(usage.entryId, group);
-    }
+    // Remove duplicates
+    const duplicateIds = duplicates.map(d => d.id);
+    const cleanedUsage = allUsage.filter(usage => !duplicateIds.includes(usage.id));
     
-    // Consolidate duplicate usage records
-    const consolidatedUsage: TOILUsage[] = [];
-    
-    // Add all non-user records first
-    consolidatedUsage.push(...allUsage.filter(u => u.userId !== userId));
-    
-    // Now process duplicates for the specified user
-    for (const [entryId, usages] of usageByEntryId.entries()) {
-      if (usages.length === 1) {
-        // No duplicates, keep as is
-        consolidatedUsage.push(usages[0]);
-        continue;
-      }
-      
-      // Sort by most recent first
-      usages.sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      
-      // Keep only the most recent usage for this entry ID
-      const mostRecent = usages[0];
-      logger.debug(`Found ${usages.length} duplicate usages for entry ${entryId}, keeping most recent`);
-      
-      consolidatedUsage.push(mostRecent);
-    }
-    
-    // Save consolidated usage
+    // Save back to storage
     await attemptStorageOperation(
-      () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(consolidatedUsage)),
+      () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(cleanedUsage)),
       STORAGE_RETRY_DELAY,
       STORAGE_MAX_RETRIES
     );
     
-    const removed = originalCount - consolidatedUsage.length;
-    logger.debug(`Removed ${removed} duplicate TOIL usage records, ${consolidatedUsage.length} records remaining`);
-    
-    return removed;
+    logger.debug(`Removed ${duplicates.length} duplicate TOIL usage records for user ${userId}`);
+    return duplicates.length;
   } catch (error) {
-    logger.error(`Error cleaning up duplicate TOIL usage: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Error cleaning up duplicate TOIL usage for user ${userId}:`, error);
     return 0;
   }
 }
 
 /**
- * Delete TOIL usage records associated with a specific entry ID
- * Now uses raw loading to ensure physical deletion from storage
- * 
- * @param entryId - The ID of the entry whose usage records should be deleted
- * @returns Promise that resolves to the number of records deleted
+ * Delete TOIL usage by entry ID - now uses unified deletion approach
  */
 export async function deleteTOILUsageByEntryId(entryId: string): Promise<number> {
   try {
-    if (!entryId) {
-      logger.warn('Cannot delete TOIL usage records: No entryId provided');
+    logger.debug(`Deleting TOIL usage for entry ID: ${entryId}`);
+    
+    // First, find which usage records would be affected
+    const allUsage = loadRawTOILUsage();
+    const usageToDelete = allUsage.filter(usage => usage.entryId === entryId);
+    
+    if (usageToDelete.length === 0) {
+      logger.debug(`No TOIL usage found for entry ID: ${entryId}`);
       return 0;
     }
     
-    // Use raw loading to get actual storage contents, not filtered data
-    const allUsage = loadRawTOILUsage();
-    const originalCount = allUsage.length;
+    // Get the userId from the first usage record for targeted deletion
+    const userId = usageToDelete[0].userId;
     
-    // Find usage records with matching entry ID
-    const usageToDelete = allUsage.filter(usage => usage.entryId === entryId);
+    console.log(`[TOIL-DEBUG] Found ${usageToDelete.length} TOIL usage records for entry ${entryId}, user ${userId}`);
     
-    // Filter out records with the matching entry ID for physical removal
-    const remainingUsage = allUsage.filter(usage => usage.entryId !== entryId);
-    const deletedCount = usageToDelete.length;
+    // Add to deletion tracking first
+    const trackingPromises = usageToDelete.map(usage => addToDeletedTOILUsage(usage.id));
+    await Promise.all(trackingPromises);
     
-    if (deletedCount > 0) {
-      // Save the physically updated usage records back to storage
+    // Use unified deletion to clear user's TOIL data
+    const deletionResult = await deleteAllToilData(userId);
+    
+    if (deletionResult.success) {
+      logger.debug(`Successfully deleted ${usageToDelete.length} TOIL usage records for entry ${entryId} via unified deletion`);
+      return usageToDelete.length;
+    } else {
+      logger.error(`Failed to delete TOIL usage for entry ${entryId} via unified deletion:`, deletionResult.errors);
+      
+      // Fallback to manual deletion
+      const remainingUsage = allUsage.filter(usage => usage.entryId !== entryId);
       await attemptStorageOperation(
         () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(remainingUsage)),
         STORAGE_RETRY_DELAY,
         STORAGE_MAX_RETRIES
       );
       
-      logger.debug(`Physically deleted ${deletedCount} TOIL usage records for entry ID: ${entryId}`);
-    } else {
-      logger.debug(`No TOIL usage records found for entry ID: ${entryId}`);
+      logger.debug(`Fallback deletion completed for ${usageToDelete.length} TOIL usage records`);
+      return usageToDelete.length;
     }
-    
-    return deletedCount;
   } catch (error) {
-    logger.error(`Error deleting TOIL usage records for entry ${entryId}: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Error deleting TOIL usage for entry ${entryId}:`, error);
     return 0;
   }
 }

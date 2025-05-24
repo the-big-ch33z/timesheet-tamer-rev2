@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { TOILRecord } from '@/types/toil';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -10,8 +9,10 @@ import {
 import { loadTOILRecords, filterRecordsByDate, filterRecordsByEntryId, loadRawTOILRecords } from './core';
 import { attemptStorageOperation } from './utils';
 import { format } from 'date-fns';
+import { addToDeletedTOILRecords } from './deletion-tracking';
+import { deleteAllToilData } from '../unifiedDeletion';
 
-const logger = createTimeLogger('TOIL-Storage');
+const logger = createTimeLogger('TOIL-RecordOperations');
 
 /**
  * Store a TOIL record in local storage
@@ -123,40 +124,52 @@ export async function deleteTOILRecordById(recordId: string): Promise<boolean> {
 }
 
 /**
- * Delete all TOIL records associated with a specific time entry
- * Now uses raw loading to ensure physical deletion from storage
+ * Delete TOIL records by entry ID - now uses unified deletion approach
  */
 export async function deleteTOILRecordsByEntryId(entryId: string): Promise<number> {
   try {
-    // Use raw loading to get actual storage contents, not filtered data
-    const allRecords = loadRawTOILRecords();
+    logger.debug(`Deleting TOIL records for entry ID: ${entryId}`);
     
-    // Find records with matching entry ID
+    // First, find which records would be affected
+    const allRecords = loadRawTOILRecords();
     const recordsToDelete = allRecords.filter(record => record.entryId === entryId);
     
     if (recordsToDelete.length === 0) {
-      logger.debug(`No TOIL records found for entry ID ${entryId}`);
+      logger.debug(`No TOIL records found for entry ID: ${entryId}`);
       return 0;
     }
     
-    // Filter out the records with this entry ID for physical removal
-    const filteredRecords = allRecords.filter(record => record.entryId !== entryId);
+    // Get the userId from the first record for targeted deletion
+    const userId = recordsToDelete[0].userId;
     
-    // Save the physically updated records back to storage
-    await attemptStorageOperation(
-      () => {
-        localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(filteredRecords));
-      },
-      STORAGE_RETRY_DELAY,
-      STORAGE_MAX_RETRIES
-    );
+    console.log(`[TOIL-DEBUG] Found ${recordsToDelete.length} TOIL records for entry ${entryId}, user ${userId}`);
     
-    const deletedCount = recordsToDelete.length;
-    logger.debug(`Physically deleted ${deletedCount} TOIL records for entry ID ${entryId}`);
+    // Add to deletion tracking first
+    const trackingPromises = recordsToDelete.map(record => addToDeletedTOILRecords(record.id));
+    await Promise.all(trackingPromises);
     
-    return deletedCount;
+    // Use unified deletion to clear user's TOIL data
+    const deletionResult = await deleteAllToilData(userId);
+    
+    if (deletionResult.success) {
+      logger.debug(`Successfully deleted ${recordsToDelete.length} TOIL records for entry ${entryId} via unified deletion`);
+      return recordsToDelete.length;
+    } else {
+      logger.error(`Failed to delete TOIL records for entry ${entryId} via unified deletion:`, deletionResult.errors);
+      
+      // Fallback to manual deletion
+      const remainingRecords = allRecords.filter(record => record.entryId !== entryId);
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(remainingRecords)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      
+      logger.debug(`Fallback deletion completed for ${recordsToDelete.length} TOIL records`);
+      return recordsToDelete.length;
+    }
   } catch (error) {
-    logger.error(`Failed to delete TOIL records for entry ID ${entryId}:`, error);
+    logger.error(`Error deleting TOIL records for entry ${entryId}:`, error);
     return 0;
   }
 }

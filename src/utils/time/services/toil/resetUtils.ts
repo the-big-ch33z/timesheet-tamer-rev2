@@ -1,4 +1,5 @@
 import { createTimeLogger } from '@/utils/time/errors';
+import { deleteAllToilData } from './unifiedDeletion';
 import { 
   TOIL_RECORDS_KEY, 
   TOIL_USAGE_KEY,
@@ -16,22 +17,22 @@ const logger = createTimeLogger('TOIL-ResetUtils');
 
 /**
  * Completely reset all TOIL data for a user or globally
- * This includes both data and deletion tracking
+ * Now uses the unified deletion function
  */
 export async function resetTOILData(userId?: string): Promise<boolean> {
   try {
     logger.debug(`Resetting TOIL data${userId ? ` for user ${userId}` : ' globally'}`);
     
-    if (userId) {
-      // Reset data for specific user
-      await resetUserTOILData(userId);
-    } else {
-      // Reset all TOIL data globally
-      await resetAllTOILData();
-    }
+    // Use the unified deletion function
+    const result = await deleteAllToilData(userId);
     
-    logger.info(`TOIL data reset completed${userId ? ` for user ${userId}` : ' globally'}`);
-    return true;
+    if (result.success) {
+      logger.info(`TOIL data reset completed${userId ? ` for user ${userId}` : ' globally'}: ${result.deletedRecords} records, ${result.deletedUsage} usage, ${result.deletedCaches} caches deleted`);
+      return true;
+    } else {
+      logger.error(`TOIL data reset failed${userId ? ` for user ${userId}` : ''}: ${result.errors.join(', ')}`);
+      return false;
+    }
   } catch (error) {
     logger.error(`Error resetting TOIL data${userId ? ` for user ${userId}` : ''}:`, error);
     return false;

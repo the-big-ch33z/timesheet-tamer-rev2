@@ -9,6 +9,7 @@ import {
 } from './constants';
 import { createTimeLogger } from "@/utils/time/errors";
 import { loadDeletedTOILRecords, loadDeletedTOILUsage } from './deletion-tracking';
+import { deleteAllToilData } from '../unifiedDeletion';
 
 const logger = createTimeLogger('TOIL-Storage-Core');
 
@@ -239,26 +240,31 @@ export function clearSummaryCache(userId?: string, monthYear?: string): void {
 }
 
 /**
- * Clear all TOIL caches
+ * Clear all TOIL caches - now uses unified deletion
  */
 export function clearAllTOILCaches(): void {
   try {
-    // Get all localStorage keys
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(TOIL_SUMMARY_PREFIX)) {
-        keys.push(key);
+    // Use the unified deletion function for cache clearing only
+    deleteAllToilData().then(result => {
+      if (result.success) {
+        logger.debug(`Cleared ${result.deletedCaches} TOIL cache entries via unified deletion`);
+      } else {
+        logger.error('Failed to clear TOIL caches via unified deletion:', result.errors);
       }
-    }
-    
-    // Remove all TOIL cache keys
-    keys.forEach(key => localStorage.removeItem(key));
-    
-    // Clear the in-memory cache
-    toilDayInfoCache.clear();
-    
-    logger.debug(`Cleared ${keys.length} TOIL cache entries`);
+    }).catch(error => {
+      logger.error('Error calling unified deletion for cache clearing:', error);
+      // Fallback to manual clearing
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(TOIL_SUMMARY_PREFIX)) {
+          keys.push(key);
+        }
+      }
+      keys.forEach(key => localStorage.removeItem(key));
+      toilDayInfoCache.clear();
+      logger.debug(`Fallback: Cleared ${keys.length} TOIL cache entries manually`);
+    });
   } catch (error) {
     logger.error('Error clearing all TOIL caches:', error);
   }
