@@ -48,19 +48,19 @@ export { toilService };
 
 // Track the last time we cleared the cache to prevent excessive clearing
 let lastCacheClearTime = 0;
-const CACHE_CLEAR_THROTTLE = 5000; // 5 seconds
+const CACHE_CLEAR_THROTTLE = 30000; // Increased to 30 seconds to be less aggressive
 
 /**
- * Add a more selective cache clearing function
- * Avoid clearing caches too frequently or when not needed
+ * More selective cache clearing function
+ * Only clears when absolutely necessary and with proper throttling
  */
 export function clearCache(userId?: string, monthYear?: string) {
   try {
     const now = Date.now();
     
-    // Throttle cache clearing operations
+    // Throttle cache clearing operations more aggressively
     if (now - lastCacheClearTime < CACHE_CLEAR_THROTTLE) {
-      logger.debug('Cache clearing throttled - ignoring request');
+      logger.debug('Cache clearing throttled - ignoring request (too frequent)');
       return false;
     }
     
@@ -71,15 +71,15 @@ export function clearCache(userId?: string, monthYear?: string) {
       logger.debug(`Selective cache clearing for user ${userId}, month ${monthYear}`);
       clearSummaryCache(userId, monthYear);
     } else {
-      // Broader but still controlled cache clearing
-      logger.debug('Broader cache clearing requested');
+      // Only clear when explicitly requested, not automatically
+      logger.warn('Broad cache clearing requested - this should be rare');
       clearSummaryCache();
     }
     
     // Also invalidate any in-memory caches
     toilService.clearCache();
     
-    logger.debug('TOIL caches cleared');
+    logger.debug('TOIL caches cleared selectively');
     return true;
   } catch (e) {
     logger.error('Error clearing TOIL caches:', e);
@@ -96,6 +96,28 @@ export function clearCacheForCurrentMonth(userId: string, date: Date) {
   return clearCache(userId, monthYear);
 }
 
+/**
+ * Validate cache before clearing - only clear if data is stale
+ */
+export function validateAndClearCache(userId: string, monthYear: string) {
+  try {
+    // Check if we have valid cached data first
+    const summary = toilService.getTOILSummary(userId, monthYear);
+    
+    // Only clear if we don't have valid data or it's explicitly stale
+    if (!summary || summary.accrued === 0) {
+      logger.debug(`Clearing stale cache for ${userId} in ${monthYear}`);
+      return clearCache(userId, monthYear);
+    } else {
+      logger.debug(`Cache is valid for ${userId} in ${monthYear}, preserving`);
+      return false;
+    }
+  } catch (e) {
+    logger.error('Error validating cache:', e);
+    return false;
+  }
+}
+
 // Add debug utilities
 export function getDebugInfo() {
   return {
@@ -103,9 +125,10 @@ export function getDebugInfo() {
     queueLength: toilService.getQueueLength(),
     isQueueProcessing: toilService.isQueueProcessing(),
     lastCacheClear: new Date(lastCacheClearTime).toISOString(),
-    unifiedEventServiceInitialized: !!unifiedTOILEventService
+    unifiedEventServiceInitialized: !!unifiedTOILEventService,
+    cacheThrottleMs: CACHE_CLEAR_THROTTLE
   };
 }
 
 // Module initialization marker
-logger.debug('TOIL service module initialized with unified event handling');
+logger.debug('TOIL service module initialized with selective cache management');

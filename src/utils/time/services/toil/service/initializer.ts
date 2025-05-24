@@ -1,7 +1,6 @@
 
 import { createTimeLogger } from "@/utils/time/errors";
 import { toilQueueManager } from "../queue/TOILQueueManager";
-import { clearSummaryCache } from "../storage";
 
 const logger = createTimeLogger('TOILService-Initializer');
 
@@ -24,15 +23,16 @@ export class TOILServiceInitializer {
     try {
       logger.debug('Initializing TOILService and dependent components');
       
-      // Clear any stored cache on initialization
-      this.clearCache();
+      // REMOVED: Aggressive cache clearing on initialization
+      // This was causing TOIL summaries to be wiped out immediately after being saved
+      // this.clearCache();
       
       // Initialize the queue manager now that all dependencies are ready
       toilQueueManager.initialize();
       
       this.initialized = true;
       this.initializationError = null;
-      logger.debug('TOILService fully initialized');
+      logger.debug('TOILService fully initialized (cache preserved)');
     } catch (error) {
       logger.error('Error initializing TOILService:', error);
       this.initializationError = error instanceof Error 
@@ -57,11 +57,12 @@ export class TOILServiceInitializer {
   }
   
   /**
-   * Clear all caches
+   * Clear all caches - only call when explicitly needed
    */
   public clearCache(): void {
     try {
-      logger.debug('Clearing all TOIL caches');
+      logger.debug('Manually clearing all TOIL caches');
+      const { clearSummaryCache } = require('../storage');
       clearSummaryCache(); // Pass no parameters to clear all caches
       logger.debug('Cache cleared successfully');
     } catch (error) {

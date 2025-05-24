@@ -34,7 +34,7 @@ interface CalendarGridProps {
   userId: string;
 }
 
-// Add debug mode feature toggle
+// Set debug mode to false to reduce console spam
 const DEBUG_CALENDAR = false;
 
 const CalendarGrid: React.FC<CalendarGridProps> = memo(({
@@ -64,7 +64,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       (data.requiresRefresh === true);
     
     if (shouldRefresh) {
-      logger.debug(`[CalendarGrid] Received TOIL event, refreshing (Source: ${data.source || 'unknown'})`);
+      if (DEBUG_CALENDAR) {
+        logger.debug(`[CalendarGrid] Received TOIL event, refreshing (Source: ${data.source || 'unknown'})`);
+      }
       setToilRefreshCounter(prev => prev + 1);
     }
   }, [userId, logger]);
@@ -73,8 +75,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   useEffect(() => {
     // Create a debug logger especially for events
     const eventLogger = (name: string) => (data: TOILEventData) => {
-      logger.debug(`[CalendarGrid:Events] Received ${name} event:`, 
-        data?.userId === userId ? 'matches-user' : 'other-user');
+      if (DEBUG_CALENDAR) {
+        logger.debug(`[CalendarGrid:Events] Received ${name} event:`, 
+          data?.userId === userId ? 'matches-user' : 'other-user');
+      }
     };
     
     // Array of event subscriptions to manage together
@@ -101,7 +105,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       eventBus.subscribe(TOIL_EVENTS.CALENDAR_REFRESH, (data: TOILEventData) => {
         eventLogger('CALENDAR_REFRESH')(data);
         // Always refresh for this direct event type
-        logger.debug(`[CalendarGrid] Received direct calendar refresh event from ${data?.source || 'unknown'}`);
+        if (DEBUG_CALENDAR) {
+          logger.debug(`[CalendarGrid] Received direct calendar refresh event from ${data?.source || 'unknown'}`);
+        }
         setToilRefreshCounter(prev => prev + 1);
       })
     ];
@@ -131,24 +137,24 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
   // Memoize days calculation
   const days = useMemo(() => {
     if (DEBUG_CALENDAR) logger.debug("Calculating calendar grid days");
-    console.log("[CalendarGrid] Calculating calendar days for", format(currentMonth, 'MMMM yyyy'));
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
     return eachDayOfInterval({ start: startDate, end: endDate });
-  }, [currentMonth, logger, DEBUG_CALENDAR]);
+  }, [currentMonth, logger]);
 
   // Memoize RDO shift calculation
   const shiftedRDOMap = useMemo(() => {
-    console.log("[CalendarGrid] Calculating shifted RDOs");
+    if (DEBUG_CALENDAR) {
+      logger.debug("Calculating shifted RDOs");
+    }
     return getShiftedRDOsForMonth(days, workSchedule, holidays);
-  }, [days, workSchedule, holidays]);
+  }, [days, workSchedule, holidays, logger]);
 
   // Memoize heavy day data calculations - now includes toilRefreshCounter as dependency
   const daysData = useMemo(() => {
     if (DEBUG_CALENDAR) logger.debug("Pre-calculating calendar days data");
-    console.log("[CalendarGrid] Pre-calculating all day data (Refresh #" + toilRefreshCounter + ")");
     const monthStart = startOfMonth(currentMonth);
     const calculatedData = [];
     
@@ -197,8 +203,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         shiftReason = shiftInfo.reason;
       }
 
-      // Add logging for TOIL check
-      console.log(`[CalendarGrid] Checking TOIL for day: ${format(day, 'yyyy-MM-dd')}`);
+      // REMOVED: Excessive console logging that was causing performance issues
+      // Only log TOIL checking in debug mode
+      if (DEBUG_CALENDAR) {
+        logger.debug(`Checking TOIL for day: ${format(day, 'yyyy-MM-dd')}`);
+      }
       
       // Initialize with default values that match TOILDayInfo interface
       let toilInfo: TOILDayInfo = {
@@ -212,12 +221,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
         // Use the hasTOILForDay function if available
         if (typeof hasTOILForDay === 'function') {
           toilInfo = hasTOILForDay(userId, day);
-          console.log(`[CalendarGrid] TOIL for ${format(day, 'yyyy-MM-dd')}: accrued=${toilInfo.hasAccrued}, used=${toilInfo.hasUsed}, hours=${toilInfo.toilHours}`);
-        } else {
-          console.log(`[CalendarGrid] hasTOILForDay function not available, using default values`);
+          if (DEBUG_CALENDAR) {
+            logger.debug(`TOIL for ${format(day, 'yyyy-MM-dd')}: accrued=${toilInfo.hasAccrued}, used=${toilInfo.hasUsed}, hours=${toilInfo.toilHours}`);
+          }
+        } else if (DEBUG_CALENDAR) {
+          logger.debug(`hasTOILForDay function not available, using default values`);
         }
       } catch (error) {
-        console.error(`[CalendarGrid] Error checking TOIL for day ${format(day, 'yyyy-MM-dd')}:`, error);
+        logger.error(`Error checking TOIL for day ${format(day, 'yyyy-MM-dd')}:`, error);
       }
 
       calculatedData.push({
@@ -245,7 +256,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
       });
     }
     
-    console.log(`[CalendarGrid] Completed calculation for ${calculatedData.length} days`);
+    if (DEBUG_CALENDAR) {
+      logger.debug(`Completed calculation for ${calculatedData.length} days`);
+    }
     return calculatedData;
   }, [
     days,
@@ -255,7 +268,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = memo(({
     getStartAndEndTimeForDay,
     currentMonth,
     shiftedRDOMap,
-    DEBUG_CALENDAR,
     logger,
     userId,
     toilRefreshCounter // This dependency ensures recalculation when TOIL updates occur
