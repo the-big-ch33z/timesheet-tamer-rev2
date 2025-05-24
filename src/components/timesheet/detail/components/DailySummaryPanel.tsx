@@ -30,7 +30,7 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
   };
   return <div className="bg-white rounded-lg h-full">
       <div className="flex items-center justify-between mb-1">
-        <h3 className="text-base font-medium">Daily Summary</h3>
+        <h3 className="text-base font-medium py-[12px] px-[99px]">Daily Summary</h3>
         
       </div>
       
@@ -38,18 +38,18 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
         {/* Left content - Hours information */}
         <div className="flex-1 space-y-2">
           <div>
-            <h4 className="text-xs font-medium text-gray-700 mb-0.5">Hours Progress</h4>
-            <p className="text-base font-semibold">
+            <h4 className="text-xs font-medium text-gray-700 mb-0.5 px-[59px]">Hours Progress</h4>
+            <p className="text-base font-semibold px-[62px]">
               {roundedSubmitted} <span className="text-gray-400">/</span> {roundedRequired} hours
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 px-[54px]">
               {remainingHours > 0 ? `${remainingHours} hours remaining` : "All hours submitted"}
             </p>
           </div>
         </div>
         
         {/* Right content - Progress bar and completion */}
-        <div className="flex flex-col items-center space-y-1">
+        <div className="flex flex-col items-center space-y-1 px-0 py-0 my-[35px]">
           <VerticalProgressBar value={progressPercentage} height={50} width={12} barColor={getProgressColor()} />
           
           <div className="text-center">
