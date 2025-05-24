@@ -2,6 +2,8 @@
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Team } from "@/types";
 import { CalendarIcon, RefreshCcw, UserPlus } from "lucide-react";
 import { format, addMonths, subMonths } from "date-fns";
@@ -17,6 +19,8 @@ interface TeamHeaderProps {
   onRefreshData: () => void;
   selectedMonth: Date;
   setSelectedMonth: (date: Date) => void;
+  includeManagerInTable: boolean;
+  setIncludeManagerInTable: (value: boolean) => void;
 }
 
 export const TeamHeader: React.FC<TeamHeaderProps> = ({
@@ -27,7 +31,9 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({
   onAddMemberClick,
   onRefreshData,
   selectedMonth,
-  setSelectedMonth
+  setSelectedMonth,
+  includeManagerInTable,
+  setIncludeManagerInTable
 }) => {
   const handlePreviousMonth = () => {
     setSelectedMonth(subMonths(selectedMonth, 1));
@@ -112,6 +118,20 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({
           </Button>
         </div>
       </div>
+      
+      {/* Toggle for showing manager in table */}
+      {selectedTeamId && (
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Switch 
+            id="show-manager"
+            checked={includeManagerInTable}
+            onCheckedChange={setIncludeManagerInTable}
+          />
+          <Label htmlFor="show-manager" className="cursor-pointer text-sm">
+            Show manager in table
+          </Label>
+        </div>
+      )}
     </div>
   );
 };

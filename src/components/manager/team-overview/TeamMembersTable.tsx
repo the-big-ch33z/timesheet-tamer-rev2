@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/types";
+import { User, Team } from "@/types";
 import { Loader2 } from "lucide-react";
 import { TeamMemberMetrics } from '@/hooks/useTeamMemberMetrics';
 
@@ -24,6 +24,7 @@ interface TeamMembersTableProps {
   metrics?: Record<string, TeamMemberMetrics>;
   showMetrics?: boolean;
   selectedMonth?: Date;
+  selectedTeam?: Team | null;
 }
 
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({ 
@@ -33,7 +34,8 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   setUserToRestore,
   metrics = {},
   showMetrics = true,
-  selectedMonth
+  selectedMonth,
+  selectedTeam
 }) => {
   const { toast } = useToast();
   
@@ -79,6 +81,8 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         <TableBody>
           {teamMembers.map(member => {
             const memberMetrics = metrics[member.id];
+            const isManager = member.id === selectedTeam?.managerId;
+            
             return (
               <TableRow key={member.id}>
                 <TableCell className="flex items-center gap-3">
@@ -100,7 +104,18 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     <div className="text-sm text-muted-foreground">{member.email}</div>
                   </div>
                 </TableCell>
-                <TableCell>{member.role}</TableCell>
+                <TableCell>
+                  {isManager ? (
+                    <div className="flex items-center gap-2">
+                      {member.role}
+                      <Badge className="bg-green-100 text-green-800 border-green-200">
+                        Manager
+                      </Badge>
+                    </div>
+                  ) : (
+                    member.role
+                  )}
+                </TableCell>
                 
                 {showMetrics && (
                   <>

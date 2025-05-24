@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Team, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { TeamHeader } from "./TeamHeader";
@@ -38,13 +38,26 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
   const [userToArchive, setUserToArchive] = useState<string | null>(null);
   const [userToRestore, setUserToRestore] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [includeManagerInTable, setIncludeManagerInTable] = useState<boolean>(false);
   
-  // Get metrics for team members
-  const { metrics } = useTeamMemberMetrics(teamMembers, selectedMonth);
+  // Create the display team members list that conditionally includes the manager
+  const displayTeamMembers = useMemo(() => {
+    if (includeManagerInTable && manager && selectedTeam) {
+      // Include manager in the list if toggle is enabled and manager is not already in team members
+      const isManagerAlreadyInTeam = teamMembers.some(member => member.id === manager.id);
+      if (!isManagerAlreadyInTeam) {
+        return [...teamMembers, manager];
+      }
+    }
+    return teamMembers;
+  }, [teamMembers, manager, includeManagerInTable, selectedTeam]);
   
-  // Get user by ID from team members
+  // Get metrics for the display team members (including manager if toggle is on)
+  const { metrics } = useTeamMemberMetrics(displayTeamMembers, selectedMonth);
+  
+  // Get user by ID from display team members
   const getUserById = (userId: string) => {
-    return teamMembers.find(member => member.id === userId);
+    return displayTeamMembers.find(member => member.id === userId);
   };
 
   return (
@@ -60,6 +73,8 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
             onRefreshData={onRefreshData}
             selectedMonth={selectedMonth}
             setSelectedMonth={setSelectedMonth}
+            includeManagerInTable={includeManagerInTable}
+            setIncludeManagerInTable={setIncludeManagerInTable}
           />
           
           <div className="mb-6 p-4 border rounded-lg bg-slate-50">
@@ -76,13 +91,14 @@ const TeamOverview: React.FC<TeamOverviewProps> = ({
           </div>
           
           <TeamMembersTable 
-            teamMembers={teamMembers}
+            teamMembers={displayTeamMembers}
             onMemberSelect={onEditUser}
             setUserToArchive={setUserToArchive}
             setUserToRestore={setUserToRestore}
             metrics={metrics}
             showMetrics={true}
             selectedMonth={selectedMonth}
+            selectedTeam={selectedTeam}
           />
         </>
       ) : (
