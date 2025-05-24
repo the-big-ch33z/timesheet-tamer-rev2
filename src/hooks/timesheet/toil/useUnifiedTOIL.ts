@@ -8,12 +8,13 @@ import { useToilState } from './hooks/useToilState';
 import { useToilCache } from './hooks/useToilCache';
 import { useToilEvents } from './hooks/useToilEvents';
 import { useToilCalculation } from './hooks/useToilCalculation';
+import { toilCircuitBreaker } from '@/utils/time/services/toil/circuitBreaker';
 
 // Create a logger for this hook
 const logger = createTimeLogger('useUnifiedTOIL');
 
-// OPTIMIZED: More responsive refresh intervals
-const DEFAULT_REFRESH_INTERVAL = 3000; // 3 seconds
+// OPTIMIZED: Increased refresh intervals to reduce cascading
+const DEFAULT_REFRESH_INTERVAL = 5000; // 5 seconds
 
 export interface UseUnifiedTOILProps {
   userId: string;
@@ -46,11 +47,16 @@ export interface UseUnifiedTOILResult {
   // Utility functions
   isToilEntry: (entry: TimeEntry) => boolean;
   refreshSummary: () => void;
+  
+  // Circuit breaker controls
+  circuitBreakerStatus: any;
+  stopCalculations: () => void;
+  resumeCalculations: () => void;
 }
 
 /**
  * Unified TOIL hook that provides comprehensive TOIL functionality
- * REFACTORED: Now uses composition of smaller, focused hooks
+ * REFACTORED: Now uses circuit breaker to prevent cascading calculations
  */
 export function useUnifiedTOIL({
   userId,
@@ -59,7 +65,7 @@ export function useUnifiedTOIL({
   workSchedule,
   options = {}
 }: UseUnifiedTOILProps): UseUnifiedTOILResult {
-  // Default options
+  // Default options with increased intervals
   const { 
     monthOnly = false,
     autoRefresh = true,
@@ -82,7 +88,10 @@ export function useUnifiedTOIL({
       calculateToilForDay: async () => testProps?.summary || null,
       triggerTOILCalculation: async () => testProps?.summary || null,
       isToilEntry: () => false,
-      refreshSummary: () => {}
+      refreshSummary: () => {},
+      circuitBreakerStatus: { globallyDisabled: false, calculationsInProgress: 0 },
+      stopCalculations: () => {},
+      resumeCalculations: () => {}
     };
   }
 
@@ -129,10 +138,10 @@ export function useUnifiedTOIL({
     setError
   });
 
-  // Use the calculation hook
+  // Use the calculation hook with circuit breaker integration
   const {
-    calculateToilForDay,
-    triggerTOILCalculation,
+    calculateToilForDay: originalCalculateToilForDay,
+    triggerTOILCalculation: originalTriggerTOILCalculation,
     isToilEntry
   } = useToilCalculation({
     userId,
@@ -148,7 +157,38 @@ export function useUnifiedTOIL({
     isTestMode
   });
 
-  // Use the events hook
+  // Wrap calculation functions with circuit breaker
+  const calculateToilForDay = useMemo(() => async (): Promise<TOILSummary | null> => {
+    if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      logger.debug(`Circuit breaker blocking TOIL calculation for ${userId}-${monthYear}`);
+      return toilSummary;
+    }
+
+    toilCircuitBreaker.startCalculation(userId, monthYear);
+    try {
+      const result = await originalCalculateToilForDay();
+      return result;
+    } finally {
+      toilCircuitBreaker.finishCalculation(userId, monthYear);
+    }
+  }, [userId, monthYear, originalCalculateToilForDay, toilSummary]);
+
+  const triggerTOILCalculation = useMemo(() => async (): Promise<TOILSummary | null> => {
+    if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      logger.debug(`Circuit breaker blocking manual TOIL calculation for ${userId}-${monthYear}`);
+      return toilSummary;
+    }
+
+    toilCircuitBreaker.startCalculation(userId, monthYear);
+    try {
+      const result = await originalTriggerTOILCalculation();
+      return result;
+    } finally {
+      toilCircuitBreaker.finishCalculation(userId, monthYear);
+    }
+  }, [userId, monthYear, originalTriggerTOILCalculation, toilSummary]);
+
+  // Use the events hook with reduced frequency
   useToilEvents({
     userId,
     monthYear,
@@ -164,7 +204,7 @@ export function useUnifiedTOIL({
     loadSummary();
   }, [userId, date, loadSummary]);
 
-  // IMPROVED: More responsive calculation when entries change
+  // IMPROVED: More conservative calculation when entries change
   // Create a stable reference for the entries array to detect actual changes
   const entriesKey = useMemo(() => {
     return entries.map(e => `${e.id}-${e.hours}-${e.date}`).join('|');
@@ -173,16 +213,40 @@ export function useUnifiedTOIL({
   useEffect(() => {
     if (!userId || !date || !autoRefresh) return;
     
-    logger.debug(`Entries changed (${entries.length} entries), triggering immediate TOIL calculation`);
+    // Check circuit breaker before proceeding
+    if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      logger.debug('Circuit breaker blocking entries change calculation');
+      return;
+    }
     
-    // Use a shorter timeout for more responsive updates
+    logger.debug(`Entries changed (${entries.length} entries), scheduling TOIL calculation with increased delay`);
+    
+    // INCREASED timeout for more conservative updates
     const timeoutId = setTimeout(() => {
-      logger.debug('Calculating TOIL due to entries change');
-      calculateToilForDay();
-    }, 50); // Reduced from 200ms to 50ms for faster response
+      if (toilCircuitBreaker.canCalculate(userId, monthYear)) {
+        logger.debug('Calculating TOIL due to entries change');
+        calculateToilForDay();
+      } else {
+        logger.debug('Circuit breaker prevented scheduled calculation');
+      }
+    }, 1000); // Increased from 50ms to 1000ms for better stability
     
     return () => clearTimeout(timeoutId);
-  }, [userId, date, entriesKey, calculateToilForDay, autoRefresh]); // Use entriesKey instead of entries
+  }, [userId, date, entriesKey, calculateToilForDay, autoRefresh, monthYear]); // Use entriesKey instead of entries
+
+  // Circuit breaker control functions
+  const stopCalculations = useMemo(() => () => {
+    toilCircuitBreaker.stopAllCalculations();
+    logger.info('TOIL calculations stopped by user');
+  }, []);
+
+  const resumeCalculations = useMemo(() => () => {
+    toilCircuitBreaker.resumeCalculations();
+    logger.info('TOIL calculations resumed by user');
+  }, []);
+
+  // Get circuit breaker status
+  const circuitBreakerStatus = useMemo(() => toilCircuitBreaker.getStatus(), []);
 
   return {
     toilSummary,
@@ -192,7 +256,10 @@ export function useUnifiedTOIL({
     calculateToilForDay,
     triggerTOILCalculation,
     isToilEntry,
-    refreshSummary
+    refreshSummary,
+    circuitBreakerStatus,
+    stopCalculations,
+    resumeCalculations
   };
 }
 
