@@ -1,8 +1,8 @@
-
 import { TOILSummary } from "@/types/toil";
 import { eventBus } from "@/utils/events/EventBus";
 import { TOIL_EVENTS, TOILEventData } from "@/utils/events/eventTypes";
 import { timeEventsService } from "@/utils/time/events/timeEventsService";
+import { toilEventCoordinator } from "./eventCoordinator";
 import { createTimeLogger } from "@/utils/time/errors";
 import { format } from "date-fns";
 
@@ -62,7 +62,7 @@ export const ensureStandardTOILEventData = (data: any): TOILEventData => {
 class UnifiedTOILEventService {
   /**
    * Helper function to dispatch TOIL summary update events
-   * Integrates with all event systems for backward compatibility
+   * Now uses the event coordinator to prevent cascading
    */
   public dispatchTOILSummaryEvent = (summary: TOILSummary): boolean => {
     try {
@@ -95,54 +95,28 @@ class UnifiedTOILEventService {
         // Continue despite warning
       }
       
-      // Create a unified event payload with all required fields
-      const eventData: TOILEventData = ensureStandardTOILEventData({
-        userId: summary.userId,
-        monthYear: summary.monthYear,
-        timestamp: Date.now(),
-        summary: summary,
-        requiresRefresh: true,
-        date: summary.monthYear + '-01' // Ensure date is also present
-      });
-      
-      // 1. Dispatch through the centralized event bus with minimal debounce
-      eventBus.publish(TOIL_EVENTS.SUMMARY_UPDATED, {
-        ...summary,
-        ...eventData
-      }, { debounce: 10 });
-      
-      // 2. Also dispatch a calendar refresh event to ensure immediate UI updates
-      eventBus.publish(TOIL_EVENTS.CALCULATED, {
-        ...eventData,
-        status: 'completed'
-      }, { debounce: 10 });
-      
-      // 3. Dispatch old-style DOM event for backward compatibility
-      if (typeof window !== 'undefined') {
-        const event = new CustomEvent('toil:summary-updated', { 
-          detail: {
-            ...summary,
-            ...eventData
-          }
-        });
-        window.dispatchEvent(event);
-      }
-      
-      // 4. Also dispatch through the timeEventsService for complete backward compatibility
-      timeEventsService.publish('toil-updated', {
-        userId: summary.userId,
-        monthYear: summary.monthYear,
-        summary,
-        timestamp: Date.now()
-      });
-      
-      logger.debug('TOIL summary update events dispatched:', {
+      logger.debug('Dispatching TOIL summary through coordinator:', {
         userId: summary.userId, 
         monthYear: summary.monthYear,
         accrued: summary.accrued,
         used: summary.used,
         remaining: summary.remaining
       });
+      
+      // Use the event coordinator to batch and deduplicate events
+      toilEventCoordinator.queueSummaryUpdate(summary, 'unifiedTOILEventService');
+      
+      // Keep minimal backward compatibility - only DOM events, no additional EventBus events
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('toil:summary-updated', { 
+          detail: {
+            ...summary,
+            timestamp: Date.now(),
+            source: 'unifiedTOILEventService'
+          }
+        });
+        window.dispatchEvent(event);
+      }
       
       return true;
     } catch (error) {
@@ -194,7 +168,8 @@ class UnifiedTOILEventService {
         const isRelevantMonth = !monthYear || 
                                !data.monthYear || 
                                data.monthYear === monthYear ||
-                               (data.date && data.date.startsWith(monthYear));
+                               (data.date && data.date.startsWith(monthYear)) ||
+                               (data.monthYears && data.monthYears.includes(monthYear));
         
         // Also consider requiresRefresh flag
         const forceRefresh = !!data?.requiresRefresh;
@@ -244,29 +219,36 @@ class UnifiedTOILEventService {
   };
 
   /**
-   * Trigger a TOIL save event with debouncing
+   * Trigger a TOIL save event with increased debouncing
    * @returns {boolean} Whether the event was triggered
    */
   public triggerTOILSave = () => {
     logger.debug('Dispatching TOIL save event');
     
-    // Use EventBus with debouncing option
+    // Use EventBus with increased debouncing
     eventBus.publish('toil:save-pending-changes', {}, {
-      debounce: 300,
+      debounce: 500, // Increased from 300ms
       deduplicate: true
     });
     
-    // For backward compatibility, also dispatch the old-style DOM event
+    // For backward compatibility, also dispatch the old-style DOM event with debouncing
     if (typeof window !== 'undefined') {
-      const event = new CustomEvent('toil:save-pending-changes');
-      window.dispatchEvent(event);
+      // Use a simple debounce mechanism for DOM events
+      const now = Date.now();
+      const lastSave = (window as any)._lastTOILSave || 0;
+      
+      if (now - lastSave > 500) { // 500ms debounce
+        const event = new CustomEvent('toil:save-pending-changes');
+        window.dispatchEvent(event);
+        (window as any)._lastTOILSave = now;
+      }
     }
     
     return true;
   };
 
   /**
-   * Dispatch a TOIL error event
+   * Dispatch a TOIL error event with increased debouncing
    * @param {string} errorMessage The error message
    * @param {any} data Additional error data
    * @param {string} userId Optional user ID
@@ -283,17 +265,22 @@ class UnifiedTOILEventService {
         timestamp: Date.now()
       };
       
-      // Dispatch through EventBus
-      eventBus.publish(TOIL_EVENTS.ERROR, errorData);
+      // Dispatch through EventBus with increased debouncing
+      eventBus.publish(TOIL_EVENTS.ERROR, errorData, {
+        debounce: 1000 // 1 second debounce for errors
+      });
       
-      // Dispatch through DOM event for backward compatibility
+      // Dispatch through DOM event for backward compatibility (also debounced)
       if (typeof window !== 'undefined') {
-        const event = new CustomEvent('toil:error', { detail: errorData });
-        window.dispatchEvent(event);
+        const now = Date.now();
+        const lastError = (window as any)._lastTOILError || 0;
+        
+        if (now - lastError > 1000) { // 1 second debounce
+          const event = new CustomEvent('toil:error', { detail: errorData });
+          window.dispatchEvent(event);
+          (window as any)._lastTOILError = now;
+        }
       }
-      
-      // Also dispatch through the timeEventsService for backward compatibility
-      timeEventsService.publish('toil-error' as any, errorData);
       
       return true;
     } catch (error) {
@@ -311,8 +298,5 @@ export const createTOILUpdateHandler = unifiedTOILEventService.createTOILUpdateH
 export const dispatchTOILEvent = unifiedTOILEventService.dispatchTOILEvent;
 export const dispatchTOILSummaryEvent = unifiedTOILEventService.dispatchTOILSummaryEvent;
 
-// No need to export ensureStandardTOILEventData again here, as it's already exported at the top of the file
-// Removing this line fixes the redeclaration error
-
 // Initialize the service when this module is imported
-logger.debug('Unified TOIL Event Service initialized');
+logger.debug('Unified TOIL Event Service initialized with event coordinator');

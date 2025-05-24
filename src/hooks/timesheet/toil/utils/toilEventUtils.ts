@@ -2,27 +2,21 @@
 import { eventBus } from '@/utils/events/EventBus';
 import { TOIL_EVENTS, TOILEventData } from '@/utils/events/eventTypes';
 import { TOILSummary } from '@/types/toil';
-import { unifiedTOILEventService } from '@/utils/time/services/toil/unifiedEventService';
+import { toilEventCoordinator } from '@/utils/time/services/toil/eventCoordinator';
 import { createTimeLogger } from '@/utils/time/errors';
 
 const logger = createTimeLogger('toilEventUtils');
 
 /**
- * Dispatches TOIL calculation start event
+ * Dispatches TOIL calculation start event through the coordinator
  */
 export function dispatchCalculationStart(userId: string, date: Date, monthYear: string, source: string = 'useUnifiedTOIL'): void {
-  eventBus.publish(TOIL_EVENTS.CALCULATED, {
-    userId,
-    date: date.toISOString(),
-    status: 'starting',
-    timestamp: Date.now(),
-    source,
-    monthYear
-  } as TOILEventData);
+  logger.debug(`Queuing calculation start for ${userId} in ${monthYear}`);
+  toilEventCoordinator.queueCalculation(userId, date, monthYear, source);
 }
 
 /**
- * Dispatches TOIL calculation completion event
+ * Dispatches TOIL calculation completion event through the coordinator
  */
 export function dispatchCalculationComplete(
   userId: string, 
@@ -31,28 +25,21 @@ export function dispatchCalculationComplete(
   summary: TOILSummary | null,
   source: string = 'useUnifiedTOIL'
 ): void {
-  if (summary && !summary.monthYear) {
-    summary.monthYear = monthYear;
-  }
+  logger.debug(`Calculation complete for ${userId} in ${monthYear}, queuing summary update`);
   
   if (summary) {
-    unifiedTOILEventService.dispatchTOILSummaryEvent(summary);
+    // Ensure summary has required fields
+    if (!summary.monthYear) {
+      summary.monthYear = monthYear;
+    }
+    
+    // Queue through coordinator instead of multiple direct dispatches
+    toilEventCoordinator.queueSummaryUpdate(summary, source);
   }
-  
-  eventBus.publish(TOIL_EVENTS.CALCULATED, {
-    userId,
-    date: date.toISOString(),
-    status: 'completed',
-    summary,
-    timestamp: Date.now(),
-    source,
-    monthYear,
-    requiresRefresh: true
-  } as TOILEventData);
 }
 
 /**
- * Dispatches TOIL calculation error event
+ * Dispatches TOIL calculation error event with reduced frequency
  */
 export function dispatchCalculationError(
   userId: string, 
@@ -61,7 +48,8 @@ export function dispatchCalculationError(
   error: unknown,
   source: string = 'useUnifiedTOIL'
 ): void {
-  eventBus.publish(TOIL_EVENTS.CALCULATED, {
+  // Error events are important and shouldn't be batched, but should be debounced
+  eventBus.publish(TOIL_EVENTS.ERROR, {
     userId,
     date: date.toISOString(),
     status: 'error',
@@ -69,7 +57,9 @@ export function dispatchCalculationError(
     timestamp: Date.now(),
     source,
     monthYear
-  } as TOILEventData);
+  } as TOILEventData, {
+    debounce: 1000 // 1 second debounce for errors
+  });
 }
 
 /**
@@ -80,11 +70,33 @@ export function isRelevantToilEvent(
   userId: string, 
   monthYear: string
 ): boolean {
+  if (!eventData?.userId || eventData.userId !== userId) {
+    return false;
+  }
+  
+  // Check for explicit refresh flag
+  if (eventData?.requiresRefresh === true) {
+    return true;
+  }
+  
+  // Check month relevance
   return (
-    eventData?.userId === userId && (
-      eventData?.monthYear === monthYear ||
-      eventData?.date?.startsWith(monthYear) ||
-      eventData?.requiresRefresh === true
-    )
+    eventData?.monthYear === monthYear ||
+    eventData?.date?.startsWith(monthYear) ||
+    (eventData?.monthYears && eventData.monthYears.includes(monthYear))
   );
+}
+
+/**
+ * Force flush pending events (useful for cleanup/testing)
+ */
+export function flushPendingEvents(): void {
+  toilEventCoordinator.flushImmediate();
+}
+
+/**
+ * Get coordinator queue size for monitoring
+ */
+export function getEventQueueSize(): number {
+  return toilEventCoordinator.getQueueSize();
 }

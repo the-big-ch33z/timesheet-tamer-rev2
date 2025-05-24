@@ -53,26 +53,55 @@ export function validateCalculationData(userId: string, date?: Date, entries?: T
 }
 
 /**
- * Rate limiting utility for TOIL operations
+ * Enhanced rate limiting utility with progressive debouncing for TOIL operations
  */
 export class RateLimiter {
   private lastOperationTime = 0;
   private readonly debounceMs: number;
+  private operationCount = 0;
+  private readonly resetInterval = 5000; // Reset count every 5 seconds
+  private lastResetTime = 0;
   
-  constructor(debounceMs: number = 150) {
+  constructor(debounceMs: number = 300) {
     this.debounceMs = debounceMs;
+    this.lastResetTime = Date.now();
   }
   
   canProceed(): boolean {
     const now = Date.now();
-    if (now - this.lastOperationTime < this.debounceMs) {
+    
+    // Reset operation count periodically
+    if (now - this.lastResetTime > this.resetInterval) {
+      this.operationCount = 0;
+      this.lastResetTime = now;
+    }
+    
+    // Calculate progressive debounce time based on operation frequency
+    const progressiveDelay = this.debounceMs + (this.operationCount * 50); // Add 50ms per recent operation
+    const maxDelay = this.debounceMs * 3; // Cap at 3x original delay
+    const effectiveDelay = Math.min(progressiveDelay, maxDelay);
+    
+    if (now - this.lastOperationTime < effectiveDelay) {
+      logger.debug(`Rate limited: need to wait ${effectiveDelay}ms, only ${now - this.lastOperationTime}ms elapsed`);
       return false;
     }
+    
     this.lastOperationTime = now;
+    this.operationCount++;
     return true;
   }
   
   reset(): void {
     this.lastOperationTime = 0;
+    this.operationCount = 0;
+    this.lastResetTime = Date.now();
+  }
+  
+  /**
+   * Get current effective delay for monitoring
+   */
+  getEffectiveDelay(): number {
+    const progressiveDelay = this.debounceMs + (this.operationCount * 50);
+    return Math.min(progressiveDelay, this.debounceMs * 3);
   }
 }

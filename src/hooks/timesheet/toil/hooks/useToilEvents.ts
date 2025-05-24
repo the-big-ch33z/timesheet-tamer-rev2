@@ -19,7 +19,7 @@ export interface UseToilEventsProps {
 }
 
 /**
- * Hook for managing TOIL event subscriptions
+ * Hook for managing TOIL event subscriptions with optimized debouncing
  */
 export function useToilEvents({
   userId,
@@ -29,6 +29,15 @@ export function useToilEvents({
   refreshSummary,
   isTestMode = false
 }: UseToilEventsProps): void {
+  // Create a debounced refresh function to prevent excessive calls
+  const debouncedRefresh = useCallback(() => {
+    const timeoutId = setTimeout(() => {
+      refreshSummary();
+    }, 300); // 300ms debounce for refresh operations
+    
+    return () => clearTimeout(timeoutId);
+  }, [refreshSummary]);
+
   // Set up event listeners
   useEffect(() => {
     if (isTestMode) return;
@@ -42,7 +51,7 @@ export function useToilEvents({
           setToilSummary(data);
           setIsLoading(false);
         },
-        onRefresh: refreshSummary,
+        onRefresh: debouncedRefresh,
         onLog: (message, data) => {
           logger.debug(message, data);
         }
@@ -51,24 +60,28 @@ export function useToilEvents({
 
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     
-    const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
+    // Subscribe to primary events with consolidated handling
+    const summarySubscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       if (isRelevantToilEvent(data, userId, monthYear)) {
-        logger.debug(`Matched TOIL update for ${userId} in ${monthYear}`);
-        refreshSummary();
+        logger.debug(`Matched TOIL summary update for ${userId} in ${monthYear}`);
+        debouncedRefresh();
       }
     });
 
     const calculatedSubscription = eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: TOILEventData) => {
       if (isRelevantToilEvent(data, userId, monthYear)) {
         logger.debug(`Matched TOIL calculation for ${userId} in ${monthYear}`);
-        refreshSummary();
+        debouncedRefresh();
       }
     });
 
+    // Remove the redundant UPDATED subscription to reduce event volume
+    // The SUMMARY_UPDATED and CALCULATED events cover all necessary cases
+
     return () => {
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
-      if (typeof subscription === 'function') subscription();
+      if (typeof summarySubscription === 'function') summarySubscription();
       if (typeof calculatedSubscription === 'function') calculatedSubscription();
     };
-  }, [userId, monthYear, refreshSummary, setToilSummary, setIsLoading, isTestMode]);
+  }, [userId, monthYear, debouncedRefresh, setToilSummary, setIsLoading, isTestMode]);
 }

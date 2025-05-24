@@ -21,7 +21,7 @@ export interface UseToilCacheResult {
 }
 
 /**
- * Hook for managing TOIL caching and loading
+ * Hook for managing TOIL caching and loading with optimized rate limiting
  */
 export function useToilCache({
   userId,
@@ -31,7 +31,7 @@ export function useToilCache({
   setError
 }: UseToilCacheProps): UseToilCacheResult {
   const isMountedRef = useRef(true);
-  const rateLimiter = useRef(new RateLimiter(150));
+  const rateLimiter = useRef(new RateLimiter(300)); // Increased from 150ms to 300ms
 
   const loadSummary = useCallback(() => {
     if (!isMountedRef.current || !userId) {
@@ -68,6 +68,7 @@ export function useToilCache({
 
   const refreshSummary = useCallback(() => {
     if (!isMountedRef.current || !rateLimiter.current.canProceed()) {
+      logger.debug(`Refresh skipped - rate limited or unmounted`);
       return;
     }
     
@@ -76,8 +77,12 @@ export function useToilCache({
     // Clear cache for immediate feedback
     clearCacheForCurrentMonth(userId, new Date());
     
-    // Trigger immediate reload
-    loadSummary();
+    // Trigger reload with debouncing
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        loadSummary();
+      }
+    }, 100); // Small delay to prevent excessive rapid reloads
   }, [userId, loadSummary]);
 
   // Cleanup on unmount
