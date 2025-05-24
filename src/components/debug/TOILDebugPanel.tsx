@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import { deleteTOILRecordById } from '@/utils/time/services/toil/storage/record-operations';
 import { 
   toilService, 
   loadTOILRecords, 
@@ -10,7 +11,6 @@ import {
   cleanupDuplicateTOILRecords,
   cleanupDuplicateTOILUsage
 } from '@/utils/time/services/toil';
-import { deleteAllToilData } from '@/utils/time/services/toil/unifiedDeletion';
 import { TOILRecord, TOILSummary, TOILUsage } from '@/types/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -43,15 +43,6 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
   const [refreshCount, setRefreshCount] = useState(0);
   const [status, setStatus] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  // Auto-delete TOIL data from localStorage on mount
-  useEffect(() => {
-    const runDeletion = async () => {
-      const result = await deleteAllToilData(userId);
-      console.log('[TOILDebugPanel] Auto TOIL deletion result:', result);
-    };
-    runDeletion();
-  }, [userId]);
-
   
   const monthYear = format(date, 'yyyy-MM');
   
@@ -238,7 +229,29 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     return format(date instanceof Date ? date : new Date(date), 'yyyy-MM-dd HH:mm');
   }, []);
   
-  return (
+  
+  const handleDeleteAllTOILById = useCallback(async () => {
+    setStatus({ message: 'Deleting TOIL by record ID...', type: 'info' });
+    setIsProcessing(true);
+
+    try {
+      const recordIds = toilRecords.map(r => r.id).filter(Boolean);
+
+      for (const id of recordIds) {
+        console.log(`[TOILDebugPanel] Deleting record with ID: ${id}`);
+        await deleteTOILRecordById(id);
+      }
+
+      setStatus({ message: `Deleted ${recordIds.length} TOIL records`, type: 'success' });
+      setRefreshCount(prev => prev + 1);
+    } catch (error) {
+      console.error('[TOILDebugPanel] Deletion by record ID failed:', error);
+      setStatus({ message: 'Failed to delete TOIL records', type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [toilRecords]);
+return (
     <Card className="w-full bg-slate-50 border border-slate-200">
       <CardHeader className="p-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center justify-between">
@@ -455,6 +468,16 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
               <RefreshCw className="h-3 w-3" />
               Refresh
             </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleDeleteAllTOILById}
+              disabled={isProcessing}
+              className="flex gap-1 items-center"
+            >
+              Delete TOIL by Record ID
+            </Button>
+
             <Button 
               variant="outline" 
               size="sm"
