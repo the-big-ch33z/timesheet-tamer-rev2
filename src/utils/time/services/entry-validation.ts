@@ -1,36 +1,55 @@
-
 import { TimeEntry } from "@/types";
 import { createTimeLogger } from '../errors/timeLogger';
 
 const logger = createTimeLogger('entry-validation');
 
 /**
- * Validation result type
+ * Enhanced validation result type with error details
  */
 export interface ValidationResult {
-  valid: boolean;
+  isValid: boolean;
+  valid: boolean; // Keep both for compatibility
+  errors?: string[];
   message?: string;
 }
 
 /**
- * Validate a time entry
+ * Validate a time entry with detailed error reporting
  */
 export function validateTimeEntry(entry: Partial<TimeEntry>): ValidationResult {
+  console.log(`[TOIL-DEBUG] ==> VALIDATING ENTRY:`, entry);
+  logger.debug('Validating time entry:', entry);
+  
+  const errors: string[] = [];
+
   if (!entry.hours || entry.hours <= 0) {
-    return {
-      valid: false,
-      message: "Hours must be greater than 0"
-    };
+    errors.push("Hours must be greater than 0");
   }
 
   if (!entry.date) {
-    return {
-      valid: false,
-      message: "Date is required"
-    };
+    errors.push("Date is required");
   }
 
-  return { valid: true };
+  if (!entry.userId) {
+    errors.push("User ID is required");
+  }
+
+  const isValid = errors.length === 0;
+  
+  console.log(`[TOIL-DEBUG] ✅ VALIDATION RESULT:`, {
+    isValid,
+    errorsCount: errors.length,
+    errors
+  });
+  
+  logger.debug('Validation result:', { isValid, errors });
+
+  return {
+    isValid,
+    valid: isValid, // Provide both properties for compatibility
+    errors: errors.length > 0 ? errors : undefined,
+    message: errors.length > 0 ? errors.join(', ') : undefined
+  };
 }
 
 /**
