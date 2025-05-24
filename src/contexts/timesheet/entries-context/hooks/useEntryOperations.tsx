@@ -1,7 +1,6 @@
-
 import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { ensureDate } from "@/utils/time/validation";
 import { unifiedTimeEntryService } from "@/utils/time/services";

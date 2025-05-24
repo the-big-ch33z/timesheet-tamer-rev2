@@ -11,7 +11,7 @@ import TimesheetNotFound from "@/components/timesheet/navigation/TimesheetNotFou
 import TimesheetBackNavigation from "@/components/timesheet/navigation/TimesheetBackNavigation";
 import { TimeEntryProvider } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { initializeService, areServicesInitialized, getInitializationError } from "@/utils/time/services/api-wrapper";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "@/components/common/ErrorFallback";
 

@@ -6,7 +6,7 @@ import MonthSummary from "./MonthSummary";
 import TOILSummaryCard from "./detail/components/TOILSummaryCard";
 import { format } from "date-fns";
 import { createTimeLogger } from "@/utils/time/errors";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { TOILEventProvider } from "@/utils/time/events/toil";
 import { TOIL_EVENTS, TOILEventData } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
