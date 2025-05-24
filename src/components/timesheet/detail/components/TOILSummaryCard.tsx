@@ -1,4 +1,3 @@
-
 import React, { memo, useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Clock, Bug, RefreshCw, StopCircle, Play } from "lucide-react";
@@ -9,6 +8,7 @@ import TOILCardContent from "./toil-summary/TOILCardContent";
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 import { Button } from "@/components/ui/button";
+import { debugToilDataState } from "@/utils/time/services/toil/unifiedDeletion";
 
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
@@ -88,6 +88,32 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // NEW: Listen for unified deletion events
+  useEffect(() => {
+    const handleToilDataDeleted = (event: CustomEvent) => {
+      console.log(`[TOIL-DEBUG] ✅ TOILSummaryCard received toilDataDeleted event for ${userId}`, event.detail);
+      logger.debug('Received toilDataDeleted event, refreshing summary');
+      
+      // Force a refresh after deletion
+      setTimeout(() => {
+        refreshSummary();
+        setLastUpdated(new Date());
+      }, 100); // Small delay to ensure deletion is complete
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('toilDataDeleted', handleToilDataDeleted as EventListener);
+      console.log(`[TOIL-DEBUG] ✅ TOILSummaryCard listening for deletion events for ${userId}`);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('toilDataDeleted', handleToilDataDeleted as EventListener);
+        console.log(`[TOIL-DEBUG] TOILSummaryCard stopped listening for deletion events for ${userId}`);
+      }
+    };
+  }, [refreshSummary, userId]);
+  
   // Simple manual refresh without forcing aggressive updates
   const handleManualRefresh = useCallback(() => {
     if (circuitBreakerStatus.globallyDisabled) {
@@ -134,6 +160,12 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
         setDebugMode(prev => !prev);
         console.log(`[TOIL-DEBUG] Debug mode ${!debugMode ? 'enabled' : 'disabled'} for ${userId}`);
         logger.debug(`Debug mode ${!debugMode ? 'enabled' : 'disabled'}`);
+        
+        // Show debug state when enabling debug mode
+        if (!debugMode) {
+          const state = debugToilDataState(userId);
+          console.log(`[TOIL-DEBUG] Current TOIL data state for ${userId}:`, state);
+        }
       }
     };
     
@@ -227,6 +259,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
                 Summary: {summary ? `A:${summary.accrued.toFixed(1)} U:${summary.used.toFixed(1)} R:${summary.remaining.toFixed(1)}` : "None"}
               </div>
               {error && <div className="text-red-500">Error: {error}</div>}
+              <button 
+                onClick={() => {
+                  const state = debugToilDataState(userId);
+                  console.log(`[TOIL-DEBUG] Manual debug check for ${userId}:`, state);
+                }}
+                className="mt-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+              >
+                Check TOIL State
+              </button>
             </div>
           )}
         </CardContent>

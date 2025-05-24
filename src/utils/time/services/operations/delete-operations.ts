@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
@@ -7,7 +6,7 @@ import { eventBus } from '@/utils/events/EventBus';
 import { TIME_ENTRY_EVENTS, TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { format } from 'date-fns';
 import { loadEntriesFromStorage, saveEntriesToStorage, addToDeletedEntries } from "../storage-operations";
-import { deleteTOILRecordsByEntryId, deleteTOILUsageByEntryId } from "@/utils/time/services/toil/storage";
+import { deleteAllToilData, triggerUIStateUpdate } from "../../toil/unifiedDeletion";
 
 const logger = createTimeLogger('DeleteOperations');
 
@@ -56,16 +55,13 @@ export class DeleteOperations {
     logger.debug(`Deleting entry with ID: ${entryId}`);
     
     try {
-      // Load current entries from storage
       const currentEntries = loadEntriesFromStorage(this.storageKey, []);
       
-      // Find the entry to get its user ID if not provided
       const entryToDelete = currentEntries.find(entry => entry.id === entryId);
       if (entryToDelete && !userId) {
         userId = entryToDelete.userId;
       }
       
-      // Check if entry exists
       if (!entryToDelete) {
         console.log(`[TOIL-DEBUG] ❌ Entry ${entryId} not found in storage`);
         logger.warn(`Entry with ID ${entryId} not found in storage`);
@@ -80,10 +76,8 @@ export class DeleteOperations {
         jobNumber: entryToDelete.jobNumber
       });
       
-      // Filter out the entry to delete
       const updatedEntries = currentEntries.filter(entry => entry.id !== entryId);
       
-      // Save updated entries back to storage
       const saveSuccess = await saveEntriesToStorage(updatedEntries, this.storageKey, []);
       
       if (!saveSuccess) {
@@ -94,7 +88,6 @@ export class DeleteOperations {
       
       console.log(`[TOIL-DEBUG] ✅ Entry deleted from storage successfully`);
       
-      // Mark the entry as deleted in the deletion tracking system
       try {
         await addToDeletedEntries(entryId, [], 'time-entries-deleted');
         console.log(`[TOIL-DEBUG] ✅ Added entry ${entryId} to deletion tracking`);
@@ -102,29 +95,32 @@ export class DeleteOperations {
       } catch (error) {
         console.log(`[TOIL-DEBUG] ⚠️ Failed to add entry to deletion tracking: ${error}`);
         logger.warn(`Failed to add entry to deletion tracking: ${error}`);
-        // Continue execution as the main deletion succeeded
       }
       
-      // DIRECT TOIL CLEANUP - Execute synchronously to ensure TOIL records are removed
+      // UNIFIED TOIL CLEANUP - Use the master deletion function
       try {
-        console.log(`[TOIL-DEBUG] ==> STARTING TOIL CLEANUP for entry ${entryId}`);
-        logger.debug(`Starting direct TOIL cleanup for entry ${entryId}`);
+        console.log(`[TOIL-DEBUG] ==> STARTING UNIFIED TOIL CLEANUP for entry ${entryId}`);
+        logger.debug(`Starting unified TOIL cleanup for entry ${entryId}`);
         
-        // Delete TOIL records associated with this entry
-        const deletedRecordsCount = await deleteTOILRecordsByEntryId(entryId);
-        console.log(`[TOIL-DEBUG] ✅ Deleted ${deletedRecordsCount} TOIL records for entry ${entryId}`);
-        logger.debug(`Deleted ${deletedRecordsCount} TOIL records for entry ${entryId}`);
-        
-        // Delete TOIL usage records associated with this entry
-        const deletedUsageCount = await deleteTOILUsageByEntryId(entryId);
-        console.log(`[TOIL-DEBUG] ✅ Deleted ${deletedUsageCount} TOIL usage records for entry ${entryId}`);
-        logger.debug(`Deleted ${deletedUsageCount} TOIL usage records for entry ${entryId}`);
-        
-        console.log(`[TOIL-DEBUG] ✅ TOIL cleanup completed: ${deletedRecordsCount} records, ${deletedUsageCount} usage items deleted for entry ${entryId}`);
+        // Use unified deletion to clean up all TOIL data for this user
+        if (userId) {
+          const deletionResult = await deleteAllToilData(userId);
+          
+          if (deletionResult.success) {
+            console.log(`[TOIL-DEBUG] ✅ Unified TOIL cleanup completed successfully for entry ${entryId}`, deletionResult.summary);
+            logger.debug(`Unified TOIL cleanup completed for entry ${entryId}`, deletionResult);
+            
+            // Trigger UI state update
+            triggerUIStateUpdate();
+            console.log(`[TOIL-DEBUG] ✅ UI state update triggered after TOIL cleanup`);
+          } else {
+            console.error(`[TOIL-DEBUG] ❌ Unified TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);
+            logger.error(`Unified TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);
+          }
+        }
       } catch (toilError) {
-        console.error(`[TOIL-DEBUG] ❌ TOIL cleanup failed for entry ${entryId}:`, toilError);
-        logger.error(`Error during direct TOIL cleanup for entry ${entryId}:`, toilError);
-        // Don't fail the entire operation if TOIL cleanup fails
+        console.error(`[TOIL-DEBUG] ❌ Unified TOIL cleanup error for entry ${entryId}:`, toilError);
+        logger.error(`Error during unified TOIL cleanup for entry ${entryId}:`, toilError);
       }
       
       // Dispatch events for UI updates (keeping these for other systems that might depend on them)
