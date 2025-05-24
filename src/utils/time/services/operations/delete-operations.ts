@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from "../../errors";
 import { EventManager } from "../event-handling";
 import { TimeEntryOperationsConfig } from "./types";
@@ -43,7 +44,7 @@ export class DeleteOperations {
     this.storageKey = config.storageKey;
     
     logger.debug(`DeleteOperations initialized for ${this.serviceName}`);
-    console.log(`[DeleteOperations] DeleteOperations initialized for ${this.serviceName}`);
+    console.log(`[TOIL-DEBUG] DeleteOperations initialized for ${this.serviceName}`);
   }
 
   /**
@@ -51,8 +52,8 @@ export class DeleteOperations {
    * This will handle properly removing from storage, cleaning up TOIL records, and emitting events
    */
   public async deleteEntryById(entryId: string, userId?: string): Promise<boolean> {
+    console.log(`[TOIL-DEBUG] ==> DELETE ENTRY FLOW START: ${entryId}`);
     logger.debug(`Deleting entry with ID: ${entryId}`);
-    console.log(`[DeleteOperations] Deleting entry with ID: ${entryId}`);
     
     try {
       // Load current entries from storage
@@ -66,9 +67,18 @@ export class DeleteOperations {
       
       // Check if entry exists
       if (!entryToDelete) {
+        console.log(`[TOIL-DEBUG] ❌ Entry ${entryId} not found in storage`);
         logger.warn(`Entry with ID ${entryId} not found in storage`);
         return false;
       }
+      
+      console.log(`[TOIL-DEBUG] ✅ Found entry to delete:`, {
+        id: entryToDelete.id,
+        userId: entryToDelete.userId,
+        hours: entryToDelete.hours,
+        date: entryToDelete.date,
+        jobNumber: entryToDelete.jobNumber
+      });
       
       // Filter out the entry to delete
       const updatedEntries = currentEntries.filter(entry => entry.id !== entryId);
@@ -77,41 +87,51 @@ export class DeleteOperations {
       const saveSuccess = await saveEntriesToStorage(updatedEntries, this.storageKey, []);
       
       if (!saveSuccess) {
+        console.log(`[TOIL-DEBUG] ❌ Failed to save entries after deleting ${entryId}`);
         logger.error(`Failed to save entries after deleting ${entryId}`);
         return false;
       }
       
+      console.log(`[TOIL-DEBUG] ✅ Entry deleted from storage successfully`);
+      
       // Mark the entry as deleted in the deletion tracking system
       try {
         await addToDeletedEntries(entryId, [], 'time-entries-deleted');
+        console.log(`[TOIL-DEBUG] ✅ Added entry ${entryId} to deletion tracking`);
         logger.debug(`Added entry ${entryId} to deletion tracking`);
       } catch (error) {
+        console.log(`[TOIL-DEBUG] ⚠️ Failed to add entry to deletion tracking: ${error}`);
         logger.warn(`Failed to add entry to deletion tracking: ${error}`);
         // Continue execution as the main deletion succeeded
       }
       
       // DIRECT TOIL CLEANUP - Execute synchronously to ensure TOIL records are removed
       try {
+        console.log(`[TOIL-DEBUG] ==> STARTING TOIL CLEANUP for entry ${entryId}`);
         logger.debug(`Starting direct TOIL cleanup for entry ${entryId}`);
         
         // Delete TOIL records associated with this entry
         const deletedRecordsCount = await deleteTOILRecordsByEntryId(entryId);
+        console.log(`[TOIL-DEBUG] ✅ Deleted ${deletedRecordsCount} TOIL records for entry ${entryId}`);
         logger.debug(`Deleted ${deletedRecordsCount} TOIL records for entry ${entryId}`);
         
         // Delete TOIL usage records associated with this entry
         const deletedUsageCount = await deleteTOILUsageByEntryId(entryId);
+        console.log(`[TOIL-DEBUG] ✅ Deleted ${deletedUsageCount} TOIL usage records for entry ${entryId}`);
         logger.debug(`Deleted ${deletedUsageCount} TOIL usage records for entry ${entryId}`);
         
-        console.log(`[DeleteOperations] Direct TOIL cleanup completed: ${deletedRecordsCount} records, ${deletedUsageCount} usage items deleted for entry ${entryId}`);
+        console.log(`[TOIL-DEBUG] ✅ TOIL cleanup completed: ${deletedRecordsCount} records, ${deletedUsageCount} usage items deleted for entry ${entryId}`);
       } catch (toilError) {
+        console.error(`[TOIL-DEBUG] ❌ TOIL cleanup failed for entry ${entryId}:`, toilError);
         logger.error(`Error during direct TOIL cleanup for entry ${entryId}:`, toilError);
-        console.error(`[DeleteOperations] TOIL cleanup failed for entry ${entryId}:`, toilError);
         // Don't fail the entire operation if TOIL cleanup fails
       }
       
       // Dispatch events for UI updates (keeping these for other systems that might depend on them)
       const now = new Date();
       const eventData = createStandardEventData(entryId, userId);
+      
+      console.log(`[TOIL-DEBUG] ==> DISPATCHING EVENTS for deleted entry ${entryId}`, eventData);
       
       // Dispatch through the event manager
       this.eventManager.dispatchEvent({
@@ -132,13 +152,15 @@ export class DeleteOperations {
         status: 'completed'
       }, { debounce: 50 });
       
+      console.log(`[TOIL-DEBUG] ✅ All events dispatched for entry deletion ${entryId}`);
+      console.log(`[TOIL-DEBUG] ==> DELETE ENTRY FLOW COMPLETE: ${entryId}`);
+      
       logger.debug(`Successfully deleted entry with ID: ${entryId}`);
-      console.log(`[DeleteOperations] Successfully deleted entry with ID: ${entryId}`);
       
       return true;
     } catch (error) {
+      console.error(`[TOIL-DEBUG] ❌ DELETE ENTRY FLOW FAILED for ${entryId}:`, error);
       logger.error(`Failed to delete entry with ID: ${entryId}`, error);
-      console.error(`[DeleteOperations] Failed to delete entry:`, error);
       return false;
     }
   }

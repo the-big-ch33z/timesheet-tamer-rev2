@@ -42,12 +42,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   workSchedule,
   testProps
 }) => {
+  console.log(`[TOIL-DEBUG] ==> TOILSummaryCard rendering for ${userId} - ${monthName}`);
+  
   // Access TimeEntryContext to get the actual entries
   const timeEntryContext = useTimeEntryContext();
   
   // Get month entries for the user - this will update when entries change
   const monthEntries = timeEntryContext.getMonthEntries(date, userId);
   
+  console.log(`[TOIL-DEBUG] TOILSummaryCard: Found ${monthEntries.length} entries for ${userId} in month ${date.toISOString()}`);
   logger.debug(`TOILSummaryCard: Found ${monthEntries.length} entries for ${userId} in month ${date.toISOString()}`);
   
   // Only use test props if testModeEnabled is true
@@ -88,56 +91,66 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   // Simple manual refresh without forcing aggressive updates
   const handleManualRefresh = useCallback(() => {
     if (circuitBreakerStatus.globallyDisabled) {
+      console.log(`[TOIL-DEBUG] ⚠️ Manual refresh blocked by circuit breaker for ${userId}`);
       logger.debug('Manual refresh blocked by circuit breaker');
       return;
     }
     
+    console.log(`[TOIL-DEBUG] ==> MANUAL REFRESH requested for ${userId}`);
     logger.debug('Manual refresh requested');
     setIsRefreshing(true);
     refreshSummary();
     setLastUpdated(new Date());
     
     setTimeout(() => setIsRefreshing(false), 2000);
-  }, [refreshSummary, circuitBreakerStatus.globallyDisabled]);
+  }, [refreshSummary, circuitBreakerStatus.globallyDisabled, userId]);
   
   // Report errors to parent component
   useEffect(() => {
     if (error && onError) {
+      console.log(`[TOIL-DEBUG] ❌ Error in TOILSummaryCard for ${userId}: ${error}`);
       onError(error);
     }
-  }, [error, onError]);
+  }, [error, onError, userId]);
   
   // Log when summary changes
   useEffect(() => {
     if (summary) {
+      console.log(`[TOIL-DEBUG] ✅ TOILSummaryCard received summary update for ${userId}:`, {
+        accrued: summary.accrued,
+        used: summary.used,
+        remaining: summary.remaining
+      });
       logger.debug('TOILSummaryCard received summary update:', summary);
       setLastUpdated(new Date());
       setIsRefreshing(false);
     }
-  }, [summary]);
+  }, [summary, userId]);
   
   // Debug mode toggle (Ctrl+Alt+D)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.altKey && e.key === 'd') {
         setDebugMode(prev => !prev);
+        console.log(`[TOIL-DEBUG] Debug mode ${!debugMode ? 'enabled' : 'disabled'} for ${userId}`);
         logger.debug(`Debug mode ${!debugMode ? 'enabled' : 'disabled'}`);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [debugMode]);
+  }, [debugMode, userId]);
   
   // Initial refresh on mount with delay to prevent cascading
   useEffect(() => {
+    console.log(`[TOIL-DEBUG] TOILSummaryCard mounted for ${userId}, requesting initial refresh with delay`);
     logger.debug('TOILSummaryCard mounted, requesting initial refresh with delay');
     const timeoutId = setTimeout(() => {
       refreshSummary();
     }, 2000); // 2 second delay to prevent mount cascades
     
     return () => clearTimeout(timeoutId);
-  }, [refreshSummary]);
+  }, [refreshSummary, userId]);
   
   try {
     return (
@@ -220,6 +233,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       </Card>
     );
   } catch (err) {
+    console.error(`[TOIL-DEBUG] ❌ TOILSummaryCard crashed while rendering for ${userId}:`, err);
     logger.error("TOILSummaryCard crashed while rendering:", err);
     
     if (onError) {

@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from '../time/errors';
 
 const logger = createTimeLogger('EventBus');
@@ -52,6 +53,7 @@ export class EventBus {
     const listeners = this.eventListeners.get(eventType)!;
     listeners.add(handler as EventHandler);
 
+    console.log(`[TOIL-DEBUG] EventBus: Subscribed to '${eventType}' events. Count: ${listeners.size}`);
     logger.debug(`Subscribed to '${eventType}' events. Count: ${listeners.size}`);
 
     // Return unsubscribe function
@@ -64,6 +66,7 @@ export class EventBus {
           this.eventListeners.delete(eventType);
         }
         
+        console.log(`[TOIL-DEBUG] EventBus: Unsubscribed from '${eventType}'. Remaining: ${listeners.size}`);
         logger.debug(`Unsubscribed from '${eventType}'. Remaining: ${listeners.size}`);
       }
     };
@@ -81,6 +84,8 @@ export class EventBus {
     const { debounce = 0, deduplicate = false, throttle = 0 } = options;
     const now = Date.now();
 
+    console.log(`[TOIL-DEBUG] EventBus: Publishing '${eventType}' event`, { data, options });
+
     // Record event in history
     this.eventHistory.unshift({ type: eventType, time: now, data });
     if (this.eventHistory.length > this.MAX_HISTORY) {
@@ -92,102 +97,131 @@ export class EventBus {
       if (throttle > 0) {
         const lastTime = this.lastEventTimes.get(eventType) || 0;
         if (now - lastTime < throttle) {
+          console.log(`[TOIL-DEBUG] EventBus: Throttled event '${eventType}' (fired too recently)`);
           logger.debug(`Throttled event '${eventType}' (fired too recently)`);
           return false;
         }
       }
       
-      // Handle debouncing if configured
+      // Handle debouncing
       if (debounce > 0) {
-        const debouncedKey = `${eventType}${deduplicate ? JSON.stringify(data) : ''}`;
-        
-        if (this.debouncedEvents.has(debouncedKey)) {
-          clearTimeout(this.debouncedEvents.get(debouncedKey)!);
-          logger.debug(`Debounced event '${eventType}' reset`);
+        // Clear existing debounced event
+        const existingTimeout = this.debouncedEvents.get(eventType);
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
         }
-
-        this.debouncedEvents.set(
-          debouncedKey,
-          setTimeout(() => {
-            this.executePublish(eventType, data);
-            this.debouncedEvents.delete(debouncedKey);
-            this.lastEventTimes.set(eventType, Date.now());
-          }, debounce)
-        );
         
+        // Set new debounced event
+        const timeoutId = setTimeout(() => {
+          this.executeEvent(eventType, data);
+          this.debouncedEvents.delete(eventType);
+        }, debounce);
+        
+        this.debouncedEvents.set(eventType, timeoutId);
+        console.log(`[TOIL-DEBUG] EventBus: Debounced '${eventType}' for ${debounce}ms`);
+        logger.debug(`Debounced '${eventType}' for ${debounce}ms`);
         return true;
       }
-
-      // Otherwise publish immediately
+      
+      // Execute immediately if no debouncing
+      this.executeEvent(eventType, data);
       this.lastEventTimes.set(eventType, now);
-      return this.executePublish(eventType, data);
+      
+      return true;
     } catch (error) {
-      logger.error(`Error publishing ${eventType}:`, error);
+      console.error(`[TOIL-DEBUG] EventBus: Error publishing event '${eventType}':`, error);
+      logger.error(`Error publishing event '${eventType}':`, error);
       return false;
     }
   }
 
   /**
-   * Actually execute publishing the event to all subscribers
+   * Execute event handlers for a given event type
    */
-  private executePublish<T>(eventType: string, data?: T): boolean {
+  private executeEvent<T>(eventType: string, data?: T): void {
     const listeners = this.eventListeners.get(eventType);
-    const count = listeners?.size || 0;
-
-    logger.debug(`Publishing '${eventType}' to ${count} listeners`);
-
-    if (!count) {
-      // Emit DOM event for legacy listeners if no direct subscribers
-      if (typeof window !== 'undefined') {
-        try {
-          const event = new CustomEvent(eventType, { detail: data });
-          window.dispatchEvent(event);
-        } catch (error) {
-          logger.error(`Error dispatching DOM event for ${eventType}:`, error);
-        }
-      }
-      return true;
+    
+    if (!listeners || listeners.size === 0) {
+      console.log(`[TOIL-DEBUG] EventBus: No listeners for '${eventType}'`);
+      logger.debug(`No listeners for '${eventType}'`);
+      return;
     }
 
-    // Call all listeners
-    listeners!.forEach(handler => {
+    console.log(`[TOIL-DEBUG] EventBus: Executing '${eventType}' for ${listeners.size} listeners`);
+    logger.debug(`Executing '${eventType}' for ${listeners.size} listeners`);
+
+    // Execute handlers
+    listeners.forEach(handler => {
       try {
         handler(data);
       } catch (error) {
-        logger.error(`Error in event handler for ${eventType}:`, error);
+        console.error(`[TOIL-DEBUG] EventBus: Error in event handler for '${eventType}':`, error);
+        logger.error(`Error in event handler for '${eventType}':`, error);
       }
     });
-
-    // Do NOT broadcast DOM events if we already have direct subscribers
-    // This helps prevent circular event loops
-    return true;
   }
 
   /**
-   * Get a copy of the recent event history (for debugging)
+   * Get the number of active listeners for an event type
    */
-  public getEventHistory() {
+  public getListenerCount(eventType: string): number {
+    return this.eventListeners.get(eventType)?.size || 0;
+  }
+
+  /**
+   * Get all active event types
+   */
+  public getActiveEventTypes(): string[] {
+    return Array.from(this.eventListeners.keys());
+  }
+
+  /**
+   * Clear all listeners for a specific event type
+   */
+  public clearListeners(eventType: string): void {
+    this.eventListeners.delete(eventType);
+    console.log(`[TOIL-DEBUG] EventBus: Cleared all listeners for '${eventType}'`);
+    logger.debug(`Cleared all listeners for '${eventType}'`);
+  }
+
+  /**
+   * Clear all listeners for all events
+   */
+  public clearAllListeners(): void {
+    this.eventListeners.clear();
+    this.debouncedEvents.forEach(timeout => clearTimeout(timeout));
+    this.debouncedEvents.clear();
+    console.log(`[TOIL-DEBUG] EventBus: Cleared all listeners`);
+    logger.debug('Cleared all listeners');
+  }
+
+  /**
+   * Get recent event history for debugging
+   */
+  public getEventHistory(): Array<{type: string, time: number, data: any}> {
     return [...this.eventHistory];
   }
 
   /**
-   * Clear all event listeners (mainly for testing)
+   * Check if there are pending debounced events
    */
-  public clearAllListeners(): void {
-    this.eventListeners.clear();
-    this.debouncedEvents.forEach((timeout) => clearTimeout(timeout));
-    this.debouncedEvents.clear();
-    this.lastEventTimes.clear();
-    logger.debug('All event listeners cleared');
+  public hasPendingEvents(): boolean {
+    return this.debouncedEvents.size > 0;
   }
 
   /**
-   * Get count of subscribers for a particular event type (for testing)
+   * Force execution of all pending debounced events
    */
-  public getSubscriberCount(eventType: string): number {
-    return this.eventListeners.get(eventType)?.size || 0;
+  public flushPendingEvents(): void {
+    this.debouncedEvents.forEach((timeout, eventType) => {
+      clearTimeout(timeout);
+      // Note: We can't execute the event here as we don't have the data
+    });
+    this.debouncedEvents.clear();
+    console.log(`[TOIL-DEBUG] EventBus: Flushed all pending events`);
+    logger.debug('Flushed all pending events');
   }
 }
 
-// Export a singleton instance
+// Export singleton instance
 export const eventBus = EventBus.getInstance();

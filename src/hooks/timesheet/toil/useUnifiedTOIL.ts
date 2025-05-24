@@ -77,6 +77,12 @@ export function useUnifiedTOIL({
   const isTestMode = !!(testProps && testProps.testModeEnabled === true);
   const monthYear = useMemo(() => format(date, 'yyyy-MM'), [date]);
 
+  console.log(`[TOIL-DEBUG] useUnifiedTOIL called for ${userId} in ${monthYear}`, {
+    entriesCount: entries.length,
+    isTestMode,
+    workSchedule: workSchedule?.name || 'None'
+  });
+
   // For test mode, return test values immediately
   if (isTestMode) {
     logger.debug('Test mode enabled, using test props for TOIL data');
@@ -98,6 +104,13 @@ export function useUnifiedTOIL({
   // Enhanced work schedule logging
   useEffect(() => {
     if (workSchedule) {
+      console.log(`[TOIL-DEBUG] Work schedule for ${userId}:`, {
+        name: workSchedule.name,
+        id: workSchedule.id,
+        isDefault: workSchedule.isDefault,
+        weeksCount: workSchedule.weeks ? Object.keys(workSchedule.weeks).length : 0,
+        rdoDaysCount: workSchedule.rdoDays ? Object.keys(workSchedule.rdoDays).length : 0
+      });
       logger.debug(`Using work schedule for TOIL calculation:`, {
         name: workSchedule.name,
         id: workSchedule.id,
@@ -107,6 +120,7 @@ export function useUnifiedTOIL({
         rdoDaysCount: workSchedule.rdoDays ? Object.keys(workSchedule.rdoDays).length : 0
       });
     } else {
+      console.log(`[TOIL-DEBUG] ⚠️ No work schedule provided for user ${userId} - TOIL calculation may be inaccurate`);
       logger.warn(`No work schedule provided for user ${userId} - TOIL calculation may be inaccurate`);
     }
   }, [workSchedule, userId]);
@@ -160,13 +174,16 @@ export function useUnifiedTOIL({
   // Wrap calculation functions with circuit breaker
   const calculateToilForDay = useMemo(() => async (): Promise<TOILSummary | null> => {
     if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      console.log(`[TOIL-DEBUG] ⚠️ Circuit breaker blocking TOIL calculation for ${userId}-${monthYear}`);
       logger.debug(`Circuit breaker blocking TOIL calculation for ${userId}-${monthYear}`);
       return toilSummary;
     }
 
+    console.log(`[TOIL-DEBUG] ==> STARTING TOIL CALCULATION for ${userId}-${monthYear}`);
     toilCircuitBreaker.startCalculation(userId, monthYear);
     try {
       const result = await originalCalculateToilForDay();
+      console.log(`[TOIL-DEBUG] ✅ TOIL calculation completed for ${userId}-${monthYear}`, result);
       return result;
     } finally {
       toilCircuitBreaker.finishCalculation(userId, monthYear);
@@ -175,13 +192,16 @@ export function useUnifiedTOIL({
 
   const triggerTOILCalculation = useMemo(() => async (): Promise<TOILSummary | null> => {
     if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      console.log(`[TOIL-DEBUG] ⚠️ Circuit breaker blocking manual TOIL calculation for ${userId}-${monthYear}`);
       logger.debug(`Circuit breaker blocking manual TOIL calculation for ${userId}-${monthYear}`);
       return toilSummary;
     }
 
+    console.log(`[TOIL-DEBUG] ==> STARTING MANUAL TOIL CALCULATION for ${userId}-${monthYear}`);
     toilCircuitBreaker.startCalculation(userId, monthYear);
     try {
       const result = await originalTriggerTOILCalculation();
+      console.log(`[TOIL-DEBUG] ✅ Manual TOIL calculation completed for ${userId}-${monthYear}`, result);
       return result;
     } finally {
       toilCircuitBreaker.finishCalculation(userId, monthYear);
@@ -201,33 +221,40 @@ export function useUnifiedTOIL({
   // Initialize TOIL summary only once
   useEffect(() => {
     if (!userId || !date) return;
+    console.log(`[TOIL-DEBUG] Initializing TOIL summary for ${userId} on ${date.toISOString()}`);
     loadSummary();
   }, [userId, date, loadSummary]);
 
   // SIMPLIFIED: Only calculate when entries actually change content, not on every render
   // Create a stable reference for the entries array to detect actual changes
   const entriesKey = useMemo(() => {
-    return entries.map(e => `${e.id}-${e.hours}-${e.date}`).join('|');
-  }, [entries]);
+    const key = entries.map(e => `${e.id}-${e.hours}-${e.date}`).join('|');
+    console.log(`[TOIL-DEBUG] Entries key for ${userId}: ${key} (${entries.length} entries)`);
+    return key;
+  }, [entries, userId]);
 
   useEffect(() => {
     if (!userId || !date || !autoRefresh || !entriesKey) return;
     
     // Check circuit breaker before proceeding
     if (!toilCircuitBreaker.canCalculate(userId, monthYear)) {
+      console.log(`[TOIL-DEBUG] ⚠️ Circuit breaker blocking entries change calculation for ${userId}-${monthYear}`);
       logger.debug('Circuit breaker blocking entries change calculation');
       return;
     }
     
     // CONSERVATIVE: Only recalculate if we have actual entries and much longer delay
     if (entries.length > 0) {
+      console.log(`[TOIL-DEBUG] ==> ENTRIES CHANGED for ${userId} (${entries.length} entries), scheduling conservative TOIL calculation`);
       logger.debug(`Entries content changed (${entries.length} entries), scheduling conservative TOIL calculation`);
       
       const timeoutId = setTimeout(() => {
         if (toilCircuitBreaker.canCalculate(userId, monthYear)) {
+          console.log(`[TOIL-DEBUG] ✅ Executing scheduled TOIL calculation due to entries change`);
           logger.debug('Calculating TOIL due to entries change (conservative)');
           calculateToilForDay();
         } else {
+          console.log(`[TOIL-DEBUG] ⚠️ Circuit breaker prevented scheduled calculation`);
           logger.debug('Circuit breaker prevented scheduled calculation');
         }
       }, 5000); // Much longer delay: 5 seconds
@@ -239,16 +266,29 @@ export function useUnifiedTOIL({
   // Circuit breaker control functions
   const stopCalculations = useMemo(() => () => {
     toilCircuitBreaker.stopAllCalculations();
+    console.log(`[TOIL-DEBUG] ⏹️ TOIL calculations stopped by user`);
     logger.info('TOIL calculations stopped by user');
   }, []);
 
   const resumeCalculations = useMemo(() => () => {
     toilCircuitBreaker.resumeCalculations();
+    console.log(`[TOIL-DEBUG] ▶️ TOIL calculations resumed by user`);
     logger.info('TOIL calculations resumed by user');
   }, []);
 
   // Get circuit breaker status
   const circuitBreakerStatus = useMemo(() => toilCircuitBreaker.getStatus(), []);
+
+  // Log summary changes
+  useEffect(() => {
+    if (toilSummary) {
+      console.log(`[TOIL-DEBUG] ✅ TOIL Summary updated for ${userId}-${monthYear}:`, {
+        accrued: toilSummary.accrued,
+        used: toilSummary.used,
+        remaining: toilSummary.remaining
+      });
+    }
+  }, [toilSummary, userId, monthYear]);
 
   return {
     toilSummary,
