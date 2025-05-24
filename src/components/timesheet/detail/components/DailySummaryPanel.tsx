@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { VerticalProgressBar } from '@/components/ui/VerticalProgressBar';
 import { format } from 'date-fns';
@@ -28,6 +29,9 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
     if (progressPercentage >= 50) return 'bg-amber-500';
     return 'bg-red-500';
   };
+  
+  const isComplete = progressPercentage >= 100;
+  
   return <div className="bg-white rounded-lg h-full">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-base font-medium py-[12px] px-[99px]">Daily Summary</h3>
@@ -61,6 +65,14 @@ const DailySummaryPanel: React.FC<DailySummaryPanelProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Completion message below progress bar */}
+      {isComplete && (
+        <div className="mt-2 p-2 rounded-md bg-green-50 border border-green-100 text-green-700 flex items-center text-xs">
+          <span className="mr-2">✓</span>
+          <span>This day has been completed with all scheduled hours accounted for.</span>
+        </div>
+      )}
     </div>;
 };
 export default DailySummaryPanel;
