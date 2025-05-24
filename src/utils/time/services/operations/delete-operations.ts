@@ -47,10 +47,12 @@ export class DeleteOperations {
   }
 
   /**
-   * Delete a time entry by its ID
-   * This will handle properly removing from storage, cleaning up TOIL records, and emitting events
+   * ENHANCED: Delete a time entry by its ID with improved TOIL regeneration
    */
-  public async deleteEntryById(entryId: string, userId?: string): Promise<boolean> {
+  public async deleteEntryById(entryId: string, userId?: string, options?: {
+    workSchedule?: any;
+    allEntries?: any[];
+  }): Promise<boolean> {
     console.log(`[TOIL-DEBUG] ==> DELETE ENTRY FLOW START: ${entryId}`);
     logger.debug(`Deleting entry with ID: ${entryId}`);
     
@@ -76,7 +78,9 @@ export class DeleteOperations {
         jobNumber: entryToDelete.jobNumber
       });
       
+      // Get remaining entries after deletion for regeneration
       const updatedEntries = currentEntries.filter(entry => entry.id !== entryId);
+      const userEntriesAfterDeletion = updatedEntries.filter(entry => entry.userId === userId);
       
       const saveSuccess = await saveEntriesToStorage(updatedEntries, this.storageKey, []);
       
@@ -97,30 +101,46 @@ export class DeleteOperations {
         logger.warn(`Failed to add entry to deletion tracking: ${error}`);
       }
       
-      // UNIFIED TOIL CLEANUP - Use the master deletion function
+      // ENHANCED UNIFIED TOIL CLEANUP WITH AUTO-REGENERATION
       try {
-        console.log(`[TOIL-DEBUG] ==> STARTING UNIFIED TOIL CLEANUP for entry ${entryId}`);
-        logger.debug(`Starting unified TOIL cleanup for entry ${entryId}`);
+        console.log(`[TOIL-DEBUG] ==> STARTING ENHANCED TOIL CLEANUP for entry ${entryId}`);
+        logger.debug(`Starting enhanced TOIL cleanup for entry ${entryId}`);
         
-        // Use unified deletion to clean up all TOIL data for this user
         if (userId) {
-          const deletionResult = await deleteAllToilData(userId);
+          // Prepare regeneration options
+          const regenerationOptions = {
+            workSchedule: options?.workSchedule,
+            currentEntries: userEntriesAfterDeletion,
+            currentDate: new Date(entryToDelete.date),
+            skipRegeneration: userEntriesAfterDeletion.length === 0 // Skip if no entries remain
+          };
+          
+          console.log(`[TOIL-DEBUG] Deletion options:`, {
+            hasWorkSchedule: !!regenerationOptions.workSchedule,
+            remainingEntries: userEntriesAfterDeletion.length,
+            willRegenerate: !regenerationOptions.skipRegeneration
+          });
+          
+          const deletionResult = await deleteAllToilData(userId, regenerationOptions);
           
           if (deletionResult.success) {
-            console.log(`[TOIL-DEBUG] ✅ Unified TOIL cleanup completed successfully for entry ${entryId}`, deletionResult.summary);
-            logger.debug(`Unified TOIL cleanup completed for entry ${entryId}`, deletionResult);
+            console.log(`[TOIL-DEBUG] ✅ Enhanced TOIL cleanup completed for entry ${entryId}`, {
+              summary: deletionResult.summary,
+              regenerated: deletionResult.regenerationTriggered
+            });
+            logger.debug(`Enhanced TOIL cleanup completed for entry ${entryId}`, deletionResult);
             
-            // Trigger UI state update
-            triggerUIStateUpdate();
-            console.log(`[TOIL-DEBUG] ✅ UI state update triggered after TOIL cleanup`);
+            // Trigger UI state update with regeneration status
+            triggerUIStateUpdate(deletionResult.regenerationTriggered);
+            console.log(`[TOIL-DEBUG] ✅ UI state update triggered with regeneration: ${deletionResult.regenerationTriggered}`);
           } else {
-            console.error(`[TOIL-DEBUG] ❌ Unified TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);
-            logger.error(`Unified TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);
+            console.error(`[TOIL-DEBUG] ❌ Enhanced TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);
+            logger.error(`Enhanced TOIL cleanup failed for entry ${entryId}:`, deletionResult.errors);
           }
         }
       } catch (toilError) {
-        console.error(`[TOIL-DEBUG] ❌ Unified TOIL cleanup error for entry ${entryId}:`, toilError);
-        logger.error(`Error during unified TOIL cleanup for entry ${entryId}:`, toilError);
+        console.error(`[TOIL-DEBUG] ❌ Enhanced TOIL cleanup error for entry ${entryId}:`, toilError);
+        logger.error(`Error during enhanced TOIL cleanup for entry ${entryId}:`, toilError);
       }
       
       // Dispatch events for UI updates (keeping these for other systems that might depend on them)

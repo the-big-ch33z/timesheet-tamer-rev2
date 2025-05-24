@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Clock, Bug, RefreshCw, StopCircle, Play } from "lucide-react";
+import { Clock, Bug, RefreshCw, StopCircle, Play, Loader2 } from "lucide-react";
 import { createTimeLogger } from "@/utils/time/errors";
 import { TOILErrorState } from "./toil-summary";
 import { useTOILEventHandling } from "../hooks/useTOILEventHandling";
@@ -87,18 +87,34 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [debugMode, setDebugMode] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   
-  // NEW: Listen for unified deletion events
+  // ENHANCED: Listen for unified deletion events with regeneration status
   useEffect(() => {
     const handleToilDataDeleted = (event: CustomEvent) => {
       console.log(`[TOIL-DEBUG] ✅ TOILSummaryCard received toilDataDeleted event for ${userId}`, event.detail);
       logger.debug('Received toilDataDeleted event, refreshing summary');
       
-      // Force a refresh after deletion
-      setTimeout(() => {
-        refreshSummary();
-        setLastUpdated(new Date());
-      }, 100); // Small delay to ensure deletion is complete
+      const { regenerated } = event.detail || {};
+      
+      if (regenerated) {
+        console.log(`[TOIL-DEBUG] ✅ TOIL data was regenerated, triggering immediate refresh`);
+        setIsRegenerating(false);
+        // Immediate refresh since data was regenerated
+        setTimeout(() => {
+          refreshSummary();
+          setLastUpdated(new Date());
+        }, 50);
+      } else {
+        console.log(`[TOIL-DEBUG] ⚠️ TOIL data was deleted but not regenerated, may need manual refresh`);
+        setIsRegenerating(true);
+        // Longer delay for potential manual regeneration
+        setTimeout(() => {
+          refreshSummary();
+          setLastUpdated(new Date());
+          setIsRegenerating(false);
+        }, 2000);
+      }
     };
 
     if (typeof window !== 'undefined') {
@@ -114,8 +130,8 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     };
   }, [refreshSummary, userId]);
   
-  // Simple manual refresh without forcing aggressive updates
-  const handleManualRefresh = useCallback(() => {
+  // ENHANCED: Manual refresh with regeneration capability
+  const handleManualRefresh = useCallback(async () => {
     if (circuitBreakerStatus.globallyDisabled) {
       console.log(`[TOIL-DEBUG] ⚠️ Manual refresh blocked by circuit breaker for ${userId}`);
       logger.debug('Manual refresh blocked by circuit breaker');
@@ -125,11 +141,38 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     console.log(`[TOIL-DEBUG] ==> MANUAL REFRESH requested for ${userId}`);
     logger.debug('Manual refresh requested');
     setIsRefreshing(true);
+    
+    // If no TOIL data exists and we have entries, trigger regeneration
+    const currentState = debugToilDataState(userId);
+    if (!currentState.hasRecords && !currentState.hasUsage && monthEntries.length > 0 && workSchedule) {
+      console.log(`[TOIL-DEBUG] 🔄 No TOIL data found but entries exist, triggering regeneration`);
+      setIsRegenerating(true);
+      
+      try {
+        // Import and use the TOIL service to regenerate
+        const { toilService } = await import('@/utils/time/services/toil/service/factory');
+        if (toilService && workSchedule) {
+          await toilService.calculateAndStoreTOIL(
+            monthEntries,
+            date,
+            userId,
+            workSchedule,
+            [] // holidays
+          );
+          console.log(`[TOIL-DEBUG] ✅ Manual regeneration completed`);
+        }
+      } catch (error) {
+        console.error(`[TOIL-DEBUG] ❌ Manual regeneration failed:`, error);
+      } finally {
+        setIsRegenerating(false);
+      }
+    }
+    
     refreshSummary();
     setLastUpdated(new Date());
     
     setTimeout(() => setIsRefreshing(false), 2000);
-  }, [refreshSummary, circuitBreakerStatus.globallyDisabled, userId]);
+  }, [refreshSummary, circuitBreakerStatus.globallyDisabled, userId, monthEntries, workSchedule, date]);
   
   // Report errors to parent component
   useEffect(() => {
@@ -150,6 +193,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
       logger.debug('TOILSummaryCard received summary update:', summary);
       setLastUpdated(new Date());
       setIsRefreshing(false);
+      setIsRegenerating(false);
     }
   }, [summary, userId]);
   
@@ -196,13 +240,17 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <Clock className="w-6 h-6 text-blue-400" />
             TOIL Summary {monthName}
             
-            <RefreshCw 
-              size={16} 
-              className={`ml-auto cursor-pointer text-blue-400 hover:text-blue-600 transition-colors
-                ${isRefreshing ? 'animate-spin' : ''}`}
-              onClick={handleManualRefresh}
-              aria-label="Refresh TOIL data"
-            />
+            {isRegenerating ? (
+              <Loader2 size={16} className="ml-auto animate-spin text-orange-500" />
+            ) : (
+              <RefreshCw 
+                size={16} 
+                className={`ml-auto cursor-pointer text-blue-400 hover:text-blue-600 transition-colors
+                  ${isRefreshing ? 'animate-spin' : ''}`}
+                onClick={handleManualRefresh}
+                aria-label="Refresh TOIL data"
+              />
+            )}
             
             {debugMode && (
               <>
@@ -240,7 +288,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
         <CardContent className="pt-0">
           <TOILCardContent
             summary={summary}
-            loading={loading}
+            loading={loading || isRegenerating}
             useSimpleView={useSimpleView}
             showRollover={showRollover}
             rolloverHours={rolloverHours}
@@ -251,6 +299,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <div className="mt-4 p-2 border border-amber-200 bg-amber-50 rounded text-xs font-mono">
               <div>Last update: {lastUpdated.toLocaleTimeString()}</div>
               <div>Loading state: {loading ? 'Loading' : 'Ready'}</div>
+              <div>Regenerating: {isRegenerating ? 'Yes' : 'No'}</div>
               <div>Entries count: {monthEntries.length}</div>
               <div>Work schedule: {workSchedule ? workSchedule.name : 'None'}</div>
               <div>Circuit breaker: {circuitBreakerStatus.globallyDisabled ? 'DISABLED' : 'Active'}</div>
@@ -267,6 +316,12 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
                 className="mt-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
               >
                 Check TOIL State
+              </button>
+              <button 
+                onClick={handleManualRefresh}
+                className="mt-1 ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs"
+              >
+                Force Regenerate
               </button>
             </div>
           )}

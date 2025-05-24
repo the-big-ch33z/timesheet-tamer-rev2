@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from '@/utils/time/errors';
 import { storageWriteLock } from '../storage-lock';
 import { 
@@ -20,14 +19,20 @@ export interface DeletionResult {
     usageRemoved: boolean;
     trackingCleared: boolean;
   };
+  regenerationTriggered?: boolean;
 }
 
 /**
- * MASTER TOIL DELETION FUNCTION
+ * MASTER TOIL DELETION FUNCTION WITH AUTO-REGENERATION
  * This is the ONLY function that should be used to delete TOIL data
- * All other deletion operations must route through this function
+ * Now includes automatic regeneration after deletion
  */
-export async function deleteAllToilData(userId?: string): Promise<DeletionResult> {
+export async function deleteAllToilData(userId?: string, options?: {
+  skipRegeneration?: boolean;
+  workSchedule?: any;
+  currentEntries?: any[];
+  currentDate?: Date;
+}): Promise<DeletionResult> {
   console.log(`[TOIL-DEBUG] ==> MASTER DELETION START ${userId ? `for user ${userId}` : 'GLOBALLY'}`);
   logger.info(`Starting master TOIL deletion ${userId ? `for user ${userId}` : 'globally'}`);
   
@@ -40,7 +45,8 @@ export async function deleteAllToilData(userId?: string): Promise<DeletionResult
       recordsRemoved: false,
       usageRemoved: false,
       trackingCleared: false
-    }
+    },
+    regenerationTriggered: false
   };
 
   try {
@@ -116,7 +122,81 @@ export async function deleteAllToilData(userId?: string): Promise<DeletionResult
     console.log(`[TOIL-DEBUG] Storage lock released`);
   }
 
+  // PHASE 7: AUTO-REGENERATION (outside the lock)
+  if (result.success && !options?.skipRegeneration && userId && options?.currentEntries?.length > 0) {
+    console.log(`[TOIL-DEBUG] ==> PHASE 7: AUTO-REGENERATION for user ${userId}`);
+    try {
+      const regenerationResult = await triggerToilRegeneration(userId, options);
+      result.regenerationTriggered = regenerationResult;
+      console.log(`[TOIL-DEBUG] ✅ Auto-regeneration ${regenerationResult ? 'succeeded' : 'failed'}`);
+    } catch (error) {
+      console.error(`[TOIL-DEBUG] ❌ Auto-regeneration failed:`, error);
+      result.errors.push(`Regeneration failed: ${error}`);
+    }
+  }
+
   return result;
+}
+
+/**
+ * NEW: Trigger TOIL regeneration after deletion
+ */
+async function triggerToilRegeneration(userId: string, options: {
+  workSchedule?: any;
+  currentEntries?: any[];
+  currentDate?: Date;
+}): Promise<boolean> {
+  console.log(`[TOIL-DEBUG] ==> STARTING TOIL REGENERATION for user ${userId}`);
+  
+  try {
+    // Import the TOIL service dynamically to avoid circular dependencies
+    const { toilService } = await import('./service/factory');
+    
+    if (!toilService) {
+      console.error(`[TOIL-DEBUG] ❌ TOIL service not available for regeneration`);
+      return false;
+    }
+
+    const { currentEntries = [], workSchedule, currentDate = new Date() } = options;
+    
+    console.log(`[TOIL-DEBUG] Regenerating TOIL with:`, {
+      entriesCount: currentEntries.length,
+      hasWorkSchedule: !!workSchedule,
+      date: currentDate.toISOString()
+    });
+
+    // Force recalculation for the current month
+    if (currentEntries.length > 0 && workSchedule) {
+      const holidays: any[] = []; // Load holidays if available
+      
+      // Calculate TOIL for the current date with the entries
+      const summary = await toilService.calculateAndStoreTOIL(
+        currentEntries,
+        currentDate,
+        userId,
+        workSchedule,
+        holidays
+      );
+      
+      if (summary) {
+        console.log(`[TOIL-DEBUG] ✅ TOIL regeneration completed:`, {
+          accrued: summary.accrued,
+          used: summary.used,
+          remaining: summary.remaining
+        });
+        
+        // Trigger UI refresh after regeneration
+        triggerUIStateUpdate();
+        return true;
+      }
+    }
+    
+    console.log(`[TOIL-DEBUG] ⚠️ TOIL regeneration skipped - insufficient data`);
+    return false;
+  } catch (error) {
+    console.error(`[TOIL-DEBUG] ❌ TOIL regeneration error:`, error);
+    return false;
+  }
 }
 
 /**
@@ -235,19 +315,22 @@ async function clearDeletionTracking(): Promise<boolean> {
 
 /**
  * Force immediate UI state update after deletion
- * This should be called by UI components after deletion
+ * Enhanced to include regeneration status
  */
-export function triggerUIStateUpdate(): void {
-  console.log(`[TOIL-DEBUG] ==> TRIGGERING UI STATE UPDATE`);
+export function triggerUIStateUpdate(regenerated = false): void {
+  console.log(`[TOIL-DEBUG] ==> TRIGGERING UI STATE UPDATE (regenerated: ${regenerated})`);
   
   // Dispatch custom event to notify UI components
   const event = new CustomEvent('toilDataDeleted', {
-    detail: { timestamp: Date.now() }
+    detail: { 
+      timestamp: Date.now(),
+      regenerated
+    }
   });
   
   if (typeof window !== 'undefined') {
     window.dispatchEvent(event);
-    console.log(`[TOIL-DEBUG] ✅ UI update event dispatched`);
+    console.log(`[TOIL-DEBUG] ✅ UI update event dispatched with regeneration status: ${regenerated}`);
   }
 }
 
