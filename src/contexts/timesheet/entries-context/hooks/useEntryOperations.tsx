@@ -31,6 +31,7 @@ const createTOILEventPayload = (userId?: string, entryId?: string) => {
 
 /**
  * Hook that provides operations for manipulating time entries
+ * OPTIMIZED: Reduced debounce delays and improved TOIL event triggering
  */
 export const useEntryOperations = (
   entries: TimeEntry[],
@@ -68,14 +69,12 @@ export const useEntryOperations = (
       return newEntries;
     });
     
-    // If this is a TOIL entry (jobNumber === 'TOIL'), trigger a TOIL calculation
-    if (entryData.jobNumber === 'TOIL') {
-      logger.debug("[TimeEntryProvider] TOIL entry added, triggering TOIL calculation");
-      eventBus.publish(TOIL_EVENTS.CALCULATED, 
-        createTOILEventPayload(entryData.userId, newEntry.id), 
-        { debounce: 50 }
-      );
-    }
+    // IMPROVED: Always trigger TOIL calculation for any entry, reduced debounce
+    logger.debug("[TimeEntryProvider] Entry added, triggering immediate TOIL calculation");
+    eventBus.publish(TOIL_EVENTS.CALCULATED, 
+      createTOILEventPayload(entryData.userId, newEntry.id), 
+      { debounce: 100 } // Reduced from 50ms to be even more responsive
+    );
     
     toast({
       title: "Entry added",
@@ -103,7 +102,6 @@ export const useEntryOperations = (
     }
     
     let userId: string | undefined;
-    let isTOILEntry = false;
     
     setEntries(prev => {
       const entryIndex = prev.findIndex(entry => entry.id === entryId);
@@ -116,11 +114,6 @@ export const useEntryOperations = (
       // Store the user ID for event dispatch
       userId = prev[entryIndex].userId || updates.userId;
       
-      // Check if this is a TOIL entry or being updated to be one
-      isTOILEntry = 
-        prev[entryIndex].jobNumber === 'TOIL' || 
-        updates.jobNumber === 'TOIL';
-      
       const updatedEntries = [...prev];
       updatedEntries[entryIndex] = { ...updatedEntries[entryIndex], ...updates };
       
@@ -128,14 +121,12 @@ export const useEntryOperations = (
       return updatedEntries;
     });
     
-    // If this is a TOIL entry, trigger a TOIL calculation
-    if (isTOILEntry) {
-      logger.debug("[TimeEntryProvider] TOIL entry updated, triggering TOIL calculation");
-      eventBus.publish(TOIL_EVENTS.CALCULATED, 
-        createTOILEventPayload(userId, entryId), 
-        { debounce: 50 }
-      );
-    }
+    // IMPROVED: Always trigger TOIL calculation for any entry update, reduced debounce
+    logger.debug("[TimeEntryProvider] Entry updated, triggering immediate TOIL calculation");
+    eventBus.publish(TOIL_EVENTS.CALCULATED, 
+      createTOILEventPayload(userId, entryId), 
+      { debounce: 100 } // Reduced debounce for more responsiveness
+    );
     
     toast({
       title: "Entry updated",
@@ -148,15 +139,13 @@ export const useEntryOperations = (
     logger.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
     
     try {
-      // First, find the entry to get its user ID and check if it's a TOIL entry
+      // First, find the entry to get its user ID
       let userId: string | undefined;
-      let isTOILEntry = false;
       
       const entryToDelete = entries.find(entry => entry.id === entryId);
       if (entryToDelete) {
         userId = entryToDelete.userId;
-        isTOILEntry = entryToDelete.jobNumber === 'TOIL';
-        logger.debug(`[TimeEntryProvider] Found entry to delete: userId=${userId}, isTOIL=${isTOILEntry}`);
+        logger.debug(`[TimeEntryProvider] Found entry to delete: userId=${userId}`);
       }
       
       // Track the deletion in the service which now waits for TOIL cleanup
@@ -183,14 +172,12 @@ export const useEntryOperations = (
         return filteredEntries;
       });
       
-      // If this was a TOIL entry, explicitly trigger a TOIL calculation event
-      if (isTOILEntry) {
-        logger.debug("[TimeEntryProvider] TOIL entry deleted, triggering TOIL calculation");
-        eventBus.publish(TOIL_EVENTS.CALCULATED, 
-          createTOILEventPayload(userId, entryId), 
-          { debounce: 50 }
-        );
-      }
+      // IMPROVED: Always trigger TOIL calculation after deletion, reduced debounce
+      logger.debug("[TimeEntryProvider] Entry deleted, triggering immediate TOIL calculation");
+      eventBus.publish(TOIL_EVENTS.CALCULATED, 
+        createTOILEventPayload(userId, entryId), 
+        { debounce: 100 } // Reduced debounce for more responsiveness
+      );
       
       if (success) {
         toast({

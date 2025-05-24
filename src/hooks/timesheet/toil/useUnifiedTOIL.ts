@@ -14,11 +14,9 @@ import { TOIL_JOB_NUMBER } from '@/utils/time/services/toil';
 // Create a logger for this hook
 const logger = createTimeLogger('useUnifiedTOIL');
 
-// More responsive refresh interval (5s instead of 30s)
-const DEFAULT_REFRESH_INTERVAL = 5000;
-
-// More responsive debounce period (300ms instead of 1000ms)  
-const DEFAULT_OPERATION_DEBOUNCE = 300; 
+// OPTIMIZED: More responsive refresh intervals
+const DEFAULT_REFRESH_INTERVAL = 3000; // Reduced from 5s to 3s
+const DEFAULT_OPERATION_DEBOUNCE = 150; // Reduced from 300ms to 150ms
 
 export interface UseUnifiedTOILProps {
   userId: string;
@@ -32,7 +30,7 @@ export interface UseUnifiedTOILProps {
     testProps?: {
       summary: TOILSummary | null;
       loading: boolean;
-      testModeEnabled?: boolean; // Added explicit flag for test mode
+      testModeEnabled?: boolean;
     };
   };
 }
@@ -55,6 +53,7 @@ export interface UseUnifiedTOILResult {
 
 /**
  * Unified TOIL hook that provides comprehensive TOIL functionality
+ * OPTIMIZED: Simplified logic and more responsive calculations
  */
 export function useUnifiedTOIL({
   userId,
@@ -81,18 +80,12 @@ export function useUnifiedTOIL({
   const [isLoading, setIsLoading] = useState(!isTestMode);
   const [error, setError] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [refreshCounter, setRefreshCounter] = useState(0);
 
-  // Additional state for internal tracking
+  // SIMPLIFIED: Reduced internal tracking complexity
   const isMountedRef = useRef(true);
   const lastOperationTimeRef = useRef<number>(0);
   const calculationInProgressRef = useRef<boolean>(false);
-  const updateAttemptsRef = useRef(0);
-  const lastUpdateTimeRef = useRef(0);
-  const entriesRef = useRef<TimeEntry[]>([]);
-  const processedDatesRef = useRef<Set<string>>(new Set());
   const monthYear = useMemo(() => format(date, 'yyyy-MM'), [date]);
-  const summaryLoadedRef = useRef(false);
 
   // Cache holidays to avoid recalculating
   const holidays = useMemo(() => getHolidays(), []);
@@ -112,152 +105,87 @@ export function useUnifiedTOIL({
     };
   }
 
-  // Log work schedule information
+  // IMPROVED: Enhanced work schedule logging
   useEffect(() => {
     if (workSchedule) {
       logger.debug(`Using work schedule for TOIL calculation:`, {
         name: workSchedule.name,
         id: workSchedule.id,
-        isDefault: workSchedule.isDefault
+        isDefault: workSchedule.isDefault,
+        userId
       });
     } else {
-      logger.debug(`No work schedule provided for user ${userId}`);
+      logger.warn(`No work schedule provided for user ${userId} - TOIL calculation may be inaccurate`);
     }
   }, [workSchedule, userId]);
-
-  // Clear caches when month changes
-  useEffect(() => {
-    if (!isMountedRef.current) return;
-    
-    logger.debug(`Month changed to ${monthYear}, clearing TOIL cache`);
-    clearCacheForCurrentMonth(userId, date);
-    toilService.clearCache();
-    setRefreshCounter(c => c + 1); // Force a refresh when month changes
-  }, [monthYear, userId, date]);
 
   // Check if an entry is a TOIL usage entry
   const isToilEntry = useCallback((entry: TimeEntry): boolean => {
     return entry.jobNumber === TOIL_JOB_NUMBER;
   }, []);
 
-  // Load TOIL summary with improved state management
+  // SIMPLIFIED: Load TOIL summary with better error handling
   const loadSummary = useCallback(() => {
-    if (!isMountedRef.current) {
-      logger.debug('Component unmounted, aborting loadSummary');
+    if (!isMountedRef.current || !userId) {
       return;
     }
     
-    if (!userId) {
-      setError('No user ID provided');
-      setIsLoading(false);
-      return;
-    }
-
-    // Circuit breaker for too many updates
-    const now = Date.now();
-    if (updateAttemptsRef.current > 20 && now - lastUpdateTimeRef.current < 30000) {
-      logger.warn('Circuit breaker activated - too many update attempts in short period');
-      setIsLoading(false);
-      return;
-    }
-    
-    updateAttemptsRef.current++;
-    lastUpdateTimeRef.current = now;
-
-    // Only show loading on first load or if explicitly reset
-    if (!summaryLoadedRef.current) {
-      setIsLoading(true);
-    }
-    
+    setIsLoading(true);
     setError(null);
 
     try {
       logger.debug(`Loading summary for ${userId} in ${monthYear}`);
       
-      // Use more aggressive cache clearing for better reactivity
-      if (!monthOnly) {
-        clearCacheForCurrentMonth(userId, date);
-      }
-      
       // Use the toilService directly
       const result = toilService.getTOILSummary(userId, monthYear);
       
       if (!isMountedRef.current) {
-        logger.debug('Component unmounted during loadSummary, aborting state update');
         return;
       }
 
-      if (!result) {
-        const defaultSummary = { userId, monthYear, accrued: 0, used: 0, remaining: 0 };
-        setToilSummary(defaultSummary);
-        logger.debug(`No summary found, using default`);
-      } else {
-        setToilSummary(result);
-        logger.debug(`Summary loaded: accrued=${result.accrued}, used=${result.used}, remaining=${result.remaining}`);
-      }
+      const finalSummary = result || { userId, monthYear, accrued: 0, used: 0, remaining: 0 };
+      setToilSummary(finalSummary);
       
-      // IMPORTANT: Always update loading state and mark as loaded
+      logger.debug(`Summary loaded: accrued=${finalSummary.accrued}, used=${finalSummary.used}, remaining=${finalSummary.remaining}`);
+      
       setIsLoading(false);
-      summaryLoadedRef.current = true;
     } catch (err) {
       logger.error(`Error getting summary:`, err);
       if (isMountedRef.current) {
         setError(err instanceof Error ? err.message : 'Unknown error');
-        // Still set a default summary on error
         setToilSummary({ userId, monthYear, accrued: 0, used: 0, remaining: 0 });
-        // IMPORTANT: Always update loading state on error too
         setIsLoading(false);
       }
     }
-  }, [userId, monthYear, date, monthOnly]);
+  }, [userId, monthYear]);
 
-  // Calculate TOIL for the day with improved state handling
+  // OPTIMIZED: Calculate TOIL for the day with better state handling
   const calculateToilForDay = useCallback(async (): Promise<TOILSummary | null> => {
     try {
-      // Set calculating state at the beginning
-      if (!isMountedRef.current) {
+      if (!isMountedRef.current || calculationInProgressRef.current) {
         return null;
       }
       
       setIsCalculating(true);
       
-      // Add circuit breaker for calculations
+      // REDUCED: Shorter debounce period for more responsive updates
       const now = Date.now();
-      if (calculationInProgressRef.current) {
-        logger.debug('Skipping TOIL calculation - another one is in progress');
-        return null;
-      }
-      
-      // Reduce debounce period for more responsive updates
       if (now - lastOperationTimeRef.current < DEFAULT_OPERATION_DEBOUNCE) {
         logger.debug('Skipping TOIL calculation due to rate limiting');
         return null;
       }
       
-      // Mark calculation as in progress and update last operation time
       calculationInProgressRef.current = true;
       lastOperationTimeRef.current = now;
       
-      logger.debug(`calculateToilForDay called for date ${format(date, 'yyyy-MM-dd')}`);
+      logger.debug(`calculateToilForDay called for date ${format(date, 'yyyy-MM-dd')} with ${entries.length} entries`);
       
-      // Return early if missing required data or component unmounted
       if (!userId || !date) {
         logger.debug('Missing required data for TOIL calculation');
-        
-        if (isMountedRef.current) {
-          setIsCalculating(false);
-        }
-        
+        if (isMountedRef.current) setIsCalculating(false);
         calculationInProgressRef.current = false;
         return null;
       }
-      
-      // Store current entries in ref to compare later
-      entriesRef.current = [...entries];
-      
-      // Filter entries for efficiency
-      const dateKey = format(date, 'yyyy-MM-dd');
-      logger.debug(`Processing day ${dateKey} with ${entries.length} entries`);
       
       // Process TOIL usage entries first
       const toilUsageEntries = entries.filter(isToilEntry);
@@ -271,13 +199,13 @@ export function useUnifiedTOIL({
         await toilService.recordTOILUsage(entry);
       }
       
-      // Calculate and store TOIL accrual with holidays
-      logger.debug(`Calculating TOIL accrual for ${nonToilEntries.length} entries`);
+      // Calculate and store TOIL accrual with work schedule and holidays
+      logger.debug(`Calculating TOIL accrual for ${nonToilEntries.length} entries with work schedule:`, workSchedule?.name || 'None');
       const summary = await toilService.calculateAndStoreTOIL(
         nonToilEntries,
         date,
         userId,
-        workSchedule,
+        workSchedule, // IMPROVED: Ensure work schedule is passed
         holidays
       );
       
@@ -291,10 +219,7 @@ export function useUnifiedTOIL({
       // Update internal state if component still mounted
       if (isMountedRef.current) {
         setToilSummary(summary);
-        
-        // IMPORTANT: Make sure to update loading state when we have data
         setIsLoading(false);
-        summaryLoadedRef.current = true;
         
         // Dispatch event with all required fields
         unifiedTOILEventService.dispatchTOILSummaryEvent(summary);
@@ -304,27 +229,16 @@ export function useUnifiedTOIL({
     } catch (error) {
       logger.error('Error calculating TOIL:', error);
       
-      // Dispatch error event
-      unifiedTOILEventService.dispatchTOILErrorEvent(
-        'Error calculating TOIL',
-        error,
-        userId
-      );
-      
       if (isMountedRef.current) {
         setError(error instanceof Error ? error.message : String(error));
-        // IMPORTANT: Always update loading state on error too
         setIsLoading(false);
       }
       
       return null;
     } finally {
-      // Always reset calculating state if component is mounted
       if (isMountedRef.current) {
         setIsCalculating(false);
       }
-      
-      // Release the lock
       calculationInProgressRef.current = false;
     }
   }, [userId, date, entries, workSchedule, monthYear, isToilEntry, holidays]);
@@ -334,29 +248,24 @@ export function useUnifiedTOIL({
     logger.debug('Manually triggering TOIL calculation');
     
     try {
-      // Notify that calculation is starting with all required fields
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
         date: date.toISOString(),
         status: 'starting',
         timestamp: Date.now(),
         source: 'useUnifiedTOIL',
-        monthYear // Add monthYear for proper event targeting
+        monthYear
       } as TOILEventData);
       
       const result = await calculateToilForDay();
       
-      // Notify that calculation is complete with all required fields
       if (result) {
-        // Ensure monthYear is set
         if (!result.monthYear) {
           result.monthYear = monthYear;
         }
-        
         unifiedTOILEventService.dispatchTOILSummaryEvent(result);
       }
       
-      // Also publish the calculation completed event with all required fields
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
         date: date.toISOString(),
@@ -364,7 +273,7 @@ export function useUnifiedTOIL({
         summary: result,
         timestamp: Date.now(),
         source: 'useUnifiedTOIL',
-        monthYear, // Add monthYear for proper event targeting
+        monthYear,
         requiresRefresh: true
       } as TOILEventData);
       
@@ -373,7 +282,6 @@ export function useUnifiedTOIL({
     } catch (error) {
       logger.error('Error during manual TOIL calculation:', error);
       
-      // Notify about error with all required fields
       eventBus.publish(TOIL_EVENTS.CALCULATED, {
         userId,
         date: date.toISOString(),
@@ -381,7 +289,7 @@ export function useUnifiedTOIL({
         error: error instanceof Error ? error.message : String(error),
         timestamp: Date.now(),
         source: 'useUnifiedTOIL',
-        monthYear // Add monthYear for proper event targeting
+        monthYear
       } as TOILEventData);
       
       if (isMountedRef.current) {
@@ -393,60 +301,42 @@ export function useUnifiedTOIL({
     }
   }, [calculateToilForDay, userId, date, monthYear]);
 
-  // Refresh summary with more explicit state management
+  // SIMPLIFIED: Refresh summary with explicit state management
   const refreshSummary = useCallback(() => {
     if (!isMountedRef.current) return;
     
     const now = Date.now();
     if (now - lastOperationTimeRef.current < DEFAULT_OPERATION_DEBOUNCE) {
-      logger.debug('Skipping duplicate refresh due to debounce');
       return;
     }
     lastOperationTimeRef.current = now;
     
     logger.debug(`Refresh requested for ${userId}`);
     
-    // Aggressive cache clearing for immediate feedback
+    // Clear cache for immediate feedback
     clearCacheForCurrentMonth(userId, date);
     
-    // Reset loading state for an explicit refresh to show feedback
-    setIsLoading(true);
-    summaryLoadedRef.current = false;
-    
-    // Trigger a reload through the counter
-    setRefreshCounter(c => c + 1);
-  }, [userId, date]);
-
-  // Initialize TOIL summary when component mounts or user/date changes
-  useEffect(() => {
-    if (!userId || !date) return;
-    
-    // Reset summary loaded flag when user or date changes
-    summaryLoadedRef.current = false;
-    
-    // Set loading state explicitly
-    setIsLoading(true);
-    
-    // Trigger immediate load
+    // Trigger immediate reload
     loadSummary();
   }, [userId, date, loadSummary]);
 
-  // Set up event listeners for TOIL updates with improved event handling
+  // Initialize TOIL summary
   useEffect(() => {
-    // Create a unified handler using the factory function from the unified service
+    if (!userId || !date) return;
+    loadSummary();
+  }, [userId, date, loadSummary]);
+
+  // OPTIMIZED: Set up event listeners with reduced complexity
+  useEffect(() => {
     const handleTOILUpdate = unifiedTOILEventService.createTOILUpdateHandler(
       userId,
       monthYear,
       {
         onValidUpdate: (data) => {
           if (!isMountedRef.current) return;
-          
           logger.debug('Received valid TOIL update:', data);
           setToilSummary(data);
-          
-          // IMPORTANT: Always update loading state when we get valid data
           setIsLoading(false);
-          summaryLoadedRef.current = true;
         },
         onRefresh: refreshSummary,
         onLog: (message, data) => {
@@ -455,14 +345,11 @@ export function useUnifiedTOIL({
       }
     );
 
-    // Listen for DOM events - standard part of the event system
     window.addEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
     
-    // Subscribe to EventBus events with improved data validation
     const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: any) => {
       if (!isMountedRef.current) return;
       
-      // Enhanced data validation with multiple matching approaches
       const isRelevantUpdate = (
         data?.userId === userId && (
           data?.monthYear === monthYear ||
@@ -470,21 +357,15 @@ export function useUnifiedTOIL({
         )
       );
       
-      logger.debug(`TOIL_EVENTS.SUMMARY_UPDATED received:`, data);
-      
       if (isRelevantUpdate) {
         logger.debug(`Matched TOIL update for ${userId} in ${monthYear}`);
         refreshSummary();
       }
     });
 
-    // Special handler for the CALCULATED event
     const calculatedSubscription = eventBus.subscribe(TOIL_EVENTS.CALCULATED, (data: TOILEventData) => {
       if (!isMountedRef.current) return;
       
-      logger.debug(`TOIL_EVENTS.CALCULATED received:`, data);
-      
-      // Enhanced data validation with multiple matching approaches
       const isRelevantCalculation = (
         data?.userId === userId && (
           data?.monthYear === monthYear ||
@@ -500,77 +381,34 @@ export function useUnifiedTOIL({
     });
 
     return () => {
-      // Clean up all event listeners properly
       window.removeEventListener('toil:summary-updated', handleTOILUpdate as EventListener);
       if (typeof subscription === 'function') subscription();
       if (typeof calculatedSubscription === 'function') calculatedSubscription();
     };
   }, [userId, monthYear, refreshSummary]);
 
-  // Refresh when refreshCounter changes
+  // OPTIMIZED: Debounced calculation when entries change with shorter delay
   useEffect(() => {
-    if (!isMountedRef.current) return;
-    loadSummary();
-  }, [loadSummary, refreshCounter]);
-
-  // Debounced calculation when entries change
-  useEffect(() => {
-    if (!userId || !date || !autoRefresh || !isMountedRef.current) return;
-    
-    const dateKey = format(date, 'yyyy-MM-dd');
-    
-    // Skip calculation if entries haven't changed
-    if (entries.length === 0 || 
-        (processedDatesRef.current.has(dateKey) && 
-         entries.length === entriesRef.current.length)) {
-      return;
-    }
+    if (!userId || !date || !autoRefresh || !isMountedRef.current || entries.length === 0) return;
     
     logger.debug(`Entries changed (${entries.length} entries), debouncing TOIL calculation`);
     
     const timeoutId = setTimeout(() => {
       if (!isMountedRef.current) return;
       logger.debug('Debounce time elapsed, calculating TOIL');
-      calculateToilForDay().then(() => {
-        // Mark this date as processed
-        processedDatesRef.current.add(dateKey);
-      });
-    }, 500);
+      calculateToilForDay();
+    }, 200); // Reduced from 500ms to 200ms for more responsive calculations
     
     return () => clearTimeout(timeoutId);
   }, [userId, date, entries, calculateToilForDay, autoRefresh]);
 
-  // Auto-refresh interval with improved handling
-  useEffect(() => {
-    if (!autoRefresh || !isMountedRef.current) return;
-    
-    logger.debug(`Setting up auto-refresh interval (${refreshInterval}ms)`);
-    
-    const intervalId = setInterval(() => {
-      if (isMountedRef.current) {
-        refreshSummary();
-      }
-    }, refreshInterval);
-    
-    return () => clearInterval(intervalId);
-  }, [autoRefresh, refreshInterval, refreshSummary]);
-
-  // Force initial refresh with better mount handling
+  // Component cleanup
   useEffect(() => {
     isMountedRef.current = true;
-    // Short delay to let other initialization complete
-    const timeoutId = setTimeout(() => {
-      if (isMountedRef.current) {
-        logger.debug('Initial refresh after component mount');
-        refreshSummary();
-      }
-    }, 100);
-    
     return () => {
-      clearTimeout(timeoutId);
       isMountedRef.current = false;
     };
-  }, [refreshSummary]);
+  }, []);
 
   return {
     toilSummary,

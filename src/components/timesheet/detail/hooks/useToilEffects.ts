@@ -7,7 +7,6 @@ const logger = createTimeLogger('useToilEffects');
 
 /**
  * Interface for the useToilEffects parameters
- * Combines the best of both parameter sets, making optional parameters explicit
  */
 export interface UseToilEffectsProps {
   // Required parameters
@@ -21,11 +20,9 @@ export interface UseToilEffectsProps {
   // Schedule data
   schedule?: WorkSchedule;
   
-  // Status flags
+  // Status flags - simplified
   hasEntries?: boolean; // Whether there are entries for the day
   leaveActive?: boolean; // Whether leave is active for the day
-  toilActive?: boolean; // Whether TOIL is being used for the day
-  isComplete?: boolean; // Whether the day is marked complete
   
   // Functions
   calculateToilForDay: () => Promise<void>; // Function to trigger TOIL calculation
@@ -33,12 +30,13 @@ export interface UseToilEffectsProps {
 
 /**
  * Hook that handles side effects for TOIL calculations
- * Automatically triggers TOIL calculations when conditions are met
+ * SIMPLIFIED: Now triggers TOIL calculations more aggressively
  * 
  * TOIL is calculated when:
  * 1. We have entries for the day (hasEntries or entries.length > 0)
  * 2. No leave is active (leaveActive is false)
- * 3. Either the day is marked as complete OR TOIL is explicitly marked as active
+ * 
+ * Removed restrictive conditions: isComplete and toilActive are no longer required
  */
 export const useToilEffects = ({
   userId,
@@ -47,8 +45,6 @@ export const useToilEffects = ({
   schedule,
   hasEntries: explicitHasEntries,
   leaveActive = false,
-  toilActive = false,
-  isComplete = false,
   calculateToilForDay,
   entriesCount
 }: UseToilEffectsProps) => {
@@ -57,27 +53,29 @@ export const useToilEffects = ({
     ? explicitHasEntries 
     : (entries && entries.length > 0);
   
-  // Trigger TOIL calculation when entries change and day is complete or TOIL is active
+  // SIMPLIFIED: Trigger TOIL calculation when entries exist and no leave is active
   useEffect(() => {
     // Only calculate if:
     // 1. We have entries
     // 2. No leave is active
-    // 3. The day is marked as complete OR TOIL is explicitly marked as active
-    if (hasEntries && !leaveActive && (isComplete || toilActive)) {
+    // REMOVED: isComplete and toilActive conditions that were too restrictive
+    if (hasEntries && !leaveActive) {
       logger.debug(
         `[useToilEffects] Auto-calculating TOIL for day: ${date.toISOString().split('T')[0]}, ` +
-        `isComplete: ${isComplete}, toilActive: ${toilActive}`
+        `entriesCount: ${entries?.length || 0}`
       );
       
       calculateToilForDay().catch(error => {
         logger.error('TOIL calculation failed:', error);
       });
+    } else {
+      logger.debug(
+        `[useToilEffects] Skipping TOIL calculation: hasEntries=${hasEntries}, leaveActive=${leaveActive}`
+      );
     }
   }, [
     hasEntries, 
     leaveActive, 
-    toilActive, 
-    isComplete, 
     date, 
     calculateToilForDay, 
     entriesCount
