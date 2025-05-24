@@ -6,7 +6,7 @@ import { eventBus } from '@/utils/events/EventBus';
 import { TIME_ENTRY_EVENTS, TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { format } from 'date-fns';
 import { loadEntriesFromStorage, saveEntriesToStorage, addToDeletedEntries } from "../storage-operations";
-import { deleteAllToilData, triggerUIStateUpdate } from "../../toil/unifiedDeletion";
+import { deleteAllToilData, triggerUIStateUpdate } from "../toil/unifiedDeletion";
 
 const logger = createTimeLogger('DeleteOperations');
 
