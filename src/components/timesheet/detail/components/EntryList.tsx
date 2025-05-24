@@ -3,6 +3,13 @@ import React, { useState, useCallback } from "react";
 import { TimeEntry } from "@/types";
 import EntryListItem from "./EntryListItem";
 import { useTimesheetWorkHours } from "@/hooks/timesheet/useTimesheetWorkHours";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface EntryListProps {
   entries: TimeEntry[];
@@ -40,21 +47,35 @@ const EntryList: React.FC<EntryListProps> = ({
   }, [onDeleteEntry]);
 
   return (
-    <div className="space-y-4">
-      {entries.map(entry => {
-        const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
-        const workHours = getWorkHoursForDate(entryDate, entry.userId);
-        
-        return (
-          <EntryListItem
-            key={entry.id}
-            entry={entry}
-            onDelete={() => handleDeleteEntry(entry.id)}
-            interactive={interactive}
-            isDeleting={processingEntryIds.has(entry.id)}
-          />
-        );
-      })}
+    <div className="w-full">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-20">Hours</TableHead>
+            <TableHead className="w-24">Rego</TableHead>
+            <TableHead className="w-28">Job Number</TableHead>
+            <TableHead className="w-28">Task Number</TableHead>
+            <TableHead className="flex-1">Description</TableHead>
+            <TableHead className="w-16 text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map(entry => {
+            const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
+            const workHours = getWorkHoursForDate(entryDate, entry.userId);
+            
+            return (
+              <EntryListItem
+                key={entry.id}
+                entry={entry}
+                onDelete={() => handleDeleteEntry(entry.id)}
+                interactive={interactive}
+                isDeleting={processingEntryIds.has(entry.id)}
+              />
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 };
