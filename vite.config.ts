@@ -60,10 +60,14 @@ export default defineConfig(({ mode }) => ({
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
       "react-is": path.resolve(__dirname, "node_modules/react-is"),
       "prop-types": path.resolve(__dirname, "node_modules/prop-types"),
+      // Fix lodash imports for Recharts compatibility
+      "lodash/isString": path.resolve(__dirname, "node_modules/lodash/isString.js"),
+      "lodash/isNaN": path.resolve(__dirname, "node_modules/lodash/isNaN.js"),
+      "lodash/get": path.resolve(__dirname, "node_modules/lodash/get.js"),
     },
     // Ensure proper extension resolution
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-    dedupe: ['react', 'react-dom', 'react-is', 'prop-types']
+    dedupe: ['react', 'react-dom', 'react-is', 'prop-types', 'lodash']
   },
   optimizeDeps: {
     include: [
@@ -78,6 +82,8 @@ export default defineConfig(({ mode }) => ({
       "@radix-ui/react-primitive",
       "clsx",
       "class-variance-authority",
+      "recharts",
+      "lodash",
     ],
     exclude: [], // Ensure React is not excluded
     esbuildOptions: {
@@ -94,7 +100,13 @@ export default defineConfig(({ mode }) => ({
     cssMinify: mode === "production", // Only minify CSS in production
     commonjsOptions: {
       transformMixedEsModules: true, // Important for handling mixed module types
-      include: [/node_modules\/react\//, /node_modules\/react-dom\//, /node_modules\/react-is\//], // Force proper handling of React packages
+      include: [
+        /node_modules\/react\//, 
+        /node_modules\/react-dom\//, 
+        /node_modules\/react-is\//, 
+        /node_modules\/lodash\//,
+        /node_modules\/recharts\//
+      ], // Force proper handling of React and lodash packages
       requireReturnsDefault: "auto",
     },
     sourcemap: mode !== "production",
