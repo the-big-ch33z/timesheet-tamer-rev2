@@ -44,12 +44,12 @@ export const useMonthlyHoursCalculation = (
   // Calculate fortnight hours and target hours
   const { fortnightHours, targetHours } = useMemo(() => {
     // If we have a work schedule, calculate fortnight hours from it
-    let fortnightHours = userMetrics?.fortnightHours || 0;
+    let fortnightHours = userMetrics?.fortnightHours || 76; // Default to 76 hours if no metrics
     let userFte = userMetrics?.fte || 1.0;
     
     if (workSchedule) {
       // Calculate adjusted fortnight hours based on schedule and FTE
-      fortnightHours = calculateFortnightHoursFromSchedule(workSchedule);
+      fortnightHours = calculateFortnightHoursFromSchedule(workSchedule) * userFte;
       logger.debug(`Using calculated fortnight hours from schedule: ${fortnightHours}`);
     } else if (userMetrics) {
       // If no schedule but we have user metrics with fortnightHours

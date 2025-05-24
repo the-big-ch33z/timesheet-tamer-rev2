@@ -1,7 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { User, TimeEntry } from '@/types';
 import { useTimeEntryContext } from '@/contexts/timesheet/entries-context/TimeEntryContext';
+import { useUserMetrics } from '@/contexts/user-metrics';
+import { useWorkSchedule } from '@/contexts/work-schedule';
 import { useMonthlyHoursCalculation } from '@/hooks/useMonthlyHoursCalculation';
 import { toilService } from '@/utils/time/services/toil';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -23,79 +25,77 @@ export function useTeamMemberMetrics(
 ) {
   const [metrics, setMetrics] = useState<Record<string, TeamMemberMetrics>>({});
   const timeEntryContext = useTimeEntryContext();
-  const getMonthEntries = timeEntryContext?.getMonthEntries;
+  const { getUserMetrics } = useUserMetrics();
+  const { getScheduleById } = useWorkSchedule();
   
-  useEffect(() => {
-    async function fetchMetricsForMembers() {
-      const newMetrics: Record<string, TeamMemberMetrics> = {};
-      
-      // Initialize metrics for all team members
-      teamMembers.forEach(member => {
+  // Calculate metrics for each team member
+  const calculatedMetrics = useMemo(() => {
+    const newMetrics: Record<string, TeamMemberMetrics> = {};
+    
+    teamMembers.forEach(member => {
+      try {
+        // Get entries for this user for the selected month
+        let entries: TimeEntry[] = [];
+        if (timeEntryContext?.getMonthEntries) {
+          entries = timeEntryContext.getMonthEntries(selectedMonth, member.id);
+        }
+        
+        // Get user metrics and work schedule
+        const userMetrics = getUserMetrics(member.id);
+        const workSchedule = userMetrics.workScheduleId ? getScheduleById(userMetrics.workScheduleId) : undefined;
+        
+        // Calculate monthly hours
+        const { targetHours, hours } = useMonthlyHoursCalculation(
+          entries,
+          selectedMonth,
+          member,
+          workSchedule
+        );
+        
+        // Get TOIL balance
+        const monthYear = format(selectedMonth, 'yyyy-MM');
+        let toilBalance = 0;
+        try {
+          const toilSummary = toilService.getTOILSummary(member.id, monthYear);
+          toilBalance = toilSummary?.remaining || 0;
+        } catch (error) {
+          logger.error(`Failed to get TOIL balance for user ${member.id}`, error);
+        }
+        
+        newMetrics[member.id] = {
+          userId: member.id,
+          requiredHours: targetHours,
+          actualHours: hours,
+          toilBalance,
+          loading: false
+        };
+        
+        logger.debug(`Calculated metrics for ${member.name}:`, {
+          requiredHours: targetHours,
+          actualHours: hours,
+          toilBalance,
+          entriesCount: entries.length
+        });
+        
+      } catch (error) {
+        logger.error(`Failed to calculate metrics for user ${member.id}`, error);
         newMetrics[member.id] = {
           userId: member.id,
           requiredHours: 0,
           actualHours: 0,
           toilBalance: 0,
-          loading: true
+          loading: false
         };
-      });
-      
-      // Update state with loading indicators
-      setMetrics(newMetrics);
-      
-      // Process each team member
-      for (const member of teamMembers) {
-        try {
-          // Get entries for this user for the selected month
-          let entries: TimeEntry[] = [];
-          if (getMonthEntries) {
-            entries = getMonthEntries(selectedMonth, member.id);
-          } else {
-            logger.warn(`getMonthEntries not available, using empty entries for ${member.id}`);
-          }
-          
-          // Calculate monthly hours
-          const { targetHours, hours } = useMonthlyHoursCalculation(entries, selectedMonth, member);
-          
-          // Get TOIL balance - now handled synchronously
-          const monthYear = format(selectedMonth, 'yyyy-MM');
-          let toilBalance = 0;
-          try {
-            const toilSummary = toilService.getTOILSummary(member.id, monthYear);
-            toilBalance = toilSummary?.remaining || 0;
-          } catch (error) {
-            logger.error(`Failed to get TOIL balance for user ${member.id}`, error);
-          }
-          
-          // Update metrics for this member
-          newMetrics[member.id] = {
-            userId: member.id,
-            requiredHours: targetHours,
-            actualHours: hours,
-            toilBalance: toilBalance,
-            loading: false
-          };
-        } catch (error) {
-          logger.error(`Failed to calculate metrics for user ${member.id}`, error);
-          // Keep the entry but mark as not loading and with default values
-          newMetrics[member.id] = {
-            userId: member.id,
-            requiredHours: 0,
-            actualHours: 0,
-            toilBalance: 0,
-            loading: false
-          };
-        }
       }
-      
-      setMetrics(newMetrics);
-    }
+    });
     
-    if (teamMembers.length > 0) {
-      fetchMetricsForMembers();
-    }
-    
-  }, [teamMembers, selectedMonth, getMonthEntries]);
+    return newMetrics;
+  }, [teamMembers, selectedMonth, timeEntryContext, getUserMetrics, getScheduleById]);
+  
+  // Update state when calculated metrics change
+  useEffect(() => {
+    setMetrics(calculatedMetrics);
+  }, [calculatedMetrics]);
   
   return { metrics };
 }
