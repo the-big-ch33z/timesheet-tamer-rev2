@@ -122,8 +122,8 @@ export function useUnifiedTOIL({
       logger.debug(`Work schedule details:`, {
         name: workSchedule.name,
         id: workSchedule.id,
-        weekCount: workSchedule.weeks?.length || 0,
-        rdoDays: workSchedule.rdoDays?.length || 0
+        weekCount: Object.keys(workSchedule.weeks).length,
+        rdoDays: Object.keys(workSchedule.rdoDays).length
       });
     } else {
       logger.warn(`⚠️ No work schedule provided - TOIL calculations may be incorrect!`);
