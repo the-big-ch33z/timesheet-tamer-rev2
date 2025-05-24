@@ -6,6 +6,7 @@ import { timeEventsService } from "@/utils/time/events/timeEventsService";
 import { eventBus } from '@/utils/events/EventBus';
 import { TIME_ENTRY_EVENTS, TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { format } from 'date-fns';
+import { loadEntriesFromStorage, saveEntriesToStorage, addToDeletedEntries } from "../storage-operations";
 
 const logger = createTimeLogger('DeleteOperations');
 
@@ -54,46 +55,68 @@ export class DeleteOperations {
     console.log(`[DeleteOperations] Deleting entry with ID: ${entryId}`);
     
     try {
-      // Logic for deleting an entry would go here.
-      // For simplicity in this example, we're just returning true
-      // and emitting events.
+      // Load current entries from storage
+      const currentEntries = loadEntriesFromStorage(this.storageKey, []);
       
-      // In a real implementation, we would:
-      // 1. Get all entries from storage
-      // 2. Filter out the entry with the matching ID
-      // 3. Write the updated array back to storage
-      
-      // For now, just simulate this was successful
-      const success = true;
-      
-      if (success) {
-        const now = new Date();
-        const eventData = createStandardEventData(entryId, userId);
-        
-        // Dispatch through the event manager
-        this.eventManager.dispatchEvent({
-          type: 'entry-deleted', // Using the correct event type name
-          timestamp: now,
-          payload: eventData
-        });
-        
-        // Also dispatch through the improved event service
-        timeEventsService.publish('entry-deleted', eventData);
-        
-        // Dispatch through EventBus for wider notification
-        eventBus.publish(TIME_ENTRY_EVENTS.DELETED, eventData, { debounce: 50 });
-        
-        // Also dispatch a TOIL calculation event to trigger TOIL updates
-        eventBus.publish(TOIL_EVENTS.CALCULATED, {
-          ...eventData,
-          status: 'completed'
-        }, { debounce: 50 });
-        
-        logger.debug(`Successfully deleted entry with ID: ${entryId}`);
-        console.log(`[DeleteOperations] Successfully deleted entry with ID: ${entryId}`);
+      // Find the entry to get its user ID if not provided
+      const entryToDelete = currentEntries.find(entry => entry.id === entryId);
+      if (entryToDelete && !userId) {
+        userId = entryToDelete.userId;
       }
       
-      return success;
+      // Check if entry exists
+      if (!entryToDelete) {
+        logger.warn(`Entry with ID ${entryId} not found in storage`);
+        return false;
+      }
+      
+      // Filter out the entry to delete
+      const updatedEntries = currentEntries.filter(entry => entry.id !== entryId);
+      
+      // Save updated entries back to storage
+      const saveSuccess = await saveEntriesToStorage(updatedEntries, this.storageKey, []);
+      
+      if (!saveSuccess) {
+        logger.error(`Failed to save entries after deleting ${entryId}`);
+        return false;
+      }
+      
+      // Mark the entry as deleted in the deletion tracking system
+      try {
+        await addToDeletedEntries(entryId, [], 'time-entries-deleted');
+        logger.debug(`Added entry ${entryId} to deletion tracking`);
+      } catch (error) {
+        logger.warn(`Failed to add entry to deletion tracking: ${error}`);
+        // Continue execution as the main deletion succeeded
+      }
+      
+      // Dispatch events for TOIL cleanup and UI updates
+      const now = new Date();
+      const eventData = createStandardEventData(entryId, userId);
+      
+      // Dispatch through the event manager
+      this.eventManager.dispatchEvent({
+        type: 'entry-deleted',
+        timestamp: now,
+        payload: eventData
+      });
+      
+      // Also dispatch through the improved event service
+      timeEventsService.publish('entry-deleted', eventData);
+      
+      // Dispatch through EventBus for wider notification
+      eventBus.publish(TIME_ENTRY_EVENTS.DELETED, eventData, { debounce: 50 });
+      
+      // Also dispatch a TOIL calculation event to trigger TOIL updates
+      eventBus.publish(TOIL_EVENTS.CALCULATED, {
+        ...eventData,
+        status: 'completed'
+      }, { debounce: 50 });
+      
+      logger.debug(`Successfully deleted entry with ID: ${entryId}`);
+      console.log(`[DeleteOperations] Successfully deleted entry with ID: ${entryId}`);
+      
+      return true;
     } catch (error) {
       logger.error(`Failed to delete entry with ID: ${entryId}`, error);
       console.error(`[DeleteOperations] Failed to delete entry:`, error);
