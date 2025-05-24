@@ -11,7 +11,8 @@ import {
   loadDeletedEntries,
   addToDeletedEntries,
   STORAGE_KEY,
-  DELETED_ENTRIES_KEY
+  DELETED_ENTRIES_KEY,
+  storageWriteLock
 } from './storage-operations';
 import { 
   validateTimeEntry,
@@ -411,26 +412,19 @@ export class UnifiedTimeEntryService {
   }
 }
 
-// Export types for backward compatibility
-export type { 
-  TimeEntryEventType,
-  TimeEntryEvent,
-  TimeEntryServiceConfig,
-  ValidationResult
-};
-
-// Export constants
-export { 
-  STORAGE_KEY,
-  DELETED_ENTRIES_KEY 
-};
-
 // Export utility functions
 export {
   validateTimeEntry,
   autoCalculateHours,
-  calculateTotalHours
+  calculateTotalHours,
+  STORAGE_KEY,
+  DELETED_ENTRIES_KEY,
+  storageWriteLock
 };
 
-// Re-export the storageWriteLock for backward compatibility
-export { storageWriteLock } from './storage-operations';
+// Export types
+export type { 
+  TimeEntryEventType,
+  TimeEntryEvent,
+  ValidationResult
+};
