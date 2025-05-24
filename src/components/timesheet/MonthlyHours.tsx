@@ -12,7 +12,6 @@ import { TOIL_EVENTS, TOILEventData } from '@/utils/events/eventTypes';
 import { eventBus } from '@/utils/events/EventBus';
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 
-// Create a logger for this component
 const logger = createTimeLogger('MonthlyHours');
 
 interface MonthlyHoursProps {
@@ -26,7 +25,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   currentMonth,
   workSchedule
 }) => {
-  // Use our unified TOIL hook
+  // Use our unified TOIL hook for fallback data
   const {
     toilSummary,
     isLoading: toilLoading,
@@ -36,8 +35,8 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     userId: user.id,
     date: currentMonth,
     options: {
-      monthOnly: true, // Use month-only mode
-      refreshInterval: 120000 // 2 minutes
+      monthOnly: true,
+      refreshInterval: 120000
     }
   });
   
@@ -46,7 +45,6 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   const [rolloverHours, setRolloverHours] = useState<number>(0);
   const [refreshCount, setRefreshCount] = useState(0);
 
-  // Memoize these values to prevent unnecessary renders
   const monthName = useMemo(() => format(currentMonth, 'MMMM yyyy'), [currentMonth]);
   const monthYear = useMemo(() => format(currentMonth, 'yyyy-MM'), [currentMonth]);
   
@@ -56,13 +54,13 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     setErrorMessage(error);
   }, []);
   
-  // Add logging to help debug the TOIL summary
   useEffect(() => {
     logger.debug(`MonthlyHours component for ${monthName}:`, {
       userId: user.id,
       toilSummary,
       toilLoading,
-      toilError
+      toilError,
+      workSchedule: workSchedule?.name || 'None'
     });
     
     if (toilError) {
@@ -77,21 +75,17 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
     }
     
     // Calculate rollover hours when summary changes
-    // This is a simplified example - in production you'd get this from a service
     if (toilSummary && toilSummary.remaining > 0) {
-      // Just for demonstration - usually this would come from a real calculation
-      const calculatedRollover = Math.min(toilSummary.remaining, 16); // Cap at 16 hours for example
+      const calculatedRollover = Math.min(toilSummary.remaining, 16);
       setRolloverHours(calculatedRollover);
     } else {
       setRolloverHours(0);
     }
-  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast]);
+  }, [toilSummary, toilLoading, toilError, monthName, user.id, toast, workSchedule]);
   
   // Subscribe to TOIL events to update based on changes
   useEffect(() => {
     const subscription = eventBus.subscribe(TOIL_EVENTS.SUMMARY_UPDATED, (data: TOILEventData) => {
-      // Check for the monthYear property in the TOILEventData
-      // For backward compatibility, we'll also check month+year, month, or just userId match
       const dataMatchesMonth = 
         (data && data.userId === user.id && data.monthYear === monthYear) || 
         (data && data.userId === user.id && data.date?.startsWith(monthYear));
@@ -111,12 +105,11 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
   return (
     <TOILEventProvider>
       <div className="flex flex-col gap-8 w-full">
-        {/* 1. Monthly Summary card comes FIRST */}
+        {/* Monthly Summary card */}
         <div className="w-full max-w-full">
           <Card className="bg-gradient-to-br from-white via-blue-50 to-blue-100 shadow-lg border-0 rounded-2xl hover:shadow-xl transition-shadow group">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl font-semibold text-blue-700 mb-2">
-                {/* Monthly Summary title handled inside MonthSummary */}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -128,7 +121,8 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
             </CardContent>
           </Card>
         </div>
-        {/* 2. TOIL Summary card below */}
+        
+        {/* TOIL Summary card with work schedule passed */}
         <div className="w-full max-w-full">
           {toilError && !toilSummary ? (
             <div className="text-center text-red-500 p-4 bg-red-50 rounded-lg flex flex-col gap-2">
@@ -146,6 +140,7 @@ const MonthlyHours: React.FC<MonthlyHoursProps> = ({
               userId={user.id}
               date={currentMonth}
               monthName={monthName}
+              workSchedule={workSchedule}
               onError={handleTOILError}
               showRollover={rolloverHours > 0}
               rolloverHours={rolloverHours}

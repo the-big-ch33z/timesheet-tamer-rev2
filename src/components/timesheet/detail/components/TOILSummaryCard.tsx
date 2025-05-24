@@ -10,6 +10,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useUnifiedTOIL } from "@/hooks/timesheet/toil/useUnifiedTOIL";
 import { eventBus } from "@/utils/events/EventBus";
 import { TIME_ENTRY_EVENTS } from "@/utils/events/eventTypes";
+import { useTimeEntryContext } from "@/contexts/timesheet/entries-context/TimeEntryContext";
 
 // Create logger
 const logger = createTimeLogger('TOILSummaryCard');
@@ -23,7 +24,7 @@ export interface TOILSummaryCardProps {
   showRollover?: boolean;
   rolloverHours?: number;
   useSimpleView?: boolean;
-  // For testing purposes only - significantly enhanced
+  workSchedule?: any; // Add work schedule prop
   testProps?: {
     summary: any;
     loading: boolean;
@@ -31,7 +32,6 @@ export interface TOILSummaryCardProps {
   };
 }
 
-// Main TOILSummaryCard component with improved error handling
 const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   userId,
   date,
@@ -41,15 +41,24 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   showRollover = false,
   rolloverHours = 0,
   useSimpleView = false,
+  workSchedule,
   testProps
 }) => {
+  // Access TimeEntryContext to get the actual entries
+  const timeEntryContext = useTimeEntryContext();
+  
+  // Get month entries for the user
+  const monthEntries = timeEntryContext.getMonthEntries(date, userId);
+  
+  logger.debug(`TOILSummaryCard: Found ${monthEntries.length} entries for ${userId} in month ${date.toISOString()}`);
+  
   // Only use test props if testModeEnabled is true
   const enhancedTestProps = testProps && testProps.testModeEnabled ? {
     ...testProps,
     testModeEnabled: true
   } : undefined;
   
-  // Use our unified TOIL hook with improved test mode handling
+  // Use our unified TOIL hook with the actual entries and work schedule
   const {
     toilSummary: summary,
     isLoading: loading,
@@ -58,10 +67,12 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   } = useUnifiedTOIL({
     userId,
     date,
+    entries: monthEntries, // Pass the actual entries
+    workSchedule, // Pass the work schedule
     options: {
-      monthOnly: true, // Use month-only mode
-      refreshInterval: 60000, // Reduced refresh interval
-      testProps: enhancedTestProps // Only pass test props if properly enabled
+      monthOnly: true,
+      refreshInterval: 60000,
+      testProps: enhancedTestProps
     }
   });
 
@@ -74,7 +85,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
   const [refreshAttempts, setRefreshAttempts] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Debounce the refresh function to prevent excessive calls - REDUCED to 100ms
+  // Debounce the refresh function
   const debouncedRefresh = useDebounce(() => {
     logger.debug('Requesting refresh of TOIL summary (debounced)');
     setIsRefreshing(true);
@@ -91,7 +102,7 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
   }, [error, onError]);
   
-  // Log when summary changes and update last updated timestamp
+  // Log when summary changes
   useEffect(() => {
     if (summary) {
       logger.debug('TOILSummaryCard received summary update:', summary);
@@ -100,14 +111,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     }
   }, [summary]);
   
-  // Add listener for time entry events - now more responsive to deletion and creation
+  // Add listener for time entry events
   useEffect(() => {
     const handleEntryEvent = () => {
       logger.debug('Time entry event received, refreshing TOIL summary');
       debouncedRefresh();
     };
     
-    // Listen to all entry-related events
     const sub1 = eventBus.subscribe(TIME_ENTRY_EVENTS.DELETED, handleEntryEvent);
     const sub2 = eventBus.subscribe(TIME_ENTRY_EVENTS.CREATED, handleEntryEvent);
     const sub3 = eventBus.subscribe(TIME_ENTRY_EVENTS.UPDATED, handleEntryEvent);
@@ -132,16 +142,15 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [debugMode]);
   
-  // Manual refresh handling - using debounced function
+  // Manual refresh handling
   const handleManualRefresh = useCallback(() => {
     logger.debug('Manual refresh requested');
     debouncedRefresh();
   }, [debouncedRefresh]);
   
-  // Ensure we refresh on mount
+  // Refresh on mount
   useEffect(() => {
     logger.debug('TOILSummaryCard mounted, requesting initial refresh');
-    // Immediate refresh on mount
     refreshSummary();
   }, [refreshSummary]);
   
@@ -157,7 +166,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             <Clock className="w-6 h-6 text-blue-400" />
             TOIL Summary {monthName}
             
-            {/* Manual refresh button */}
             <RefreshCw 
               size={16} 
               className={`ml-auto cursor-pointer text-blue-400 hover:text-blue-600 transition-colors
@@ -166,7 +174,6 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
               aria-label="Refresh TOIL data"
             />
             
-            {/* Debug indicator */}
             {debugMode && (
               <Bug 
                 size={16} 
@@ -187,12 +194,13 @@ const TOILSummaryCard: React.FC<TOILSummaryCardProps> = memo(({
             onError={onError}
           />
           
-          {/* Debug info area */}
           {debugMode && (
             <div className="mt-4 p-2 border border-amber-200 bg-amber-50 rounded text-xs font-mono">
               <div>Last update: {lastUpdated.toLocaleTimeString()}</div>
               <div>Refresh attempts: {refreshAttempts}/5</div>
               <div>Loading state: {loading ? 'Loading' : 'Ready'}</div>
+              <div>Entries count: {monthEntries.length}</div>
+              <div>Work schedule: {workSchedule ? workSchedule.name : 'None'}</div>
               <div>
                 Summary: {summary ? `A:${summary.accrued.toFixed(1)} U:${summary.used.toFixed(1)} R:${summary.remaining.toFixed(1)}` : "None"}
               </div>
