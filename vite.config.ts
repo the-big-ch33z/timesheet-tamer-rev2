@@ -67,7 +67,7 @@ export default defineConfig(({ mode }) => ({
     },
     // Ensure proper extension resolution
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-    dedupe: ['react', 'react-dom', 'react-is', 'prop-types', 'lodash']
+    dedupe: ['react', 'react-dom', 'react-is', 'prop-types', 'lodash', 'eventemitter3']
   },
   optimizeDeps: {
     include: [
@@ -108,10 +108,11 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/lodash\//,
         /node_modules\/recharts\//,
         /node_modules\/react-smooth\//,
-        /node_modules\/prop-types\//
-      ], // Force proper handling of React, lodash, and prop-types packages
+        /node_modules\/prop-types\//,
+        /node_modules\/eventemitter3\//
+      ], // Force proper handling of React, lodash, prop-types, and eventemitter3 packages
       requireReturnsDefault: "auto",
-      defaultIsModuleExports: true, // Handle prop-types default export
+      defaultIsModuleExports: true, // Handle prop-types and eventemitter3 default export
     },
     sourcemap: mode !== "production",
     rollupOptions: {
