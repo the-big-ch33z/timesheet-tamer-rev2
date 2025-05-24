@@ -1,39 +1,33 @@
 
-/**
- * Time services index
- * Exports the unified time entry service and its constants
- */
-import { 
-  timeEntryService,
-  unifiedTimeEntryService,
-  createTimeEntryService,
-  STORAGE_KEY,
-  DELETED_ENTRIES_KEY,
-  validateTimeEntry,
-  autoCalculateHours,
-  calculateTotalHours,
-  storageWriteLock
-} from './time-entry-service';
-
-// Re-export everything for backward compatibility
+// Main exports from the refactored unified service
 export { 
-  timeEntryService,
-  unifiedTimeEntryService,
-  createTimeEntryService,
+  UnifiedTimeEntryService,
   STORAGE_KEY,
   DELETED_ENTRIES_KEY,
+  storageWriteLock,
   validateTimeEntry,
   autoCalculateHours,
-  calculateTotalHours,
-  storageWriteLock
-};
+  calculateTotalHours
+} from './unified-service';
 
-// Re-export types for convenience
-export type {
-  TimeEntryEvent,
+export type { 
   TimeEntryServiceConfig,
-  TimeEntryEventType
-} from './types';
+  TimeEntryEventType,
+  TimeEntryEvent,
+  ValidationResult
+} from './unified-service';
 
-// Export singleton instance as default
-export default timeEntryService;
+// Create singleton instance
+import { UnifiedTimeEntryService } from './unified-service';
+
+export const unifiedTimeEntryService = new UnifiedTimeEntryService();
+
+// Also export as timeEntryService for backward compatibility
+export const timeEntryService = unifiedTimeEntryService;
+
+// Factory function
+export function createTimeEntryService(config?: any): UnifiedTimeEntryService {
+  const service = new UnifiedTimeEntryService(config);
+  service.init();
+  return service;
+}

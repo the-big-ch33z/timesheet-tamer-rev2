@@ -1,26 +1,26 @@
+
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { createTimeLogger } from '../errors/timeLogger';
-import { ensureDate, isValidDate, formatDateForComparison } from '../validation/dateValidation';
+import { ensureDate, isValidDate } from '../validation/dateValidation';
+import { EventManager, TimeEntryEvent, TimeEntryEventType } from './event-manager';
+import { CacheManager } from './cache-manager';
+import { 
+  loadEntriesFromStorage,
+  saveEntriesToStorage,
+  loadDeletedEntries,
+  addToDeletedEntries,
+  STORAGE_KEY,
+  DELETED_ENTRIES_KEY
+} from './storage-operations';
+import { 
+  validateTimeEntry,
+  autoCalculateHours,
+  calculateTotalHours,
+  ValidationResult
+} from './entry-validation';
 
-// Consolidated type definitions from 'types.ts'
-export type TimeEntryEventType = 
-  | 'entry-created' 
-  | 'entry-updated'
-  | 'entry-deleted'
-  | 'entries-loaded'
-  | 'storage-sync'
-  | 'error'
-  | 'all';
-
-export interface TimeEntryEvent {
-  type: TimeEntryEventType;
-  payload?: any;
-  timestamp: Date;
-  userId?: string;
-}
-
-export type TimeEntryEventListener = (event: TimeEntryEvent) => void;
+const logger = createTimeLogger('UnifiedTimeEntryService');
 
 export interface TimeEntryServiceConfig {
   enableCaching?: boolean;
@@ -30,392 +30,12 @@ export interface TimeEntryServiceConfig {
   storageKey?: string;
 }
 
-export interface EntryCache {
-  entries: TimeEntry[];
-  userEntries: Record<string, TimeEntry[]>;
-  dayEntries: Record<string, TimeEntry[]>; 
-  monthEntries: Record<string, TimeEntry[]>;
-  timestamp: number;
-  isValid: boolean;
-}
-
-export interface ValidationResult {
-  valid: boolean;
-  message?: string;
-}
-
-// Storage constants moved from storage-operations.ts
-export const STORAGE_KEY = 'time-entries';
-export const DELETED_ENTRIES_KEY = 'time-entries-deleted';
-export const CACHE_TIMESTAMP_KEY = 'time-entries-cache-timestamp';
-
-const logger = createTimeLogger('UnifiedTimeEntryService');
-
 /**
- * Enhanced event manager for time entry operations
- * Consolidated from event-handling.ts
- */
-export class EventManager {
-  private eventListeners: Map<TimeEntryEventType, Set<TimeEntryEventListener>> = new Map();
-
-  public addEventListener(
-    type: TimeEntryEventType, 
-    listener: TimeEntryEventListener
-  ): () => void {
-    if (!this.eventListeners.has(type)) {
-      this.eventListeners.set(type, new Set());
-    }
-
-    const listeners = this.eventListeners.get(type)!;
-    listeners.add(listener);
-    
-    return () => {
-      listeners.delete(listener);
-      if (listeners.size === 0) {
-        this.eventListeners.delete(type);
-      }
-    };
-  }
-
-  public dispatchEvent(event: TimeEntryEvent): void {
-    const listeners = this.eventListeners.get(event.type);
-    if (listeners) {
-      listeners.forEach(listener => {
-        try {
-          listener(event);
-        } catch (error) {
-          logger.error('Error in event listener', error);
-        }
-      });
-    }
-
-    const allListeners = this.eventListeners.get('all');
-    if (allListeners) {
-      allListeners.forEach(listener => {
-        try {
-          listener(event);
-        } catch (error) {
-          logger.error('Error in event listener', error);
-        }
-      });
-    }
-  }
-
-  public setupStorageListener(
-    storageKey: string, 
-    onStorageChange: () => void,
-    onDeletedEntriesChange: () => void,
-    deletedEntriesKey: string
-  ): () => void {
-    const handleStorageEvent = (event: StorageEvent): void => {
-      if (event.key === storageKey) {
-        onStorageChange();
-        this.dispatchEvent({
-          type: 'storage-sync',
-          timestamp: new Date(),
-          payload: { source: 'storage-event' }
-        });
-      } else if (event.key === deletedEntriesKey) {
-        onDeletedEntriesChange();
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', handleStorageEvent);
-      return () => {
-        window.removeEventListener('storage', handleStorageEvent);
-      };
-    }
-    
-    return () => {};
-  }
-
-  public clear(): void {
-    this.eventListeners.clear();
-  }
-}
-
-// Write lock mechanism consolidated from storage-operations.ts
-let writeInProgress = false;
-let writeQueue: (() => Promise<void>)[] = [];
-
-export const storageWriteLock = {
-  acquire: async (): Promise<boolean> => {
-    if (writeInProgress) {
-      return new Promise<boolean>(resolve => {
-        const queuedWrite = async () => {
-          resolve(true);
-        };
-        writeQueue.push(queuedWrite);
-      });
-    }
-    
-    writeInProgress = true;
-    return true;
-  },
-  
-  release: (): void => {
-    writeInProgress = false;
-    
-    if (writeQueue.length > 0) {
-      const nextWrite = writeQueue.shift();
-      if (nextWrite) {
-        writeInProgress = true;
-        nextWrite().catch(error => {
-          logger.error("Error in queued write:", error);
-          storageWriteLock.release();
-        });
-      }
-    }
-  }
-};
-
-/**
- * Consolidated cache management functions
- */
-export function createEmptyCache(): EntryCache {
-  return {
-    entries: [],
-    userEntries: {},
-    dayEntries: {},
-    monthEntries: {},
-    timestamp: 0,
-    isValid: false
-  };
-}
-
-export function isCacheValid(
-  cache: EntryCache,
-  enableCaching: boolean,
-  cacheTTL: number
-): boolean {
-  if (!enableCaching) return false;
-  if (!cache || !cache.isValid) return false;
-  
-  const now = Date.now();
-  return (now - cache.timestamp) < cacheTTL;
-}
-
-export function updateCacheEntries(
-  cache: EntryCache,
-  entries: TimeEntry[]
-): EntryCache {
-  return {
-    ...cache,
-    entries: [...entries],
-    timestamp: Date.now(),
-    isValid: true
-  };
-}
-
-/**
- * Consolidated validation functions from entry-validation.ts
- */
-export function validateTimeEntry(entry: Partial<TimeEntry>): ValidationResult {
-  if (!entry.hours || entry.hours <= 0) {
-    return {
-      valid: false,
-      message: "Hours must be greater than 0"
-    };
-  }
-
-  if (!entry.date) {
-    return {
-      valid: false,
-      message: "Date is required"
-    };
-  }
-
-  return { valid: true };
-}
-
-export function autoCalculateHours(startTime: string, endTime: string): number {
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
-  
-  let hours = endHour - startHour;
-  const minutes = endMinute - startMinute;
-  
-  hours += minutes / 60;
-  
-  return Math.max(0, parseFloat(hours.toFixed(2)));
-}
-
-export function calculateTotalHours(entries: TimeEntry[]): number {
-  return entries.reduce((total, entry) => total + (entry.hours || 0), 0);
-}
-
-/**
- * Consolidated storage operations
- */
-export function loadEntriesFromStorage(
-  storageKey: string = STORAGE_KEY, 
-  deletedEntryIds: string[] = []
-): TimeEntry[] {
-  try {
-    const storedData = localStorage.getItem(storageKey);
-    
-    if (!storedData) {
-      return [];
-    }
-    
-    const entries: TimeEntry[] = JSON.parse(storedData);
-    
-    if (!Array.isArray(entries)) {
-      logger.error('Invalid storage data: not an array');
-      return [];
-    }
-    
-    const filteredEntries = entries.filter(entry => 
-      entry && entry.id && !deletedEntryIds.includes(entry.id)
-    );
-    
-    const validEntries = filteredEntries.filter(entry => {
-      if (!entry.id || !entry.userId || !entry.date) {
-        return false;
-      }
-      
-      try {
-        if (!(entry.date instanceof Date)) {
-          new Date(entry.date);
-        }
-        return true;
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    try {
-      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-    } catch (e) {
-      logger.debug('Could not update cache timestamp', e);
-    }
-    
-    return validEntries;
-    
-  } catch (error) {
-    logger.error('Error loading entries from storage', error);
-    
-    try {
-      localStorage.setItem('error-state', JSON.stringify({
-        time: Date.now(),
-        error: error instanceof Error ? error.message : String(error)
-      }));
-    } catch (e) {
-      // Silently fail
-    }
-    
-    return [];
-  }
-}
-
-export async function saveEntriesToStorage(
-  entries: TimeEntry[], 
-  storageKey: string = STORAGE_KEY,
-  deletedEntryIds: string[] = []
-): Promise<boolean> {
-  let retries = 0;
-  const MAX_RETRIES = 3;
-  
-  while (retries < MAX_RETRIES) {
-    try {
-      await storageWriteLock.acquire();
-      
-      const filteredEntries = entries.filter(entry => 
-        entry && entry.id && !deletedEntryIds.includes(entry.id)
-      );
-      
-      localStorage.setItem(storageKey, JSON.stringify(filteredEntries));
-      
-      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-      
-      return true;
-    } catch (error) {
-      retries++;
-      logger.error(`Error saving entries (attempt ${retries}):`, error);
-      
-      if (retries >= MAX_RETRIES) {
-        break;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 100));
-    } finally {
-      storageWriteLock.release();
-    }
-  }
-  
-  return false;
-}
-
-export function loadDeletedEntries(storageKey: string = DELETED_ENTRIES_KEY): string[] {
-  try {
-    const storedData = localStorage.getItem(storageKey);
-    
-    if (!storedData) {
-      return [];
-    }
-    
-    const deletedEntries = JSON.parse(storedData);
-    
-    if (!Array.isArray(deletedEntries)) {
-      logger.error('Invalid deleted entries data: not an array');
-      return [];
-    }
-    
-    return deletedEntries.filter(id => typeof id === 'string');
-    
-  } catch (error) {
-    logger.error('Error loading deleted entries', error);
-    return [];
-  }
-}
-
-export async function addToDeletedEntries(
-  entryId: string,
-  currentDeletedIds: string[] = [],
-  storageKey: string = DELETED_ENTRIES_KEY
-): Promise<string[]> {
-  await storageWriteLock.acquire();
-  
-  try {
-    let deletedEntries = loadDeletedEntries(storageKey);
-    
-    currentDeletedIds.forEach(id => {
-      if (!deletedEntries.includes(id)) {
-        deletedEntries.push(id);
-      }
-    });
-    
-    if (!deletedEntries.includes(entryId)) {
-      deletedEntries.push(entryId);
-      
-      localStorage.setItem(storageKey, JSON.stringify(deletedEntries));
-    }
-    
-    return deletedEntries;
-  } catch (error) {
-    logger.error('Error adding to deleted entries', error);
-    
-    if (!currentDeletedIds.includes(entryId)) {
-      return [...currentDeletedIds, entryId];
-    }
-    return currentDeletedIds;
-  } finally {
-    storageWriteLock.release();
-  }
-}
-
-/**
- * Unified Time Entry Service
- * 
- * This class consolidates functionality from:
- * - UnifiedTimeEntryService
- * - TimeEntryOperations
- * - TimeEntryQueries
+ * Unified Time Entry Service - Refactored to use modular components
  */
 export class UnifiedTimeEntryService {
   private eventManager: EventManager;
-  private cache: EntryCache;
+  private cacheManager: CacheManager;
   private config: Required<TimeEntryServiceConfig>;
   private isInitialized = false;
   private deletedEntryIds: string[] = [];
@@ -424,7 +44,7 @@ export class UnifiedTimeEntryService {
   constructor(config?: TimeEntryServiceConfig) {
     this.config = {
       enableCaching: true,
-      cacheTTL: 60000, // 1 minute default
+      cacheTTL: 60000,
       validateOnAccess: true,
       enableAuditing: true,
       storageKey: STORAGE_KEY,
@@ -432,12 +52,15 @@ export class UnifiedTimeEntryService {
     };
 
     this.eventManager = new EventManager();
-    this.cache = createEmptyCache();
+    this.cacheManager = new CacheManager({
+      enableCaching: this.config.enableCaching,
+      cacheTTL: this.config.cacheTTL
+    });
 
     if (typeof window !== 'undefined') {
       this.storageCleanupFn = this.eventManager.setupStorageListener(
         this.config.storageKey,
-        () => this.invalidateCache(),
+        () => this.cacheManager.invalidate(),
         () => this.loadDeletedEntries(),
         DELETED_ENTRIES_KEY
       );
@@ -445,7 +68,6 @@ export class UnifiedTimeEntryService {
 
     this.loadDeletedEntries();
     
-    // Auto-initialize if we're in a browser
     if (typeof window !== 'undefined') {
       this.init();
     }
@@ -466,28 +88,13 @@ export class UnifiedTimeEntryService {
     }
     
     this.eventManager.clear();
-    this.invalidateCache();
+    this.cacheManager.invalidate();
     this.isInitialized = false;
     logger.debug('Service destroyed');
   }
 
   public addEventListener(type: TimeEntryEventType, listener: (event: TimeEntryEvent) => void): () => void {
     return this.eventManager.addEventListener(type, listener);
-  }
-
-  private invalidateCache(): void {
-    this.cache = {
-      ...this.cache,
-      isValid: false,
-      timestamp: 0,
-      userEntries: {},
-      dayEntries: {},
-      monthEntries: {}
-    };
-  }
-
-  private isCacheValid(): boolean {
-    return isCacheValid(this.cache, this.config.enableCaching, this.config.cacheTTL);
   }
 
   private loadDeletedEntries(): void {
@@ -498,18 +105,15 @@ export class UnifiedTimeEntryService {
     return [...this.deletedEntryIds];
   }
 
-  /** 
-   * Core entry access methods
-   */
   public getAllEntries(): TimeEntry[] {
     try {
-      if (this.isCacheValid()) {
-        return [...this.cache.entries];
+      const cachedEntries = this.cacheManager.getEntries();
+      if (cachedEntries.length > 0) {
+        return cachedEntries;
       }
 
       const entries = loadEntriesFromStorage(this.config.storageKey, this.deletedEntryIds);
-      
-      this.cache = updateCacheEntries(this.cache, entries);
+      this.cacheManager.updateEntries(entries);
       
       this.eventManager.dispatchEvent({
         type: 'entries-loaded',
@@ -531,86 +135,58 @@ export class UnifiedTimeEntryService {
     }
   }
 
-  /**
-   * Query operations
-   */
   public getUserEntries(userId: string): TimeEntry[] {
     if (!userId) {
       logger.warn('No userId provided to getUserEntries');
       return [];
     }
     
-    // Check cache first
-    if (this.cache.userEntries[userId]) {
-      return [...this.cache.userEntries[userId]];
+    const cachedEntries = this.cacheManager.getUserEntries(userId);
+    if (cachedEntries) {
+      return cachedEntries;
     }
     
-    // Filter entries for the user
     const userEntries = this.getAllEntries().filter(entry => entry.userId === userId);
-    
-    // Update cache
-    this.cache.userEntries[userId] = userEntries;
+    this.cacheManager.setUserEntries(userId, userEntries);
     
     return [...userEntries];
   }
 
   public getDayEntries(date: Date, userId: string): TimeEntry[] {
-    if (!isValidDate(date)) {
-      logger.warn('Invalid date provided to getDayEntries', date);
+    if (!isValidDate(date) || !userId) {
+      logger.warn('Invalid date or userId provided to getDayEntries');
       return [];
     }
     
-    if (!userId) {
-      logger.warn('No userId provided to getDayEntries');
-      return [];
-    }
-    
-    // Get user entries first
-    const userEntries = this.getUserEntries(userId);
-    
-    // Generate cache key
     const cacheKey = `${userId}-${date.toDateString()}`;
-    
-    // Check cache first
-    if (this.cache.dayEntries[cacheKey]) {
-      return [...this.cache.dayEntries[cacheKey]];
+    const cachedEntries = this.cacheManager.getDayEntries(cacheKey);
+    if (cachedEntries) {
+      return cachedEntries;
     }
     
-    // Filter by date using our consistent comparison
+    const userEntries = this.getUserEntries(userId);
     const dayEntries = userEntries.filter(entry => {
       const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
       return entryDate.toDateString() === date.toDateString();
     });
     
-    // Update cache
-    this.cache.dayEntries[cacheKey] = dayEntries;
-    
+    this.cacheManager.setDayEntries(cacheKey, dayEntries);
     return [...dayEntries];
   }
 
   public getMonthEntries(date: Date, userId: string): TimeEntry[] {
-    if (!isValidDate(date)) {
-      logger.warn('Invalid date provided to getMonthEntries', date);
+    if (!isValidDate(date) || !userId) {
+      logger.warn('Invalid date or userId provided to getMonthEntries');
       return [];
     }
     
-    if (!userId) {
-      logger.warn('No userId provided to getMonthEntries');
-      return [];
-    }
-    
-    // Get user entries first
-    const userEntries = this.getUserEntries(userId);
-    
-    // Generate cache key
     const cacheKey = `${userId}-${date.getFullYear()}-${date.getMonth()}`;
-    
-    // Check cache first
-    if (this.cache.monthEntries[cacheKey]) {
-      return [...this.cache.monthEntries[cacheKey]];
+    const cachedEntries = this.cacheManager.getMonthEntries(cacheKey);
+    if (cachedEntries) {
+      return cachedEntries;
     }
     
-    // Filter by month
+    const userEntries = this.getUserEntries(userId);
     const monthEntries = userEntries.filter(entry => {
       const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date);
       return (
@@ -619,15 +195,10 @@ export class UnifiedTimeEntryService {
       );
     });
     
-    // Update cache
-    this.cache.monthEntries[cacheKey] = monthEntries;
-    
+    this.cacheManager.setMonthEntries(cacheKey, monthEntries);
     return [...monthEntries];
   }
 
-  /**
-   * CRUD operations
-   */
   public createEntry(entryData: Omit<TimeEntry, "id">): string | null {
     const validation = validateTimeEntry(entryData);
     if (!validation.valid) {
@@ -656,7 +227,7 @@ export class UnifiedTimeEntryService {
       saveEntriesToStorage(allEntries, this.config.storageKey, this.deletedEntryIds)
         .then(saved => {
           if (saved) {
-            this.invalidateCache();
+            this.cacheManager.invalidate();
             this.dispatchEntryEvent('entry-created', { entry: newEntry }, newEntry.userId);
           } else {
             this.dispatchErrorEvent('Failed to save new entry', 'createEntry', entryData);
@@ -698,17 +269,14 @@ export class UnifiedTimeEntryService {
       }
       
       const originalEntry = allEntries[entryIndex];
-      const updatedEntry = {
-        ...originalEntry,
-        ...updates
-      };
+      const updatedEntry = { ...originalEntry, ...updates };
       
       allEntries[entryIndex] = updatedEntry;
       
       saveEntriesToStorage(allEntries, this.config.storageKey, this.deletedEntryIds)
         .then(saved => {
           if (saved) {
-            this.invalidateCache();
+            this.cacheManager.invalidate();
             this.dispatchEntryEvent('entry-updated', {
               entryId,
               updates,
@@ -746,25 +314,14 @@ export class UnifiedTimeEntryService {
       }
       
       const updatedEntries = allEntries.filter(entry => entry.id !== entryId);
-      
-      // Add to deleted entries list
-      const updatedDeletedIds = await addToDeletedEntries(
-        entryId, 
-        this.deletedEntryIds,
-        DELETED_ENTRIES_KEY
-      );
+      const updatedDeletedIds = await addToDeletedEntries(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY);
       
       this.deletedEntryIds = updatedDeletedIds;
       
-      // Save the updated entries list
-      const savedEntries = await saveEntriesToStorage(
-        updatedEntries, 
-        this.config.storageKey, 
-        this.deletedEntryIds
-      );
+      const savedEntries = await saveEntriesToStorage(updatedEntries, this.config.storageKey, this.deletedEntryIds);
       
       if (savedEntries) {
-        this.invalidateCache();
+        this.cacheManager.invalidate();
         this.dispatchEntryEvent('entry-deleted', {
           entryId,
           entry: entryToDelete
@@ -781,15 +338,12 @@ export class UnifiedTimeEntryService {
     }
   }
 
-  /**
-   * Storage operations
-   */
   public async saveEntriesToStorage(entriesToSave: TimeEntry[]): Promise<boolean> {
     try {
       const result = await saveEntriesToStorage(entriesToSave, this.config.storageKey, this.deletedEntryIds);
       
       if (result) {
-        this.invalidateCache();
+        this.cacheManager.invalidate();
       }
       
       return result;
@@ -806,7 +360,7 @@ export class UnifiedTimeEntryService {
       const updatedIds = await addToDeletedEntries(entryId, this.deletedEntryIds, DELETED_ENTRIES_KEY);
       this.deletedEntryIds = updatedIds;
       
-      this.invalidateCache();
+      this.cacheManager.invalidate();
       
       return true;
     } catch (error) {
@@ -815,9 +369,6 @@ export class UnifiedTimeEntryService {
     }
   }
 
-  /**
-   * Utility methods
-   */
   public calculateTotalHours(entries: TimeEntry[]): number {
     return calculateTotalHours(entries);
   }
@@ -832,12 +383,8 @@ export class UnifiedTimeEntryService {
   
   public cleanupDeletedEntries(maxAgeDays: number = 30): void {
     logger.debug(`Cleanup requested for entries older than ${maxAgeDays} days`);
-    // Implementation would go here - keeping this as a stub for compatibility
   }
 
-  /**
-   * Event helper methods
-   */
   private dispatchEntryEvent(type: TimeEntryEventType, payload: any, userId?: string): void {
     this.eventManager.dispatchEvent({
       type,
@@ -863,3 +410,27 @@ export class UnifiedTimeEntryService {
     });
   }
 }
+
+// Export types for backward compatibility
+export type { 
+  TimeEntryEventType,
+  TimeEntryEvent,
+  TimeEntryServiceConfig,
+  ValidationResult
+};
+
+// Export constants
+export { 
+  STORAGE_KEY,
+  DELETED_ENTRIES_KEY 
+};
+
+// Export utility functions
+export {
+  validateTimeEntry,
+  autoCalculateHours,
+  calculateTotalHours
+};
+
+// Re-export the storageWriteLock for backward compatibility
+export { storageWriteLock } from './storage-operations';
