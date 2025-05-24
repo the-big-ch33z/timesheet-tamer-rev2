@@ -4,16 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { 
-  deleteTOILRecordsByEntryId 
-} from '@/utils/time/services/toil/storage/record-operations';
-import { deleteTOILUsageByEntryId } from '@/utils/time/services/toil/storage/usage-operations';
-import { 
   toilService, 
   loadTOILRecords, 
   loadTOILUsage,
   cleanupDuplicateTOILRecords,
   cleanupDuplicateTOILUsage
 } from '@/utils/time/services/toil';
+import { deleteAllToilData } from '@/utils/time/services/toil/unifiedDeletion';
 import { TOILRecord, TOILSummary, TOILUsage } from '@/types/toil';
 import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { createTimeLogger } from '@/utils/time/errors';
@@ -46,6 +43,15 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
   const [refreshCount, setRefreshCount] = useState(0);
   const [status, setStatus] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  // Auto-delete TOIL data from localStorage on mount
+  useEffect(() => {
+    const runDeletion = async () => {
+      const result = await deleteAllToilData(userId);
+      console.log('[TOILDebugPanel] Auto TOIL deletion result:', result);
+    };
+    runDeletion();
+  }, [userId]);
+
   
   const monthYear = format(date, 'yyyy-MM');
   
@@ -232,34 +238,7 @@ export const TOILDebugPanel: React.FC<TOILDebugPanelProps> = ({
     return format(date instanceof Date ? date : new Date(date), 'yyyy-MM-dd HH:mm');
   }, []);
   
-  
-  // Handle deletion of all TOIL by entry ID (entry-based removal strategy)
-  const handleDeleteAllTOILByEntry = useCallback(async () => {
-    setStatus({ message: 'Deleting TOIL via entry IDs...', type: 'info' });
-    setIsProcessing(true);
-
-    try {
-      const entryIds = Array.from(new Set([
-        ...toilRecords.map(r => r.entryId).filter(Boolean),
-        ...toilUsage.map(u => u.entryId).filter(Boolean)
-      ]));
-
-      for (const entryId of entryIds) {
-        await deleteTOILRecordsByEntryId(entryId);
-        await deleteTOILUsageByEntryId(entryId);
-        console.log(`[TOILDebugPanel] Deleted TOIL for entryId: ${entryId}`);
-      }
-
-      setStatus({ message: `Deleted TOIL for ${entryIds.length} entries`, type: 'success' });
-      setRefreshCount(prev => prev + 1);
-    } catch (error) {
-      console.error('[TOILDebugPanel] TOIL entry-based deletion error:', error);
-      setStatus({ message: 'Error deleting TOIL by entry', type: 'error' });
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [toilRecords, toilUsage]);
-return (
+  return (
     <Card className="w-full bg-slate-50 border border-slate-200">
       <CardHeader className="p-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center justify-between">
@@ -476,16 +455,6 @@ return (
               <RefreshCw className="h-3 w-3" />
               Refresh
             </Button>
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={handleDeleteAllTOILByEntry}
-              disabled={isProcessing}
-              className="flex gap-1 items-center"
-            >
-              Delete TOIL by Entry ID
-            </Button>
-
             <Button 
               variant="outline" 
               size="sm"
