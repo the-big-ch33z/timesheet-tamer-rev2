@@ -1,3 +1,4 @@
+
 import { 
   TOILRecord, TOILSummary
 } from "@/types/toil";
@@ -93,7 +94,7 @@ export class TOILServiceCalculation extends TOILServiceCore {
       
       // Check if TOIL records already exist for this day
       const existingRecords = await loadTOILRecords(userId);
-      const existingDayRecords = filterRecordsByDate(existingRecords, date);
+      const existingDayRecords = filterRecordsByDate(existingRecords, date, date);
       
       // Calculate TOIL hours based on real entries, not synthetic ones
       const toilHours = calculateTOILHours(nonToilEntries, date, workSchedule, holidays);

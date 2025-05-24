@@ -17,10 +17,6 @@ export const TOIL_PROCESSING_RECORDS_KEY = 'toilProcessingRecords';
 export const TOIL_MONTH_PROCESSING_STATE_KEY = 'toilMonthProcessingState';
 export const TOIL_THRESHOLDS_KEY = 'toilThresholds';
 
-// Deletion tracking keys
-export const DELETED_TOIL_RECORDS_KEY = 'toil-records-deleted';
-export const DELETED_TOIL_USAGE_KEY = 'toil-usage-deleted';
-
 // Storage operation constants
 export const STORAGE_RETRY_DELAY = 200; // ms
 export const STORAGE_MAX_RETRIES = 3;

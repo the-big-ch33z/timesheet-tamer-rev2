@@ -9,10 +9,12 @@ import {
 } from './constants';
 import { createTimeLogger } from "@/utils/time/errors";
 import { loadDeletedTOILRecords, loadDeletedTOILUsage } from './deletion-tracking';
-import { deleteAllToilData } from '../unifiedDeletion';
 
 const logger = createTimeLogger('TOIL-Storage-Core');
 
+/**
+ * Safely parse JSON with error handling
+ */
 export function safelyParseJSON<T>(json: string, defaultValue: T): T {
   try {
     return JSON.parse(json);
@@ -22,6 +24,9 @@ export function safelyParseJSON<T>(json: string, defaultValue: T): T {
   }
 }
 
+/**
+ * Attempt storage operation with retry logic
+ */
 export const attemptStorageOperation = async <T>(
   operation: () => T,
   retryDelay: number = 200,
@@ -46,11 +51,17 @@ export const attemptStorageOperation = async <T>(
   throw lastError || new Error('Operation failed after retries');
 };
 
+// Export constants for storage operations
 export const STORAGE_RETRY_DELAY = 200;
 export const STORAGE_MAX_RETRIES = 3;
 
+// Keep track of TOILDayInfo cache for immediate clearing
 const toilDayInfoCache = new Map<string, any>();
 
+/**
+ * Load raw TOIL records directly from storage without deletion filtering
+ * This bypasses the deletion tracking system for physical storage operations
+ */
 export function loadRawTOILRecords(): TOILRecord[] {
   try {
     const records = localStorage.getItem(TOIL_RECORDS_KEY);
@@ -67,6 +78,10 @@ export function loadRawTOILRecords(): TOILRecord[] {
   }
 }
 
+/**
+ * Load raw TOIL usage directly from storage without deletion filtering
+ * This bypasses the deletion tracking system for physical storage operations
+ */
 export function loadRawTOILUsage(): TOILUsage[] {
   try {
     const usage = localStorage.getItem(TOIL_USAGE_KEY);
@@ -83,13 +98,18 @@ export function loadRawTOILUsage(): TOILUsage[] {
   }
 }
 
+/**
+ * Load TOIL records for a user (now respects deletion tracking)
+ */
 export function loadTOILRecords(userId?: string): TOILRecord[] {
   try {
     const allRecords = loadRawTOILRecords();
     const deletedRecordIds = loadDeletedTOILRecords();
     
+    // Filter out deleted records
     let filteredRecords = allRecords.filter(record => !deletedRecordIds.includes(record.id));
     
+    // Filter by userId if provided
     if (userId) {
       filteredRecords = filteredRecords.filter(record => record.userId === userId);
     }
@@ -101,13 +121,18 @@ export function loadTOILRecords(userId?: string): TOILRecord[] {
   }
 }
 
+/**
+ * Load TOIL usage records for a user (now respects deletion tracking)
+ */
 export function loadTOILUsage(userId?: string): TOILUsage[] {
   try {
     const allUsage = loadRawTOILUsage();
     const deletedUsageIds = loadDeletedTOILUsage();
     
+    // Filter out deleted usage
     let filteredUsage = allUsage.filter(item => !deletedUsageIds.includes(item.id));
     
+    // Filter by userId if provided
     if (userId) {
       filteredUsage = filteredUsage.filter(item => item.userId === userId);
     }
@@ -120,63 +145,138 @@ export function loadTOILUsage(userId?: string): TOILUsage[] {
 }
 
 /**
- * @deprecated Use deleteAllToilData() from unifiedDeletion.ts instead
+ * Check and fix storage consistency between deletion tracking and actual storage
+ * This function detects and repairs cases where records are marked as deleted but still exist in storage
  */
 export async function checkAndFixStorageConsistency(): Promise<{ recordsFixed: number; usageFixed: number }> {
-  console.warn('[TOIL-DEBUG] ⚠️ checkAndFixStorageConsistency is deprecated, using unified deletion instead');
-  
-  const result = await deleteAllToilData();
-  
-  return {
-    recordsFixed: result.summary.recordsRemoved ? 1 : 0,
-    usageFixed: result.summary.usageRemoved ? 1 : 0
-  };
+  try {
+    logger.debug('Checking TOIL storage consistency...');
+    
+    const rawRecords = loadRawTOILRecords();
+    const rawUsage = loadRawTOILUsage();
+    const deletedRecordIds = loadDeletedTOILRecords();
+    const deletedUsageIds = loadDeletedTOILUsage();
+    
+    // Find records that are marked as deleted but still exist in storage
+    const inconsistentRecords = rawRecords.filter(record => deletedRecordIds.includes(record.id));
+    const inconsistentUsage = rawUsage.filter(usage => deletedUsageIds.includes(usage.id));
+    
+    let recordsFixed = 0;
+    let usageFixed = 0;
+    
+    // Physically remove inconsistent records
+    if (inconsistentRecords.length > 0) {
+      const cleanedRecords = rawRecords.filter(record => !deletedRecordIds.includes(record.id));
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_RECORDS_KEY, JSON.stringify(cleanedRecords)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      recordsFixed = inconsistentRecords.length;
+      logger.debug(`Fixed ${recordsFixed} inconsistent TOIL records`);
+    }
+    
+    // Physically remove inconsistent usage
+    if (inconsistentUsage.length > 0) {
+      const cleanedUsage = rawUsage.filter(usage => !deletedUsageIds.includes(usage.id));
+      await attemptStorageOperation(
+        () => localStorage.setItem(TOIL_USAGE_KEY, JSON.stringify(cleanedUsage)),
+        STORAGE_RETRY_DELAY,
+        STORAGE_MAX_RETRIES
+      );
+      usageFixed = inconsistentUsage.length;
+      logger.debug(`Fixed ${usageFixed} inconsistent TOIL usage records`);
+    }
+    
+    if (recordsFixed > 0 || usageFixed > 0) {
+      logger.info(`Storage consistency check completed: fixed ${recordsFixed} records and ${usageFixed} usage items`);
+      clearAllTOILCaches();
+    } else {
+      logger.debug('Storage consistency check: no issues found');
+    }
+    
+    return { recordsFixed, usageFixed };
+  } catch (error) {
+    logger.error('Error during storage consistency check:', error);
+    return { recordsFixed: 0, usageFixed: 0 };
+  }
 }
 
+/**
+ * Get cache key for TOIL summary
+ */
 export function getSummaryCacheKey(userId: string, monthYear: string): string {
   return `${TOIL_SUMMARY_PREFIX}_${userId}_${monthYear}`;
 }
 
 /**
- * UPDATED: Clear TOIL summary cache now uses unified deletion for consistency
+ * Clear TOIL summary cache for a specific user and month
  */
-export async function clearSummaryCache(userId?: string, monthYear?: string): Promise<void> {
-  console.log(`[TOIL-DEBUG] ==> CLEARING SUMMARY CACHE (routed to unified deletion)`);
-  
-  if (userId && monthYear) {
-    // For specific cache clearing, still use direct removal but log for tracking
-    const cacheKey = getSummaryCacheKey(userId, monthYear);
-    localStorage.removeItem(cacheKey);
-    console.log(`[TOIL-DEBUG] ✅ Cleared specific cache key: ${cacheKey}`);
-  } else {
-    // For global cache clearing, use unified deletion
-    console.log(`[TOIL-DEBUG] Using unified deletion for global cache clearing`);
-    const result = await deleteAllToilData();
-    console.log(`[TOIL-DEBUG] ✅ Global cache clearing via unified deletion:`, result.summary);
+export function clearSummaryCache(userId?: string, monthYear?: string): void {
+  try {
+    if (userId && monthYear) {
+      // Clear specific cache
+      const cacheKey = getSummaryCacheKey(userId, monthYear);
+      localStorage.removeItem(cacheKey);
+      logger.debug(`Cleared summary cache for ${userId} in ${monthYear}`);
+    } else {
+      // Clear all summary caches
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(TOIL_SUMMARY_PREFIX)) {
+          localStorage.removeItem(key);
+          logger.debug(`Cleared cache key: ${key}`);
+        }
+      }
+      logger.debug('Cleared all summary caches');
+    }
+    
+    // Also clear the in-memory cache
+    toilDayInfoCache.clear();
+  } catch (error) {
+    logger.error('Error clearing summary cache:', error);
   }
-  
-  toilDayInfoCache.clear();
 }
 
 /**
- * UPDATED: Clear all TOIL caches now uses unified deletion
+ * Clear all TOIL caches
  */
-export async function clearAllTOILCaches(): Promise<void> {
-  console.log(`[TOIL-DEBUG] ==> CLEAR ALL TOIL CACHES (routed to unified deletion)`);
-  
-  // Use unified deletion for complete cache clearing
-  const result = await deleteAllToilData();
-  console.log(`[TOIL-DEBUG] ✅ All caches cleared via unified deletion:`, result);
+export function clearAllTOILCaches(): void {
+  try {
+    // Get all localStorage keys
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(TOIL_SUMMARY_PREFIX)) {
+        keys.push(key);
+      }
+    }
+    
+    // Remove all TOIL cache keys
+    keys.forEach(key => localStorage.removeItem(key));
+    
+    // Clear the in-memory cache
+    toilDayInfoCache.clear();
+    
+    logger.debug(`Cleared ${keys.length} TOIL cache entries`);
+  } catch (error) {
+    logger.error('Error clearing all TOIL caches:', error);
+  }
 }
 
+/**
+ * Get TOIL summary for a specific month with improved caching
+ */
 export function getTOILSummary(userId: string, monthYear: string): TOILSummary | null {
   try {
     const cacheKey = getSummaryCacheKey(userId, monthYear);
     const cached = localStorage.getItem(cacheKey);
     
+    // Aggressively check for cache validity
     if (cached) {
       const parsedSummary = safelyParseJSON(cached, null);
       
+      // Validate the summary cache data
       if (parsedSummary && 
           typeof parsedSummary.accrued === 'number' && 
           typeof parsedSummary.used === 'number' && 
@@ -195,9 +295,10 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
       }
     }
     
+    // If cache is invalid or doesn't exist, calculate from records (now uses filtered data)
     logger.debug(`No valid cache found for ${userId} in ${monthYear}. Calculating...`);
-    const records = loadTOILRecords(userId);
-    const usage = loadTOILUsage(userId);
+    const records = loadTOILRecords(userId); // This now filters out deleted records
+    const usage = loadTOILUsage(userId); // This now filters out deleted usage
     
     const accrued = records
       .filter(record => record.monthYear === monthYear)
@@ -207,20 +308,20 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
       .filter(usage => usage.monthYear === monthYear)
       .reduce((sum, usage) => sum + usage.hours, 0);
     
-    const remaining = accrued - used;
-    
-    const summary: TOILSummary = { 
-      userId, 
-      monthYear, 
-      accrued, 
-      used, 
-      remaining 
+    const summary: TOILSummary = {
+      userId,
+      monthYear,
+      accrued,
+      used,
+      remaining: accrued - used
     };
     
-    try {
+    // Cache the result with proper validation
+    if (!isNaN(summary.accrued) && !isNaN(summary.used) && !isNaN(summary.remaining)) {
       localStorage.setItem(cacheKey, JSON.stringify(summary));
-    } catch (error) {
-      logger.warn('Could not cache TOIL summary:', error);
+      logger.debug(`Cached new TOIL summary for ${userId} in ${monthYear}: A=${accrued}, U=${used}, R=${accrued-used}`);
+    } else {
+      logger.error(`Calculated invalid TOIL summary (NaN values): A=${accrued}, U=${used}, R=${accrued-used}`);
     }
     
     return summary;
@@ -230,14 +331,69 @@ export function getTOILSummary(userId: string, monthYear: string): TOILSummary |
   }
 }
 
-export function filterRecordsByDate(records: TOILRecord[], date: Date): TOILRecord[] {
-  const targetDate = format(date, 'yyyy-MM-dd');
+/**
+ * Filter TOIL records by date range
+ */
+export function filterRecordsByDate(records: TOILRecord[], startDate?: Date, endDate?: Date): TOILRecord[] {
+  if (!startDate || !endDate) return records;
+  
   return records.filter(record => {
-    const recordDate = format(new Date(record.date), 'yyyy-MM-dd');
-    return recordDate === targetDate;
+    const recordDate = new Date(record.date);
+    return recordDate >= startDate && recordDate <= endDate;
   });
 }
 
+/**
+ * Filter TOIL records by entry ID
+ */
 export function filterRecordsByEntryId(records: TOILRecord[], entryId: string): TOILRecord[] {
   return records.filter(record => record.entryId === entryId);
 }
+
+/**
+ * Function to clear the TOILDayInfo cache when a TOIL calculation happens
+ */
+export const clearTOILDayInfoCache = (userId?: string, date?: Date) => {
+  if (userId && date) {
+    // Clear specific user+date entry
+    const dateKey = date.toISOString().split('T')[0];
+    const cacheKey = `toil-day-info-${userId}-${dateKey}`;
+    toilDayInfoCache.delete(cacheKey);
+    logger.debug(`Cleared specific TOIL day info cache for ${userId} on ${dateKey}`);
+  } else if (userId) {
+    // Clear all entries for this user
+    const keysToDelete: string[] = [];
+    toilDayInfoCache.forEach((_, key) => {
+      if (key.startsWith(`toil-day-info-${userId}`)) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach(key => toilDayInfoCache.delete(key));
+    logger.debug(`Cleared all TOIL day info caches for user ${userId}`);
+  } else {
+    // Clear all cache
+    toilDayInfoCache.clear();
+    logger.debug('Cleared all TOIL day info caches');
+  }
+};
+
+/**
+ * Get cached TOILDayInfo with automatic clearing
+ */
+export const getCachedTOILDayInfo = (userId: string, date: Date, finder: () => any): any => {
+  const dateKey = date.toISOString().split('T')[0];
+  const cacheKey = `toil-day-info-${userId}-${dateKey}`;
+  
+  if (toilDayInfoCache.has(cacheKey)) {
+    logger.debug(`Using cached TOIL day info for ${userId} on ${dateKey}`);
+    return toilDayInfoCache.get(cacheKey);
+  }
+  
+  logger.debug(`No cached TOIL day info for ${userId} on ${dateKey}, calculating...`);
+  const result = finder();
+  toilDayInfoCache.set(cacheKey, result);
+  return result;
+};
+
+// Export toilDayInfoCache
+export { toilDayInfoCache };
