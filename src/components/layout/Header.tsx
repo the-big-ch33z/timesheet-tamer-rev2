@@ -39,11 +39,11 @@ const Header: React.FC<HeaderProps> = ({ userRole }) => {
     <header className="border-b border-border bg-background sticky top-0 z-30">
       <div className="container flex items-center justify-between h-16">
         <div className="flex items-center gap-6">
-          <Link to="/timesheet" className="flex items-center gap-2">
+          <Link to="/timesheet" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img 
-              src="/lovable-uploads/4570dffb-6d2a-41e7-9ecf-d663acd507f4.png" 
+              src="/lovable-uploads/261b1994-f873-4bba-870e-f211ba05335f.png" 
               alt="Lieu" 
-              className="h-8 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
           </Link>
         </div>
