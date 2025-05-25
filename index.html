@@ -15,10 +15,207 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <!-- Debug overlay styles -->
+    <style>
+      .debug-overlay {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        z-index: 10000;
+        max-width: 280px;
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #333;
+      }
+      .status { 
+        margin: 2px 0; 
+        padding: 2px 4px;
+        border-radius: 2px;
+      }
+      .success { background: #0d5016; color: #4ade80; }
+      .error { background: #7f1d1d; color: #f87171; }
+      .warning { background: #451a03; color: #fbbf24; }
+      .info { background: #1e3a8a; color: #60a5fa; }
+      .debug-header {
+        font-weight: bold;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #444;
+        padding-bottom: 4px;
+      }
+    </style>
   </head>
 
   <body>
+    <!-- Debug overlay for monitoring -->
+    <div id="debug-overlay" class="debug-overlay">
+      <div class="debug-header">🔍 Edit Button Simulator</div>
+      <div id="debug-log"></div>
+    </div>
+
     <div id="root"></div>
+
+    <!-- Edit Button Simulation Script -->
+    <script>
+      console.log("=== EDIT BUTTON BEHAVIOR ANALYSIS ===");
+      
+      const debugLog = document.getElementById('debug-log');
+      let simulationActive = false;
+      
+      function addDebug(message, type = 'info') {
+        const statusEl = document.createElement('div');
+        statusEl.className = `status ${type}`;
+        statusEl.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+        debugLog.appendChild(statusEl);
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        
+        // Keep only last 15 messages
+        while (debugLog.children.length > 15) {
+          debugLog.removeChild(debugLog.firstChild);
+        }
+        
+        // Auto-scroll to bottom
+        debugLog.scrollTop = debugLog.scrollHeight;
+      }
+      
+      // Monitor for white screen condition
+      function checkWhiteScreen() {
+        const rootContent = document.getElementById('root').innerHTML;
+        if (!rootContent.trim()) {
+          addDebug('White screen detected', 'warning');
+          return true;
+        }
+        return false;
+      }
+      
+      // Enhanced script loading with edit button simulation
+      function enhancedScriptLoad() {
+        if (simulationActive) return;
+        simulationActive = true;
+        
+        addDebug('Starting enhanced loading simulation', 'info');
+        
+        // Remove existing main script
+        const existingScript = document.querySelector('script[src*="main.tsx"]');
+        if (existingScript) {
+          existingScript.remove();
+          addDebug('Removed existing main.tsx script', 'info');
+        }
+        
+        // Create new script with aggressive cache busting
+        const script = document.createElement('script');
+        script.type = 'module';
+        
+        // Multiple cache-busting strategies (what edit button might do)
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(7);
+        script.src = `/src/main.tsx?t=${timestamp}&r=${random}&edit=1&reload=true`;
+        
+        // Add edit-button-like attributes
+        script.crossOrigin = 'anonymous';
+        script.defer = true;
+        
+        script.onload = () => {
+          addDebug('✅ Enhanced script loaded successfully!', 'success');
+          setTimeout(() => {
+            if (checkWhiteScreen()) {
+              addDebug('Still white screen after load', 'error');
+            } else {
+              addDebug('🎉 App loaded - simulation worked!', 'success');
+              setTimeout(() => {
+                document.getElementById('debug-overlay').style.display = 'none';
+              }, 3000);
+            }
+          }, 1000);
+        };
+        
+        script.onerror = (e) => {
+          addDebug('❌ Enhanced script failed', 'error');
+          addDebug('Trying alternative method', 'warning');
+          setTimeout(() => tryAlternativeMethod(), 1000);
+        };
+        
+        document.head.appendChild(script);
+        addDebug('Created enhanced script element', 'info');
+      }
+      
+      // Alternative loading method
+      async function tryAlternativeMethod() {
+        addDebug('Attempting dynamic import method', 'warning');
+        
+        try {
+          const cacheBuster = `?dynamic=${Date.now()}&method=import`;
+          await import(`/src/main.tsx${cacheBuster}`);
+          addDebug('✅ Dynamic import successful!', 'success');
+        } catch (error) {
+          addDebug('❌ Dynamic import failed', 'error');
+          addDebug('Trying fetch method', 'warning');
+          
+          try {
+            const response = await fetch(`/src/main.tsx?fetch=${Date.now()}`);
+            const content = await response.text();
+            addDebug(`Fetched ${content.length} characters`, 'info');
+            
+            if (content.length < 100) {
+              addDebug('❌ File truncated - cache issue confirmed', 'error');
+              addDebug('This is a Lovable platform issue', 'warning');
+            } else {
+              addDebug('✅ Full file content retrieved', 'success');
+            }
+          } catch (fetchError) {
+            addDebug('❌ All methods failed - platform issue', 'error');
+          }
+        }
+        
+        simulationActive = false;
+      }
+      
+      // Initial check and setup
+      addDebug('Monitoring script loading...', 'info');
+      
+      // Wait for initial load, then check if intervention needed
+      setTimeout(() => {
+        if (checkWhiteScreen()) {
+          addDebug('White screen persists, starting simulation', 'warning');
+          enhancedScriptLoad();
+        } else {
+          addDebug('✅ App loaded normally', 'success');
+          setTimeout(() => {
+            document.getElementById('debug-overlay').style.display = 'none';
+          }, 2000);
+        }
+      }, 2000);
+      
+      // Fallback check after 5 seconds
+      setTimeout(() => {
+        if (checkWhiteScreen() && !simulationActive) {
+          addDebug('Final intervention attempt', 'warning');
+          enhancedScriptLoad();
+        }
+      }, 5000);
+      
+      // Monitor for successful app load
+      const observer = new MutationObserver(() => {
+        if (!checkWhiteScreen() && document.getElementById('debug-overlay').style.display !== 'none') {
+          addDebug('🎉 App content detected!', 'success');
+          setTimeout(() => {
+            document.getElementById('debug-overlay').style.opacity = '0.3';
+          }, 2000);
+        }
+      });
+      
+      observer.observe(document.getElementById('root'), { 
+        childList: true, 
+        subtree: true 
+      });
+    </script>
+    
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
