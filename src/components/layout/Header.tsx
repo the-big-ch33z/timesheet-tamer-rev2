@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({ userRole }) => {
         <div className="flex items-center gap-6">
           <Link to="/timesheet" className="flex items-center gap-2">
             <img 
-              src="/lovable-uploads/22e31f59-2951-4b7c-9b3a-c87d2adc8bb5.png" 
+              src="/lovable-uploads/4570dffb-6d2a-41e7-9ecf-d663acd507f4.png" 
               alt="Lieu" 
               className="h-8 w-auto object-contain"
             />
