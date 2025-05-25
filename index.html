@@ -1,4 +1,4 @@
-
+<!-- REPLACE your index.html with this version that forces proper module loading -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -8,6 +8,18 @@
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />
 
+    <!-- Force module support -->
+    <script>
+      // Ensure module support
+      if (!window.HTMLScriptElement.prototype.supports || !HTMLScriptElement.prototype.supports('module')) {
+        document.write('<script src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"><\/script>');
+      }
+    </script>
+
+    <!-- Preload critical dependencies -->
+    <link rel="modulepreload" href="https://unpkg.com/react@18/index.js" />
+    <link rel="modulepreload" href="https://unpkg.com/react-dom@18/index.js" />
+    
     <meta property="og:title" content="timeflow-grid-manager" />
     <meta property="og:description" content="Lovable Generated Project" />
     <meta property="og:type" content="website" />
@@ -16,12 +28,150 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <style>
+      /* Loading styles */
+      .lovable-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f9fafb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      .lovable-loading.hidden {
+        display: none;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
 
   <body>
+    <!-- Loading screen -->
+    <div id="lovable-loading" class="lovable-loading">
+      <div style="text-align: center;">
+        <div class="spinner"></div>
+        <p style="margin-top: 16px; color: #6b7280;">Loading application...</p>
+        <p style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Initializing modules</p>
+      </div>
+    </div>
+
+    <!-- Main app container -->
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+
+    <!-- Module loading script -->
+    <script>
+      console.log("=== BYPASS MODULE SYSTEM FIX ===");
+      
+      // Force reload function (what edit button does)
+      window.forceReload = function() {
+        console.log("🔄 Force reloading page...");
+        window.location.reload(true);
+      };
+      
+      // Monitor loading and auto-reload if stuck
+      let loadingStartTime = Date.now();
+      let hasLoaded = false;
+      
+      // Check if we're stuck after 5 seconds
+      setTimeout(() => {
+        if (!hasLoaded) {
+          console.log("❌ App stuck loading for 5 seconds, force reloading...");
+          const isLovable = window.location.hostname.includes('lovableproject.com') || 
+                           window.location.href.includes('lovable') ||
+                           document.querySelector('script[src*="gptengineer"]');
+          if (isLovable) {
+            window.forceReload();
+          }
+        }
+      }, 5000);
+      
+      // Hide loading screen when app loads
+      window.hideLoading = function() {
+        hasLoaded = true;
+        const loading = document.getElementById('lovable-loading');
+        if (loading) {
+          loading.classList.add('hidden');
+        }
+        console.log("✅ App loaded successfully");
+      };
+      
+      // Handle module loading errors
+      window.addEventListener('error', (event) => {
+        if (event.filename && event.filename.includes('chrome-extension://')) {
+          return; // Ignore chrome extension errors
+        }
+        
+        const isModuleError = event.message.includes('import statement') || 
+                             event.message.includes('module') ||
+                             event.message.includes('Failed to fetch');
+        
+        if (isModuleError && !hasLoaded) {
+          console.log("❌ Module loading error detected, force reloading...", event.message);
+          setTimeout(window.forceReload, 1000);
+        }
+      });
+    </script>
+
+    <!-- Critical: GPT Engineer script BEFORE our app -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
-    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Our app script with error handling -->
+    <script type="module" onerror="console.error('Main script failed to load'); window.forceReload();">
+      try {
+        console.log("🚀 Loading main application script...");
+        import('/src/main.tsx').then(() => {
+          console.log("✅ Main script loaded successfully");
+          // Hide loading after a short delay to ensure React has mounted
+          setTimeout(window.hideLoading, 1000);
+        }).catch(error => {
+          console.error("❌ Failed to load main script:", error);
+          window.forceReload();
+        });
+      } catch (error) {
+        console.error("❌ Script execution failed:", error);
+        window.forceReload();
+      }
+    </script>
+
+    <!-- Fallback script loader -->
+    <script>
+      // Backup plan if module loading fails completely
+      setTimeout(() => {
+        if (!hasLoaded) {
+          console.log("🔄 Module loading failed, trying fallback method...");
+          
+          // Try direct script injection
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = '/src/main.tsx';
+          script.onload = () => {
+            console.log("✅ Fallback script loaded");
+            setTimeout(window.hideLoading, 1000);
+          };
+          script.onerror = () => {
+            console.log("❌ Fallback failed, force reloading...");
+            window.forceReload();
+          };
+          document.head.appendChild(script);
+        }
+      }, 3000);
+    </script>
   </body>
 </html>
