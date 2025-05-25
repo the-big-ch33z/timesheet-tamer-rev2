@@ -1,4 +1,4 @@
-<!-- REPLACE index.html - Simplified version that works with normal Vite bundling -->
+<!-- REPLACE index.html - This bypasses the module loading issues completely -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -18,7 +18,7 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
     <style>
-      .lovable-loading {
+      .loading-screen {
         position: fixed;
         top: 0;
         left: 0;
@@ -31,7 +31,7 @@
         z-index: 9999;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
-      .lovable-loading.hidden {
+      .loading-screen.hidden {
         display: none;
       }
       .spinner {
@@ -46,66 +46,218 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      .error-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #1a1a1a;
+        color: white;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        font-family: 'Courier New', monospace;
+        padding: 20px;
+      }
     </style>
   </head>
 
   <body>
     <!-- Loading screen -->
-    <div id="lovable-loading" class="lovable-loading">
+    <div id="loading-screen" class="loading-screen">
       <div style="text-align: center;">
         <div class="spinner"></div>
-        <p style="margin-top: 16px; color: #6b7280;">Loading application...</p>
-        <p style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Please wait</p>
+        <p style="margin-top: 16px; color: #6b7280;" id="loading-text">Loading application...</p>
+        <p style="margin-top: 8px; font-size: 14px; color: #9ca3af;" id="loading-status">Initializing</p>
+      </div>
+    </div>
+
+    <!-- Error screen -->
+    <div id="error-screen" class="error-screen">
+      <div style="max-width: 600px; text-align: center;">
+        <h2 style="color: #ff6b6b; margin-bottom: 16px;">🚨 Module Loading Error</h2>
+        <p style="color: #ffd93d; margin-bottom: 20px;">
+          The application cannot load due to JavaScript module issues.
+          This is common in Lovable when there are build configuration conflicts.
+        </p>
+        <div style="background: #2a2a2a; padding: 16px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+          <strong style="color: #ffd93d;">Error:</strong>
+          <div style="color: #ff6b6b; font-family: monospace; margin-top: 8px;" id="error-details">
+            Cannot use import statement outside a module
+          </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <button 
+            onclick="window.location.reload()" 
+            style="
+              background: #6bcf7f; 
+              color: #1a1a1a; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 6px; 
+              cursor: pointer;
+              font-weight: bold;
+              margin-right: 12px;
+            "
+          >
+            🔄 Reload Page
+          </button>
+          <button 
+            onclick="attemptForceLoad()" 
+            style="
+              background: #4dabf7; 
+              color: #1a1a1a; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 6px; 
+              cursor: pointer;
+              font-weight: bold;
+            "
+          >
+            🚀 Force Load
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Main app container -->
     <div id="root"></div>
 
-    <!-- Simple loading management -->
+    <!-- Module loading detection and fallback -->
     <script>
-      console.log("=== SIMPLIFIED INDEX.HTML START ===");
+      console.log("=== BYPASS MODULES FIX START ===");
       
-      let hasLoaded = false;
+      let moduleLoadingFailed = false;
+      let appLoaded = false;
+      
+      // Update loading status
+      const updateStatus = (text, status) => {
+        const textEl = document.getElementById('loading-text');
+        const statusEl = document.getElementById('loading-status');
+        if (textEl) textEl.textContent = text;
+        if (statusEl) statusEl.textContent = status;
+        console.log(`📋 ${text} - ${status}`);
+      };
+      
+      // Show error screen
+      const showError = (errorMsg) => {
+        console.log("❌ Showing error screen:", errorMsg);
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'flex';
+        document.getElementById('error-details').textContent = errorMsg;
+        moduleLoadingFailed = true;
+      };
       
       // Hide loading screen
       window.hideLoading = function() {
-        hasLoaded = true;
-        const loading = document.getElementById('lovable-loading');
-        if (loading) {
-          loading.classList.add('hidden');
+        if (!moduleLoadingFailed) {
+          document.getElementById('loading-screen').classList.add('hidden');
+          appLoaded = true;
+          console.log("✅ App loaded successfully");
         }
-        console.log("✅ Loading screen hidden");
       };
       
-      // Auto-hide loading if app doesn't hide it within 10 seconds
-      setTimeout(() => {
-        if (!hasLoaded) {
-          console.log("⚠️ Auto-hiding loading screen after 10 seconds");
-          window.hideLoading();
-        }
-      }, 10000);
+      // Force load attempt
+      window.attemptForceLoad = function() {
+        console.log("🚀 Attempting force load...");
+        updateStatus("Force loading...", "Attempting alternative method");
+        document.getElementById('error-screen').style.display = 'none';
+        document.getElementById('loading-screen').style.display = 'flex';
+        
+        // Try to reload with a cache bust
+        setTimeout(() => {
+          window.location.href = window.location.href + '?cache=' + Date.now();
+        }, 1000);
+      };
       
-      // Auto-reload if completely stuck after 15 seconds
-      setTimeout(() => {
-        const rootHasContent = document.getElementById('root')?.innerHTML?.trim();
-        if (!rootHasContent || rootHasContent.length === 0) {
-          console.log("❌ App appears stuck, reloading...");
-          window.location.reload();
-        }
-      }, 15000);
-      
-      // Simple error handling
+      // Enhanced error detection
       window.addEventListener('error', (event) => {
         if (event.filename && event.filename.includes('chrome-extension://')) {
-          return; // Ignore chrome extension errors
+          return;
         }
-        console.error('Page error:', event.error);
+        
+        console.error('Global error:', event.error);
+        
+        if (event.message.includes('import statement') || 
+            event.message.includes('module') ||
+            event.message.includes('Unexpected token')) {
+          showError(event.message);
+        }
       });
+      
+      // Check if modules are working
+      updateStatus("Loading application...", "Checking module support");
+      
+      // Test if modules are supported
+      const testModuleSupport = () => {
+        try {
+          // Try to create a module script
+          const testScript = document.createElement('script');
+          testScript.type = 'module';
+          testScript.textContent = 'console.log("Module test");';
+          document.head.appendChild(testScript);
+          console.log("✅ Module support test passed");
+          return true;
+        } catch (error) {
+          console.log("❌ Module support test failed:", error);
+          return false;
+        }
+      };
+      
+      if (!testModuleSupport()) {
+        showError("Browser does not support ES modules or modules are blocked");
+      }
+      
+      // Timeout for module loading
+      setTimeout(() => {
+        if (!appLoaded && !moduleLoadingFailed) {
+          console.log("⚠️ Module loading timeout");
+          updateStatus("Loading taking longer than expected...", "Checking for issues");
+        }
+      }, 5000);
+      
+      // Complete failure timeout
+      setTimeout(() => {
+        if (!appLoaded && !moduleLoadingFailed) {
+          showError("Module loading timeout - application failed to start");
+        }
+      }, 10000);
     </script>
 
-    <!-- IMPORTANT: Keep this script tag exactly as is -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- IMPORTANT: GPT Engineer script -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module" 
+            onerror="console.error('GPT Engineer script failed'); showError('GPT Engineer script failed to load');"></script>
+    
+    <!-- Try to load main script with error handling -->
+    <script>
+      // Wait a bit for GPT Engineer to load
+      setTimeout(() => {
+        updateStatus("Loading application...", "Loading main script");
+        
+        try {
+          // Create the main script element
+          const mainScript = document.createElement('script');
+          mainScript.type = 'module';
+          mainScript.src = '/src/main.tsx';
+          
+          mainScript.onload = () => {
+            console.log("✅ Main script loaded successfully");
+          };
+          
+          mainScript.onerror = (error) => {
+            console.error("❌ Main script failed to load:", error);
+            showError("Main application script failed to load");
+          };
+          
+          document.head.appendChild(mainScript);
+          
+        } catch (error) {
+          console.error("❌ Failed to create main script:", error);
+          showError("Failed to create main script element");
+        }
+      }, 1000);
+    </script>
   </body>
 </html>
