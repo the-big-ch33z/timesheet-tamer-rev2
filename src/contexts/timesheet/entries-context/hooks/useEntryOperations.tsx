@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { TimeEntry } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
@@ -5,32 +6,12 @@ import { v4 as uuidv4 } from "uuid";
 import { ensureDate } from "@/utils/time/validation";
 import { unifiedTimeEntryService } from "@/utils/time/services";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
-import { eventBus } from "@/utils/events/EventBus";
-import { TOIL_EVENTS } from "@/utils/events/eventTypes";
-import { format } from "date-fns";
 
 const logger = createTimeLogger('useEntryOperations');
 
 /**
- * Utility to create standard event payload for TOIL-related operations
- */
-const createTOILEventPayload = (userId?: string, entryId?: string) => {
-  const now = new Date();
-  return {
-    userId,
-    entryId,
-    timestamp: Date.now(),
-    date: format(now, 'yyyy-MM-dd'),
-    monthYear: format(now, 'yyyy-MM'),
-    requiresRefresh: true,
-    source: 'entry-operations',
-    status: 'completed'
-  };
-};
-
-/**
  * Hook that provides operations for manipulating time entries
- * OPTIMIZED: Reduced debounce delays and improved TOIL event triggering
+ * OPTIMIZED: Removed redundant TOIL event dispatching to prevent timing conflicts
  */
 export const useEntryOperations = (
   entries: TimeEntry[],
@@ -68,13 +49,7 @@ export const useEntryOperations = (
       return newEntries;
     });
     
-    // IMPROVED: Always trigger TOIL calculation for any entry, reduced debounce
-    logger.debug("[TimeEntryProvider] Entry added, triggering immediate TOIL calculation");
-    eventBus.publish(TOIL_EVENTS.CALCULATED, 
-      createTOILEventPayload(entryData.userId, newEntry.id), 
-      { debounce: 100 } // Reduced from 50ms to be even more responsive
-    );
-    
+    // Service layer will handle TOIL events, no need to dispatch here
     toast({
       title: "Entry added",
       description: `Added ${entryData.hours} hours to your timesheet`,
@@ -100,8 +75,6 @@ export const useEntryOperations = (
       updates.date = validDate;
     }
     
-    let userId: string | undefined;
-    
     setEntries(prev => {
       const entryIndex = prev.findIndex(entry => entry.id === entryId);
       
@@ -110,9 +83,6 @@ export const useEntryOperations = (
         return prev;
       }
       
-      // Store the user ID for event dispatch
-      userId = prev[entryIndex].userId || updates.userId;
-      
       const updatedEntries = [...prev];
       updatedEntries[entryIndex] = { ...updatedEntries[entryIndex], ...updates };
       
@@ -120,34 +90,25 @@ export const useEntryOperations = (
       return updatedEntries;
     });
     
-    // IMPROVED: Always trigger TOIL calculation for any entry update, reduced debounce
-    logger.debug("[TimeEntryProvider] Entry updated, triggering immediate TOIL calculation");
-    eventBus.publish(TOIL_EVENTS.CALCULATED, 
-      createTOILEventPayload(userId, entryId), 
-      { debounce: 100 } // Reduced debounce for more responsiveness
-    );
-    
+    // Service layer will handle TOIL events, no need to dispatch here
     toast({
       title: "Entry updated",
       description: "Your time entry has been updated",
     });
   }, [setEntries, toast]);
 
-  // Delete an entry - now fully async to support TOIL cleanup
+  // Delete an entry - now delegates to service layer for proper TOIL cleanup
   const deleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
     logger.debug("[TimeEntryProvider] Attempting to delete entry:", entryId);
     
     try {
-      // First, find the entry to get its user ID
-      let userId: string | undefined;
-      
+      // Find the entry to get its user ID
       const entryToDelete = entries.find(entry => entry.id === entryId);
       if (entryToDelete) {
-        userId = entryToDelete.userId;
-        logger.debug(`[TimeEntryProvider] Found entry to delete: userId=${userId}`);
+        logger.debug(`[TimeEntryProvider] Found entry to delete: userId=${entryToDelete.userId}`);
       }
       
-      // Track the deletion in the service which now waits for TOIL cleanup
+      // Use the service which handles TOIL cleanup and event coordination
       const serviceDeleted = await unifiedTimeEntryService.deleteEntry(entryId);
       
       if (!serviceDeleted) {
@@ -171,13 +132,7 @@ export const useEntryOperations = (
         return filteredEntries;
       });
       
-      // IMPROVED: Always trigger TOIL calculation after deletion, reduced debounce
-      logger.debug("[TimeEntryProvider] Entry deleted, triggering immediate TOIL calculation");
-      eventBus.publish(TOIL_EVENTS.CALCULATED, 
-        createTOILEventPayload(userId, entryId), 
-        { debounce: 100 } // Reduced debounce for more responsiveness
-      );
-      
+      // Service layer handles all TOIL events and calculations
       if (success) {
         toast({
           title: "Entry deleted",

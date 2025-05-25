@@ -1,4 +1,3 @@
-
 import { createTimeLogger } from '@/utils/time/errors';
 import { toilService } from './service/main';
 import { 
@@ -21,6 +20,8 @@ const logger = createTimeLogger('TOIL-EntryEventHandler');
  * Stores cleanup functions to prevent memory leaks
  */
 let cleanupFunctions: Array<() => void> = [];
+let isInitialized = false;
+let initializationTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Utility function to create standardized TOIL event data
@@ -45,7 +46,7 @@ function createStandardTOILEventData(entryId?: string, userId?: string) {
 
 /**
  * Comprehensive entry ID extraction from any event format
- * Handles all possible ways an entry ID might be passed in events
+ * Updated to handle the standardized event format from unified service
  */
 function extractEntryId(event: any): string | null {
   console.log('[TOIL-EventHandler] Raw event received:', {
@@ -54,58 +55,33 @@ function extractEntryId(event: any): string | null {
     event: event
   });
 
-  // Direct entryId property
+  // Primary: Direct entryId property (standardized format)
   if (event?.entryId) {
     console.log('[TOIL-EventHandler] Found entryId directly:', event.entryId);
     return event.entryId;
   }
 
-  // DOM event detail format
+  // Secondary: DOM event detail format
   if (event?.detail?.entryId) {
     console.log('[TOIL-EventHandler] Found entryId in detail:', event.detail.entryId);
     return event.detail.entryId;
   }
 
-  // Custom event payload format
+  // Tertiary: Custom event payload format
   if (event?.payload?.entryId) {
     console.log('[TOIL-EventHandler] Found entryId in payload:', event.payload.entryId);
     return event.payload.entryId;
   }
 
-  // Entry object with id property
+  // Legacy formats for backward compatibility
   if (event?.entry?.id) {
     console.log('[TOIL-EventHandler] Found entryId in entry.id:', event.entry.id);
     return event.entry.id;
   }
 
-  // Direct entry object
   if (event?.id && typeof event.id === 'string') {
     console.log('[TOIL-EventHandler] Found entryId as direct id:', event.id);
     return event.id;
-  }
-
-  // Nested in data object
-  if (event?.data?.entryId) {
-    console.log('[TOIL-EventHandler] Found entryId in data:', event.data.entryId);
-    return event.data.entryId;
-  }
-
-  // Nested in data.entry
-  if (event?.data?.entry?.id) {
-    console.log('[TOIL-EventHandler] Found entryId in data.entry.id:', event.data.entry.id);
-    return event.data.entry.id;
-  }
-
-  // TimeEntry object format
-  if (event?.timeEntry?.id) {
-    console.log('[TOIL-EventHandler] Found entryId in timeEntry.id:', event.timeEntry.id);
-    return event.timeEntry.id;
-  }
-
-  // EventBus format with target
-  if (event?.target?.entryId) {
-    console.log('[TOIL-EventHandler] Found entryId in target:', event.target.entryId);
-    return event.target.entryId;
   }
 
   // Check if the whole event is just the entry ID string
@@ -265,11 +241,61 @@ function handleEntryDeleted(event: any) {
 }
 
 /**
- * Initializes all event listeners for TOIL-entry interactions
+ * Check if services are ready before initializing handlers
+ */
+function checkServicesReady(): boolean {
+  // Check if the unified service is available and initialized
+  try {
+    const unifiedService = require('@/utils/time/services').unifiedTimeEntryService;
+    if (!unifiedService) {
+      console.log('[TOIL-EventHandler] Unified service not yet available');
+      return false;
+    }
+    
+    // Additional checks can be added here for other required services
+    console.log('[TOIL-EventHandler] Services are ready for handler initialization');
+    return true;
+  } catch (error) {
+    console.log('[TOIL-EventHandler] Services not ready:', error);
+    return false;
+  }
+}
+
+/**
+ * Initializes all event listeners for TOIL-entry interactions with proper dependency checking
  * Returns a cleanup function to remove all listeners
  */
 export function initializeTOILEntryEventHandlers(): () => void {
+  if (isInitialized) {
+    logger.debug('TOIL entry event handlers already initialized');
+    return cleanupTOILEntryEventHandlers;
+  }
+  
+  // Check if services are ready
+  if (!checkServicesReady()) {
+    logger.debug('Services not ready, delaying handler initialization');
+    
+    // Clear any existing timeout
+    if (initializationTimeout) {
+      clearTimeout(initializationTimeout);
+    }
+    
+    // Retry initialization after services have had time to load
+    initializationTimeout = setTimeout(() => {
+      console.log('[TOIL-EventHandler] Retrying handler initialization after service startup delay');
+      initializeTOILEntryEventHandlers();
+    }, 1000); // Give services 1 second to initialize
+    
+    return () => {
+      if (initializationTimeout) {
+        clearTimeout(initializationTimeout);
+        initializationTimeout = null;
+      }
+    };
+  }
+  
   logger.debug('Initializing TOIL entry event handlers');
+  console.log('[TOIL-EventHandler] Initializing handlers with services ready');
   
   // Clean up any existing handlers first
   cleanupTOILEntryEventHandlers();
@@ -287,7 +313,9 @@ export function initializeTOILEntryEventHandlers(): () => void {
   window.addEventListener('timesheet:entry-deleted', handleDomEvent as EventListener);
   cleanupFunctions.push(() => window.removeEventListener('timesheet:entry-deleted', handleDomEvent as EventListener));
   
-  logger.debug('TOIL entry event handlers initialized');
+  isInitialized = true;
+  logger.debug('TOIL entry event handlers initialized successfully');
+  console.log('[TOIL-EventHandler] Handler initialization complete');
   
   // Return a function that can be called to clean up all listeners
   return cleanupTOILEntryEventHandlers;
@@ -305,11 +333,26 @@ export function cleanupTOILEntryEventHandlers(): void {
     }
   });
   
-  // Reset the cleanup functions array
+  // Reset the cleanup functions array and state
   cleanupFunctions = [];
+  isInitialized = false;
+  
+  // Clear any pending initialization timeout
+  if (initializationTimeout) {
+    clearTimeout(initializationTimeout);
+    initializationTimeout = null;
+  }
 }
 
-// Auto-initialize if in browser environment
+// Modified auto-initialization to use proper sequencing
 if (typeof window !== 'undefined') {
-  initializeTOILEntryEventHandlers();
+  // Wait for DOM and initial scripts to load before initializing
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initializeTOILEntryEventHandlers, 100);
+    });
+  } else {
+    // Document already loaded, initialize with a small delay to ensure services are ready
+    setTimeout(initializeTOILEntryEventHandlers, 100);
+  }
 }

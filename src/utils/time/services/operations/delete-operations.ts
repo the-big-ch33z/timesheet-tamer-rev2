@@ -127,16 +127,16 @@ export class DeleteOperations {
         // Don't fail the entire operation if TOIL cleanup fails
       }
       
-      // Dispatch events for UI updates (keeping these for other systems that might depend on them)
-      const now = new Date();
+      // Dispatch events with standardized format for UI updates
       const eventData = createStandardEventData(entryId, userId);
       
-      console.log(`[TOIL-DEBUG] ==> DISPATCHING EVENTS for deleted entry ${entryId}`, eventData);
+      console.log(`[TOIL-DEBUG] ==> DISPATCHING STANDARDIZED EVENTS for deleted entry ${entryId}`, eventData);
+      logger.debug('Dispatching standardized deletion events:', eventData);
       
       // Dispatch through the event manager
       this.eventManager.dispatchEvent({
         type: 'entry-deleted',
-        timestamp: now,
+        timestamp: new Date(),
         payload: eventData
       });
       
@@ -152,7 +152,14 @@ export class DeleteOperations {
         status: 'completed'
       }, { debounce: 50 });
       
-      console.log(`[TOIL-DEBUG] ✅ All events dispatched for entry deletion ${entryId}`);
+      console.log(`[TOIL-DEBUG] ✅ All standardized events dispatched for entry deletion ${entryId}`);
+      console.log(`[TOIL-DEBUG] Event format verification:`, {
+        hasEntryId: !!eventData.entryId,
+        hasUserId: !!eventData.userId,
+        hasTimestamp: !!eventData.timestamp,
+        hasRequiresRefresh: eventData.requiresRefresh === true,
+        format: 'standardized'
+      });
       console.log(`[TOIL-DEBUG] ==> DELETE ENTRY FLOW COMPLETE: ${entryId}`);
       
       logger.debug(`Successfully deleted entry with ID: ${entryId}`);

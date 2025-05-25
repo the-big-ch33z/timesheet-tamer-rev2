@@ -1,4 +1,3 @@
-
 import { TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { createTimeLogger } from '../errors/timeLogger';
@@ -323,10 +322,20 @@ export class UnifiedTimeEntryService {
       
       if (savedEntries) {
         this.cacheManager.invalidate();
-        this.dispatchEntryEvent('entry-deleted', {
+        
+        // Create standardized event data matching delete-operations format
+        const now = new Date();
+        const standardEventData = {
           entryId,
-          entry: entryToDelete
-        }, entryToDelete.userId);
+          userId: entryToDelete.userId,
+          timestamp: Date.now(),
+          date: now.toISOString().slice(0, 10),
+          monthYear: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+          requiresRefresh: true,
+          source: 'unified-service'
+        };
+        
+        this.dispatchEntryEvent('entry-deleted', standardEventData, entryToDelete.userId);
         
         return true;
       } else {
