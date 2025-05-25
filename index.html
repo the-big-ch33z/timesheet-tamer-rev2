@@ -1,4 +1,3 @@
-<!-- REPLACE index.html - This loads everything via CDN and avoids modules entirely -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -17,241 +16,210 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
-    <!-- Load React from CDN (no modules) -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-router-dom@6/dist/umd/react-router-dom.development.js"></script>
-    
-    <!-- Load Babel for JSX transformation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <style>
-      /* Basic app styles */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.5;
-        color: #333;
-      }
-      
-      .loading-screen {
+      .diagnostic-screen {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: #f9fafb;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
+        background: #0f1419;
+        color: #ffffff;
+        font-family: 'Courier New', monospace;
+        padding: 20px;
+        overflow-y: auto;
+        z-index: 10000;
       }
-      
-      .loading-screen.hidden {
+      .diagnostic-hidden {
         display: none;
       }
-      
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #e5e7eb;
-        border-top: 4px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+      .status-line {
+        margin: 8px 0;
+        padding: 4px 8px;
+        border-radius: 4px;
       }
-      
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      
-      /* Basic component styles */
-      .container {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      
-      .header {
-        background: #fff;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 1rem 2rem;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-      }
-      
-      .main {
-        flex: 1;
-        padding: 2rem;
-      }
-      
-      .card {
-        background: #fff;
-        border-radius: 8px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        margin-bottom: 1rem;
-      }
-      
-      .btn {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      
-      .btn:hover {
-        background: #2563eb;
-      }
-      
-      .success-message {
-        background: #dcfce7;
-        border: 1px solid #bbf7d0;
-        color: #166534;
-        padding: 1rem;
-        border-radius: 6px;
-        margin-bottom: 1rem;
-      }
+      .status-success { background: #0d5016; color: #4ade80; }
+      .status-error { background: #7f1d1d; color: #f87171; }
+      .status-warning { background: #451a03; color: #fbbf24; }
+      .status-info { background: #1e3a8a; color: #60a5fa; }
     </style>
   </head>
 
   <body>
-    <!-- Loading screen -->
-    <div id="loading-screen" class="loading-screen">
-      <div style="text-align: center;">
-        <div class="spinner"></div>
-        <p style="margin-top: 16px; color: #6b7280;">Loading application...</p>
-        <p style="margin-top: 8px; font-size: 14px; color: #9ca3af;" id="loading-status">Loading React</p>
+    <!-- Diagnostic Screen -->
+    <div id="diagnostic-screen" class="diagnostic-screen">
+      <h1 style="color: #60a5fa; margin-bottom: 20px;">🔍 ES Module Diagnostic</h1>
+      <div id="diagnostic-log"></div>
+      <div style="margin-top: 20px;">
+        <button id="retry-button" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px;">
+          🔄 Retry Loading
+        </button>
+        <button id="force-fix-button" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 4px;">
+          🛠️ Apply Fixes
+        </button>
       </div>
     </div>
 
     <!-- Main app container -->
     <div id="root"></div>
 
-    <!-- Non-module application -->
-    <script type="text/babel">
-      console.log("=== NO MODULES SOLUTION START ===");
+    <!-- Diagnostic Script -->
+    <script>
+      console.log("=== ES MODULE DIAGNOSTIC START ===");
       
-      // Update loading status
-      const updateStatus = (status) => {
-        const statusEl = document.getElementById('loading-status');
-        if (statusEl) statusEl.textContent = status;
-        console.log(`📋 ${status}`);
-      };
+      const diagnosticLog = document.getElementById('diagnostic-log');
+      const retryButton = document.getElementById('retry-button');
+      const forceFixButton = document.getElementById('force-fix-button');
+      let diagnosticResults = {};
       
-      // Simple App Component
-      function App() {
-        const [isLoaded, setIsLoaded] = React.useState(false);
+      function addLog(message, type = 'info') {
+        const logLine = document.createElement('div');
+        logLine.className = `status-line status-${type}`;
+        logLine.textContent = message;
+        diagnosticLog.appendChild(logLine);
+        console.log(`[${type.toUpperCase()}] ${message}`);
+      }
+      
+      function runDiagnostics() {
+        addLog("Starting ES Module diagnostic...", 'info');
         
-        React.useEffect(() => {
-          updateStatus("Initializing app");
-          setTimeout(() => {
-            setIsLoaded(true);
-            updateStatus("App ready");
-            hideLoading();
-          }, 1000);
-        }, []);
-        
-        return React.createElement('div', { className: 'container' },
-          React.createElement('div', { className: 'header' },
-            React.createElement('h1', null, '🎉 Timeflow Grid Manager')
-          ),
-          React.createElement('div', { className: 'main' },
-            React.createElement('div', { className: 'success-message' },
-              React.createElement('h2', null, '✅ Application Loaded Successfully!'),
-              React.createElement('p', null, 'The white screen issue has been resolved. Your Lovable app is now working.')
-            ),
-            React.createElement('div', { className: 'card' },
-              React.createElement('h3', null, 'Welcome to your application'),
-              React.createElement('p', { style: { marginBottom: '1rem' } }, 
-                'This is a simplified version that bypasses the module loading issues. Your app is now functional!'
-              ),
-              React.createElement('button', { 
-                className: 'btn',
-                onClick: () => alert('App is working! 🎉')
-              }, 'Test Interaction')
-            ),
-            React.createElement('div', { className: 'card' },
-              React.createElement('h3', null, 'Next Steps'),
-              React.createElement('ul', { style: { marginLeft: '1.5rem' } },
-                React.createElement('li', null, 'Your app now loads without the edit button'),
-                React.createElement('li', null, 'You can continue building your features'),
-                React.createElement('li', null, 'The white screen issue is permanently resolved')
-              )
-            )
-          )
-        );
-      }
-      
-      // Router wrapper
-      function AppWithRouter() {
-        return React.createElement(ReactRouterDOM.BrowserRouter, null,
-          React.createElement(App)
-        );
-      }
-      
-      // Hide loading screen
-      function hideLoading() {
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-          loadingScreen.classList.add('hidden');
-        }
-        console.log("✅ Loading screen hidden - app is ready!");
-      }
-      
-      // Initialize the app
-      function initApp() {
+        // Check 1: Browser ES module support
         try {
-          updateStatus("Checking React");
-          
-          if (!window.React || !window.ReactDOM || !window.ReactRouterDOM) {
-            throw new Error("React libraries not loaded");
+          const supportsModules = 'noModule' in HTMLScriptElement.prototype;
+          if (supportsModules) {
+            addLog("✅ Browser supports ES modules", 'success');
+            diagnosticResults.browserSupport = true;
+          } else {
+            addLog("❌ Browser does not support ES modules", 'error');
+            diagnosticResults.browserSupport = false;
           }
-          
-          console.log("✅ React:", !!window.React);
-          console.log("✅ ReactDOM:", !!window.ReactDOM);
-          console.log("✅ React Router:", !!window.ReactRouterDOM);
-          
-          updateStatus("Creating React app");
-          
-          const rootElement = document.getElementById('root');
-          if (!rootElement) {
-            throw new Error("Root element not found");
-          }
-          
-          const root = ReactDOM.createRoot(rootElement);
-          root.render(React.createElement(AppWithRouter));
-          
-          console.log("🎉 APP SUCCESSFULLY LOADED WITH NO MODULES!");
-          
-        } catch (error) {
-          console.error("❌ App initialization failed:", error);
-          document.getElementById('root').innerHTML = `
-            <div style="padding: 2rem; text-align: center;">
-              <h2 style="color: #dc2626;">App Loading Failed</h2>
-              <p>${error.message}</p>
-              <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px;">
-                Reload
-              </button>
-            </div>
-          `;
-          hideLoading();
+        } catch (e) {
+          addLog("❌ Error checking module support: " + e.message, 'error');
+          diagnosticResults.browserSupport = false;
         }
+        
+        // Check 2: Check if we can create module scripts
+        try {
+          const testScript = document.createElement('script');
+          testScript.type = 'module';
+          testScript.textContent = 'console.log("Module test");';
+          document.head.appendChild(testScript);
+          addLog("✅ Can create module scripts", 'success');
+          diagnosticResults.moduleCreation = true;
+        } catch (e) {
+          addLog("❌ Cannot create module scripts: " + e.message, 'error');
+          diagnosticResults.moduleCreation = false;
+        }
+        
+        // Check 3: Check MIME types and Content-Type
+        fetch('/src/main.tsx')
+          .then(response => {
+            const contentType = response.headers.get('content-type');
+            addLog(`Content-Type for main.tsx: ${contentType || 'none'}`, contentType ? 'success' : 'warning');
+            diagnosticResults.contentType = contentType;
+            return response.text();
+          })
+          .then(content => {
+            addLog(`✅ Can fetch main.tsx (${content.length} characters)`, 'success');
+            diagnosticResults.canFetchMain = true;
+            
+            // Check if content has import statements
+            if (content.includes('import ')) {
+              addLog("✅ main.tsx contains import statements", 'success');
+            } else {
+              addLog("⚠️ main.tsx does not contain import statements", 'warning');
+            }
+          })
+          .catch(e => {
+            addLog("❌ Cannot fetch main.tsx: " + e.message, 'error');
+            diagnosticResults.canFetchMain = false;
+          });
+        
+        // Check 4: Vite dev server detection
+        if (window.location.port === '8080' || window.location.hostname.includes('localhost')) {
+          addLog("✅ Detected development environment", 'success');
+          diagnosticResults.devEnvironment = true;
+        } else {
+          addLog("ℹ️ Production/hosted environment detected", 'info');
+          diagnosticResults.devEnvironment = false;
+        }
+        
+        // Check 5: GPT Engineer script
+        const gptScript = document.querySelector('script[src*="gptengineer"]');
+        if (gptScript) {
+          addLog("✅ GPT Engineer script found", 'success');
+          diagnosticResults.gptEngineerScript = true;
+        } else {
+          addLog("❌ GPT Engineer script not found", 'error');
+          diagnosticResults.gptEngineerScript = false;
+        }
+        
+        // Check 6: CSP headers
+        const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+        if (metaCSP) {
+          addLog("⚠️ Content Security Policy detected: " + metaCSP.content, 'warning');
+          diagnosticResults.csp = metaCSP.content;
+        } else {
+          addLog("✅ No CSP meta tag found", 'success');
+          diagnosticResults.csp = null;
+        }
+        
+        setTimeout(() => {
+          addLog("🔍 Diagnostic complete. Click 'Apply Fixes' to attempt repairs.", 'info');
+        }, 2000);
       }
       
-      // Start the app when everything is loaded
-      updateStatus("Starting app");
-      initApp();
+      // Retry button handler
+      retryButton.addEventListener('click', () => {
+        addLog("🔄 Retrying module loading...", 'info');
+        window.location.reload();
+      });
+      
+      // Force fix button handler
+      forceFixButton.addEventListener('click', () => {
+        addLog("🛠️ Applying fixes...", 'info');
+        applyFixes();
+      });
+      
+      function applyFixes() {
+        // Fix 1: Remove conflicting scripts
+        const allScripts = document.querySelectorAll('script[type="module"]');
+        allScripts.forEach(script => {
+          if (script.src.includes('main.tsx')) {
+            script.remove();
+            addLog("🧹 Removed existing main.tsx script", 'info');
+          }
+        });
+        
+        // Fix 2: Create new module script with proper attributes
+        setTimeout(() => {
+          const newScript = document.createElement('script');
+          newScript.type = 'module';
+          newScript.src = '/src/main.tsx?t=' + Date.now(); // Cache bust
+          newScript.crossOrigin = 'anonymous';
+          
+          newScript.onload = () => {
+            addLog("✅ Module loaded successfully!", 'success');
+            setTimeout(() => {
+              document.getElementById('diagnostic-screen').style.display = 'none';
+            }, 2000);
+          };
+          
+          newScript.onerror = (e) => {
+            addLog("❌ Module loading failed: " + e.message, 'error');
+            addLog("🔧 Try using the CDN fallback solution", 'warning');
+          };
+          
+          document.head.appendChild(newScript);
+          addLog("📦 Created new module script with cache busting", 'info');
+        }, 1000);
+      }
+      
+      // Start diagnostics
+      runDiagnostics();
     </script>
 
-    <!-- IMPORTANT: Keep GPT Engineer script for Lovable compatibility -->
-    <script src="https://cdn.gpteng.co/gptengineer.js"></script>
+    <!-- IMPORTANT: Keep this for Lovable compatibility -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
   </body>
 </html>
