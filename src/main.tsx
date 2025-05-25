@@ -1,4 +1,4 @@
-// REPLACE src/main.tsx - Use normal imports that work with Lovable's bundler
+// REPLACE src/main.tsx - Debug version to see what's actually available
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -9,42 +9,50 @@ import './index.css';
 import './utils/react-is-polyfill';
 import './utils/prop-types-polyfill';
 
-console.log("=== SIMPLE WORKING MAIN.TSX START ===");
+console.log("=== DEBUG REACT MAIN.TSX START ===");
 
-// Validate React is available
-const validateReactEnvironment = () => {
-  console.log("🔍 Validating React environment...");
+// Debug React availability
+const debugReact = () => {
+  console.log("🔍 DEBUGGING REACT AVAILABILITY:");
+  console.log("React object:", React);
+  console.log("React keys:", Object.keys(React || {}));
+  console.log("React.createElement:", typeof React?.createElement);
+  console.log("React.StrictMode:", typeof React?.StrictMode);
+  console.log("React.forwardRef:", typeof React?.forwardRef);
+  console.log("React.useState:", typeof React?.useState);
+  console.log("React.useEffect:", typeof React?.useEffect);
+  console.log("createRoot:", typeof createRoot);
+  console.log("BrowserRouter:", typeof BrowserRouter);
   
-  const checks = {
-    'React': !!React,
-    'React.createElement': !!React?.createElement,
-    'React.StrictMode': !!React?.StrictMode,
-    'React.forwardRef': !!React?.forwardRef,
-    'createRoot': !!createRoot,
-    'BrowserRouter': !!BrowserRouter,
-  };
-  
-  console.log("React environment checks:", checks);
-  
-  const failed = Object.entries(checks).filter(([key, value]) => !value);
-  if (failed.length > 0) {
-    const missingItems = failed.map(([key]) => key).join(', ');
-    throw new Error(`Missing React dependencies: ${missingItems}`);
+  // Try to create a simple element
+  try {
+    const testElement = React.createElement('div', null, 'Test');
+    console.log("✅ React.createElement works:", !!testElement);
+  } catch (error) {
+    console.log("❌ React.createElement failed:", error);
   }
-  
-  console.log("✅ React environment validation passed");
-  return true;
 };
 
-// Simple app mounting with retries
-const mountApp = async (retryCount = 0) => {
-  const maxRetries = 3;
-  
+// Simple mounting without strict validation
+const mountApp = () => {
   try {
-    console.log(`🚀 Mounting app (attempt ${retryCount + 1}/${maxRetries + 1})`);
+    console.log("🚀 MOUNTING APP - DEBUG VERSION");
     
-    // Validate React environment
-    validateReactEnvironment();
+    // Debug React first
+    debugReact();
+    
+    // Basic checks only
+    if (!React) {
+      throw new Error("React is not available");
+    }
+    
+    if (!React.createElement) {
+      throw new Error("React.createElement is not available");
+    }
+    
+    if (!createRoot) {
+      throw new Error("createRoot is not available");
+    }
     
     // Get root element
     const rootElement = document.getElementById("root");
@@ -56,20 +64,28 @@ const mountApp = async (retryCount = 0) => {
     // Create React root
     console.log("🏗️ Creating React root...");
     const root = createRoot(rootElement);
+    console.log("✅ React root created");
     
-    // Render app
-    console.log("🎨 Rendering app...");
-    root.render(
-      <React.StrictMode>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </React.StrictMode>
+    // Try basic render first
+    console.log("🎨 Attempting basic render...");
+    
+    // Use React.createElement instead of JSX to avoid compilation issues
+    const StrictModeComponent = React.StrictMode || React.Fragment;
+    const appElement = React.createElement(
+      StrictModeComponent,
+      null,
+      React.createElement(
+        BrowserRouter,
+        null,
+        React.createElement(App)
+      )
     );
     
-    console.log("🎉 APP MOUNTED SUCCESSFULLY!");
+    root.render(appElement);
     
-    // Hide loading screen if it exists
+    console.log("🎉 APP RENDERED SUCCESSFULLY!");
+    
+    // Hide loading screen
     setTimeout(() => {
       if (window.hideLoading) {
         window.hideLoading();
@@ -77,24 +93,27 @@ const mountApp = async (retryCount = 0) => {
     }, 1000);
     
   } catch (error) {
-    console.error(`❌ Mount attempt ${retryCount + 1} failed:`, error);
+    console.error("❌ MOUNT FAILED:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     
-    if (retryCount < maxRetries) {
-      console.log(`🔄 Retrying in 1 second... (${maxRetries - retryCount} attempts left)`);
-      setTimeout(() => {
-        mountApp(retryCount + 1);
-      }, 1000);
-    } else {
-      console.error("❌ All mount attempts failed, showing error screen");
-      showErrorScreen(error);
-    }
+    // Show the actual error instead of retrying
+    showDebugError(error);
   }
 };
 
-// Show error screen with auto-reload
-const showErrorScreen = (error: Error) => {
+// Show debug error screen
+const showDebugError = (error: Error) => {
   const rootElement = document.getElementById("root");
   if (!rootElement) return;
+  
+  // Hide loading screen first
+  if (window.hideLoading) {
+    window.hideLoading();
+  }
   
   rootElement.innerHTML = `
     <div style="
@@ -102,98 +121,118 @@ const showErrorScreen = (error: Error) => {
       display: flex; 
       align-items: center; 
       justify-content: center; 
-      font-family: system-ui, sans-serif;
-      background: #f9fafb;
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      color: #ffffff;
       padding: 20px;
     ">
       <div style="
-        background: white;
+        background: #2a2a2a;
         padding: 32px;
         border-radius: 8px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        max-width: 500px;
-        text-align: center;
+        border: 1px solid #444;
+        max-width: 800px;
+        width: 100%;
       ">
-        <div style="
-          width: 48px;
-          height: 48px;
-          background: #fee2e2;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 16px;
-        ">
-          ⚠️
+        <h2 style="color: #ff6b6b; margin-bottom: 16px; font-family: system-ui;">
+          🚨 React Debug Error
+        </h2>
+        <div style="margin-bottom: 20px;">
+          <strong style="color: #ffd93d;">Error Message:</strong>
+          <pre style="
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 8px 0;
+            border: 1px solid #444;
+            color: #ff6b6b;
+          ">${error.message}</pre>
         </div>
-        <h2 style="color: #dc2626; margin-bottom: 16px;">App Loading Failed</h2>
-        <p style="color: #6b7280; margin-bottom: 16px;">
-          ${error.message}
-        </p>
-        <p style="color: #9ca3af; margin-bottom: 24px; font-size: 14px;">
-          Auto-reloading in <span id="countdown">5</span> seconds...
-        </p>
-        <button 
-          onclick="window.location.reload()" 
-          style="
-            background: #3b82f6; 
-            color: white; 
-            border: none; 
-            padding: 12px 24px; 
-            border-radius: 6px; 
-            cursor: pointer;
-            margin-right: 8px;
-          "
-        >
-          Reload Now
-        </button>
+        
+        <div style="margin-bottom: 20px;">
+          <strong style="color: #ffd93d;">Available React Properties:</strong>
+          <pre style="
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 8px 0;
+            border: 1px solid #444;
+            color: #6bcf7f;
+            font-size: 12px;
+          ">React: ${typeof React}
+React keys: ${Object.keys(React || {}).join(', ')}
+React.createElement: ${typeof React?.createElement}
+React.StrictMode: ${typeof React?.StrictMode}
+React.forwardRef: ${typeof React?.forwardRef}
+createRoot: ${typeof createRoot}
+BrowserRouter: ${typeof BrowserRouter}</pre>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <strong style="color: #ffd93d;">Stack Trace:</strong>
+          <pre style="
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 8px 0;
+            border: 1px solid #444;
+            color: #c7c7c7;
+            font-size: 11px;
+            max-height: 200px;
+          ">${error.stack || 'No stack trace available'}</pre>
+        </div>
+        
+        <div style="text-align: center;">
+          <button 
+            onclick="window.location.reload()" 
+            style="
+              background: #6bcf7f; 
+              color: #1a1a1a; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 6px; 
+              cursor: pointer;
+              font-weight: bold;
+              margin-right: 12px;
+            "
+          >
+            🔄 Reload Page
+          </button>
+          <button 
+            onclick="console.clear(); ${debugReact.toString()}(); debugReact();" 
+            style="
+              background: #4dabf7; 
+              color: #1a1a1a; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 6px; 
+              cursor: pointer;
+              font-weight: bold;
+            "
+          >
+            🔍 Debug in Console
+          </button>
+        </div>
       </div>
     </div>
   `;
-  
-  // Countdown timer
-  let countdown = 5;
-  const timer = setInterval(() => {
-    countdown--;
-    const countdownEl = document.getElementById('countdown');
-    if (countdownEl) {
-      countdownEl.textContent = countdown.toString();
-    }
-    
-    if (countdown <= 0) {
-      clearInterval(timer);
-      window.location.reload();
-    }
-  }, 1000);
 };
 
 // Enhanced error handling
 window.addEventListener('error', (event) => {
   if (event.filename && event.filename.includes('chrome-extension://')) {
-    return; // Ignore chrome extension errors
+    return;
   }
-  
   console.error('Global error:', event.error);
 });
 
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
-});
-
-// Start mounting when DOM is ready
-const startApp = () => {
-  if (document.readyState === 'loading') {
-    console.log("📋 DOM still loading, waiting...");
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log("📋 DOM ready, starting app...");
-      // Small delay to ensure everything is settled
-      setTimeout(mountApp, 100);
-    });
-  } else {
-    console.log("📋 DOM already ready, starting app...");
-    // Small delay to ensure everything is settled
-    setTimeout(mountApp, 100);
-  }
-};
-
-startApp();
+// Start the app
+console.log("📋 Starting debug app...");
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountApp);
+} else {
+  mountApp();
+}
