@@ -1,13 +1,13 @@
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
-import { createSeedData } from './utils/seedData';
 
-// Initialize polyfills and compatibility layer
-import './utils/react-is-polyfill';
-import './utils/prop-types-polyfill';
+// Cache-busting: Add timestamp to avoid cached module issues
+const cacheBreaker = Date.now();
+console.log(`Application loading with cache breaker: ${cacheBreaker}`);
 
 // Enhanced error logging for troubleshooting
 console.log("React version:", React.version);
@@ -24,16 +24,6 @@ const mount = () => {
     console.error("Root element not found");
     return;
   }
-
-  // Initialize seed data for first-time users
-  try {
-    console.log("Initializing seed data...");
-    createSeedData();
-    console.log("Seed data initialized successfully");
-  } catch (error) {
-    console.error("Error initializing seed data:", error);
-    // Continue loading app even if seed data fails
-  }
   
   try {
     console.log("Creating React root and rendering app...");
@@ -49,7 +39,6 @@ const mount = () => {
     
     // Register service worker for production
     if (import.meta.env.PROD) {
-      // This would be where we'd register a service worker if needed
       console.log('Running in production mode');
     }
   } catch (error) {
@@ -63,7 +52,7 @@ const mount = () => {
       errorDiv.style.padding = '20px';
       errorDiv.style.color = 'red';
       errorDiv.style.backgroundColor = '#fff';
-      errorDiv.innerHTML = `<h2>Application Error</h2><p>${error.message}</p>`;
+      errorDiv.innerHTML = `<h2>Application Error</h2><p>${error.message}</p><p>Cache breaker: ${cacheBreaker}</p>`;
       rootElement.appendChild(errorDiv);
     } catch (e) {
       // Last resort error handling
@@ -72,8 +61,6 @@ const mount = () => {
   }
 };
 
-// Initialize app with timeout to handle potential timing issues
+// Initialize app immediately
 console.log("Starting mount process...");
-setTimeout(() => {
-  mount();
-}, 0);
+mount();

@@ -6,11 +6,14 @@ import React from 'react';
 export const isFragment = (element: any): boolean => {
   // Try to use the built-in isFragment if it exists
   try {
-    // Dynamically import react-is (this will be a runtime check)
-    const reactIs = require('react-is');
-    if (typeof reactIs.isFragment === 'function') {
-      return reactIs.isFragment(element);
-    }
+    // Use dynamic import instead of require for ES module compatibility
+    import('react-is').then(reactIs => {
+      if (typeof reactIs.isFragment === 'function') {
+        return reactIs.isFragment(element);
+      }
+    }).catch(() => {
+      console.debug('react-is isFragment not available, using fallback');
+    });
   } catch (e) {
     console.debug('react-is isFragment not available, using fallback');
   }

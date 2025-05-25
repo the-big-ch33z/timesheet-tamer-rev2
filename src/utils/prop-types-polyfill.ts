@@ -29,23 +29,18 @@ function createValidator(type: string) {
   return validator;
 }
 
-// Checks if a module exists
-function moduleExists(name: string): boolean {
-  try {
-    return !!require.resolve(name);
-  } catch (e) {
-    return false;
-  }
-}
-
 // Export the real prop-types if available, otherwise use our polyfill
 let exportedPropTypes = PropTypes;
 
-if (moduleExists('prop-types')) {
+// Use dynamic import instead of require for ES module compatibility
+if (typeof window !== 'undefined') {
   try {
-    // Try to load the real prop-types
-    const realPropTypes = require('prop-types');
-    exportedPropTypes = realPropTypes;
+    // Try to load the real prop-types using dynamic import
+    import('prop-types').then(realPropTypes => {
+      exportedPropTypes = realPropTypes.default || realPropTypes;
+    }).catch(() => {
+      console.debug('Failed to load prop-types, using polyfill instead');
+    });
   } catch (e) {
     console.debug('Failed to load prop-types, using polyfill instead');
   }
