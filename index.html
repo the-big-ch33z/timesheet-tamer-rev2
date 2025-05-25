@@ -30,9 +30,6 @@
         overflow-y: auto;
         z-index: 10000;
       }
-      .diagnostic-hidden {
-        display: none;
-      }
       .status-line {
         margin: 8px 0;
         padding: 4px 8px;
@@ -48,14 +45,17 @@
   <body>
     <!-- Diagnostic Screen -->
     <div id="diagnostic-screen" class="diagnostic-screen">
-      <h1 style="color: #60a5fa; margin-bottom: 20px;">🔍 ES Module Diagnostic</h1>
+      <h1 style="color: #60a5fa; margin-bottom: 20px;">🔍 ES Module Cache Fix Test</h1>
       <div id="diagnostic-log"></div>
       <div style="margin-top: 20px;">
-        <button id="retry-button" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px;">
-          🔄 Retry Loading
+        <button id="test-original" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px;">
+          📋 Test Original main.tsx
         </button>
-        <button id="force-fix-button" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 4px;">
-          🛠️ Apply Fixes
+        <button id="test-new" style="background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px;">
+          🆕 Test main-fixed.tsx
+        </button>
+        <button id="direct-load" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 4px;">
+          🚀 Direct Load
         </button>
       </div>
     </div>
@@ -63,14 +63,12 @@
     <!-- Main app container -->
     <div id="root"></div>
 
-    <!-- Diagnostic Script -->
+    <!-- Enhanced Diagnostic Script -->
     <script>
-      console.log("=== ES MODULE DIAGNOSTIC START ===");
+      console.log("=== CACHE FIX TEST START ===");
       
       const diagnosticLog = document.getElementById('diagnostic-log');
-      const retryButton = document.getElementById('retry-button');
-      const forceFixButton = document.getElementById('force-fix-button');
-      let diagnosticResults = {};
+      let testResults = {};
       
       function addLog(message, type = 'info') {
         const logLine = document.createElement('div');
@@ -80,143 +78,93 @@
         console.log(`[${type.toUpperCase()}] ${message}`);
       }
       
-      function runDiagnostics() {
-        addLog("Starting ES Module diagnostic...", 'info');
+      async function testFile(filepath, label) {
+        addLog(`Testing ${label}: ${filepath}`, 'info');
         
-        // Check 1: Browser ES module support
         try {
-          const supportsModules = 'noModule' in HTMLScriptElement.prototype;
-          if (supportsModules) {
-            addLog("✅ Browser supports ES modules", 'success');
-            diagnosticResults.browserSupport = true;
+          const response = await fetch(filepath + '?cache=' + Date.now());
+          const content = await response.text();
+          const contentType = response.headers.get('content-type');
+          
+          addLog(`✅ ${label} - Size: ${content.length} chars, Type: ${contentType}`, 'success');
+          
+          if (content.includes('import React')) {
+            addLog(`✅ ${label} contains React imports`, 'success');
+            return true;
           } else {
-            addLog("❌ Browser does not support ES modules", 'error');
-            diagnosticResults.browserSupport = false;
+            addLog(`❌ ${label} missing React imports`, 'error');
+            return false;
           }
-        } catch (e) {
-          addLog("❌ Error checking module support: " + e.message, 'error');
-          diagnosticResults.browserSupport = false;
+          
+        } catch (error) {
+          addLog(`❌ ${label} failed: ${error.message}`, 'error');
+          return false;
         }
-        
-        // Check 2: Check if we can create module scripts
-        try {
-          const testScript = document.createElement('script');
-          testScript.type = 'module';
-          testScript.textContent = 'console.log("Module test");';
-          document.head.appendChild(testScript);
-          addLog("✅ Can create module scripts", 'success');
-          diagnosticResults.moduleCreation = true;
-        } catch (e) {
-          addLog("❌ Cannot create module scripts: " + e.message, 'error');
-          diagnosticResults.moduleCreation = false;
-        }
-        
-        // Check 3: Check MIME types and Content-Type
-        fetch('/src/main.tsx')
-          .then(response => {
-            const contentType = response.headers.get('content-type');
-            addLog(`Content-Type for main.tsx: ${contentType || 'none'}`, contentType ? 'success' : 'warning');
-            diagnosticResults.contentType = contentType;
-            return response.text();
-          })
-          .then(content => {
-            addLog(`✅ Can fetch main.tsx (${content.length} characters)`, 'success');
-            diagnosticResults.canFetchMain = true;
-            
-            // Check if content has import statements
-            if (content.includes('import ')) {
-              addLog("✅ main.tsx contains import statements", 'success');
-            } else {
-              addLog("⚠️ main.tsx does not contain import statements", 'warning');
-            }
-          })
-          .catch(e => {
-            addLog("❌ Cannot fetch main.tsx: " + e.message, 'error');
-            diagnosticResults.canFetchMain = false;
-          });
-        
-        // Check 4: Vite dev server detection
-        if (window.location.port === '8080' || window.location.hostname.includes('localhost')) {
-          addLog("✅ Detected development environment", 'success');
-          diagnosticResults.devEnvironment = true;
-        } else {
-          addLog("ℹ️ Production/hosted environment detected", 'info');
-          diagnosticResults.devEnvironment = false;
-        }
-        
-        // Check 5: GPT Engineer script
-        const gptScript = document.querySelector('script[src*="gptengineer"]');
-        if (gptScript) {
-          addLog("✅ GPT Engineer script found", 'success');
-          diagnosticResults.gptEngineerScript = true;
-        } else {
-          addLog("❌ GPT Engineer script not found", 'error');
-          diagnosticResults.gptEngineerScript = false;
-        }
-        
-        // Check 6: CSP headers
-        const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-        if (metaCSP) {
-          addLog("⚠️ Content Security Policy detected: " + metaCSP.content, 'warning');
-          diagnosticResults.csp = metaCSP.content;
-        } else {
-          addLog("✅ No CSP meta tag found", 'success');
-          diagnosticResults.csp = null;
-        }
-        
-        setTimeout(() => {
-          addLog("🔍 Diagnostic complete. Click 'Apply Fixes' to attempt repairs.", 'info');
-        }, 2000);
       }
       
-      // Retry button handler
-      retryButton.addEventListener('click', () => {
-        addLog("🔄 Retrying module loading...", 'info');
-        window.location.reload();
-      });
-      
-      // Force fix button handler
-      forceFixButton.addEventListener('click', () => {
-        addLog("🛠️ Applying fixes...", 'info');
-        applyFixes();
-      });
-      
-      function applyFixes() {
-        // Fix 1: Remove conflicting scripts
-        const allScripts = document.querySelectorAll('script[type="module"]');
-        allScripts.forEach(script => {
-          if (script.src.includes('main.tsx')) {
-            script.remove();
-            addLog("🧹 Removed existing main.tsx script", 'info');
-          }
-        });
+      async function directLoadModule(filepath) {
+        addLog(`🚀 Attempting direct module load: ${filepath}`, 'info');
         
-        // Fix 2: Create new module script with proper attributes
-        setTimeout(() => {
-          const newScript = document.createElement('script');
-          newScript.type = 'module';
-          newScript.src = '/src/main.tsx?t=' + Date.now(); // Cache bust
-          newScript.crossOrigin = 'anonymous';
+        try {
+          // Remove any existing scripts
+          const existingScripts = document.querySelectorAll('script[src*="main"]');
+          existingScripts.forEach(script => script.remove());
           
-          newScript.onload = () => {
-            addLog("✅ Module loaded successfully!", 'success');
+          // Create new script with cache busting
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = filepath + '?t=' + Date.now();
+          
+          script.onload = () => {
+            addLog(`✅ Module loaded successfully from ${filepath}!`, 'success');
             setTimeout(() => {
               document.getElementById('diagnostic-screen').style.display = 'none';
             }, 2000);
           };
           
-          newScript.onerror = (e) => {
-            addLog("❌ Module loading failed: " + e.message, 'error');
-            addLog("🔧 Try using the CDN fallback solution", 'warning');
+          script.onerror = (e) => {
+            addLog(`❌ Module load failed: ${e.message || 'Unknown error'}`, 'error');
           };
           
-          document.head.appendChild(newScript);
-          addLog("📦 Created new module script with cache busting", 'info');
-        }, 1000);
+          document.head.appendChild(script);
+          
+        } catch (error) {
+          addLog(`❌ Direct load error: ${error.message}`, 'error');
+        }
       }
       
-      // Start diagnostics
-      runDiagnostics();
+      // Button handlers
+      document.getElementById('test-original').addEventListener('click', () => {
+        testFile('/src/main.tsx', 'Original main.tsx');
+      });
+      
+      document.getElementById('test-new').addEventListener('click', () => {
+        testFile('/src/main-fixed.tsx', 'New main-fixed.tsx');
+      });
+      
+      document.getElementById('direct-load').addEventListener('click', async () => {
+        addLog('🔍 Testing both files first...', 'info');
+        
+        const originalWorks = await testFile('/src/main.tsx', 'Original');
+        const newWorks = await testFile('/src/main-fixed.tsx', 'New file');
+        
+        if (originalWorks) {
+          addLog('📋 Original file works, loading it...', 'info');
+          directLoadModule('/src/main.tsx');
+        } else if (newWorks) {
+          addLog('🆕 New file works, loading it...', 'info');
+          directLoadModule('/src/main-fixed.tsx');
+        } else {
+          addLog('❌ Neither file contains proper content', 'error');
+          addLog('💡 Try making a small edit to main.tsx in Lovable editor', 'warning');
+        }
+      });
+      
+      // Auto-run initial test
+      addLog('🔍 Running initial cache test...', 'info');
+      setTimeout(() => {
+        testFile('/src/main.tsx', 'Original main.tsx');
+      }, 1000);
     </script>
 
     <!-- IMPORTANT: Keep this for Lovable compatibility -->
