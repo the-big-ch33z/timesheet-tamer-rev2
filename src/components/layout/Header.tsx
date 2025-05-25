@@ -1,68 +1,44 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LogOut, Settings, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
-
 interface HeaderProps {
   userRole: string;
 }
-
-const Header: React.FC<HeaderProps> = ({ userRole }) => {
+const Header: React.FC<HeaderProps> = ({
+  userRole
+}) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
-  const { currentUser, logout } = useAuth();
-  
+  const {
+    currentUser,
+    logout
+  } = useAuth();
+
   // Get user initials for the avatar fallback
-  const userInitials = currentUser?.name 
-    ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() 
-    : 'U';
-  
+  const userInitials = currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
   const handleSignOut = () => {
     // Handle sign out logic using auth context
     logout();
     navigate("/");
   };
-
-  return (
-    <header className="border-b border-border bg-background sticky top-0 z-30">
+  return <header className="border-b border-border bg-background sticky top-0 z-30">
       <div className="container flex items-center justify-between h-16">
         <div className="flex items-center gap-6">
           <Link to="/timesheet" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <img 
-              src="/lovable-uploads/261b1994-f873-4bba-870e-f211ba05335f.png" 
-              alt="Lieu" 
-              className="h-10 w-auto object-contain"
-            />
+            <img alt="Lieu" src="/lovable-uploads/9e66188b-853e-446e-964f-50382787e69a.png" className="h-10 w-auto object-cover" />
           </Link>
         </div>
         
         <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="p-1 h-9 flex items-center gap-2"
-              >
+              <Button variant="ghost" className="p-1 h-9 flex items-center gap-2">
                 <Avatar className="h-7 w-7">
-                  {!imageError && (
-                    <AvatarImage 
-                      src={currentUser?.avatarUrl || ""} 
-                      alt="User avatar"
-                      onError={() => setImageError(true)} 
-                    />
-                  )}
+                  {!imageError && <AvatarImage src={currentUser?.avatarUrl || ""} alt="User avatar" onError={() => setImageError(true)} />}
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
                 <span className="hidden md:inline-block text-sm font-normal">
@@ -92,8 +68,6 @@ const Header: React.FC<HeaderProps> = ({ userRole }) => {
           </DropdownMenu>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default Header;
