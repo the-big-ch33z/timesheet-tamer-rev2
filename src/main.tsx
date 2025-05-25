@@ -1,4 +1,6 @@
 // REPLACE src/main.tsx - Debug version to see what's actually available
+// Cache bust - updated at [1819]
+// REPLACE src/main.tsx - Debug version to see what's actually available
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
