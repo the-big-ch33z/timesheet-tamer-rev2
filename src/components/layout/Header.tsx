@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({
       <div className="container flex items-center justify-between h-16">
         <div className="flex items-center gap-6">
           <Link to="/timesheet" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <img alt="Lieu" className="h-20 w-auto object-cover" src="/lovable-uploads/d7347dca-b59e-4869-9e51-b176ddafe659.png" />
+            <img alt="Lieu" src="/lovable-uploads/332c0eb2-b21a-40c1-a58e-a2a22e793db9.png" className="h40 -w-auto object-cover" />
           </Link>
         </div>
         
