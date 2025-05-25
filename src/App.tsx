@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
@@ -23,96 +22,117 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
 const TeamCalendar = lazy(() => import('./pages/TeamCalendar'));
 
-// Loading fallback component
+// Enhanced loading fallback component for Lovable
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-96">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    <div className="flex flex-col items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+      <p className="text-gray-600">Loading...</p>
+    </div>
   </div>
 );
 
-// Global app state tracking
-const globalAppState = {
-  isInitialized: false,
-  loadingStartTime: Date.now(),
-  hasErrors: false
-};
-
-function App() {
+// App initialization state management
+const useAppInitialization = () => {
   const [isAppReady, setIsAppReady] = React.useState(false);
+  const [initError, setInitError] = React.useState<string | null>(null);
   
-  // Initialize services and monitor app state on startup
   React.useEffect(() => {
-    console.log("App initialization started");
+    let isMounted = true;
+    
     const initializeApp = async () => {
       try {
-        // Check for stored auth data
-        const storedUser = localStorage.getItem('currentUser');
-        const storedTeams = localStorage.getItem('teams');
+        console.log("=== APP COMPONENT INITIALIZATION START ===");
         
-        // Validate the stored data - this helps catch corrupted localStorage issues
-        if (storedUser) {
+        // Clean up any corrupted localStorage data
+        const cleanupStorage = () => {
           try {
-            JSON.parse(storedUser);
+            const storedUser = localStorage.getItem('currentUser');
+            const storedTeams = localStorage.getItem('teams');
+            
+            if (storedUser) {
+              JSON.parse(storedUser);
+            }
+            if (storedTeams) {
+              JSON.parse(storedTeams);
+            }
           } catch (e) {
-            console.warn("Corrupted user data detected, clearing...");
+            console.warn("Corrupted localStorage detected, cleaning up...");
             localStorage.removeItem('currentUser');
-          }
-        }
-        
-        if (storedTeams) {
-          try {
-            JSON.parse(storedTeams);
-          } catch (e) {
-            console.warn("Corrupted teams data detected, clearing...");
             localStorage.removeItem('teams');
           }
-        }
+        };
         
-        // Run data format validation and fix any issues
+        cleanupStorage();
+        
+        // Run data format validation
+        console.log("Validating storage format...");
         await validateStorageFormat();
         
         // Initialize core services
+        console.log("Initializing services...");
         await initializeService();
         
-        // Only create seed data if needed - with false to ensure no demo data is created
-        // This is important - only call createSeedData once
+        // Create seed data only once (removed from main.tsx)
+        console.log("Creating seed data...");
         createSeedData(false);
         
-        // Mark app as initialized
-        globalAppState.isInitialized = true;
-        console.log("App initialization complete");
-        setIsAppReady(true);
-      } catch (error) {
-        console.error("Failed to initialize application:", error);
-        globalAppState.hasErrors = true;
+        console.log("=== APP INITIALIZATION COMPLETE ===");
         
-        // Still mark app as ready so we can show error UI
-        setIsAppReady(true);
+        if (isMounted) {
+          setIsAppReady(true);
+        }
+        
+      } catch (error) {
+        console.error("=== APP INITIALIZATION ERROR ===", error);
+        
+        if (isMounted) {
+          setInitError(error instanceof Error ? error.message : 'Unknown initialization error');
+          setIsAppReady(true); // Still set ready so we can show error UI
+        }
       }
     };
     
-    // Start initialization
-    initializeApp();
+    // Small delay to ensure Lovable environment is fully ready
+    const initTimer = setTimeout(initializeApp, 100);
     
-    // Set up error monitoring
-    const originalConsoleError = console.error;
-    console.error = function(...args) {
-      globalAppState.hasErrors = true;
-      originalConsoleError.apply(this, args);
-    };
-    
-    // Cleanup
     return () => {
-      console.error = originalConsoleError;
+      isMounted = false;
+      clearTimeout(initTimer);
     };
   }, []);
+  
+  return { isAppReady, initError };
+};
 
-  // Show a loading indicator while the app initializes
+function App() {
+  const { isAppReady, initError } = useAppInitialization();
+
+  // Show loading screen while app initializes
   if (!isAppReady) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p className="text-gray-600">Loading application...</p>
+        <p className="text-gray-600">Initializing application...</p>
+        <p className="text-sm text-gray-400 mt-2">Please wait...</p>
+      </div>
+    );
+  }
+
+  // Show error screen if initialization failed
+  if (initError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 p-8">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Initialization Error</h2>
+          <p className="text-gray-600 mb-4">{initError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Reload Application
+          </button>
+        </div>
       </div>
     );
   }
