@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, LogOut, Settings, UserRound } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 
 interface HeaderProps {
@@ -39,9 +39,12 @@ const Header: React.FC<HeaderProps> = ({ userRole }) => {
     <header className="border-b border-border bg-background sticky top-0 z-30">
       <div className="container flex items-center justify-between h-16">
         <div className="flex items-center gap-6">
-          <Link to="/timesheet" className="flex items-center gap-2 text-brand-600">
-            <Clock className="h-6 w-6" />
-            <span className="font-bold text-xl">Timesheet Tamer</span>
+          <Link to="/timesheet" className="flex items-center gap-2">
+            <img 
+              src="/lovable-uploads/22e31f59-2951-4b7c-9b3a-c87d2adc8bb5.png" 
+              alt="Lieu" 
+              className="h-8 w-auto object-contain"
+            />
           </Link>
         </div>
         
