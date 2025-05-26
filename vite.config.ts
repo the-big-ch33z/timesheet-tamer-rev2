@@ -1,4 +1,3 @@
-
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -125,25 +124,28 @@ export default defineConfig(({ mode }) => ({
       external: [],
       output: {
         manualChunks: (id) => {
+          // Keep all React dependencies in the same chunk as the main React bundle
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-is")) {
-            return "react"; // Bundle all React-related dependencies together
+            return "react-vendor"; // Renamed to be more specific
           }
           if (id.includes("node_modules/react-router-dom")) {
             return "router";
           }
-          if (id.includes("node_modules/@radix-ui") || id.includes("node_modules/use-sync-external-store")) {
-            return "radix"; // Bundle Radix UI and its dependencies together
-          }
+          // FIXED: Group charts with React dependencies to ensure React is available
           if (
             id.includes("node_modules/recharts") ||
             id.includes("node_modules/lodash") ||
             id.includes("node_modules/prop-types") ||
             id.includes("node_modules/react-smooth") ||
-            id.includes("node_modules/eventemitter3")
+            id.includes("node_modules/eventemitter3") ||
+            id.includes("src/components/ui/chart")
           ) {
-            return "charts";
+            return "charts-with-react"; // New chunk that includes React context
           }
-          if (id.includes("src/components/ui")) {
+          if (id.includes("node_modules/@radix-ui") || id.includes("node_modules/use-sync-external-store")) {
+            return "radix"; // Bundle Radix UI and its dependencies together
+          }
+          if (id.includes("src/components/ui") && !id.includes("src/components/ui/chart")) {
             return "ui";
           }
           if (id.includes("src/lib/utils") || id.includes("src/lib/date-utils")) {
@@ -173,8 +175,8 @@ export default defineConfig(({ mode }) => ({
     'process.env': {
       NODE_ENV: JSON.stringify(mode),
     },
-    // Ensure React.createElement and React.Fragment are available
-    'React.createElement': ['react', 'createElement'],
-    'React.Fragment': ['react', 'Fragment'],
+    // FIXED: Ensure React is globally available for forwardRef resolution
+    'global.React': 'React',
+    'window.React': 'React',
   },
 }));

@@ -8,7 +8,7 @@ import { getPayloadConfigFromPayload } from "../utils/payload-helpers";
 // Re-export Tooltip from recharts
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
-// Custom tooltip content component
+// Custom tooltip content component with explicit React forwardRef
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof RechartsPrimitive.Tooltip> &

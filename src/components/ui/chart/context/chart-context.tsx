@@ -23,7 +23,7 @@ type ChartContextProps = {
 // Create and export the chart context
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
-// Hook for accessing chart context
+// Hook for accessing chart context with React availability check
 export function useChart() {
   const context = React.useContext(ChartContext);
 

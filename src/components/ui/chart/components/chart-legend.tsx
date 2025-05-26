@@ -8,7 +8,7 @@ import { getPayloadConfigFromPayload } from "../utils/payload-helpers";
 // Re-export Legend from recharts
 const ChartLegend = RechartsPrimitive.Legend;
 
-// Custom legend content component
+// Custom legend content component with explicit React forwardRef
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> &
