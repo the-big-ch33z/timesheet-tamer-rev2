@@ -1,3 +1,4 @@
+
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -63,10 +64,13 @@ export default defineConfig(({ mode }) => ({
       "lodash/isString": path.resolve(__dirname, "node_modules/lodash/isString.js"),
       "lodash/isNaN": path.resolve(__dirname, "node_modules/lodash/isNaN.js"),
       "lodash/get": path.resolve(__dirname, "node_modules/lodash/get.js"),
+      // Explicit alias for use-sync-external-store to ensure proper resolution
+      "use-sync-external-store": path.resolve(__dirname, "node_modules/use-sync-external-store"),
+      "use-sync-external-store/shim": path.resolve(__dirname, "node_modules/use-sync-external-store/shim"),
     },
     // Ensure proper extension resolution
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-    dedupe: ['react', 'react-dom', 'react-is', 'prop-types', 'lodash', 'eventemitter3']
+    dedupe: ['react', 'react-dom', 'react-is', 'prop-types', 'lodash', 'eventemitter3', 'use-sync-external-store']
   },
   optimizeDeps: {
     include: [
@@ -84,6 +88,8 @@ export default defineConfig(({ mode }) => ({
       "recharts",
       "lodash",
       "react-smooth", // Add react-smooth to optimization
+      "use-sync-external-store", // Add use-sync-external-store to optimization
+      "use-sync-external-store/shim", // Include the shim as well
     ],
     exclude: [], // Ensure React is not excluded
     esbuildOptions: {
@@ -108,10 +114,11 @@ export default defineConfig(({ mode }) => ({
         /node_modules\/recharts\//,
         /node_modules\/react-smooth\//,
         /node_modules\/prop-types\//,
-        /node_modules\/eventemitter3\//
-      ], // Force proper handling of React, lodash, prop-types, and eventemitter3 packages
+        /node_modules\/eventemitter3\//,
+        /node_modules\/use-sync-external-store\//, // Include use-sync-external-store in CommonJS handling
+      ], // Force proper handling of React, lodash, prop-types, eventemitter3, and use-sync-external-store packages
       requireReturnsDefault: "auto",
-      defaultIsModuleExports: true, // Handle prop-types and eventemitter3 default export
+      defaultIsModuleExports: true, // Handle prop-types, eventemitter3, and use-sync-external-store default export
     },
     sourcemap: mode !== "production",
     rollupOptions: {
@@ -124,8 +131,8 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("node_modules/react-router-dom")) {
             return "router";
           }
-          if (id.includes("node_modules/@radix-ui")) {
-            return "radix";
+          if (id.includes("node_modules/@radix-ui") || id.includes("node_modules/use-sync-external-store")) {
+            return "radix"; // Bundle Radix UI and its dependencies together
           }
           if (
             id.includes("node_modules/recharts") ||
