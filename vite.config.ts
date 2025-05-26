@@ -1,3 +1,4 @@
+
 import { defineConfig, splitVendorChunkPlugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -175,8 +176,7 @@ export default defineConfig(({ mode }) => ({
     'process.env': {
       NODE_ENV: JSON.stringify(mode),
     },
-    // FIXED: Ensure React is globally available for forwardRef resolution
-    'global.React': 'React',
-    'window.React': 'React',
+    // REMOVED: Global React definitions that were causing import issues
+    // Let files use explicit imports instead of relying on global availability
   },
 }));
