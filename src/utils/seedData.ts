@@ -81,33 +81,44 @@ export function createSeedData(includeDemoData: boolean = false): void {
 
     log("Creating default organization...");
     
-    // Create default organization
+    // Create default organization - removed settings property
     const defaultOrg: Organization = {
       id: uuidv4(),
       name: 'Default Organization',
-      settings: {}
+      ownerId: 'system'
     };
 
     log("Creating default work schedule...");
     
-    // Create default work schedule
+    // Create default work schedule - fixed rdoDays to use numeric keys
     const defaultSchedule: WorkSchedule = {
       id: 'default-schedule',
       name: 'Default Schedule',
-      workDays: {
-        monday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
-        tuesday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
-        wednesday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
-        thursday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
-        friday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
-        saturday: { isWorkDay: false, startTime: '09:00', endTime: '17:00', hoursPerDay: 0 },
-        sunday: { isWorkDay: false, startTime: '09:00', endTime: '17:00', hoursPerDay: 0 }
+      userId: 'system',
+      weeks: {
+        1: {
+          monday: { startTime: '09:00', endTime: '17:00' },
+          tuesday: { startTime: '09:00', endTime: '17:00' },
+          wednesday: { startTime: '09:00', endTime: '17:00' },
+          thursday: { startTime: '09:00', endTime: '17:00' },
+          friday: { startTime: '09:00', endTime: '17:00' },
+          saturday: null,
+          sunday: null
+        },
+        2: {
+          monday: { startTime: '09:00', endTime: '17:00' },
+          tuesday: { startTime: '09:00', endTime: '17:00' },
+          wednesday: { startTime: '09:00', endTime: '17:00' },
+          thursday: { startTime: '09:00', endTime: '17:00' },
+          friday: { startTime: '09:00', endTime: '17:00' },
+          saturday: null,
+          sunday: null
+        }
       },
       rdoDays: {
-        week1: [],
-        week2: []
-      },
-      totalFortnightHours: 80
+        1: [],
+        2: []
+      }
     };
 
     log("Storing default data to localStorage...");
