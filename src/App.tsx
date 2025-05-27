@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth';
@@ -14,20 +15,90 @@ import { initializeService } from './utils/time/services/api-wrapper';
 import { createSeedData, validateStorageFormat } from './utils/seedData';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
+// Enhanced logging for App component
+const timestamp = () => new Date().toISOString();
+const log = (message: string, data?: any) => {
+  console.log(`[${timestamp()}] APP: ${message}`, data || '');
+};
+
+console.log(`[${timestamp()}] APP: ===== APP COMPONENT INITIALIZATION =====`);
+
 // Lazy load pages to improve initial load time
-const Timesheet = lazy(() => import('./pages/Timesheet'));
-const Admin = lazy(() => import('./pages/Admin'));
-const Manager = lazy(() => import('./pages/Manager'));
-const Reports = lazy(() => import('./pages/Reports'));
-const Settings = lazy(() => import('./pages/Settings'));
-const TeamCalendar = lazy(() => import('./pages/TeamCalendar'));
+const Timesheet = lazy(() => {
+  log("Loading Timesheet component...");
+  return import('./pages/Timesheet').then(module => {
+    log("✅ Timesheet component loaded successfully");
+    return module;
+  }).catch(error => {
+    console.error(`[${timestamp()}] APP: ❌ Failed to load Timesheet component:`, error);
+    throw error;
+  });
+});
+
+const Admin = lazy(() => {
+  log("Loading Admin component...");
+  return import('./pages/Admin').then(module => {
+    log("✅ Admin component loaded successfully");
+    return module;
+  }).catch(error => {
+    console.error(`[${timestamp()}] APP: ❌ Failed to load Admin component:`, error);
+    throw error;
+  });
+});
+
+const Manager = lazy(() => {
+  log("Loading Manager component...");
+  return import('./pages/Manager').then(module => {
+    log("✅ Manager component loaded successfully");
+    return module;
+  }).catch(error => {
+    console.error(`[${timestamp()}] APP: ❌ Failed to load Manager component:`, error);
+    throw error;
+  });
+});
+
+const Reports = lazy(() => {
+  log("Loading Reports component...");
+  return import('./pages/Reports').then(module => {
+    log("✅ Reports component loaded successfully");
+    return module;
+  }).catch(error => {
+    console.error(`[${timestamp()}] APP: ❌ Failed to load Reports component:`, error);
+    throw error;
+  });
+});
+
+const Settings = lazy(() => {
+  log("Loading Settings component...");
+  return import('./pages/Settings').then(module => {
+    log("✅ Settings component loaded successfully");
+    return module;
+  }).catch(error => {
+    console.error(`[${timestamp()}] APP: ❌ Failed to load Settings component:`, error);
+    throw error;
+  });
+});
+
+const TeamCalendar = lazy(() => {
+  log("Loading TeamCalendar component...");
+  return import('./pages/TeamCalendar').then(module => {
+    log("✅ TeamCalendar component loaded successfully");
+    return module;
+  }).catch(error => {
+    console.error(`[${timestamp()}] APP: ❌ Failed to load TeamCalendar component:`, error);
+    throw error;
+  });
+});
 
 // Loading fallback component
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center h-96">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
+const LoadingFallback = () => {
+  log("LoadingFallback component rendered");
+  return (
+    <div className="flex items-center justify-center h-96">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  );
+};
 
 // Global app state tracking
 const globalAppState = {
@@ -37,14 +108,20 @@ const globalAppState = {
 };
 
 function App() {
+  log("===== APP COMPONENT FUNCTION STARTED =====");
+  
   const [isAppReady, setIsAppReady] = React.useState(false);
   
   // Initialize services and monitor app state on startup
   React.useEffect(() => {
-    console.log("App initialization started");
+    log("App useEffect initialization started");
+    
     const initializeApp = async () => {
       try {
+        log("Starting app initialization process...");
+        
         // Check for stored auth data
+        log("Checking localStorage for auth data...");
         const storedUser = localStorage.getItem('currentUser');
         const storedTeams = localStorage.getItem('teams');
         
@@ -52,8 +129,9 @@ function App() {
         if (storedUser) {
           try {
             JSON.parse(storedUser);
+            log("✅ Stored user data is valid JSON");
           } catch (e) {
-            console.warn("Corrupted user data detected, clearing...");
+            console.warn(`[${timestamp()}] APP: ⚠️ Corrupted user data detected, clearing...`);
             localStorage.removeItem('currentUser');
           }
         }
@@ -61,28 +139,37 @@ function App() {
         if (storedTeams) {
           try {
             JSON.parse(storedTeams);
+            log("✅ Stored teams data is valid JSON");
           } catch (e) {
-            console.warn("Corrupted teams data detected, clearing...");
+            console.warn(`[${timestamp()}] APP: ⚠️ Corrupted teams data detected, clearing...`);
             localStorage.removeItem('teams');
           }
         }
         
         // Run data format validation and fix any issues
+        log("Starting storage format validation...");
         await validateStorageFormat();
+        log("✅ Storage format validation completed");
         
         // Initialize core services
+        log("Initializing core services...");
         await initializeService();
+        log("✅ Core services initialized");
         
         // Only create seed data if needed - with false to ensure no demo data is created
-        // This is important - only call createSeedData once
+        log("Creating seed data if needed...");
         createSeedData(false);
+        log("✅ Seed data creation completed");
         
         // Mark app as initialized
         globalAppState.isInitialized = true;
-        console.log("App initialization complete");
+        log("✅ App initialization complete");
         setIsAppReady(true);
+        
       } catch (error) {
-        console.error("Failed to initialize application:", error);
+        console.error(`[${timestamp()}] APP: ❌ Failed to initialize application:`, error);
+        console.error(`[${timestamp()}] APP: Error details:`, error instanceof Error ? error.message : String(error));
+        console.error(`[${timestamp()}] APP: Stack trace:`, error instanceof Error ? error.stack : 'No stack trace');
         globalAppState.hasErrors = true;
         
         // Still mark app as ready so we can show error UI
@@ -108,6 +195,7 @@ function App() {
 
   // Show a loading indicator while the app initializes
   if (!isAppReady) {
+    log("Rendering app loading state");
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
@@ -115,6 +203,8 @@ function App() {
       </div>
     );
   }
+
+  log("Starting main app render with providers...");
 
   return (
     <GlobalErrorBoundary>
@@ -190,4 +280,5 @@ function App() {
   );
 }
 
+log("===== APP COMPONENT EXPORT =====");
 export default App;

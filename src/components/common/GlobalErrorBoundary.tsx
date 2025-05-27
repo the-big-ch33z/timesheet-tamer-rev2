@@ -1,7 +1,14 @@
+
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { createTimeLogger } from "@/utils/time/errors/timeLogger";
 import ErrorFallback from "./ErrorFallback";
 import AppStateRecovery from "@/utils/error/errorRecovery";
+
+// Enhanced logging for GlobalErrorBoundary
+const timestamp = () => new Date().toISOString();
+const log = (message: string, data?: any) => {
+  console.log(`[${timestamp()}] GLOBAL_ERROR_BOUNDARY: ${message}`, data || '');
+};
 
 const logger = createTimeLogger("GlobalErrorBoundary");
 
@@ -27,9 +34,14 @@ class GlobalErrorBoundary extends Component<Props, State> {
       hasError: false,
       errorCount: 0,
     };
+    
+    log("===== GLOBAL_ERROR_BOUNDARY INITIALIZED =====");
   }
 
   static getDerivedStateFromError(error: Error): State {
+    const timestamp = Date.now();
+    console.error(`[${new Date(timestamp).toISOString()}] GLOBAL_ERROR_BOUNDARY: ❌ getDerivedStateFromError:`, error);
+    
     return {
       hasError: true,
       error,
@@ -39,6 +51,11 @@ class GlobalErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     const now = Date.now();
+    
+    log(`ERROR CAUGHT - Count: ${this.state.errorCount + 1}`);
+    console.error(`[${timestamp()}] GLOBAL_ERROR_BOUNDARY: ❌ componentDidCatch:`, error);
+    console.error(`[${timestamp()}] GLOBAL_ERROR_BOUNDARY: Error stack:`, error.stack);
+    console.error(`[${timestamp()}] GLOBAL_ERROR_BOUNDARY: Component stack:`, errorInfo.componentStack);
 
     if (now - this.lastErrorTime > this.ERROR_THROTTLE_MS) {
       // ✅ Direct console logs for dev visibility
@@ -51,7 +68,12 @@ class GlobalErrorBoundary extends Component<Props, State> {
       if (this.shouldAttemptRecovery(error)) {
         console.info("🔁 Attempting automatic recovery...");
         logger.info("Attempting automatic recovery...");
-        AppStateRecovery.attemptRecovery();
+        try {
+          AppStateRecovery.attemptRecovery();
+          log("✅ Recovery attempt completed");
+        } catch (recoveryError) {
+          console.error(`[${timestamp()}] GLOBAL_ERROR_BOUNDARY: ❌ Recovery failed:`, recoveryError);
+        }
       }
     } else {
       console.debug("🕒 Suppressed duplicate error report");
@@ -75,34 +97,49 @@ class GlobalErrorBoundary extends Component<Props, State> {
       "is not defined",
     ];
 
-    return stateIssueIndicators.some((indicator) =>
+    const shouldRecover = stateIssueIndicators.some((indicator) =>
       errorMessage.includes(indicator)
     );
+    
+    log(`Should attempt recovery: ${shouldRecover} (error: ${error.message})`);
+    return shouldRecover;
   }
 
   resetErrorBoundary = (): void => {
+    log("Resetting error boundary...");
     this.setState({
       hasError: false,
       error: undefined,
       errorInfo: undefined,
       errorCount: 0,
     });
+    log("✅ Error boundary reset completed");
   };
 
   handleDeepRecovery = (): void => {
-    AppStateRecovery.attemptRecovery();
+    log("Starting deep recovery process...");
+    
+    try {
+      AppStateRecovery.attemptRecovery();
 
-    if (!AppStateRecovery.hasRecentlyReloaded()) {
-      AppStateRecovery.forceReload();
-    } else {
-      alert(
-        "Multiple reload attempts detected. Please try clearing your browser cache and reloading the page manually."
-      );
+      if (!AppStateRecovery.hasRecentlyReloaded()) {
+        log("Initiating page reload...");
+        AppStateRecovery.forceReload();
+      } else {
+        log("Multiple reload attempts detected, showing user alert");
+        alert(
+          "Multiple reload attempts detected. Please try clearing your browser cache and reloading the page manually."
+        );
+      }
+    } catch (recoveryError) {
+      console.error(`[${timestamp()}] GLOBAL_ERROR_BOUNDARY: ❌ Deep recovery failed:`, recoveryError);
     }
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
+      log(`Rendering error fallback (error count: ${this.state.errorCount})`);
+      
       if (this.props.fallback) {
         return this.props.fallback;
       }

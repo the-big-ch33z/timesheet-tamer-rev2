@@ -1,227 +1,167 @@
 
-import { Organization, Team, User } from '@/types';
+import { User, Team, Organization, WorkSchedule, TeamMembership, TimeEntry } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
-// Flag to track if seed data has already been created in this session
-let seedDataCreated = false;
+// Enhanced logging for seed data operations
+const timestamp = () => new Date().toISOString();
+const log = (message: string, data?: any) => {
+  console.log(`[${timestamp()}] SEED_DATA: ${message}`, data || '');
+};
 
-// Create seed data if no users exist in the system and createDemoData is true
-export const createSeedData = (createDemoData = false) => {
-  // Skip if we've already created seed data in this session
-  if (seedDataCreated) {
-    console.log('Seed data creation skipped - already created in this session');
-    return false;
-  }
-
-  const existingUsers = localStorage.getItem('users');
-  const existingOrganizations = localStorage.getItem('organizations');
+/**
+ * Validate and fix storage format issues
+ */
+export async function validateStorageFormat(): Promise<void> {
+  log("===== STORAGE FORMAT VALIDATION STARTED =====");
   
-  // Only create seed data if it doesn't exist already and createDemoData is true
-  if (createDemoData && (!existingUsers || JSON.parse(existingUsers).length === 0)) {
-    console.log('Creating seed data for initial application use');
+  try {
+    log("Checking localStorage availability...");
+    if (typeof localStorage === 'undefined') {
+      log("⚠️ LocalStorage not available, skipping validation");
+      return;
+    }
+    log("✅ LocalStorage is available");
+
+    const keysToValidate = [
+      'currentUser',
+      'users', 
+      'teams',
+      'organizations',
+      'teamMemberships',
+      'time-entries'
+    ];
+
+    log("Validating stored data formats...");
     
-    const userId = `user-${Date.now()}`;
-    const orgId = `org-${Date.now()}`;
-    const teamId = `team-${Date.now()}`;
+    for (const key of keysToValidate) {
+      try {
+        log(`Validating key: ${key}`);
+        const storedValue = localStorage.getItem(key);
+        
+        if (storedValue) {
+          JSON.parse(storedValue);
+          log(`✅ ${key} format is valid`);
+        } else {
+          log(`ℹ️ ${key} not found in storage (this is ok)`);
+        }
+      } catch (parseError) {
+        console.error(`[${timestamp()}] SEED_DATA: ❌ Invalid JSON in ${key}, removing:`, parseError);
+        localStorage.removeItem(key);
+        log(`🔧 Removed corrupted ${key} from storage`);
+      }
+    }
+
+    log("✅ Storage format validation completed");
+    
+  } catch (error) {
+    console.error(`[${timestamp()}] SEED_DATA: ❌ Storage validation failed:`, error);
+    console.error(`[${timestamp()}] SEED_DATA: Error details:`, error instanceof Error ? error.message : String(error));
+    throw error;
+  }
+}
+
+/**
+ * Create seed data if needed
+ */
+export function createSeedData(includeDemoData: boolean = false): void {
+  log("===== SEED DATA CREATION STARTED =====");
+  log(`Creating seed data with demo data: ${includeDemoData}`);
+  
+  try {
+    log("Checking if seed data already exists...");
+    
+    // Check if we already have essential data
+    const existingOrgs = localStorage.getItem('organizations');
+    const existingUsers = localStorage.getItem('currentUser');
+    
+    if (existingOrgs && existingUsers) {
+      log("✅ Seed data already exists, skipping creation");
+      return;
+    }
+
+    log("Creating default organization...");
     
     // Create default organization
     const defaultOrg: Organization = {
-      id: orgId,
-      name: 'Demo Organization',
-      ownerId: userId,
-      createdAt: new Date().toISOString()
+      id: uuidv4(),
+      name: 'Default Organization',
+      settings: {}
     };
+
+    log("Creating default work schedule...");
     
-    // Create default team
-    const defaultTeam: Team = {
-      id: teamId,
-      name: 'Demo Team',
-      organizationId: orgId,
-      managerId: userId,
-      createdAt: new Date().toISOString()
+    // Create default work schedule
+    const defaultSchedule: WorkSchedule = {
+      id: 'default-schedule',
+      name: 'Default Schedule',
+      workDays: {
+        monday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
+        tuesday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
+        wednesday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
+        thursday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
+        friday: { isWorkDay: true, startTime: '09:00', endTime: '17:00', hoursPerDay: 8 },
+        saturday: { isWorkDay: false, startTime: '09:00', endTime: '17:00', hoursPerDay: 0 },
+        sunday: { isWorkDay: false, startTime: '09:00', endTime: '17:00', hoursPerDay: 0 }
+      },
+      rdoDays: {
+        week1: [],
+        week2: []
+      },
+      totalFortnightHours: 80
     };
+
+    log("Storing default data to localStorage...");
     
-    // Create default admin user WITH work schedule assigned
-    const defaultUser: User = {
-      id: userId,
-      name: 'Admin User',
-      email: 'admin@example.com',
-      role: 'admin',
-      organizationId: orgId,
-      teamIds: [teamId],
-      status: 'active',
-      workScheduleId: 'default', // FIX: Ensure default work schedule is assigned
-      createdAt: new Date().toISOString()
-    };
-    
-    // Store in localStorage
-    localStorage.setItem('users', JSON.stringify([defaultUser]));
-    localStorage.setItem('organizations', JSON.stringify([defaultOrg]));
-    localStorage.setItem('teams', JSON.stringify([defaultTeam]));
-    localStorage.setItem('teamMemberships', JSON.stringify([{
-      id: `membership-${Date.now()}`,
-      teamId,
-      userId,
-      managerId: userId,
-      joinedAt: new Date().toISOString()
-    }]));
-    
-    seedDataCreated = true;
-    console.log('Seed data created successfully with work schedule assignments');
-    return true;
-  }
-  return false;
-};
-
-// Add a function to fix the nested userSchedules format if found
-export const migrateUserSchedulesFormat = () => {
-  try {
-    const userSchedulesJson = localStorage.getItem('timesheet-app-user-schedules');
-    if (!userSchedulesJson) return;
-
-    let needsMigration = false;
-    const userSchedules = JSON.parse(userSchedulesJson);
-    const migratedData: Record<string, string> = {};
-
-    // Check if any value is an object (nested structure) rather than a string
-    Object.entries(userSchedules).forEach(([userId, scheduleData]) => {
-      if (typeof scheduleData === 'object' && scheduleData !== null) {
-        needsMigration = true;
-        // Get the first schedule ID from the nested object (usually there's just one)
-        const nestedValues = Object.values(scheduleData as Record<string, string>);
-        if (nestedValues.length > 0) {
-          migratedData[userId] = nestedValues[0];
-        }
-      } else if (typeof scheduleData === 'string') {
-        // Already correct format
-        migratedData[userId] = scheduleData as string;
-      }
-    });
-
-    if (needsMigration) {
-      console.log('Migrating user schedules from nested format to flat format');
-      localStorage.setItem('timesheet-app-user-schedules', JSON.stringify(migratedData));
-      console.log('User schedules migration complete');
+    // Store the default data
+    try {
+      localStorage.setItem('organizations', JSON.stringify([defaultOrg]));
+      log("✅ Default organization stored");
       
-      // After migration, trigger a storage validation event to ensure other components are aware
-      window.dispatchEvent(new CustomEvent('storage-migrated', { 
-        detail: { type: 'user-schedules' }
-      }));
-    }
-  } catch (error) {
-    console.error('Error migrating user schedules format:', error);
-  }
-};
-
-// NEW: Migration to ensure all existing users have work schedule assignments
-export const migrateUsersWorkSchedules = () => {
-  try {
-    const usersJson = localStorage.getItem('users');
-    if (!usersJson) return;
-
-    const users = JSON.parse(usersJson);
-    let needsMigration = false;
-
-    const migratedUsers = users.map((user: User) => {
-      if (!user.workScheduleId) {
-        console.log(`Migrating user ${user.name} (${user.id}) to have default work schedule`);
-        needsMigration = true;
-        return {
-          ...user,
-          workScheduleId: 'default'
-        };
-      }
-      return user;
-    });
-
-    if (needsMigration) {
-      localStorage.setItem('users', JSON.stringify(migratedUsers));
-      console.log(`Migrated ${users.length} users to have work schedule assignments`);
+      localStorage.setItem('work-schedules', JSON.stringify([defaultSchedule]));
+      log("✅ Default work schedule stored");
       
-      // Trigger event to notify other components
-      window.dispatchEvent(new CustomEvent('users-migrated', { 
-        detail: { type: 'work-schedule-assignment' }
-      }));
+      // Initialize empty arrays for other data
+      localStorage.setItem('users', JSON.stringify([]));
+      localStorage.setItem('teams', JSON.stringify([]));
+      localStorage.setItem('teamMemberships', JSON.stringify([]));
+      log("✅ Empty data arrays initialized");
+      
+    } catch (storageError) {
+      console.error(`[${timestamp()}] SEED_DATA: ❌ Failed to store seed data:`, storageError);
+      throw new Error(`Failed to store seed data: ${storageError}`);
     }
-  } catch (error) {
-    console.error('Error migrating users work schedules:', error);
-  }
-};
 
-// This function will run data validation and fix any issues found
-export const validateStorageFormat = () => {
-  try {
-    console.log('Validating storage format...');
-    
-    // Run the user schedules migration
-    migrateUserSchedulesFormat();
-    
-    // NEW: Run the users work schedule migration
-    migrateUsersWorkSchedules();
-    
-    // Verify work schedule assignments format
-    const workSchedulesJson = localStorage.getItem('timesheet-app-schedules');
-    if (workSchedulesJson) {
-      try {
-        const schedules = JSON.parse(workSchedulesJson);
-        console.log(`Found ${schedules.length} work schedules in storage`);
-        
-        // Log the first schedule for debugging
-        if (schedules.length > 0) {
-          console.log('Sample schedule available:', schedules[0].name);
-        }
-      } catch (e) {
-        console.error('Invalid work schedules format in localStorage:', e);
-      }
+    // Only create demo data if explicitly requested
+    if (includeDemoData) {
+      log("Creating demo data...");
+      createDemoData(defaultOrg, defaultSchedule);
     } else {
-      console.log('No work schedules found in localStorage');
+      log("Skipping demo data creation");
     }
-    
-    // Could add more validation for other storage keys here
-    
-    return true;
-  } catch (error) {
-    console.error('Error validating storage format:', error);
-    return false;
-  }
-};
 
-// Add a debug function to log all user-schedule associations
-export const logUserScheduleAssociations = () => {
-  try {
-    console.group('User Schedule Associations:');
+    log("✅ Seed data creation completed successfully");
     
-    // Get users
-    const usersJson = localStorage.getItem('users');
-    const users = usersJson ? JSON.parse(usersJson) : [];
-    
-    // Get user schedules
-    const userSchedulesJson = localStorage.getItem('timesheet-app-user-schedules');
-    const userSchedules = userSchedulesJson ? JSON.parse(userSchedulesJson) : {};
-    
-    // Get schedules
-    const schedulesJson = localStorage.getItem('timesheet-app-schedules');
-    const schedules = schedulesJson ? JSON.parse(schedulesJson) : [];
-    
-    // Map scheduleIds to names for easier reading
-    const scheduleMap = schedules.reduce((acc: Record<string, string>, s: any) => {
-      acc[s.id] = s.name || 'Unnamed schedule';
-      return acc;
-    }, {});
-    
-    // Log each user and their associated schedule
-    users.forEach((user: any) => {
-      const scheduleId = user.workScheduleId || userSchedules[user.id] || 'MISSING';
-      const scheduleName = scheduleMap[scheduleId] || 'Default schedule';
-      console.log(`User: ${user.name} (${user.id}) → Schedule: ${scheduleName} (${scheduleId})`);
-      
-      // Flag users without schedules
-      if (!user.workScheduleId) {
-        console.warn(`⚠️  User ${user.name} is missing workScheduleId!`);
-      }
-    });
-    
-    console.groupEnd();
   } catch (error) {
-    console.error('Error logging user-schedule associations:', error);
+    console.error(`[${timestamp()}] SEED_DATA: ❌ Seed data creation failed:`, error);
+    console.error(`[${timestamp()}] SEED_DATA: Error details:`, error instanceof Error ? error.message : String(error));
+    console.error(`[${timestamp()}] SEED_DATA: Stack trace:`, error instanceof Error ? error.stack : 'No stack trace');
+    throw error;
   }
-};
+}
+
+/**
+ * Create demo data (only called when explicitly requested)
+ */
+function createDemoData(defaultOrg: Organization, defaultSchedule: WorkSchedule): void {
+  log("===== CREATING DEMO DATA =====");
+  
+  try {
+    // This function intentionally left minimal
+    // We don't want to create demo users/data by default
+    log("Demo data creation skipped - no demo data configured");
+    
+  } catch (error) {
+    console.error(`[${timestamp()}] SEED_DATA: ❌ Demo data creation failed:`, error);
+    throw error;
+  }
+}
