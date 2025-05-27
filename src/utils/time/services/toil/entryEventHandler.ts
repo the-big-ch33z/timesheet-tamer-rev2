@@ -1,3 +1,4 @@
+
 import { createTimeLogger } from '@/utils/time/errors';
 import { toilService } from './service/main';
 import { 
@@ -13,6 +14,7 @@ import { timeEventsService } from '@/utils/time/events/timeEventsService';
 import { eventBus } from '@/utils/events/EventBus';
 import { TIME_ENTRY_EVENTS, TOIL_EVENTS } from '@/utils/events/eventTypes';
 import { format } from 'date-fns';
+import { unifiedTimeEntryService } from '@/utils/time/services';
 
 const logger = createTimeLogger('TOIL-EntryEventHandler');
 
@@ -246,8 +248,7 @@ function handleEntryDeleted(event: any) {
 function checkServicesReady(): boolean {
   // Check if the unified service is available and initialized
   try {
-    const unifiedService = require('@/utils/time/services').unifiedTimeEntryService;
-    if (!unifiedService) {
+    if (!unifiedTimeEntryService) {
       console.log('[TOIL-EventHandler] Unified service not yet available');
       return false;
     }
